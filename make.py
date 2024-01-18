@@ -114,11 +114,13 @@ if __name__ == '__main__':
     extra_args, lv_cflags, board = mod.parse_args(extra_args, lv_cflags, board)
     mod.build_commands(target, extra_args, SCRIPT_DIR, lv_cflags, board)
 
-    if mpy_cross:
-        mod.mpy_cross()
     if submodules:
         get_submodules()
         mod.submodules()
+
+    if mpy_cross:
+        mod.mpy_cross()
+
     if clean:
         mod.clean()
 
