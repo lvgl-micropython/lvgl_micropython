@@ -86,13 +86,12 @@ if lv_cflags is not None:
 
 
 def get_submodules():
-    # if not os.path.exists(os.path.join(SCRIPT_DIR, 'micropython/mpy-cross')):
-    #     builder.get_micropython()
-    # if not os.path.exists(os.path.join(SCRIPT_DIR, 'lvgl/lvgl.h')):
-    #     builder.get_lvgl()
-    # if not os.path.exists(os.path.join(SCRIPT_DIR, 'libs/pycparser/pycparser')):
-    #     builder.get_pycparser()
-    pass
+    if not os.path.exists(os.path.join(SCRIPT_DIR, 'micropython/mpy-cross')):
+        builder.get_micropython()
+    if not os.path.exists(os.path.join(SCRIPT_DIR, 'lvgl/lvgl.h')):
+        builder.get_lvgl()
+    if not os.path.exists(os.path.join(SCRIPT_DIR, 'libs/pycparser/pycparser')):
+        builder.get_pycparser()
 
 
 if __name__ == '__main__':
