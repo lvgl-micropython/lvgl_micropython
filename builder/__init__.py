@@ -103,9 +103,9 @@ def spawn(cmd_, out_to_screen=True):
         prompt = b'$'
 
     if isinstance(cmd_[0], str):
-        cmd_ = ' '.join(cmd_) + '\n'
+        cmd_ = ' '.join(cmd_)
     else:
-        cmd_ = ' && '.join(' '.join(c) + '\n' for c in cmd_)
+        cmd_ = ' && '.join(' '.join(c) for c in cmd_)
 
     def read():
         output_buffer = b''
@@ -141,7 +141,7 @@ def spawn(cmd_, out_to_screen=True):
         shell=True
     )
 
-    # print(cmd_[:-1])
+    print(cmd_[:-1])
     o_buf = read().decode('utf-8')
 
     if not p.stdout.closed:
