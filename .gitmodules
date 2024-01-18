@@ -1,0 +1,12 @@
+[submodule "lib/lvgl"]
+	path = lib/lvgl
+	url = https://github.com/lvgl/lvgl
+[submodule "lib/micropython"]
+	path = lib/micropython
+	url = https://github.com/micropython/micropython
+[submodule "lib/pycparser"]
+	path = lib/pycparser
+	url = https://github.com/eliben/pycparser
+[submodule "lib/esp-idf"]
+	path = lib/esp-idf
+	url = https://github.com/espressif/esp-idf
