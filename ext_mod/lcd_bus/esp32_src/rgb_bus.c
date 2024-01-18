@@ -128,7 +128,7 @@
         // create new object
         mp_lcd_rgb_bus_obj_t *self = m_new_obj(mp_lcd_rgb_bus_obj_t);
         self->base.type = &mp_lcd_rgb_bus_type;
-`
+
         self->callback = mp_const_none;
 
         self->bus_config.pclk_hz = (uint32_t)args[ARG_freq].u_int;

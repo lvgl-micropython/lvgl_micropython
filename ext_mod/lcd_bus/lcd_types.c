@@ -31,6 +31,7 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
     // micropy includes
     #include "py/gc.h"
     #include "py/stackctrl.h"
+    #include "mphalport.h"
 
     // The 2 functions below are specific to ESP32. They cat called within an ISR context
     // since the rest of the boards are either bitbang or utilize the micropython
