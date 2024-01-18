@@ -99,7 +99,7 @@ def get_pycparser():
 
 def _busy_spinner(evnt):
     count = random.randint(1, 25)
-    wait = random.randint(5, 50) * 0.001
+    wait = random.randint(10, 100) * 0.001
     chars = '\\|/-'
     char_index = 0
     sys.stdout.write(chars[char_index])
@@ -118,7 +118,7 @@ def _busy_spinner(evnt):
 
         if count == 0:
             count = random.randint(1, 25)
-            wait = random.randint(5, 50) * 0.001
+            wait = random.randint(10, 100) * 0.001
 
     sys.stdout.write('\r')
     sys.stdout.flush()
