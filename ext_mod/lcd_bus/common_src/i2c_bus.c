@@ -1,4 +1,6 @@
 // local includes
+#include "lcd_types.h"
+#include "modlcd_bus.h"
 #include "i2c_bus.h"
 
 // micropython includes

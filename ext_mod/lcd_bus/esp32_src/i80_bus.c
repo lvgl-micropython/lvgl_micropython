@@ -1,5 +1,5 @@
 // local includes
-#include "lcd_bus.h"
+#include "lcd_types.h"
 #include "modlcd_bus.h"
 #include "i80_bus.h"
 

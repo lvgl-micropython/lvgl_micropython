@@ -1,5 +1,7 @@
 /* includes */
 // local includes
+#include "lcd_types.h"
+#include "modlcd_bus.h"
 #include "../common_include/i80_bus.h"
 
 // micropython includes

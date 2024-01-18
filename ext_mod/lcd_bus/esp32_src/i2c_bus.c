@@ -1,6 +1,6 @@
 
 // local includes
-#include "lcd_bus.h"
+#include "lcd_types.h"
 #include "modlcd_bus.h"
 #include "i2c_bus.h"
 
