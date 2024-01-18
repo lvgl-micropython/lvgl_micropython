@@ -102,7 +102,7 @@ def _busy_spinner(evnt):
     wait = random.randint(10, 100) * 0.001
     chars = '\\|/-'
     char_index = 0
-    sys.stdout.write(chars[char_index])
+    sys.stdout.write(chars[char_index] + '\r')
     sys.stdout.flush()
 
     while not evnt.is_set():
@@ -112,16 +112,12 @@ def _busy_spinner(evnt):
         if char_index == 4:
             char_index = 0
 
-        sys.stdout.write(f'\r{chars[char_index]}')
-
+        sys.stdout.write(f'{chars[char_index]}\r')
         sys.stdout.flush()
 
         if count == 0:
             count = random.randint(1, 25)
             wait = random.randint(10, 100) * 0.001
-
-    sys.stdout.write('\r')
-    sys.stdout.flush()
 
 
 def spawn(cmd_, out_to_screen=True, spinner=False):
