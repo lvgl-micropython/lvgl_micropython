@@ -177,7 +177,7 @@ def parse_args(extra_args, lv_cflags, board):
 
     board_variant = esp_args.board_variant
 
-    with open(f'micropython/ports/esp32/boards/sdkconfig.base', 'r') as f:
+    with open(f'lib/micropython/ports/esp32/boards/sdkconfig.base', 'r') as f:
         sdkconfig_base = f.read()
 
     if 'CONFIG_FREERTOS_INTERRUPT_BACKTRACE=n' not in sdkconfig_base:
@@ -241,7 +241,7 @@ def get_idf_version():
 def build_manifest(target, script_dir, frozen_manifest):
     update_mphalport(target)
     idf_version = get_idf_version()
-    manifest_path = 'micropython/ports/esp32/boards/manifest.py'
+    manifest_path = 'lib/micropython/ports/esp32/boards/manifest.py'
 
     manifest_files = [
         f'{script_dir}/driver/display/display_driver_framework.py',
@@ -250,7 +250,7 @@ def build_manifest(target, script_dir, frozen_manifest):
     ]
     generate_manifest(manifest_path, frozen_manifest, *manifest_files)
 
-    network_common_path = 'micropython/ports/esp32/network_common.c'
+    network_common_path = 'lib/micropython/ports/esp32/network_common.c'
 
     with open(network_common_path, 'rb') as f:
         network_common = f.read()
