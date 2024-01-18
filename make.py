@@ -113,7 +113,6 @@ if __name__ == '__main__':
 
     extra_args, lv_cflags, board = mod.parse_args(extra_args, lv_cflags, board)
     mod.build_commands(target, extra_args, SCRIPT_DIR, lv_cflags, board)
-    mod.build_manifest(target, SCRIPT_DIR, frozen_manifest)
 
     if mpy_cross:
         mod.mpy_cross()
@@ -122,6 +121,8 @@ if __name__ == '__main__':
         mod.submodules()
     if clean:
         mod.clean()
+
+    mod.build_manifest(target, SCRIPT_DIR, frozen_manifest)
 
     mod.compile()
 
