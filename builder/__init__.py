@@ -1,6 +1,8 @@
 import sys
 import os
 import subprocess
+import threading
+import random
 
 
 def update_mphalport(target):
@@ -75,7 +77,7 @@ def get_micropython():
         f'lib/micropython'
     ]
 
-    result, _ = spawn(cmd_)
+    result, _ = spawn(cmd_, spinner=True)
     if result != 0:
         sys.exit(result)
 
@@ -95,16 +97,11 @@ def get_pycparser():
         sys.exit(result)
 
 
-import threading
-import random
-
-
 def _busy_spinner(evnt):
     count = random.randint(1, 25)
     wait = random.randint(1, 10) * 0.001
     chars = '\\|/-'
     char_index = 0
-    import sys
     sys.stdout.write(chars[char_index])
     sys.stdout.flush()
 
