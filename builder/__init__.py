@@ -56,6 +56,7 @@ def get_lvgl():
         'git',
         'submodule',
         'init',
+        '--update',
         '--',
         f'lib/lvgl'
     ]
@@ -68,7 +69,8 @@ def get_micropython():
     cmd_ = [
         'git',
         'submodule',
-        'init',
+        'update',
+        '--init',
         '--',
         f'lib/micropython'
     ]
@@ -82,7 +84,8 @@ def get_pycparser():
     cmd_ = [
         'git',
         'submodule',
-        'init',
+        'update',
+        '--init',
         '--',
         f'lib/pycparser'
     ]

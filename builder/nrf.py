@@ -70,13 +70,14 @@ def clean():
 
 
 def submodules():
-    nrfx_path = f'lib/micropython/lib/nrfx'
+    nrfx_path = f'lib/micropython/libs/nrfx'
     if not os.path.exists(os.path.join(nrfx_path, 'nrfx.h')):
         ret_code, _ = spawn([
             'git',
             'submodule',
             'update',
             '--init',
+            '--',
             nrfx_path
         ])
 

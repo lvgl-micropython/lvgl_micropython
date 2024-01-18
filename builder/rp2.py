@@ -73,7 +73,7 @@ def submodules():
         ):
             ret_code, _ = spawn([
                 ['cd', pico_dsk_path],
-                ['git', 'submodule', 'init']
+                ['git', 'submodule', 'update', '--init']
             ])
 
             if ret_code != 0:

@@ -77,7 +77,8 @@ def submodules():
         ret_code, _ = spawn([
             'git',
             'submodule',
-            'init',
+            'update',
+            '--init',
             '--',
             stm32lib_path
         ])
