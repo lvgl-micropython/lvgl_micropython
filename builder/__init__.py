@@ -55,8 +55,8 @@ def get_lvgl():
     cmd_ = [
         'git',
         'submodule',
-        'init',
-        '--update',
+        'update',
+        '--init',
         '--',
         f'lib/lvgl'
     ]
@@ -141,7 +141,7 @@ def spawn(cmd_, out_to_screen=True):
         shell=True
     )
 
-    print(cmd_[:-1])
+    print(cmd_)
     o_buf = read().decode('utf-8')
 
     if not p.stdout.closed:
