@@ -177,16 +177,6 @@ def parse_args(extra_args, lv_cflags, board):
 
     board_variant = esp_args.board_variant
 
-    with open(f'lib/micropython/ports/esp32/boards/sdkconfig.base', 'r') as f:
-        sdkconfig_base = f.read()
-
-    if 'CONFIG_FREERTOS_INTERRUPT_BACKTRACE=n' not in sdkconfig_base:
-        sdkconfig_base += '\nCONFIG_FREERTOS_INTERRUPT_BACKTRACE=n\n'
-        sdkconfig_base += 'CONFIG_FREERTOS_IDLE_TASK_STACKSIZE=4096\n'
-
-        with open(f'lib/micropython/ports/esp32/boards/sdkconfig.base', 'w') as f:
-            f.write(sdkconfig_base)
-
     if lv_cflags is None:
         lv_cflags = '-DLV_KCONFIG_IGNORE=1'
     else:
@@ -240,6 +230,17 @@ def get_idf_version():
 
 def build_manifest(target, script_dir, frozen_manifest):
     update_mphalport(target)
+
+    with open(f'lib/micropython/ports/esp32/boards/sdkconfig.base', 'r') as f:
+        sdkconfig_base = f.read()
+
+    if 'CONFIG_FREERTOS_INTERRUPT_BACKTRACE=n' not in sdkconfig_base:
+        sdkconfig_base += '\nCONFIG_FREERTOS_INTERRUPT_BACKTRACE=n\n'
+        sdkconfig_base += 'CONFIG_FREERTOS_IDLE_TASK_STACKSIZE=4096\n'
+
+        with open(f'lib/micropython/ports/esp32/boards/sdkconfig.base', 'w') as f:
+            f.write(sdkconfig_base)
+
     idf_version = get_idf_version()
     manifest_path = 'lib/micropython/ports/esp32/boards/manifest.py'
 
