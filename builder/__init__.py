@@ -60,7 +60,7 @@ def get_lvgl():
         '--',
         f'lib/lvgl'
     ]
-    result, _ = spawn(cmd_)
+    result, _ = spawn(cmd_, spinner=True)
     if result != 0:
         sys.exit(result)
 
@@ -95,7 +95,38 @@ def get_pycparser():
         sys.exit(result)
 
 
-def spawn(cmd_, out_to_screen=True):
+import threading
+import random
+
+
+def _busy_spinner(evnt):
+    count = random.randint(1, 25)
+    wait = random.randint(1, 10) * 0.001
+    chars = '\\|/-'
+    char_index = 0
+    import sys
+    sys.stdout.write(chars[char_index])
+    sys.stdout.flush()
+
+    while not evnt.is_set():
+        evnt.wait(wait)
+        count -= 1
+        char_index += 1
+        if char_index == 4:
+            char_index = 0
+
+        sys.stdout.write(f'\r{chars[char_index]}')
+
+        sys.stdout.flush()
+
+        if count == 0:
+            count = random.randint(1, 25)
+            wait = random.randint(1, 10) * 0.001
+    print()
+    sys.stdout.flush()
+
+
+def spawn(cmd_, out_to_screen=True, spinner=False):
 
     if sys.platform.startswith('win'):
         prompt = b'>'
@@ -112,7 +143,7 @@ def spawn(cmd_, out_to_screen=True):
         while p.poll() is None:
             o_char = p.stdout.read(1)
             while o_char != b'':
-                if out_to_screen:
+                if out_to_screen and not spinner:
                     sys.stdout.write(o_char.decode('utf-8'))
                     sys.stdout.flush()
                 output_buffer += o_char
@@ -120,7 +151,7 @@ def spawn(cmd_, out_to_screen=True):
 
             e_char = p.stderr.read(1)
             while e_char != b'':
-                if out_to_screen:
+                if out_to_screen and not spinner:
                     try:
                         sys.stderr.write(e_char.decode('utf-8'))
                     except UnicodeDecodeError:
@@ -142,6 +173,15 @@ def spawn(cmd_, out_to_screen=True):
     )
 
     print(cmd_)
+    event = threading.Event()
+
+    if spinner:
+        t = threading.Thread(target=_busy_spinner, args=(event,))
+        t.daemon = True
+        t.start()
+    else:
+        t = None
+
     o_buf = read().decode('utf-8')
 
     if not p.stdout.closed:
@@ -149,6 +189,13 @@ def spawn(cmd_, out_to_screen=True):
 
     if not p.stderr.closed:
         p.stderr.close()
+
+    if t is not None:
+        event.set()
+        t.join()
+
+    if out_to_screen and spinner:
+        print(o_buf)
 
     return p.returncode, o_buf
 

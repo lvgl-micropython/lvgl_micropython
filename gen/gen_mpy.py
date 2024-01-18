@@ -38,7 +38,10 @@ from os.path import dirname, abspath
 from os.path import commonprefix
 
 script_path = dirname(abspath(__file__))
-sys.path.insert(0, '%s/../pycparser' % script_path)
+pycparser_path = os.path.join(script_path, '..', 'lib', 'pycparser')
+
+
+sys.path.insert(0, os.path.abspath(pycparser_path))
 from pycparser import c_parser, c_ast, c_generator
 import pycparser
 
