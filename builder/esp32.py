@@ -184,7 +184,7 @@ def parse_args(extra_args, lv_cflags, board):
         sdkconfig_base += '\nCONFIG_FREERTOS_INTERRUPT_BACKTRACE=n\n'
         sdkconfig_base += 'CONFIG_FREERTOS_IDLE_TASK_STACKSIZE=4096\n'
 
-        with open(f'micropython/ports/esp32/boards/sdkconfig.base', 'w') as f:
+        with open(f'lib/micropython/ports/esp32/boards/sdkconfig.base', 'w') as f:
             f.write(sdkconfig_base)
 
     if lv_cflags is None:
