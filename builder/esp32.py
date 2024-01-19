@@ -117,6 +117,7 @@ class Partition:
 
         return csv_data
 
+
 def get_espidf():
     cmd = [
         'git',
@@ -124,7 +125,7 @@ def get_espidf():
         'update',
         '--init',
         '--recursive',
-        '--'
+        '--',
         'lib/esp-idf'
     ]
 
