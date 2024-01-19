@@ -117,14 +117,15 @@ class Partition:
 
         return csv_data
 
-
 def get_espidf():
     cmd = [
         'git',
         'submodule',
-        'init',
-        '--',
-        f'lib/esp-idf'
+        'update',
+        '--init',
+        '--recursive',
+        '--'
+        'lib/esp-idf'
     ]
 
     result, _ = spawn(cmd, spinner=True)
