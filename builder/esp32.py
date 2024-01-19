@@ -129,7 +129,7 @@ def get_espidf():
         'lib/esp-idf'
     ]
 
-    result, _ = spawn(cmd, spinner=True)
+    result, _ = spawn(cmd)
     if result != 0:
         sys.exit(result)
 
