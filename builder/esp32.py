@@ -123,7 +123,6 @@ def get_espidf():
         'git',
         'submodule',
         'init',
-        '--recursive',
         '--',
         f'lib/esp-idf'
     ]
