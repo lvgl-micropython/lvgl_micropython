@@ -111,7 +111,8 @@ def get_sdl2():
                 return file
 
             if os.path.isdir(file):
-                if res := get_path(name, file):
+                res = get_path(name, file)
+                if res:
                     return res
 
     import requests  # NOQA
@@ -2187,7 +2188,14 @@ def get_user_data(func, func_name = None, containing_struct = None, containing_s
             user_data = 'user_data'
             user_data_found = user_data in [decl.name for decl in flatten_struct_decls]
             # print('/* --> callback: user_data=%s user_data_found=%s containing_struct=%s */' % (user_data, user_data_found, containing_struct))
-    return (user_data if user_data_found else None), *get_user_data_accessors(containing_struct, containing_struct_name)
+
+    ud_accessors = get_user_data_accessors(containing_struct, containing_struct_name)
+    if user_data_found:
+        res = (user_data, )
+    else:
+        res = (None, )
+
+    return res + ud_accessors
 
 #
 # Generate structs when needed
