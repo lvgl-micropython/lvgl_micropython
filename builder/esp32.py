@@ -239,7 +239,9 @@ def build_manifest(target, script_dir, frozen_manifest):
         sdkconfig_base += '\nCONFIG_FREERTOS_INTERRUPT_BACKTRACE=n\n'
         sdkconfig_base += 'CONFIG_FREERTOS_IDLE_TASK_STACKSIZE=4096\n'
 
-        with open(f'lib/micropython/ports/esp32/boards/sdkconfig.base', 'w') as f:
+        with open(
+            f'lib/micropython/ports/esp32/boards/sdkconfig.base', 'w'
+        ) as f:
             f.write(sdkconfig_base)
 
     idf_version = get_idf_version()
@@ -303,7 +305,10 @@ def setup_idf_environ():
                 sys.exit(result)
 
             output = [line for line in output.split('\n') if '=' in line]
-            env = {line.split('=', 1)[0]: line.split('=', 1)[1] for line in output}
+            env = {
+                line.split('=', 1)[0]: line.split('=', 1)[1]
+                for line in output
+            }
         else:
             args = sys.argv[:]
             if 'submodule' in args:
@@ -382,7 +387,9 @@ def compile():  # NOQA
         sys.stdout.flush()
 
         partition_file_name = get_partition_file_name(output)
-        partition_file_name = os.path.join('lib/micropython/ports/esp32', partition_file_name)
+        partition_file_name = (
+            os.path.join('lib/micropython/ports/esp32', partition_file_name)
+        )
         partition = Partition(partition_file_name)
 
         if partition_size != -1:
@@ -396,7 +403,7 @@ def compile():  # NOQA
 
         sys.stdout.write(
             '\n\033[31;1m***** Running build again *****\033[0m\n\n'
-            )
+        )
         sys.stdout.flush()
 
         if deploy:
@@ -412,14 +419,14 @@ def compile():  # NOQA
 
             sys.stdout.write(
                 '\n\033[31;1m***** Resizing Partition *****\033[0m\n'
-                )
+            )
             sys.stdout.flush()
 
             partition_file_name = get_partition_file_name(output)
             partition_file_name = os.path.join(
                 'lib/micropython/ports/esp32',
                 partition_file_name
-                )
+            )
             partition = Partition(partition_file_name)
 
             if partition_size != -1:
@@ -439,7 +446,7 @@ def compile():  # NOQA
 
             sys.stdout.write(
                 '\n\033[31;1m***** Running build again *****\033[0m\n\n'
-                )
+            )
             sys.stdout.flush()
 
             if deploy:
