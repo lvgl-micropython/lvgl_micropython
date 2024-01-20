@@ -279,6 +279,51 @@ def clean():
     spawn(clean_cmd)
 
 
+def setup_idf_environ():
+    idf_ver = get_idf_version()
+    env = None
+
+    if idf_ver is None or idf_ver not in ('5.0', '5.1'):
+        idf_path = 'lib/esp-idf'
+
+        if os.path.exists(os.path.join(idf_path, 'export.sh')):
+            cmds = [['cd', idf_path]]
+
+            if sys.platform.startswith('win'):
+                cmds.append(['export'])
+                cmds.append(['set'])
+            else:
+                cmds.append(['. ./export.sh'])
+                cmds.append(['printenv'])
+
+            result, output = spawn(cmds, out_to_screen=False)
+
+            if result != 0:
+                print(output)
+                sys.exit(result)
+
+            output = [line for line in output.split('\n') if '=' in line]
+            env = {line.split('=', 1)[0]: line.split('=', 1)[1] for line in output}
+        else:
+            args = sys.argv[:]
+            if 'submodule' in args:
+                args.remove('submodule')
+
+            if 'submodules' not in args:
+                args.insert(2, 'submodules')
+            else:
+                raise RuntimeError('Internal Error (5)')
+
+            args = " ".join(args)
+
+            print('ESP-IDF version 5.0.x or 5.1.x is needed to compile')
+            print('Please rerun the build using the command below...')
+            print(f'"{sys.executable} {args}"')
+            raise RuntimeError
+
+    return env
+
+
 def submodules():
     idf_ver = get_idf_version()
     if idf_ver is None or idf_ver not in ('5.0', '5.1'):
@@ -294,14 +339,13 @@ def submodules():
 
         if sys.platform.startswith('win'):
             cmds.append(['install', 'all'])
-            cmds.append(['export'])
         else:
             cmds.append(['./install.sh', 'all'])
-            cmds.append(['. ./export.sh'])
 
         print('setting up ESP-IDF v5.1')
         print('this might take a bit...')
         print()
+
         result, _ = spawn(cmds)
         if result != 0:
             sys.exit(result)
@@ -315,6 +359,8 @@ def submodules():
 
 
 def compile():  # NOQA
+    env = setup_idf_environ()
+
     if 'deploy' in compile_cmd:
         if not skip_partition_resize:
             compile_cmd.remove('deploy')
@@ -324,7 +370,7 @@ def compile():  # NOQA
     else:
         deploy = False
 
-    ret_code, output = spawn(compile_cmd)
+    ret_code, output = spawn(compile_cmd, env=env)
     if ret_code != 0:
         if (
             'partition is too small ' not in output or
@@ -356,7 +402,7 @@ def compile():  # NOQA
         if deploy:
             compile_cmd.append('deploy')
 
-        ret_code, output = spawn(compile_cmd)
+        ret_code, output = spawn(compile_cmd, env=env)
 
         if ret_code != 0:
             sys.exit(ret_code)
@@ -399,7 +445,7 @@ def compile():  # NOQA
             if deploy:
                 compile_cmd.append('deploy')
 
-            ret_code, output = spawn(compile_cmd)
+            ret_code, output = spawn(compile_cmd, env=env)
 
             if ret_code != 0:
                 sys.exit(ret_code)

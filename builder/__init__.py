@@ -120,7 +120,9 @@ def _busy_spinner(evnt):
             wait = random.randint(10, 100) * 0.001
 
 
-def spawn(cmd_, out_to_screen=True, spinner=False):
+def spawn(cmd_, out_to_screen=True, spinner=False, env=None):
+    if env is None:
+        env = os.environ
 
     if sys.platform.startswith('win'):
         prompt = b'>'
@@ -163,7 +165,8 @@ def spawn(cmd_, out_to_screen=True, spinner=False):
         cmd_,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        shell=True
+        shell=True,
+        env=env
     )
 
     print(cmd_)
