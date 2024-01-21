@@ -20,8 +20,6 @@ _RASET = const(0x2B)
 _CASET = const(0x2A)
 _RAMWR = const(0x2C)
 _MADCTL = const(0x36)
-_INVON = const(0x21)
-_INVOFF = const(0x20)
 
 _MADCTL_MY = const(0x80)  # 0=Top to Bottom, 1=Bottom to Top
 _MADCTL_MX = const(0x40)  # 0=Left to Right, 1=Right to Left
@@ -44,8 +42,8 @@ STATE_PWM = -1
 
 
 class DisplayDriver:
-
-    display_name = 'DisplayDriver'
+    _INVON = 0x21
+    _INVOFF = 0x20
 
     # Default values of "power" and "backlight" are reversed logic! 0 means ON.
     # You can change this by setting backlight_on and power_on arguments.
@@ -394,9 +392,9 @@ class DisplayDriver:
         # and see if it corrects the problem.
 
         if value:
-            self.set_params(_INVON)
+            self.set_params(self._INVON)
         else:
-            self.set_params(_INVOFF)
+            self.set_params(self._INVOFF)
 
     invert_colors = property(None, invert_colors)
 
