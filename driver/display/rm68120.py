@@ -112,7 +112,6 @@ class RM68120(display_driver_framework.DisplayDriver):
         self.set_params(0xD432, bytearray([0x0f]))
         self.set_params(0xD433, bytearray([0x8e]))
         self.set_params(0xD434, bytearray([0xff]))
-        self.set_params(0xD434)
 
         self.set_params(0xD500, bytearray([0x00]))
         self.set_params(0xD501, bytearray([0x00]))
@@ -167,7 +166,6 @@ class RM68120(display_driver_framework.DisplayDriver):
         self.set_params(0xD532, bytearray([0x0f]))
         self.set_params(0xD533, bytearray([0x8e]))
         self.set_params(0xD534, bytearray([0xff]))
-        self.set_params(0xD534)
 
         self.set_params(0xD600, bytearray([0x00]))
         self.set_params(0xD601, bytearray([0x00]))
@@ -222,42 +220,34 @@ class RM68120(display_driver_framework.DisplayDriver):
         self.set_params(0xD632, bytearray([0x0f]))
         self.set_params(0xD633, bytearray([0x8e]))
         self.set_params(0xD634, bytearray([0xff]))
-        self.set_params(0xD634)
 
         self.set_params(0xB000, bytearray([0x05]))
         self.set_params(0xB001, bytearray([0x05]))
         self.set_params(0xB002, bytearray([0x05]))
-        self.set_params(0xB002)
 
         self.set_params(0xB100, bytearray([0x05]))
         self.set_params(0xB101, bytearray([0x05]))
         self.set_params(0xB102, bytearray([0x05]))
-        self.set_params(0xB102)
 
         self.set_params(0xB600, bytearray([0x34]))
         self.set_params(0xB601, bytearray([0x34]))
         self.set_params(0xB603, bytearray([0x34]))
-        self.set_params(0xB603)
 
         self.set_params(0xB700, bytearray([0x24]))
         self.set_params(0xB701, bytearray([0x24]))
         self.set_params(0xB702, bytearray([0x24]))
-        self.set_params(0xB702)
 
         self.set_params(0xB800, bytearray([0x24]))
         self.set_params(0xB801, bytearray([0x24]))
         self.set_params(0xB802, bytearray([0x24]))
-        self.set_params(0xB802)
 
         self.set_params(0xBA00, bytearray([0x14]))
         self.set_params(0xBA01, bytearray([0x14]))
         self.set_params(0xBA02, bytearray([0x14]))
-        self.set_params(0xBA02)
 
         self.set_params(0xB900, bytearray([0x24]))
         self.set_params(0xB901, bytearray([0x24]))
         self.set_params(0xB902, bytearray([0x24]))
-        self.set_params(0xB902)
 
         self.set_params(0xBc00, bytearray([0x00]))
         self.set_params(0xBc01, bytearray([0xa0]))  # vgmp=5.0
@@ -265,25 +255,20 @@ class RM68120(display_driver_framework.DisplayDriver):
         self.set_params(0xBd00, bytearray([0x00]))
         self.set_params(0xBd01, bytearray([0xa0]))  # vgmn=5.0
         self.set_params(0xBd02, bytearray([0x00]))
-        self.set_params(0xBd02)
 
         self.set_params(0xBe01, bytearray([0x3d]))  # 3
-        self.set_params(0xBe01)
 
         self.set_params(0xF000, bytearray([0x55]))
         self.set_params(0xF001, bytearray([0xAA]))
         self.set_params(0xF002, bytearray([0x52]))
         self.set_params(0xF003, bytearray([0x08]))
         self.set_params(0xF004, bytearray([0x00]))
-        self.set_params(0xF004)
 
         self.set_params(0xB400, bytearray([0x10]))
-        self.set_params(0xB400)
 
         self.set_params(0xBC00, bytearray([0x05]))
         self.set_params(0xBC01, bytearray([0x05]))
         self.set_params(0xBC02, bytearray([0x05]))
-        self.set_params(0xBC02)
 
         self.set_params(0xB700, bytearray([0x22]))  # GATE EQ CONTROL
         self.set_params(0xB701, bytearray([0x22]))  # GATE EQ CONTROL
@@ -291,42 +276,31 @@ class RM68120(display_driver_framework.DisplayDriver):
         self.set_params(0xC80C, bytearray([0x2A]))  # DISPLAY TIMING CONTROL
         self.set_params(0xC80F, bytearray([0x2A]))  # DISPLAY TIMING CONTROL
         self.set_params(0xC810, bytearray([0x2A]))  # DISPLAY TIMING CONTROL
-        self.set_params(0xC810)
 
         self.set_params(0xd000, bytearray([0x01]))
-        self.set_params(0xd000)
 
         self.set_params(0xb300, bytearray([0x10]))
-        self.set_params(0xb300)
 
         self.set_params(0xBd02, bytearray([0x07]))
-        self.set_params(0xBd02)
 
         self.set_params(0xBe02, bytearray([0x07]))
-        self.set_params(0xBe02)
 
         self.set_params(0xBf02, bytearray([0x07]))
-        self.set_params(0xBf02)
 
         self.set_params(0xF000, bytearray([0x55]))
         self.set_params(0xF001, bytearray([0xAA]))
         self.set_params(0xF002, bytearray([0x52]))
         self.set_params(0xF003, bytearray([0x08]))
         self.set_params(0xF004, bytearray([0x02]))
-        self.set_params(0xF004)
 
         self.set_params(0xc301, bytearray([0xa9]))
-        self.set_params(0xc301)
 
         self.set_params(0xfe01, bytearray([0x94]))
-        self.set_params(0xfe01)
 
         self.set_params(0xf600, bytearray([0x60]))
-        self.set_params(0xf600)
 
         self.set_params(0x3500, bytearray([0x00]))
         self.set_params(0xFFFF, bytearray([0xFF]))
-        self.set_params(0xFFFF)
 
         time.sleep_ms(100)  # NOQA
         self.set_params(0x1100)
