@@ -245,36 +245,54 @@ IDMON = 0x39
 WR_COLMOD = 0x3A
 
 # Memory write continue
-RAMWRC = 0x3C
+WR_RAMCONT = 0x3C
 
 # Memory read continue
 # Read image data from the peripheral continuing after the last
 # read_memory_continue or read_memory_start.
 # params: variable
 # arcg: 1, 2
-RAMRDC = 0x3E
+RD_RAMCONT = 0x3E
 
 # Set tear scanline
 # Synchronization information is sent from the display module to the host
 # processor when the display device refresh reaches the provided scanline.
 # params: 2
 # arch: 1
-STE = 0x44
+WR_TEARSCNLN = 0x44
 
 # Get scanline
 # Get the current scanline.
 # params: 2
 # arch: 1, 2
-GDCAN = 0x45
+RD_SCANLINE = 0x45
 
 # Write display brightness
-WR_DISBV = 0x51
+WR_DISPBRGHT = 0x51
 
 # Read display brightness value
-RD_DISBV = 0x52
+RD_DISPBRGHT = 0x52
 
-# Display Inversion Control
-DIC = 0xB4
+# Write Control Display
+WR_CTRLDISP = 0x53
+
+# Read Control Display
+RD_CTRLDISP = 0x53
+
+# Write Content Adaptive Brightness Control
+WR_ADPBRHTCTRL = 0x55
+
+# Read Content Adaptive Brightness Control
+RD_ADPBRHTCTRL = 0x56
+
+# Write CABC Minimum Brightness
+WR_CABCMIN = 0x5E
+
+# Read CABC Minimum Brightness
+RD_CABCMIN = 0x5F
+
+# Vcore voltage Control
+VCORECTRL = 0xA7
 
 # Interface Mode Control
 IFMODE = 0xB0
@@ -288,26 +306,104 @@ FRMCTR2 = 0xB2
 # Frame Rate Control3 (In Partial Mode/Full Colors)
 FRMCTR3 = 0xB3
 
+# Frame Memory Access and Interface Setting
+IFACESET = 0xB3
+
+# Display Inversion Control
+DINVCTRL = 0xB4
+
+# Display Mode and Frame Memory Write Mode Setting
+DISPMODE = 0xB4
+
 # Blanking Porch Control
-BPC = 0xB5
+BPCTRL = 0xB5
 
 # Display Function Control
-DFC = 0xB6
+DFUNCTRL = 0xB6
 
 # Entry Mode Set
-EM = 0xB7
+SETEM = 0xB7
+
+# Backlight Control 1
+BKLTCTRL1 = 0xB8
+
+# Backlight Control 2
+BKLTCTRL2 = 0xB9
+
+# Backlight Control 3
+BKLTCTRL3 = 0xBA
+
+# Backlight Control 4
+BKLTCTRL4 = 0xBB
+
+# Backlight Control 5
+BKLTCTRL5 = 0xBC
+
+# Backlight Control 7
+BKLTCTRL7 = 0xBE
+
+# Backlight Control 8
+BKLTCTRL8 = 0xBF
+
+# TE Control
+TECTRL = 0xBA
 
 # Power Control 1
-PWR1 = 0xC0
+PWRCTL1 = 0xC0
 
 # Power Control 2
-PWR2 = 0xC1
+PWRCTL2 = 0xC1
 
 # Power Control 3
-PWR3 = 0xC2
+PWRCTL3 = 0xC2
 
-# VCOM Control
-VCMPCTL = 0xC5
+# Vreg1a Volatge Control
+VREG1ACTL = 0xC3
+
+# Vreg1b Volatge Control
+VREG1BCTL = 0xC4
+
+# VCOM Control 1
+VCOMCTL1 = 0xC5
+
+# Interface Control
+IFACECTRL = 0xC6
+
+# VCOM Control 1
+VCOMCTL2 = 0xC7
+
+# Gamma setting
+GAMMASET = 0xC8
+
+# Vreg2a Volatge Control
+VREG2ACTL = 0xC9
+
+# Power control A
+PWRCTRLA = 0xCB
+
+# Power control B
+PWRCTRLB = 0xCF
+
+# NV Memory Write
+WRNVRAM = 0xD0
+
+# NV Memory Protection Key
+NVPROTKEY = 0xD1
+
+# NV memory status read
+RDNVSTAT = 0xD2
+
+# Read ID4
+RDID4 = 0xD3
+
+# Read ID1
+RDID1 = 0xDA
+
+# Read ID2
+RDID2 = 0xDB
+
+# Read ID3
+RDID3 = 0xDC
 
 # Positive Gamma Control
 PGC = 0xE0
@@ -320,3 +416,33 @@ DGC1 = 0xE2
 
 # Digital Gamma Control 2
 DGC2 = 0xE3
+
+# Frame Rate
+FRMRATE = 0xE8
+
+# SPI Data Control
+SPICTL = 0xE9
+
+# Driver timing control A1
+DRVTIMCTRLA1 = 0xE8
+
+# Driver timing control A2
+DRVTIMCTRLA2 = 0xE9
+
+# Driver timing control B
+DRVTIMCTRLB = 0xEA
+
+# Charge Pump Frequent Control
+CHGPCTRL = 0xEC
+
+# Power on sequence control
+PWRONSQCTRL = 0xED
+
+# Enable 3 gamma control
+ENA3GAMMA = 0xF2
+
+# Interface Control
+IFACECTRL = 0xF6
+
+# Pump ratio control
+PUMPRATIOCTRL = 0xF7

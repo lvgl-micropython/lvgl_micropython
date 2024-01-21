@@ -1,10 +1,10 @@
-import micropython
+import micropython  # NOQA
 import time
 import gc
 from machine import Pin, PWM  # NOQA
 from micropython import const  # NOQA
 
-import lvgl as lv
+import lvgl as lv  # NOQA
 import lcd_bus  # NOQA
 import heap_caps  # NOQA
 
@@ -495,7 +495,7 @@ class DisplayDriver:
             return
 
         self._reset_pin.value(self._reset_state)
-        time.sleep_ms(120)
+        time.sleep_ms(120)  # NOQA
         self._reset_pin.value(not self._reset_state)
 
     def get_backlight(self):
@@ -524,14 +524,14 @@ class DisplayDriver:
         else:
             self._backlight_pin.value(not int(bool(value)))
 
-    def _dummy_set_memory_location(self, x1: int, y1: int, x2: int, y2: int):
+    def _dummy_set_memory_location(self, *_, **__):
         return _RAMWR
 
     # this function is handeled in the viper code emitter. This will
     # increase the performance to near C code execution times. While this is
     # not really heavy lifting in terms of work being done every cycle counts
     # and it adds up over time. Need to keep things running as fast as possible.
-    def _set_memory_location(self, x1: int, y1: int, x2: int, y2: int) -> int:
+    def _set_memory_location(self, x1, y1, x2, y2):
         # Column addresses
         param_buf = self._param_buf
 

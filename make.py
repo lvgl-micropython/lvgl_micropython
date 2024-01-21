@@ -124,6 +124,5 @@ if __name__ == '__main__':
         mod.clean()
 
     mod.build_manifest(target, SCRIPT_DIR, frozen_manifest)
-
     mod.compile()
 

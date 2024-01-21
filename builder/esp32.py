@@ -311,13 +311,9 @@ def setup_idf_environ():
             }
         else:
             args = sys.argv[:]
-            if 'submodule' in args:
-                args.remove('submodule')
 
             if 'submodules' not in args:
                 args.insert(2, 'submodules')
-            else:
-                raise RuntimeError('Internal Error (5)')
 
             args = " ".join(args)
 
