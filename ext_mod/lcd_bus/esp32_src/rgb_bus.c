@@ -67,7 +67,6 @@
             ARG_data14,
             ARG_data15,
             ARG_freq,
-            ARG_bounce_buffer_size_px,
             ARG_hsync_front_porch,
             ARG_hsync_back_porch,
             ARG_hsync_pulse_width,
@@ -78,25 +77,25 @@
             ARG_vsync_idle_low,
             ARG_de_idle_high,
             ARG_pclk_idle_high,
-            ARG_pclk_active_neg,
+            ARG_pclk_active_low,
             ARG_disp_active_low,
             ARG_refresh_on_demand,
-            ARG_bb_invalidate_cache,
         };
+
         const mp_arg_t allowed_args[] = {
-            { MP_QSTR_hsync,              MP_ARG_INT  | MP_ARG_REQUIRED                      },
-            { MP_QSTR_vsync,              MP_ARG_INT  | MP_ARG_REQUIRED                      },
-            { MP_QSTR_de,                 MP_ARG_INT  | MP_ARG_REQUIRED                      },
-            { MP_QSTR_disp,               MP_ARG_INT  | MP_ARG_REQUIRED                      },
-            { MP_QSTR_pclk,               MP_ARG_INT  | MP_ARG_REQUIRED                      },
-            { MP_QSTR_data0,              MP_ARG_INT  | MP_ARG_REQUIRED                      },
-            { MP_QSTR_data1,              MP_ARG_INT  | MP_ARG_REQUIRED                      },
-            { MP_QSTR_data2,              MP_ARG_INT  | MP_ARG_REQUIRED                      },
-            { MP_QSTR_data3,              MP_ARG_INT  | MP_ARG_REQUIRED                      },
-            { MP_QSTR_data4,              MP_ARG_INT  | MP_ARG_REQUIRED                      },
-            { MP_QSTR_data5,              MP_ARG_INT  | MP_ARG_REQUIRED                      },
-            { MP_QSTR_data6,              MP_ARG_INT  | MP_ARG_REQUIRED                      },
-            { MP_QSTR_data7,              MP_ARG_INT  | MP_ARG_REQUIRED                      },
+            { MP_QSTR_hsync,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
+            { MP_QSTR_vsync,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
+            { MP_QSTR_de,                 MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
+            { MP_QSTR_disp,               MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
+            { MP_QSTR_pclk,               MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
+            { MP_QSTR_data0,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
+            { MP_QSTR_data1,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
+            { MP_QSTR_data2,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
+            { MP_QSTR_data3,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
+            { MP_QSTR_data4,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
+            { MP_QSTR_data5,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
+            { MP_QSTR_data6,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
+            { MP_QSTR_data7,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
             { MP_QSTR_data8,              MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
             { MP_QSTR_data9,              MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
             { MP_QSTR_data10,             MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
@@ -106,9 +105,8 @@
             { MP_QSTR_data14,             MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
             { MP_QSTR_data15,             MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
             { MP_QSTR_freq,               MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 8000000 } },
-            { MP_QSTR_bb_size_px,         MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 0       } },
             { MP_QSTR_hsync_front_porch,  MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 0       } },
-            { MP_QSTR_hsync_pulse_width,  MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 0       } },
+            { MP_QSTR_hsync_back_porch,   MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 0       } },
             { MP_QSTR_hsync_pulse_width,  MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 1       } },
             { MP_QSTR_hsync_idle_low,     MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
             { MP_QSTR_vsync_front_porch,  MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 0       } },
@@ -117,10 +115,9 @@
             { MP_QSTR_vsync_idle_low,     MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
             { MP_QSTR_de_idle_high,       MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
             { MP_QSTR_pclk_idle_high,     MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
-            { MP_QSTR_pclk_active_neg,    MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
+            { MP_QSTR_pclk_active_low,    MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
             { MP_QSTR_disp_active_low,    MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
             { MP_QSTR_refresh_on_demand,  MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
-            { MP_QSTR_bb_inval_cache,     MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_bool = false  } },
         };
         mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
         mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
@@ -141,13 +138,13 @@
         self->bus_config.flags.hsync_idle_low = (uint32_t)args[ARG_hsync_idle_low].u_bool;
         self->bus_config.flags.vsync_idle_low = (uint32_t)args[ARG_vsync_idle_low].u_bool;
         self->bus_config.flags.de_idle_high = (uint32_t)args[ARG_de_idle_high].u_bool;
-        self->bus_config.flags.pclk_active_neg = (uint32_t)args[ARG_pclk_active_neg].u_bool;
+        self->bus_config.flags.pclk_active_neg = (uint32_t)args[ARG_pclk_active_low].u_bool;
         self->bus_config.flags.pclk_idle_high = (uint32_t)args[ARG_pclk_idle_high].u_bool;
 
         self->panel_io_config.clk_src = LCD_CLK_SRC_PLL160M;
         self->panel_io_config.timings = self->bus_config;
         self->panel_io_config.num_fbs = 0;
-        self->panel_io_config.bounce_buffer_size_px = (size_t)args[ARG_bounce_buffer_size_px].u_int;
+        // self->panel_io_config.bounce_buffer_size_px = (size_t)args[ARG_bounce_buffer_size_px].u_int;
         self->panel_io_config.hsync_gpio_num = (int)args[ARG_hsync].u_int;
         self->panel_io_config.vsync_gpio_num = (int)args[ARG_vsync].u_int;
         self->panel_io_config.de_gpio_num = (int)args[ARG_de].u_int;
@@ -175,7 +172,7 @@
         self->panel_io_config.flags.refresh_on_demand = (uint32_t)args[ARG_refresh_on_demand].u_bool;
         self->panel_io_config.flags.fb_in_psram = 0;
         self->panel_io_config.flags.no_fb = true;
-        self->panel_io_config.flags.bb_invalidate_cache = (uint32_t)args[ARG_bb_invalidate_cache].u_bool;
+        // self->panel_io_config.flags.bb_invalidate_cache = (uint32_t)args[ARG_bb_invalidate_cache].u_bool;
 
         int i = 0;
         for (; i < 16; i++) {
