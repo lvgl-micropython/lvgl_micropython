@@ -140,7 +140,10 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None):
             o_char = p.stdout.read(1)
             while o_char != b'':
                 if out_to_screen and not spinner:
-                    sys.stdout.write(o_char.decode('utf-8'))
+                    try:
+                        sys.stdout.write(o_char.decode('utf-8'))
+                    except UnicodeDecodeError:
+                        sys.stdout.write(str(o_char)[2:-1])
                     sys.stdout.flush()
                 output_buffer += o_char
                 o_char = p.stdout.read(1)
@@ -151,7 +154,7 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None):
                     try:
                         sys.stderr.write(e_char.decode('utf-8'))
                     except UnicodeDecodeError:
-                        sys.stderr.write(repr(e_char))
+                        sys.stdout.write(str(o_char)[2:-1])
                     sys.stderr.flush()
                 output_buffer += e_char
                 e_char = p.stderr.read(1)
