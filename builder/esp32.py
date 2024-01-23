@@ -223,20 +223,6 @@ def build_commands(_, extra_args, __, lv_cflags, board):
         compile_cmd.insert(7, f'BOARD_VARIANT={board_variant}')
         submodules_cmd.insert(8, f'BOARD_VARIANT={board_variant}')
 
-    mpconfigport_path = 'lib/micropython/ports/esp32/mpconfigport.h'
-
-    with open(mpconfigport_path, 'rb') as f:
-        data = f.read().decode('utf-8')
-
-    if '#define MICROPY_PY_MACHINE_I2S (0)' not in data:
-        data = data.replace(
-            '#ifndef MICROPY_PY_MACHINE_I2S',
-            '#define MICROPY_PY_MACHINE_I2S (0)\n'
-            '#ifndef MICROPY_PY_MACHINE_I2S'
-        )
-        with open(mpconfigport_path, 'wb') as f:
-            f.write(data.encode('utf-8'))
-
 
 def get_idf_version():
     if 'ESP_IDF_VERSION' in os.environ:
@@ -375,6 +361,20 @@ def submodules():
 
 def compile():  # NOQA
     env = setup_idf_environ()
+
+    mpconfigport_path = 'lib/micropython/ports/esp32/mpconfigport.h'
+
+    with open(mpconfigport_path, 'rb') as f:
+        data = f.read().decode('utf-8')
+
+    if '#define MICROPY_PY_MACHINE_I2S (0)' not in data:
+        data = data.replace(
+            '#ifndef MICROPY_PY_MACHINE_I2S',
+            '#define MICROPY_PY_MACHINE_I2S (0)\n'
+            '#ifndef MICROPY_PY_MACHINE_I2S'
+        )
+        with open(mpconfigport_path, 'wb') as f:
+            f.write(data.encode('utf-8'))
 
     if 'deploy' in compile_cmd:
         if not skip_partition_resize:
