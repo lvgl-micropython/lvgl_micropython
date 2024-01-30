@@ -364,7 +364,8 @@ STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
 }
 
 
-mp_lcd_err_t spi_del(lcd_panel_io_t *io) {
+mp_lcd_err_t spi_del(lcd_panel_io_t *io)
+{
     mp_lcd_spi_bus_obj_t *self = __containerof(io, mp_lcd_spi_bus_obj_t, panel_io_handle);
 
     mp_lcd_err_t ret = esp_lcd_panel_io_del(io->panel_io);
@@ -393,7 +394,8 @@ mp_lcd_err_t spi_del(lcd_panel_io_t *io) {
 }
 
 
-mp_lcd_err_t spi_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size) {
+mp_lcd_err_t spi_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size)
+{
     mp_lcd_spi_bus_obj_t *self = __containerof(io, mp_lcd_spi_bus_obj_t, panel_io_handle);
 
     self->bus_config.max_transfer_sz = (size_t)buffer_size;
@@ -412,7 +414,8 @@ mp_lcd_err_t spi_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8
 }
 
 
-mp_lcd_err_t spi_get_lane_count(lcd_panel_io_t *io, uint8_t *lane_count) {
+mp_lcd_err_t spi_get_lane_count(lcd_panel_io_t *io, uint8_t *lane_count)
+{
     mp_lcd_spi_bus_obj_t *self = __containerof(io, mp_lcd_spi_bus_obj_t, panel_io_handle);
 
     *lane_count = 1;

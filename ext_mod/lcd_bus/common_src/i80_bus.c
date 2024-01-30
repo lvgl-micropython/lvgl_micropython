@@ -59,6 +59,7 @@
 }
 /* end macros */
 
+
 /* forward declarations */
 mp_lcd_err_t i80_tx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size);
 mp_lcd_err_t i80_tx_color(lcd_panel_io_t *io, int lcd_cmd, void *color, size_t color_size);
@@ -73,8 +74,8 @@ void write_color_swap_bytes8(mp_lcd_i80_bus_obj_t *self, void *color, size_t col
 void write_color_swap_bytes16(mp_lcd_i80_bus_obj_t *self, void *color, size_t color_size);
 void write_rgb565_swap8(mp_lcd_i80_bus_obj_t *self, void *color, size_t color_size);
 void write_rgb565_swap16(mp_lcd_i80_bus_obj_t *self, void *color, size_t color_size);
-
 /* end forward declarations */
+
 
 /* function definitions */
 /*
@@ -265,7 +266,8 @@ STATIC mp_obj_t mp_lcd_i80_bus_make_new(const mp_obj_type_t *type, size_t n_args
 }
 
 
-mp_lcd_err_t i80_tx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size) {
+mp_lcd_err_t i80_tx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size)
+{
     mp_lcd_i80_bus_obj_t *self = __containerof(io, mp_lcd_i80_bus_obj_t, panel_io_handle);
 
     CS_LOW();
@@ -322,7 +324,8 @@ mp_lcd_err_t i80_tx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t p
 }
 
 
-mp_lcd_err_t i80_tx_color(lcd_panel_io_t *io, int lcd_cmd, void *color, size_t color_size) {
+mp_lcd_err_t i80_tx_color(lcd_panel_io_t *io, int lcd_cmd, void *color, size_t color_size)
+{
     mp_lcd_i80_bus_obj_t *self = __containerof(io, mp_lcd_i80_bus_obj_t, panel_io_handle);
 
     CS_LOW();
@@ -361,12 +364,14 @@ mp_lcd_err_t i80_tx_color(lcd_panel_io_t *io, int lcd_cmd, void *color, size_t c
 }
 
 
-mp_lcd_err_t i80_del(lcd_panel_io_t *io) {
+mp_lcd_err_t i80_del(lcd_panel_io_t *io)
+{
     return LCD_OK;
 
 }
 
-mp_lcd_err_t i80_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size) {
+mp_lcd_err_t i80_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size)
+{
     mp_lcd_i80_bus_obj_t *self = __containerof(io, mp_lcd_i80_bus_obj_t, panel_io_handle);
 
     self->buffer_size = buffer_size;
@@ -406,7 +411,8 @@ mp_lcd_err_t i80_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8
 }
 
 
-mp_lcd_err_t i80_get_lane_count(lcd_panel_io_t *io, uint8_t *lane_count) {
+mp_lcd_err_t i80_get_lane_count(lcd_panel_io_t *io, uint8_t *lane_count)
+{
     mp_lcd_i80_bus_obj_t *self = __containerof(io, mp_lcd_i80_bus_obj_t, panel_io_handle);
     *lane_count = (uint8_t)self->bus_config.bus_width;
     return LCD_OK;
@@ -531,6 +537,7 @@ void write_rgb565_swap8(mp_lcd_i80_bus_obj_t *self, void *color, size_t color_si
     }
 }
 
+
 void write_rgb565_swap16(mp_lcd_i80_bus_obj_t *self, void *color, size_t color_size)
 {
     uint16_t last = 0;
@@ -548,9 +555,9 @@ void write_rgb565_swap16(mp_lcd_i80_bus_obj_t *self, void *color, size_t color_s
         buf++;
     }
 }
-
 /* end transfer functions */
 /* end function definitions */
+
 
 /* create micropython class */
 MP_DEFINE_CONST_OBJ_TYPE(

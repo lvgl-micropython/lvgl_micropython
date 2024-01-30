@@ -41,7 +41,6 @@
     mp_lcd_err_t rgb_tx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size);
 
 
-
     mp_obj_t mp_lcd_rgb_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
         enum {
@@ -191,14 +190,18 @@
         return MP_OBJ_FROM_PTR(self);
     }
 
-    mp_lcd_err_t rgb_del(lcd_panel_io_t *io) {
+
+    mp_lcd_err_t rgb_del(lcd_panel_io_t *io)
+    {
         mp_lcd_rgb_bus_obj_t *self = __containerof(io, mp_lcd_rgb_bus_obj_t, panel_io_handle);
 
         mp_lcd_err_t ret = esp_lcd_panel_del(self->panel_handle);
         return ret;
     }
 
-    mp_lcd_err_t rgb_rx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size) {
+
+    mp_lcd_err_t rgb_rx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size)
+    {
         LCD_UNUSED(io);
         LCD_UNUSED(lcd_cmd);
         LCD_UNUSED(param);
@@ -206,7 +209,9 @@
         return LCD_OK;
     }
 
-    mp_lcd_err_t rgb_tx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size) {
+
+    mp_lcd_err_t rgb_tx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size)
+    {
         LCD_UNUSED(io);
         LCD_UNUSED(lcd_cmd);
         LCD_UNUSED(param);
@@ -214,7 +219,9 @@
         return LCD_OK;
     }
 
-    mp_lcd_err_t rgb_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size) {
+
+    mp_lcd_err_t rgb_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size)
+    {
         mp_lcd_rgb_bus_obj_t *self = __containerof(io, mp_lcd_rgb_bus_obj_t, panel_io_handle);
 
         self->panel_io_config.timings.h_res = (uint32_t)width;
@@ -249,7 +256,9 @@
         return ret;
     }
 
-    mp_lcd_err_t rgb_get_lane_count(lcd_panel_io_t *io, uint8_t *lane_count) {
+
+    mp_lcd_err_t rgb_get_lane_count(lcd_panel_io_t *io, uint8_t *lane_count)
+    {
         mp_lcd_rgb_bus_obj_t *self = __containerof(io, mp_lcd_rgb_bus_obj_t, panel_io_handle);
         *lane_count = (uint8_t)self->panel_io_config.data_width;
         return LCD_OK;
@@ -320,6 +329,7 @@
     };
 
     STATIC MP_DEFINE_CONST_DICT(mp_lcd_rgb_bus_locals_dict, mp_lcd_rgb_bus_locals_dict_table);
+
 
     MP_DEFINE_CONST_OBJ_TYPE(
         mp_lcd_rgb_bus_type,

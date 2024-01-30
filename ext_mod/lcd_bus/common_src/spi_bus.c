@@ -41,6 +41,7 @@ void send_cmd_16(mp_lcd_spi_bus_obj_t *self, int lcd_cmd);
 void send_cmd_8(mp_lcd_spi_bus_obj_t *self, int lcd_cmd);
 /* end forward declarations */
 
+
 /* function definitions */
 STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
 {
