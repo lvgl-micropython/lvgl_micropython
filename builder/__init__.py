@@ -136,15 +136,50 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None):
 
     def read():
         output_buffer = b''
+        r_beg = False
+        newline = False
+        last_line_len = 0
         while p.poll() is None:
             o_char = p.stdout.read(1)
             while o_char != b'':
+                output_buffer += o_char
                 if out_to_screen and not spinner:
+                    if o_char == b'\n':
+                        newline = True
+                        o_char = p.stdout.read(1)
+                        continue
+                    elif o_char == b'[':
+                        if newline:
+                            if r_beg:
+                                sys.stdout.write('\r')
+                                sys.stdout.write(' ' * last_line_len)
+                                sys.stdout.write('\r')
+                                sys.stdout.flush()
+                            else:
+                                sys.stdout.write('\n')
+                                sys.stdout.flush()
+                                r_beg = True
+
+                            last_line_len = 0
+                            newline = False
+
+                        else:
+                            r_beg = False
+
+                    if newline:
+                        last_line_len = 0
+                        newline = False
+                        sys.stdout.write('\n')
+                        sys.stdout.flush()
+                        r_beg = False
+
+                    last_line_len += 1
                     try:
                         sys.stdout.write(o_char.decode('utf-8'))
                     except UnicodeDecodeError:
                         sys.stdout.write(str(o_char)[2:-1])
                     sys.stdout.flush()
+
                 output_buffer += o_char
                 o_char = p.stdout.read(1)
 

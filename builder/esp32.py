@@ -226,7 +226,10 @@ def build_commands(_, extra_args, __, lv_cflags, board):
 
 def get_idf_version():
     if 'ESP_IDF_VERSION' in os.environ:
-        return os.environ['ESP_IDF_VERSION']
+        exit_code, data = spawn(['idf.py'], out_to_screen=False)
+        version = data.split('v')[-1].split('-')[0]
+        if version:
+            return version
 
 
 def build_manifest(target, script_dir, frozen_manifest):
@@ -244,7 +247,6 @@ def build_manifest(target, script_dir, frozen_manifest):
         ) as f:
             f.write(sdkconfig_base)
 
-    idf_version = get_idf_version()
     manifest_path = 'lib/micropython/ports/esp32/boards/manifest.py'
 
     manifest_files = [
@@ -253,25 +255,6 @@ def build_manifest(target, script_dir, frozen_manifest):
         f'{script_dir}/utils/lv_utils.py',
     ]
     generate_manifest(manifest_path, frozen_manifest, *manifest_files)
-
-    network_common_path = 'lib/micropython/ports/esp32/network_common.c'
-
-    with open(network_common_path, 'rb') as f:
-        network_common = f.read()
-
-    if idf_version == '5.1':
-        network_common = network_common.replace(
-            b'_Static_assert(WIFI_AUTH_MAX == 10',
-            b'_Static_assert(WIFI_AUTH_MAX == 11'
-        )
-    elif idf_version == '5.0':
-        network_common = network_common.replace(
-            b'_Static_assert(WIFI_AUTH_MAX == 11',
-            b'_Static_assert(WIFI_AUTH_MAX == 10'
-        )
-
-    with open(network_common_path, 'wb') as f:
-        f.write(network_common)
 
 
 def clean():
@@ -285,7 +268,7 @@ def setup_idf_environ():
     idf_ver = get_idf_version()
     env = None
 
-    if idf_ver is None or idf_ver not in ('5.0', '5.1'):
+    if idf_ver is None or idf_ver != '5.0.4':
         idf_path = 'lib/esp-idf'
 
         if os.path.exists(os.path.join(idf_path, 'export.sh')):
@@ -317,7 +300,7 @@ def setup_idf_environ():
 
             args = " ".join(args)
 
-            print('ESP-IDF version 5.0.x or 5.1.x is needed to compile')
+            print('ESP-IDF version 5.0.4 is needed to compile')
             print('Please rerun the build using the command below...')
             print(f'"{sys.executable} {args}"')
             raise RuntimeError
@@ -327,10 +310,10 @@ def setup_idf_environ():
 
 def submodules():
     idf_ver = get_idf_version()
-    if idf_ver is None or idf_ver not in ('5.0', '5.1'):
+    if idf_ver is None or idf_ver != '5.0.4':
         idf_path = 'lib/esp-idf'
         if not os.path.exists(os.path.join(idf_path, 'export.sh')):
-            print('collecting ESP-IDF v5.1')
+            print('collecting ESP-IDF v5.0.4')
             print('this might take a bit...')
             print()
             get_espidf()
@@ -343,7 +326,7 @@ def submodules():
         else:
             cmds.append(['./install.sh', 'all'])
 
-        print('setting up ESP-IDF v5.1')
+        print('setting up ESP-IDF v5.0.4')
         print('this might take a bit...')
         print()
 
@@ -426,12 +409,6 @@ def compile():  # NOQA
 
     elif not skip_partition_resize:
         if 'Project build complete.' in output:
-
-            sys.stdout.write(
-                '\n\033[31;1m***** Resizing Partition *****\033[0m\n'
-            )
-            sys.stdout.flush()
-
             partition_file_name = get_partition_file_name(output)
             partition_file_name = os.path.join(
                 'lib/micropython/ports/esp32',
@@ -439,46 +416,95 @@ def compile():  # NOQA
             )
             partition = Partition(partition_file_name)
 
+            remaining = output.rsplit('application')[-1]
+            remaining = int(
+                remaining.split('(', 1)[-1].split('remaining')[0].strip()
+            )
+
+            if remaining > 4096 or partition_size != -1:
+                sys.stdout.write(
+                    '\n\033[31;1m***** Resizing Partition *****\033[0m\n'
+                )
+                sys.stdout.flush()
+
             if partition_size != -1:
                 part_size = partition.get_app_size()
-                size_diff = abs(part_size - partition_size)
+                resize = abs(part_size - partition_size)
 
                 if part_size < partition_size:
-                    size_diff = -size_diff
-            else:
-                size_diff = output.rsplit('application')[1]
-                size_diff = int(
-                    size_diff.split('(', 1)[-1].split('remaining')[0].strip()
+                    resize = -resize
+
+                partition.set_app_size(-resize)
+                partition.save()
+
+                sys.stdout.write(
+                    '\n\033[31;1m***** Running build again *****\033[0m\n\n'
                 )
+                sys.stdout.flush()
 
-            partition.set_app_size(-size_diff)
-            partition.save()
+            elif remaining > 4096:
+                partition.set_app_size(-remaining)
+                partition.save()
 
-            sys.stdout.write(
-                '\n\033[31;1m***** Running build again *****\033[0m\n\n'
-            )
-            sys.stdout.flush()
+                sys.stdout.write(
+                    '\n\033[31;1m***** Running build again *****\033[0m\n\n'
+                )
+                sys.stdout.flush()
 
             if deploy:
                 compile_cmd.append('deploy')
 
-            ret_code, output = spawn(compile_cmd, env=env)
+            if remaining > 4096 or partition_size != -1 or deploy:
 
-            if ret_code != 0:
-                sys.exit(ret_code)
+                ret_code, output = spawn(compile_cmd, env=env)
 
-    if 'Running cmake in directory ' in output:
-        build_path = output.split('Running cmake in directory ', 1)[-1]
-    else:
-        build_path = output.split('Running ninja in directory ', 1)[-1]
+                if ret_code != 0:
+                    sys.exit(ret_code)
 
-    build_path = build_path.split('\n', 1)[0]
+    if 'To flash, run this command:' in output:
+        output = output.split('To flash, run this command:')[-1].strip()
+        output = output.split('\n')[0]
 
-    print()
-    print('COMPILED BINARIES')
-    print(f'  BOOTLOADER:  {build_path}/bootloader/bootloader.bin')
-    print(f'  FIRMWARE:    {build_path}/firmware.bin')
-    print(f'  MICROPYTHON: {build_path}/micropython.bin')
+        python_path, output = output.split('python', 1)
+        python_path += 'python'
+        esp_tool_path, output = output.split('esptool.py', 1)
+        esp_tool_path += 'esptool.py'
+
+        out_cmd = []
+
+        for file in (
+            'bootloader.bin',
+            'partition-table.bin',
+            'micropython.bin'
+        ):
+            arg, output = output.split('build-', 1)
+            output = 'build-' + output
+            path, output = output.split(file, 1)
+            output = output.strip()
+            path += file
+            'build-ESP32_GENERIC_S3-SPIRAM_OCT/bootloader/bootloader.bin'
+            out_cmd.append(arg.strip())
+            out_cmd.append(
+                os.path.abspath('lib/micropython/ports/esp32/' + path)
+            )
+
+        out_cmd = ' '.join(out_cmd)
+
+        cwd = os.getcwd()
+        os.chdir('lib/micropython/ports/esp32')
+
+        esp_tool_path = os.path.abspath(esp_tool_path)
+
+        os.chdir(cwd)
+
+        print('To flash firmware run the following commands:')
+        print()
+        print(
+            python_path, esp_tool_path, '-p (PORT) -b 460800 --erase_flash'
+        )
+        print()
+        print(python_path, esp_tool_path, out_cmd)
+        print()
 
 
 def mpy_cross():
