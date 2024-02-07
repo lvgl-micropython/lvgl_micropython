@@ -42,9 +42,9 @@ STATIC mp_obj_t mp_lcd_i2c_bus_make_new(const mp_obj_type_t *type, size_t n_args
     };
 
     const mp_arg_t make_new_args[] = {
-        { MP_QSTR_sda,                   MP_ARG_INT  | MP_ARG_REQUIRED                        },
-        { MP_QSTR_scl,                   MP_ARG_INT  | MP_ARG_REQUIRED                        },
-        { MP_QSTR_addr,                  MP_ARG_INT  | MP_ARG_REQUIRED                        },
+        { MP_QSTR_sda,                   MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
+        { MP_QSTR_scl,                   MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
+        { MP_QSTR_addr,                  MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
         { MP_QSTR_host,                  MP_ARG_INT  | MP_ARG_KW_ONLY,  {.u_int = 0         } },
         { MP_QSTR_control_phase_bytes,   MP_ARG_INT  | MP_ARG_KW_ONLY,  {.u_int = 1         } },
         { MP_QSTR_dc_bit_offset,         MP_ARG_INT  | MP_ARG_KW_ONLY,  {.u_int = 6         } },

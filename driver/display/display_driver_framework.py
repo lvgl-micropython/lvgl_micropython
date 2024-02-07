@@ -1,12 +1,11 @@
-import micropython  # NOQA
+import micropython
 import time
 import gc
-from machine import Pin, PWM  # NOQA
-from micropython import const  # NOQA
+import machine
+from micropython import const
 
 import lvgl as lv  # NOQA
-import lcd_bus  # NOQA
-import heap_caps  # NOQA
+import lcd_bus
 
 
 micropython.alloc_emergency_exception_buf(256)  # NOQA
@@ -114,18 +113,23 @@ class DisplayDriver:
 
         self.display_width = display_width
         self.display_height = display_height
+
         if reset_pin is None:
             self._reset_pin = None
+        elif not isinstance(reset_pin, int):
+            self._reset_pin = reset_pin
         else:
-            self._reset_pin = Pin(reset_pin, Pin.OUT)
+            self._reset_pin = machine.Pin(reset_pin, machine.Pin.OUT)
             self._reset_pin.value(not reset_state)
 
         self._reset_state = reset_state
 
         if power_pin is None:
             self._power_pin = None
+        elif not isinstance(power_pin, int):
+            self._power_pin = power_pin
         else:
-            self._power_pin = Pin(power_pin, Pin.OUT)
+            self._power_pin = machine.Pin(power_pin, machine.Pin.OUT)
             self._power_pin.value(not power_on_state)
 
         self._power_on_state = power_on_state
@@ -133,10 +137,10 @@ class DisplayDriver:
         if backlight_pin is None:
             self._backlight_pin = None
         elif backlight_on_state == STATE_PWM:
-            pin = Pin(backlight_pin, Pin.OUT)
-            self._backlight_pin = PWM(pin, freq=38000)
+            pin = machine.Pin(backlight_pin, machine.Pin.OUT)
+            self._backlight_pin = machine.PWM(pin, freq=38000)
         else:
-            self._backlight_pin = Pin(backlight_pin, Pin.OUT)
+            self._backlight_pin = machine.Pin(backlight_pin, machine.Pin.OUT)
             self._backlight_pin.value(not backlight_on_state)
 
         self._backlight_on_state = backlight_on_state
@@ -164,59 +168,66 @@ class DisplayDriver:
                 display_height *
                 lv.color_format_get_size(self._color_space)
             )
-
-            if not isinstance(data_bus, lcd_bus.RGBBus):
-                buf_size = int(buf_size // 10)
-
             gc.collect()
 
-            frame_buffer1 = heap_caps.malloc(
-                buf_size,
-                heap_caps.CAP_DMA | heap_caps.CAP_INTERNAL
-            )
-            frame_buffer2 = heap_caps.malloc(
-                buf_size,
-                heap_caps.CAP_DMA | heap_caps.CAP_INTERNAL
-            )
+            if isinstance(data_bus, lcd_bus.RGBBus):
+                if frame_buffer1 is None:
+                    if buf_size > 100000:
+                        caps = lcd_bus.MEMORY_SPIRAM
+                    else:
+                        caps = lcd_bus.MEMORY_INTERNAL
 
-            if frame_buffer2 is None:
-                if frame_buffer1 is not None:
-                    heap_caps.free(frame_buffer1)
+                    frame_buffer1 = data_bus.allocate_framebuffer(
+                        buf_size, caps
+                    )
+                    frame_buffer2 = data_bus.allocate_framebuffer(
+                        buf_size, caps
+                    )
+            else:
+                buf_size = int(buf_size // 10)
 
-                gc.collect()
-                frame_buffer1 = heap_caps.malloc(
-                    buf_size,
-                    heap_caps.CAP_DMA | heap_caps.CAP_SPIRAM
-                )
-                frame_buffer2 = heap_caps.malloc(
-                    buf_size,
-                    heap_caps.CAP_DMA | heap_caps.CAP_SPIRAM
-                )
+                try:
+                    frame_buffer1 = data_bus.allocate_framebuffer(
+                        buf_size,
+                        lcd_bus.MEMORY_INTERNAL | lcd_bus.MEMORY_DMA
+                    )
+                    frame_buffer2 = data_bus.allocate_framebuffer(
+                        buf_size,
+                        lcd_bus.MEMORY_INTERNAL | lcd_bus.MEMORY_DMA
+                    )
+                except MemoryError:
+                    frame_buffer1 = data_bus.free_framebuffer(frame_buffer1)
 
-            if frame_buffer2 is None:
-                if frame_buffer1 is not None:
-                    heap_caps.free(frame_buffer1)
-
-                gc.collect()
-                frame_buffer1 = heap_caps.malloc(
-                    buf_size,
-                    heap_caps.CAP_INTERNAL
-                )
-
-            if frame_buffer1 is None:
-                gc.collect()
-                frame_buffer1 = heap_caps.malloc(
-                    buf_size,
-                    heap_caps.CAP_SPIRAM
-                )
-
-            if frame_buffer1 is None:
-                raise RuntimeError(
-                    'Not enough memory available to create frame buffer(s)'
-                )
+                    try:
+                        frame_buffer1 = data_bus.allocate_framebuffer(
+                            buf_size,
+                            lcd_bus.MEMORY_SPIRAM | lcd_bus.MEMORY_DMA
+                        )
+                        frame_buffer2 = data_bus.allocate_framebuffer(
+                            buf_size,
+                            lcd_bus.MEMORY_SPIRAM | lcd_bus.MEMORY_DMA
+                        )
+                    except MemoryError:
+                        data_bus.free_framebuffer(frame_buffer1)
+                        try:
+                            frame_buffer1 = data_bus.allocate_framebuffer(
+                                buf_size,
+                                lcd_bus.MEMORY_INTERNAL
+                            )
+                        except MemoryError:
+                            frame_buffer1 = data_bus.allocate_framebuffer(
+                                buf_size,
+                                lcd_bus.MEMORY_SPIRAM
+                            )
 
         if frame_buffer2 is None and isinstance(data_bus, lcd_bus.SPIBus):
             buffer_size = data_bus.MAXIMUM_BUFFER_SIZE
+        elif isinstance(data_bus, lcd_bus.RGBBus):
+            buffer_size = int(
+                display_width *
+                display_height *
+                lv.color_format_get_size(self._color_space)
+            )
         else:
             buffer_size = len(frame_buffer1)
 
@@ -231,6 +242,9 @@ class DisplayDriver:
         self._disp_drv.set_flush_cb(self._flush_cb)
 
         if isinstance(data_bus, lcd_bus.RGBBus):
+            frame_buffer1 = data_bus.allocate_framebuffer(buffer_size, 0)
+            frame_buffer2 = data_bus.allocate_framebuffer(buffer_size, 0)
+
             self._disp_drv.set_draw_buffers(
                 frame_buffer1,
                 frame_buffer2,
@@ -275,7 +289,7 @@ class DisplayDriver:
         self._frame_buffer2 = frame_buffer2
         self._backup_set_memory_location = None
 
-        self._rotation = lv.DISPLAY_ROTATION._0
+        self._rotation = lv.DISPLAY_ROTATION._0  # NOQA
         self.set_default()
 
     def set_physical_resolution(self, width, height):
@@ -299,19 +313,28 @@ class DisplayDriver:
         return disp.get_driver_data()
 
     def set_offset(self, x, y):
-        if self._rotation in (lv.DISPLAY_ROTATION._90, lv.DISPLAY_ROTATION._270):
+        rot90 = lv.DISPLAY_ROTATION._90  # NOQA
+        rot270 = lv.DISPLAY_ROTATION._270  # NOQA
+
+        if self._rotation in (rot90, rot270):
             x, y = y, x
 
         self._offset_x, self._offset_y = x, y
 
     def get_offset_x(self):
-        if self._rotation in (lv.DISPLAY_ROTATION._90, lv.DISPLAY_ROTATION._270):
+        rot90 = lv.DISPLAY_ROTATION._90  # NOQA
+        rot270 = lv.DISPLAY_ROTATION._270  # NOQA
+
+        if self._rotation in (rot90, rot270):
             return self._offset_y
 
         return self._offset_x
 
     def get_offset_y(self):
-        if self._rotation in (lv.DISPLAY_ROTATION._90, lv.DISPLAY_ROTATION._270):
+        rot90 = lv.DISPLAY_ROTATION._90  # NOQA
+        rot270 = lv.DISPLAY_ROTATION._270  # NOQA
+
+        if self._rotation in (rot90, rot270):
             return self._offset_x
 
         return self._offset_y
@@ -353,7 +376,7 @@ class DisplayDriver:
     def get_layer_bottom(self):
         return self._disp_drv.get_layer_bottom()
 
-    def add_event_cb(self, event_cb, filter, user_data):
+    def add_event_cb(self, event_cb, filter, user_data):  # NOQA
         self._disp_drv.add_event_cb(event_cb, filter, user_data)
 
     def get_event_count(self):
@@ -405,10 +428,10 @@ class DisplayDriver:
         return self._rotation
 
     def set_rotation(self, value):
-        rot0 = lv.DISPLAY_ROTATION._0
-        rot90 = lv.DISPLAY_ROTATION._90
-        rot180 = lv.DISPLAY_ROTATION._180
-        rot270 = lv.DISPLAY_ROTATION._270
+        rot0 = lv.DISPLAY_ROTATION._0  # NOQA
+        rot90 = lv.DISPLAY_ROTATION._90  # NOQA
+        rot180 = lv.DISPLAY_ROTATION._180  # NOQA
+        rot270 = lv.DISPLAY_ROTATION._270  # NOQA
 
         if (
             (
@@ -459,7 +482,11 @@ class DisplayDriver:
             self._set_memory_location(x1, y1, x2, y2)
 
             self._backup_set_memory_location = self._set_memory_location
-            setattr(self, '_set_memory_location', self._dummy_set_memory_location)
+            setattr(
+                self,
+                '_set_memory_location',
+                self._dummy_set_memory_location
+            )
 
         self._initilized = True
 
@@ -522,13 +549,15 @@ class DisplayDriver:
         else:
             self._backlight_pin.value(not int(bool(value)))
 
-    def _dummy_set_memory_location(self, *_, **__):
+    def _dummy_set_memory_location(self, *_, **__):  # NOQA
         return _RAMWR
 
     # this function is handeled in the viper code emitter. This will
     # increase the performance to near C code execution times. While this is
     # not really heavy lifting in terms of work being done every cycle counts
     # and it adds up over time. Need to keep things running as fast as possible.
+
+    @micropython.viper
     def _set_memory_location(self, x1, y1, x2, y2):
         # Column addresses
         param_buf = self._param_buf
@@ -538,7 +567,7 @@ class DisplayDriver:
         param_buf[2] = (x2 >> 8) & 0xFF
         param_buf[3] = x2 & 0xFF
 
-        self._data_bus.tx_param(_CASET, self._param_mv[:4])
+        self._data_bus.tx_param(_CASET, self._param_mv)
 
         # Page addresses
         param_buf[0] = (y1 >> 8) & 0xFF
@@ -546,7 +575,7 @@ class DisplayDriver:
         param_buf[2] = (y2 >> 8) & 0xFF
         param_buf[3] = y2 & 0xFF
 
-        self._data_bus.tx_param(_RASET, self._param_mv[:4])
+        self._data_bus.tx_param(_RASET, self._param_mv)
 
         return _RAMWR
 
@@ -557,13 +586,13 @@ class DisplayDriver:
         y1 = area.y1 + self._offset_y
         y2 = area.y2 + self._offset_y
 
-        cmd = self._set_memory_location(x1, y1, x2, y2)
-
         size = (
             (x2 - x1 + 1) *
             (y2 - y1 + 1) *
             lv.color_format_get_size(self._color_space)
         )
+
+        cmd = self._set_memory_location(x1, y1, x2, y2)
 
         # we have to use the __dereference__ method because this method is
         # what converts from the C_Array object the binding passes into a

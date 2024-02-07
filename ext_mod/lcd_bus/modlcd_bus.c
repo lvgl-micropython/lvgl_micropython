@@ -9,6 +9,12 @@
 #include "py/obj.h"
 #include "py/runtime.h"
 #include "py/objarray.h"
+#include "py/binary.h"
+
+
+#ifdef ESP_IDF_VERSION
+    #include "esp_heap_caps.h"
+#endif
 
 
 mp_obj_t mp_lcd_bus_get_lane_count(size_t n_args, const mp_obj_t *args)
@@ -65,10 +71,57 @@ mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
 MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_bus_init_obj, 6, mp_lcd_bus_init);
 
 
+mp_obj_t mp_lcd_bus_free_framebuffer(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
+{
+    enum { ARG_self, ARG_framebuffer};
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_self,    MP_ARG_OBJ | MP_ARG_REQUIRED  },
+        { MP_QSTR_framebuffer,    MP_ARG_OBJ | MP_ARG_REQUIRED  },
+    };
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
+
+    if (args[ARG_framebuffer].u_obj == mp_const_none) {
+        return mp_const_none;
+    } else {
+        mp_obj_array_t *array_buf = (mp_obj_array_t *)args[ARG_framebuffer].u_obj;
+        void *buf = array_buf->items;
+
+        if (buf == self->buf1) {
+
+            #ifdef ESP_IDF_VERSION
+                heap_caps_free(buf);
+            #else
+                m_free(buf);
+            #endif /* ESP_IDF_VERSION */
+
+            self->buf1 = NULL;
+        } else if (buf == self->buf2) {
+
+            #ifdef ESP_IDF_VERSION
+                heap_caps_free(buf);
+            #else
+                m_free(buf);
+            #endif /* ESP_IDF_VERSION */
+
+            self->buf2 = NULL;
+        } else {
+            mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("No matching buffer found"));
+        }
+
+        return mp_const_none;
+    }
+}
+
+
+MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_bus_free_framebuffer_obj, 2, mp_lcd_bus_free_framebuffer);
+
 
 mp_obj_t mp_lcd_bus_allocate_framebuffer(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
-    enum { ARG_self, ARG_cmd, ARG_params };
+    enum { ARG_self, ARG_size, ARG_caps };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_self,    MP_ARG_OBJ | MP_ARG_REQUIRED  },
         { MP_QSTR_size,    MP_ARG_INT | MP_ARG_REQUIRED  },
@@ -79,9 +132,8 @@ mp_obj_t mp_lcd_bus_allocate_framebuffer(size_t n_args, const mp_obj_t *pos_args
 
     mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
 
-    return lcd_panel_io_allocate_framebuffer(&self->panel_io_handle, (uint32_t) args[ARG_size].u_int, (uint32_t) args[ARG_caps].u_int);
+    return lcd_panel_io_allocate_framebuffer(&self->panel_io_handle, (uint32_t)args[ARG_size].u_int, (uint32_t)args[ARG_caps].u_int);
 }
-
 
 MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_bus_allocate_framebuffer_obj, 3, mp_lcd_bus_allocate_framebuffer);
 
@@ -221,6 +273,7 @@ MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_bus_register_callback_obj, 2, mp_lcd_bus_regis
 STATIC const mp_rom_map_elem_t mp_lcd_bus_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_lane_count),       MP_ROM_PTR(&mp_lcd_bus_get_lane_count_obj)       },
     { MP_ROM_QSTR(MP_QSTR_allocate_framebuffer), MP_ROM_PTR(&mp_lcd_bus_allocate_framebuffer_obj) },
+    { MP_ROM_QSTR(MP_QSTR_free_framebuffer),     MP_ROM_PTR(&mp_lcd_bus_free_framebuffer_obj)     },
     { MP_ROM_QSTR(MP_QSTR_register_callback),    MP_ROM_PTR(&mp_lcd_bus_register_callback_obj)    },
     { MP_ROM_QSTR(MP_QSTR_tx_param),             MP_ROM_PTR(&mp_lcd_bus_tx_param_obj)             },
     { MP_ROM_QSTR(MP_QSTR_tx_color),             MP_ROM_PTR(&mp_lcd_bus_tx_color_obj)             },

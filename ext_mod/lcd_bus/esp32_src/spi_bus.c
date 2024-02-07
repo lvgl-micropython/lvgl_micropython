@@ -61,11 +61,11 @@ STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
      */
 
     const mp_arg_t make_new_args[] = {
-        { MP_QSTR_dc,               MP_ARG_OBJ  | MP_ARG_REQUIRED },
-        { MP_QSTR_host,             MP_ARG_INT  | MP_ARG_REQUIRED },
-        { MP_QSTR_sclk,             MP_ARG_INT  | MP_ARG_REQUIRED },
-        { MP_QSTR_freq,             MP_ARG_INT  | MP_ARG_REQUIRED },
-        { MP_QSTR_mosi,             MP_ARG_INT  | MP_ARG_REQUIRED },
+        { MP_QSTR_dc,               MP_ARG_OBJ  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED      },
+        { MP_QSTR_host,             MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED      },
+        { MP_QSTR_sclk,             MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED      },
+        { MP_QSTR_freq,             MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED      },
+        { MP_QSTR_mosi,             MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED      },
         { MP_QSTR_miso,             MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1       } },
         { MP_QSTR_cs,               MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1       } },
         { MP_QSTR_wp,               MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1       } },

@@ -5,6 +5,7 @@
 #include "py/obj.h"
 #include "py/runtime.h"
 #include "py/objarray.h"
+#include "py/binary.h"
 
 void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
 {
@@ -22,6 +23,7 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
     // esp-idf includes
     #include "esp_lcd_panel_io.h"
     #include "esp_lcd_types.h"
+    #include "esp_heap_caps.h"
     #include "rom/ets_sys.h"
     #include "freertos/FreeRTOS.h"
     #include "freertos/task.h"
@@ -194,7 +196,7 @@ mp_obj_t lcd_panel_io_allocate_framebuffer(lcd_panel_io_t *io, uint32_t size, ui
                 mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("Only 2 buffers can be allocated"));
                 return mp_const_none;
             }
-        
+
             mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE, size, buf));
             view->typecode |= 0x80; // used to indicate writable buffer
             return MP_OBJ_FROM_PTR(view);
