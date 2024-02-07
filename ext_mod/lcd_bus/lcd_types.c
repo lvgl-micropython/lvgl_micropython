@@ -162,8 +162,47 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
 
         return io->tx_color(io, lcd_cmd, color, color_size);
     }
-
 #endif
+
+
+mp_obj_t lcd_panel_io_allocate_framebuffer(lcd_panel_io_t *io, uint32_t size, uint32_t caps) 
+{
+    if (io->allocate_framebuffer == NULL) {
+        mp_lcd_bus_obj_t *self = __containerof(io, mp_lcd_bus_obj_t, panel_io_handle);
+
+        #ifdef ESP_IDF_VERSION
+            void *buf = heap_caps_calloc(1, size, caps);
+        #else
+            LCD_UNUSED(caps);
+            void *buf = m_malloc(size);
+        #endif /* ESP_IDF_VERSION */
+        
+        if (buf == NULL) {
+            mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("Unable to allocate frame buffer"));
+            return mp_const_none;
+        } else {
+            if (self->buf1 == NULL) {
+                self->buf1 = buf;
+            } else if (self->buf2 == NULL) {
+                self->buf2 = buf;
+            } else {
+                #ifdef ESP_IDF_VERSION
+                    heap_caps_free(buf);
+                #else
+                    m_free(buf);
+                #endif /* ESP_IDF_VERSION */
+                mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("Only 2 buffers can be allocated"));
+                return mp_const_none;
+            }
+        
+            mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE, size, buf));
+            view->typecode |= 0x80; // used to indicate writable buffer
+            return MP_OBJ_FROM_PTR(view);
+        }
+    } else {
+        return io->allocate_framebuffer(io, size, caps);
+    }
+}
 
 mp_lcd_err_t lcd_panel_io_del(lcd_panel_io_t  *io)
 {

@@ -18,6 +18,9 @@
 
         mp_obj_t callback;
 
+        void *buf1;
+        void *buf2;
+
         bool trans_done;
         bool rgb565_byte_swap;
 

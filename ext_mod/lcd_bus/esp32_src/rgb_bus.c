@@ -39,7 +39,7 @@
     mp_lcd_err_t rgb_get_lane_count(lcd_panel_io_t *io, uint8_t *lane_count);
     mp_lcd_err_t rgb_rx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size);
     mp_lcd_err_t rgb_tx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size);
-
+    mp_obj_t rgb_allocate_framebuffer(lcd_panel_io_t *io, uint32_t size, uint32_t caps);
 
     mp_obj_t mp_lcd_rgb_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
@@ -142,7 +142,6 @@
 
         self->panel_io_config.clk_src = LCD_CLK_SRC_PLL160M;
         self->panel_io_config.timings = self->bus_config;
-        self->panel_io_config.num_fbs = 0;
         // self->panel_io_config.bounce_buffer_size_px = (size_t)args[ARG_bounce_buffer_size_px].u_int;
         self->panel_io_config.hsync_gpio_num = (int)args[ARG_hsync].u_int;
         self->panel_io_config.vsync_gpio_num = (int)args[ARG_vsync].u_int;
@@ -170,7 +169,7 @@
         self->panel_io_config.flags.disp_active_low = (uint32_t)args[ARG_disp_active_low].u_bool;
         self->panel_io_config.flags.refresh_on_demand = (uint32_t)args[ARG_refresh_on_demand].u_bool;
         self->panel_io_config.flags.fb_in_psram = 0;
-        self->panel_io_config.flags.no_fb = true;
+        // self->panel_io_config.flags.no_fb = true;
         // self->panel_io_config.flags.bb_invalidate_cache = (uint32_t)args[ARG_bb_invalidate_cache].u_bool;
 
         int i = 0;
@@ -186,10 +185,24 @@
         self->panel_io_handle.del = rgb_del;
         self->panel_io_handle.rx_param = rgb_rx_param;
         self->panel_io_handle.tx_param = rgb_tx_param;
+        self->panel_io_handle.allocate_framebuffer = rgb_allocate_framebuffer;
 
         return MP_OBJ_FROM_PTR(self);
     }
 
+    mp_obj_t rgb_allocate_framebuffer(lcd_panel_io_t *io, uint32_t size, uint32_t caps)
+    {
+        LCD_UNUSED(size)
+        mp_lcd_rgb_bus_obj_t *self = __containerof(io, mp_lcd_rgb_bus_obj_t, panel_io_handle);
+
+        if (caps | MALLOC_CAP_SPIRAM == caps) {
+            self->panel_io_config.flags.fb_in_psram = 1;
+        }
+
+        self->panel_io_config.num_fbs++;
+
+        return mp_const_none;
+    }
 
     mp_lcd_err_t rgb_del(lcd_panel_io_t *io)
     {
@@ -198,7 +211,6 @@
         mp_lcd_err_t ret = esp_lcd_panel_del(self->panel_handle);
         return ret;
     }
-
 
     mp_lcd_err_t rgb_rx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size)
     {
@@ -255,7 +267,6 @@
 
         return ret;
     }
-
 
     mp_lcd_err_t rgb_get_lane_count(lcd_panel_io_t *io, uint8_t *lane_count)
     {
