@@ -244,7 +244,7 @@
         if (ret != 0) {
             mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_rgb_panel)"), ret);
         }
-        /*
+
         esp_lcd_rgb_panel_event_callbacks_t callbacks = {
             .on_vsync = rgb_bus_trans_done_cb
         };
@@ -253,7 +253,6 @@
         if (ret != 0) {
             mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_rgb_panel_register_event_callbacks)"), ret);
         }
-        */
 
         ret = esp_lcd_panel_reset(self->panel_handle);
         if (ret != 0) {
