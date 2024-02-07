@@ -189,7 +189,7 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None):
                     try:
                         sys.stderr.write(e_char.decode('utf-8'))
                     except UnicodeDecodeError:
-                        sys.stdout.write(str(o_char)[2:-1])
+                        sys.stderr.write(str(o_char)[2:-1])
                     sys.stderr.flush()
                 output_buffer += e_char
                 e_char = p.stderr.read(1)

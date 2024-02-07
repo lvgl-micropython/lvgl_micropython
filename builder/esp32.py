@@ -50,7 +50,7 @@ class Partition:
 
     def get_app_size(self) -> int:
         for part in self.csv_data:
-            if part[1] == 'app':
+            if part[1] in ('app', 'factory'):
                 return part[4]
 
     def set_app_size(self, size):
@@ -64,7 +64,7 @@ class Partition:
             if part[3] != next_offset:
                 part[3] = next_offset  # NOQA
 
-            if part[1] == 'app':
+            if part[1] in ('app', 'factory'):
                 factor = ((part[4] + size) / 4096.0) + 1
                 part[4] = int(int(factor) * 4096)  # NOQA
                 app_size += part[4]
@@ -226,7 +226,7 @@ def build_commands(_, extra_args, __, lv_cflags, board):
 
 def get_idf_version():
     if 'ESP_IDF_VERSION' in os.environ:
-        exit_code, data = spawn(['idf.py'], out_to_screen=False)
+        exit_code, data = spawn(['idf.py', '--version'], out_to_screen=False)
         version = data.split('v')[-1].split('-')[0]
         if version:
             return version
@@ -323,8 +323,10 @@ def submodules():
 
         if sys.platform.startswith('win'):
             cmds.append(['install', 'all'])
+            cmds.append(['export'])
         else:
             cmds.append(['./install.sh', 'all'])
+            cmds.append(['. ./export.sh'])
 
         print('setting up ESP-IDF v5.0.4')
         print('this might take a bit...')
@@ -408,7 +410,7 @@ def compile():  # NOQA
             sys.exit(ret_code)
 
     elif not skip_partition_resize:
-        if 'Project build complete.' in output:
+        if 'build complete' in output:
             partition_file_name = get_partition_file_name(output)
             partition_file_name = os.path.join(
                 'lib/micropython/ports/esp32',
@@ -455,7 +457,6 @@ def compile():  # NOQA
                 compile_cmd.append('deploy')
 
             if remaining > 4096 or partition_size != -1 or deploy:
-
                 ret_code, output = spawn(compile_cmd, env=env)
 
                 if ret_code != 0:
@@ -482,7 +483,6 @@ def compile():  # NOQA
             path, output = output.split(file, 1)
             output = output.strip()
             path += file
-            'build-ESP32_GENERIC_S3-SPIRAM_OCT/bootloader/bootloader.bin'
             out_cmd.append(arg.strip())
             out_cmd.append(
                 os.path.abspath('lib/micropython/ports/esp32/' + path)
