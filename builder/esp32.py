@@ -287,11 +287,13 @@ def setup_idf_environ():
                 print(output)
                 sys.exit(result)
 
+            print(output)
             output = [line for line in output.split('\n') if '=' in line]
             env = {
                 line.split('=', 1)[0]: line.split('=', 1)[1]
                 for line in output
             }
+            print(env)
         else:
             args = sys.argv[:]
 
@@ -323,10 +325,8 @@ def submodules():
 
         if sys.platform.startswith('win'):
             cmds.append(['install', 'all'])
-            cmds.append(['export'])
         else:
             cmds.append(['./install.sh', 'all'])
-            cmds.append(['. ./export.sh'])
 
         print('setting up ESP-IDF v5.0.4')
         print('this might take a bit...')
@@ -418,6 +418,7 @@ def compile():  # NOQA
             )
             partition = Partition(partition_file_name)
 
+
             remaining = output.rsplit('application')[-1]
             remaining = int(
                 remaining.split('(', 1)[-1].split('remaining')[0].strip()
@@ -466,10 +467,12 @@ def compile():  # NOQA
         output = output.split('To flash, run this command:')[-1].strip()
         output = output.split('\n')[0]
 
-        python_path, output = output.split('python', 1)
+        python_path, output = output.split('python ', 1)
         python_path += 'python'
-        esp_tool_path, output = output.split('esptool.py', 1)
+
+        esp_tool_path, output = output.split('esptool.py ', 1)
         esp_tool_path += 'esptool.py'
+        esp_tool_path = esp_tool_path.replace('../../../', os.getcwd() + '/lib/')
 
         out_cmd = []
 
@@ -490,20 +493,15 @@ def compile():  # NOQA
 
         out_cmd = ' '.join(out_cmd)
 
-        cwd = os.getcwd()
-        os.chdir('lib/micropython/ports/esp32')
-
-        esp_tool_path = os.path.abspath(esp_tool_path)
-
-        os.chdir(cwd)
-
-        print('To flash firmware run the following commands:')
+        print('To flash firmware:')
+        print('Replace "(PORT)" with the serial port for your esp32')
+        print('and run the commands.')
         print()
         print(
-            python_path, esp_tool_path, '-p (PORT) -b 460800 --erase_flash'
+            python_path, esp_tool_path, '-p (PORT) -b 460800 erase_flash'
         )
         print()
-        print(python_path, esp_tool_path, out_cmd)
+        print(python_path, esp_tool_path, out_cmd.replace('-b 460800', '-b 921600'))
         print()
 
 

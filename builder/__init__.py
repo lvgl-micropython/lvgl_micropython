@@ -142,6 +142,7 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None):
         while p.poll() is None:
             o_char = p.stdout.read(1)
             while o_char != b'':
+
                 output_buffer += o_char
                 if out_to_screen and not spinner:
                     if o_char == b'\n':
@@ -180,7 +181,7 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None):
                         sys.stdout.write(str(o_char)[2:-1])
                     sys.stdout.flush()
 
-                output_buffer += o_char
+                # output_buffer += o_char
                 o_char = p.stdout.read(1)
 
             e_char = p.stderr.read(1)
@@ -217,7 +218,18 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None):
     else:
         t = None
 
-    o_buf = read().decode('utf-8')
+    o_buf = read()
+
+    try:
+        o_buf = o_buf.decode('utf-8')
+    except UnicodeDecodeError:
+        for char in o_buf:
+            if 32 <= char <= 125 or char in (b'\r', b'\n'):
+                continue
+
+            o_buf = o_buf.replace(char, b'')
+
+        o_buf = o_buf.decode('utf-8')
 
     if not p.stdout.closed:
         p.stdout.close()
