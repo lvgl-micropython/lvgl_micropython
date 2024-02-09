@@ -1,0 +1,2 @@
+# LV_INDEV_TYPE_ENCODER
+# enc_diff

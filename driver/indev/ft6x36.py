@@ -1,5 +1,6 @@
 from micropython import const
-import touch_framework as _touch_framework
+import pointer_framework
+import i2c as _i2c
 
 _I2C_SLAVE_ADDR = const(0x38)
 
@@ -148,20 +149,20 @@ ROTATION_180 = const(-3)
 ROTATION_270 = const(-4)
 
 
-class FT6x36(_touch_framework.TouchDriver):
+class FT6x36(pointer_framework.PointerDriver):
 
     def _i2c_read8(self, register_addr):
-        self._i2c.readfrom_mem_into(_I2C_SLAVE_ADDR, register_addr, buf=self._mv[:1])
+        self._i2c.read_mem(register_addr, buf=self._mv[:1])
         return self._buf[0]
 
     def _i2c_write8(self, register_addr, data):
         self._buf[0] = data
-        self._i2c.writeto_mem(_I2C_SLAVE_ADDR, register_addr, self._mv[:1])
+        self._i2c.write_mem(register_addr, self._mv[:1])
 
     def __init__(self, bus, touch_cal=None):  # NOQA
         self._buf = bytearray(5)
         self._mv = memoryview(self._buf)
-        self._i2c = bus
+        self._i2c = _i2c.I2CDevice(bus, _I2C_SLAVE_ADDR)
 
         data = self._i2c_read8(_PANEL_ID_REG)
         print("Device ID: 0x%02x" % data)
@@ -170,6 +171,7 @@ class FT6x36(_touch_framework.TouchDriver):
 
         data = self._i2c_read8(_CHIPID_REG)
         print("Chip ID: 0x%02x" % data)
+
         if data not in (_FT6206_CHIPID, _FT6236_CHIPID, _FT6336_CHIPID):
             raise RuntimeError()
 
@@ -185,7 +187,6 @@ class FT6x36(_touch_framework.TouchDriver):
         self._i2c_write8(_DEV_MODE_REG, _DEV_MODE_WORKING)
         self._i2c_write8(_PERIOD_ACTIVE_REG, 0x0E)
         self._i2c_write8(_G_MODE, 0x00)
-
         super().__init__(touch_cal)
 
     def _get_coords(self):
@@ -193,7 +194,7 @@ class FT6x36(_touch_framework.TouchDriver):
         mv = self._mv
 
         try:
-            self._i2c.readfrom_mem_into(_I2C_SLAVE_ADDR, _TD_STAT_REG, buf=mv)
+            self._i2c.read_mem(_TD_STAT_REG, buf=mv)
         except OSError:
             return None
 

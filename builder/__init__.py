@@ -27,7 +27,7 @@ def update_mphalport(target):
             f.write(data.encode('utf-8'))
 
 
-def generate_manifest(manifest_path, frozen_manifest, *addl_manifest_files):
+def generate_manifest(script_dir, manifest_path, frozen_manifest, *addl_manifest_files):
     if not os.path.exists('build'):
         os.mkdir('build')
 
@@ -37,6 +37,28 @@ def generate_manifest(manifest_path, frozen_manifest, *addl_manifest_files):
 
     if frozen_manifest is not None:
         manifest_files.append(f"include('{frozen_manifest}')")
+
+    manifest_files = [
+        f'{script_dir}/driver/frozen/display/display_driver_framework.py',
+        f'{script_dir}/driver/frozen/indev/touch_calibration/touch_cal_data.py',
+        f'{script_dir}/driver/frozen/indev/touch_calibration/touch_calibrate.py',
+        f'{script_dir}/driver/frozen/indev/button_framework.py',
+        f'{script_dir}/driver/frozen/indev/encoder_framework.py',
+        f'{script_dir}/driver/frozen/indev/keyboard_framework.py',
+        f'{script_dir}/driver/frozen/indev/pointer_framework.py',
+        f'{script_dir}/driver/frozen/other/i2c.py',
+        f'{script_dir}/driver/frozen/other/io_expander_framework.py',
+        f'{script_dir}/driver/frozen/other/task_handler.py'
+    ]
+
+    for file in manifest_files:
+        print(file)
+        if not os.path.exists(file):
+            raise RuntimeError(f'File not found "{file}"')
+
+        file_path, file_name = os.path.split(file)
+        entry = f"freeze('{file_path}', '{file_name}')"
+        manifest_files.append(entry)
 
     for file in addl_manifest_files:
         print(file)

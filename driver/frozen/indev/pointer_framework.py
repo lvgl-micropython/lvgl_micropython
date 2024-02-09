@@ -1,11 +1,11 @@
-import lvgl as lv
+import lvgl as lv  # NOQA
 
 
 def _remap(value, old_min, old_max, new_min, new_max):
     return int((((value - old_min) * (new_max - new_min)) / (old_max - old_min)) + new_min)
 
 
-class TouchDriver:
+class PointerDriver:
     _instance_counter = 1
 
     def get_width(self):
@@ -17,22 +17,31 @@ class TouchDriver:
     def get_rotation(self):
         return self._disp_drv.get_rotation()
 
+    def add_cursor(self, cursor):
+        if cursor not in self._cursors:
+            self._cursors.append(cursor)
+
+    def remove_cursor(self, cursor):
+        if cursor in self._cursors:
+            self._cursors.remove(cursor)
+
+
     def __init__(self, touch_cal=None):  # NOQA
         self.__class__._instance_counter += 1
         self.id = self.__class__._instance_counter
+        self._cursors = []
 
         if not lv.is_initialized():
             lv.init()
 
-        lv.screen_active()
-
         disp = lv.display_get_default()
-        self._disp_drv = disp.get_driver_data()
 
         if disp is None:
             raise RuntimeError(
                 'the display driver must be initilized before the touch driver'
             )
+
+        self._disp_drv = disp.get_driver_data()
 
         width = self._disp_drv.get_physical_horizontal_resolution()
         height = self._disp_drv.get_physical_vertical_resolution()
@@ -56,7 +65,6 @@ class TouchDriver:
         indev_drv.type = lv.INDEV_TYPE.POINTER
         indev_drv.read_cb = self._read
         self._indev_drv = indev_drv.register()  # NOQA
-
         self._indev_drv.set_driver_data(self)
         self._indev_drv.set_disp(disp)
 
@@ -137,6 +145,10 @@ class TouchDriver:
 
         data.continue_reading = True
         # print("raw(x={0}, y={1}) point(x={2} y={3})".format(x, y, data.point.x, data.point.y))  # NOQA
+        point = lv.point_t(dict(x=xpos, y=ypos))
+        for cursor in self._cursors:
+            if cursor(point):
+                break
 
         return True
 

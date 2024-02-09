@@ -66,12 +66,7 @@ def build_manifest(target, script_dir, frozen_manifest):
     
     manifest_path = 'lib/micropython/ports/windows/variants/manifest.py'
 
-    manifest_files = [
-        f'{script_dir}/driver/display/display_driver_framework.py',
-        f'{script_dir}/driver/fs_driver.py',
-        f'{script_dir}/utils/lv_utils.py',
-    ]
-    generate_manifest(manifest_path, frozen_manifest, *manifest_files)
+    generate_manifest(script_dir, manifest_path, frozen_manifest)
 
 
 def clean():
