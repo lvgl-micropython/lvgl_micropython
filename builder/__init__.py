@@ -38,7 +38,7 @@ def generate_manifest(script_dir, manifest_path, frozen_manifest, *addl_manifest
     if frozen_manifest is not None:
         manifest_files.append(f"include('{frozen_manifest}')")
 
-    manifest_files = [
+    frozen_manifest_files = [
         f'{script_dir}/driver/frozen/display/display_driver_framework.py',
         f'{script_dir}/driver/frozen/indev/touch_calibration/touch_cal_data.py',
         f'{script_dir}/driver/frozen/indev/touch_calibration/touch_calibrate.py',
@@ -51,7 +51,7 @@ def generate_manifest(script_dir, manifest_path, frozen_manifest, *addl_manifest
         f'{script_dir}/driver/frozen/other/task_handler.py'
     ]
 
-    for file in manifest_files:
+    for file in frozen_manifest_files:
         print(file)
         if not os.path.exists(file):
             raise RuntimeError(f'File not found "{file}"')
