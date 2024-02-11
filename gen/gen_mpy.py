@@ -48,6 +48,58 @@ import pycparser
 
 fake_libc_path = os.path.join(script_path, 'fake_libc')
 
+
+# ---------------- monkey patch code for pycparser -------------------------
+# this code cleans up the output when logging the objects created by pycparser
+# It makes it easier to read
+
+def _repr(obj):
+    if isinstance(obj, list):
+        if len(obj) >= 1:
+            if isinstance(obj[0], str):
+                res = ', '.join(repr(item) for item in obj)
+            else:
+                res = [
+                    '\n'.join(f'  {line}' for line in _repr(e).split('\n'))
+                    for e in obj
+                ]
+                res = ',\n'.join(res)
+                res = f'\n{res}\n'
+        else:
+            res = ''
+
+        return f'[{res}]'
+    else:
+        return repr(obj)
+
+
+def Node__repr__(self):
+    """ Generates a python representation of the current node
+    """
+    result = f'{self.__class__.__name__}('
+    res = []
+
+    for name in self.__slots__[:-2]:
+        dta = f'{name}={_repr(getattr(self, name))}'
+        res.append(dta)
+
+    res = ',\n'.join(res)
+
+    if isinstance(self, c_ast.FileAST) or len(
+        self.__slots__[:-2]
+        ) > 1 or res.count('\n'):
+        res = '\n'.join(f'  {line}' for line in res.split('\n'))
+        result += f'\n{res}\n)'
+    else:
+        result += f'{res})'
+
+    return result
+
+
+c_ast._repr = _repr
+setattr(c_ast.Node, '__repr__', Node__repr__)
+
+
 #
 # Argument parsing
 #
@@ -523,9 +575,42 @@ ast = pycparser.parse_file(
 )
 
 
-ast_file = open(os.path.join(os.path.dirname(__file__), 'ast.txt'), 'w')
-ast_file.write(str(ast))
-ast_file.close()
+forward_struct_decls = {}
+
+for item in ast.ext[:]:
+    if (
+        isinstance(item, c_ast.Decl) and
+        item.name is None and
+        isinstance(item.type, c_ast.Struct) and
+        item.type.name is not None
+    ):
+        if item.type.decls is None:
+            forward_struct_decls[item.type.name] = [item]
+        else:
+            if item.type.name in forward_struct_decls:
+                decs = forward_struct_decls[item.type.name]
+                if len(decs) == 2:
+                    decl, td = decs
+
+                    td.type.type.decls = item.type.decls[:]
+
+                    ast.ext.remove(decl)
+                    ast.ext.remove(item)
+    elif (
+        isinstance(item, c_ast.Typedef) and
+        isinstance(item.type, c_ast.TypeDecl) and
+        item.name and item.type.declname and item.name == item.type.declname and
+        isinstance(item.type.type, c_ast.Struct) and
+        item.type.type.decls is None
+    ):
+        if item.type.type.name in forward_struct_decls:
+            forward_struct_decls[item.type.type.name].append(item)
+
+
+
+# ast_file = open(os.path.join(os.path.dirname(__file__), 'ast.txt'), 'w')
+# ast_file.write(str(ast))
+# ast_file.close()
 
 pp_cmd = cpp_path + (' '.join(cpp_args))
 
