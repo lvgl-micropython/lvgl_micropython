@@ -589,10 +589,9 @@ class DisplayDriver:
     # not really heavy lifting in terms of work being done every cycle counts
     # and it adds up over time. Need to keep things running as fast as possible.
 
-    @micropython.viper
-    def _set_memory_location(self, x1: int, y1: int, x2: int, y2: int) -> int:
+    def _set_memory_location(self, x1, y1, x2, y2):
         # Column addresses
-        param_buf = ptr8(self._param_buf)  # NOQA
+        param_buf = self._param_buf  # NOQA
 
         param_buf[0] = (x1 >> 8) & 0xFF
         param_buf[1] = x1 & 0xFF

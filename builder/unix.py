@@ -23,13 +23,22 @@ def parse_args(extra_args, lv_cflags, board):
     return extra_args, lv_cflags, board
 
 
-def build_commands(_, extra_args, script_dir, lv_cflags):
+def build_commands(_, extra_args, script_dir, lv_cflags, __):
     if lv_cflags is not None:
         lv_cflags += ' -DMICROPY_SDL=1'
     else:
         lv_cflags = '-DMICROPY_SDL=1'
 
+    mp_bus_flags = [
+        '-DSDL_INCLUDE_PATH=<SDL2/SDL.h>',
+        '-DSDL_THREAD_INCLUDE_PATH=<SDL2/SDL_thread.h>',
+        '-DSDL_IMAGE_INCLUDE_PATH=<SDL2/SDL_image.h>',
+    ]
+
+    mp_bus_flags = ' '.join(mp_bus_flags)
+
     unix_cmd.extend([
+        f'MP_BUS_CFLAGS="{mp_bus_flags}"',
         f'LV_CFLAGS="{lv_cflags}"',
         f'LV_PORT=unix',
         f'USER_C_MODULES="{script_dir}/ext_mod"'
@@ -53,10 +62,10 @@ def build_manifest(target, script_dir, frozen_manifest):
 
     manifest_files = [
         f'{script_dir}/driver/fs_driver.py',
-        f'{script_dir}/utils/lv_utils.py',
         f'{script_dir}/driver/linux/lv_timer.py',
     ]
     generate_manifest(script_dir, manifest_path, frozen_manifest, *manifest_files)
+
 
 def clean():
     spawn(clean_cmd)

@@ -32,7 +32,6 @@ def build_commands(_, extra_args, script_dir, lv_cflags, __):
             'msbuild',
             'lib/micropython/ports/windows/micropython.vcxproj',
         ])
-
     else:
         mpy_cross_cmd.extend(['make', '-C', 'lib/micropython/mpy-cross'])
         clean_cmd.extend([

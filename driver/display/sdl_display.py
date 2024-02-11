@@ -1,11 +1,4 @@
-import sys
-
-sys.path.append(
-    ''
-)  # See: https://github.com/micropython/micropython/issues/6419
-
 import lvgl as lv  # NOQA
-
 import display_driver_framework
 
 
@@ -49,8 +42,25 @@ class SDL(display_driver_framework.DisplayDriver):
 
         self._disp_drv = lv.sdl_window_create(self.display_width, self.display_height)
 
-        self._frame_buffer1 = self._disp_drv
-        self._frame_buffer2 = self._disp_drv
+        buf_size = display_width * display_height
+        buf_size *= lv.color_format_get_size(
+            self._disp_drv.get_color_format()
+        )
+
+        buf1 = self._disp_drv.buf_1
+        buf2 = self._disp_drv.buf_2
+
+        if buf1.data_size > 0:
+            buf1 = buf1.data.__dereference__(buf_size)
+        else:
+            buf1 = None
+        if buf2.data_size > 0:
+            buf2 = buf2.data.__dereference__(buf_size)
+        else:
+            buf2 = None
+
+        self._frame_buffer1 = buf1
+        self._frame_buffer2 = buf2
 
         self._disp_drv.set_offset(self._offset_x, self._offset_y)
 

@@ -94,6 +94,19 @@ def get_submodules():
         builder.get_pycparser()
 
 
+def create_lvgl_header():
+    header_path = f'{SCRIPT_DIR}/build/lvgl_header.h'
+
+    with open(header_path, 'w') as f:
+        f.write(
+            f'#include "{SCRIPT_DIR}/lib/lvgl/lvgl.h"\n'
+        )
+
+        f.write(
+            f'#include "{SCRIPT_DIR}/lib/lvgl/src/lvgl_private.h"\n'
+        )
+
+
 if __name__ == '__main__':
     if target.lower() == 'esp32':
         from builder import esp32 as mod
@@ -124,5 +137,6 @@ if __name__ == '__main__':
         mod.clean()
 
     mod.build_manifest(target, SCRIPT_DIR, frozen_manifest)
+    create_lvgl_header()
     mod.compile()
 

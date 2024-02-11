@@ -7,6 +7,8 @@ list(APPEND LV_CFLAGS ${LV_CFLAGS_ENV} -Wno-unused-function)
 
 include(${CMAKE_CURRENT_LIST_DIR}/ext_mod/micropython.cmake)
 
+set(LVGL_HEADER "${CMAKE_CURRENT_LIST_DIR}/build/lvgl_header.h")
+
 file(GLOB_RECURSE LVGL_HEADERS ${CMAKE_CURRENT_LIST_DIR}/lib/lvgl/src/*.h ${CMAKE_CURRENT_LIST_DIR}/lib/lv_conf.h)
 
 # this MUST be an execute_process because of the order in which cmake does things
@@ -17,7 +19,7 @@ file(GLOB_RECURSE LVGL_HEADERS ${CMAKE_CURRENT_LIST_DIR}/lib/lvgl/src/*.h ${CMAK
 # found to go about doing it.
 execute_process(
     COMMAND
-        ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/gen/gen_mpy.py ${LV_CFLAGS} --output=${CMAKE_BINARY_DIR}/lv_mp.c --include=${CMAKE_CURRENT_LIST_DIR} --include=${CMAKE_CURRENT_LIST_DIR}/include --include=${CMAKE_CURRENT_LIST_DIR}/lvgl --board=$(LV_PORT) --module_name=lvgl --module_prefix=lv --metadata=${CMAKE_BINARY_DIR}/lv_mp.c.json ${CMAKE_CURRENT_LIST_DIR}/lib/lvgl/lvgl.h
+        ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/gen/gen_mpy.py ${LV_CFLAGS} --output=${CMAKE_BINARY_DIR}/lv_mp.c --include=${CMAKE_CURRENT_LIST_DIR} --include=${CMAKE_CURRENT_LIST_DIR}/include --include=${CMAKE_CURRENT_LIST_DIR}/lvgl --board=$(LV_PORT) --module_name=lvgl --module_prefix=lv --metadata=${CMAKE_BINARY_DIR}/lv_mp.c.json ${LVGL_HEADER}
     WORKING_DIRECTORY
         ${CMAKE_CURRENT_LIST_DIR}
 
