@@ -38,7 +38,8 @@ class PointerDriver:
 
         if disp is None:
             raise RuntimeError(
-                'the display driver must be initilized before the touch driver'
+                'the display driver must be initilized '
+                'before the pointer driver'
             )
 
         self._disp_drv = disp.get_driver_data()
@@ -124,16 +125,16 @@ class PointerDriver:
         if bottom is None:
             bottom = self._height
 
-        if orientation == lv.DISPLAY_ROTATION._0:
+        if orientation == lv.DISPLAY_ROTATION._0:  # NOQA
             xpos = _remap(x, left, right, 0, self._width)
             ypos = _remap(y, top, bottom, 0, self._height)
-        elif orientation == lv.DISPLAY_ROTATION._90:
+        elif orientation == lv.DISPLAY_ROTATION._90:  # NOQA
             xpos = _remap(y, top, bottom, 0, self._width)
             ypos = _remap(x, right, left, 0, self._height)
-        elif orientation == lv.DISPLAY_ROTATION._270:
+        elif orientation == lv.DISPLAY_ROTATION._270:  # NOQA
             xpos = _remap(x, right, left, 0, self._width)
             ypos = _remap(y, bottom, top, 0, self._height)
-        elif orientation == lv.DISPLAY_ROTATION._180:
+        elif orientation == lv.DISPLAY_ROTATION._180:  # NOQA
             xpos = _remap(y, bottom, top, 0, self._width)
             ypos = _remap(x, left, right, 0, self._height)
         else:
@@ -208,9 +209,6 @@ class PointerDriver:
 
     def enable(self, en):
         self._indev_drv.enable(en)
-
-    def set_button_points(self, points):
-        self._indev_drv.set_button_points(points)
 
     def get_group(self):
         return self._indev_drv.get_group()

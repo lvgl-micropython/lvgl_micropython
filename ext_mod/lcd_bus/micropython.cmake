@@ -31,6 +31,7 @@ else()
     set(INCLUDES
         ${CMAKE_CURRENT_LIST_DIR}
         ${CMAKE_CURRENT_LIST_DIR}/common_include
+        ${CMAKE_CURRENT_LIST_DIR}/sdl_bus
     )
 
     set(SOURCES
@@ -40,6 +41,8 @@ else()
         ${CMAKE_CURRENT_LIST_DIR}/common_src/spi_bus.c
         ${CMAKE_CURRENT_LIST_DIR}/common_src/i80_bus.c
         ${CMAKE_CURRENT_LIST_DIR}/common_src/rgb_bus.c
+        ${CMAKE_CURRENT_LIST_DIR}/sdl_bus/sdl_bus.c
+
     )
 
 endif(ESP_PLATFORM)

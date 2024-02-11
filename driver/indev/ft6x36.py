@@ -143,11 +143,6 @@ _G_MODE = const(0xA4)
 
 _PWR_MODE = const(0xA5)
 
-ROTATION_0 = const(-1)
-ROTATION_90 = const(-2)
-ROTATION_180 = const(-3)
-ROTATION_270 = const(-4)
-
 
 class FT6x36(pointer_framework.PointerDriver):
 

@@ -1,7 +1,7 @@
-import lvgl as lv
+import lvgl as lv  # NOQA
 
 
-class KeyboardFramework:
+class KeypadDriver:
     _instance_counter = 1
 
     def __init__(self, touch_cal=None):  # NOQA
@@ -9,10 +9,17 @@ class KeyboardFramework:
         self.id = self.__class__._instance_counter
         self._cursors = []
 
-        disp = lv.display_get_default()
-
         if not lv.is_initialized():
             lv.init()
+
+        disp = lv.display_get_default()
+
+        if disp is None:
+            raise RuntimeError(
+                'the display driver must be initilized before the keypad driver'
+            )
+
+        self._disp_drv = disp.get_driver_data()
 
         self._last_key = -1
         self._current_state = lv.INDEV_STATE.RELEASED
@@ -36,7 +43,6 @@ class KeyboardFramework:
 
         if key is None:  # ignore no touch & multi touch
             if self._current_state != lv.INDEV_STATE.RELEASED:
-                self._last_key = key
                 self._current_state = lv.INDEV_STATE.RELEASED
                 res = True
             else:
@@ -112,9 +118,6 @@ class KeyboardFramework:
 
     def enable(self, en):
         self._indev_drv.enable(en)
-
-    def set_button_points(self, points):
-        self._indev_drv.set_button_points(points)
 
     def get_group(self):
         return self._indev_drv.get_group()

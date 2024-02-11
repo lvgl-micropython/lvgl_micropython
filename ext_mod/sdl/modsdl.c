@@ -1,13 +1,9 @@
 // local includes
-#include "modlcd_bus.h"
-#include "spi_bus.h"
-#include "i2c_bus.h"
-#include "i80_bus.h"
-#include "rgb_bus.h"
-
-#ifdef SDL_INCLUDE_PATH
-    #include "sdl_bus.h"
-#endif
+#include "modsdl.h"
+#include "mousewheel.h"
+#include "mouse.h"
+#include "keyboard.h"
+#include "display.h"
 
 // micropython includes
 #include "py/obj.h"
@@ -16,12 +12,7 @@
 #include "py/binary.h"
 
 
-#ifdef ESP_IDF_VERSION
-    #include "esp_heap_caps.h"
-#endif
-
-
-mp_obj_t mp_lcd_bus_get_lane_count(size_t n_args, const mp_obj_t *args)
+mp_obj_t mp_sdl_get_lane_count(size_t n_args, const mp_obj_t *args)
 {
     mp_lcd_i80_bus_obj_t *self = MP_OBJ_TO_PTR(args[0]);
 
@@ -35,10 +26,10 @@ mp_obj_t mp_lcd_bus_get_lane_count(size_t n_args, const mp_obj_t *args)
     return mp_obj_new_int(lane_count);
 }
 
-MP_DEFINE_CONST_FUN_OBJ_VAR(mp_lcd_bus_get_lane_count_obj, 1, mp_lcd_bus_get_lane_count);
+MP_DEFINE_CONST_FUN_OBJ_VAR(mp_sdl_get_lane_count_obj, 1, mp_sdl_get_lane_count);
 
 
-mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
+mp_obj_t mp_sdl_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
     enum { ARG_self, ARG_width, ARG_height, ARG_bpp, ARG_buffer_size, ARG_rgb565_byte_swap };
     static const mp_arg_t allowed_args[] = {
@@ -52,7 +43,7 @@ mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
+    mp_sdl_obj_t *self = (mp_sdl_obj_t *)args[ARG_self].u_obj;
 
 
     if (args[ARG_bpp].u_int == 16) {
@@ -72,10 +63,10 @@ mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
     return mp_const_none;
 }
 
-MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_bus_init_obj, 6, mp_lcd_bus_init);
+MP_DEFINE_CONST_FUN_OBJ_KW(mp_sdl_init_obj, 6, mp_sdl_init);
 
 
-mp_obj_t mp_lcd_bus_free_framebuffer(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
+mp_obj_t mp_sdl_free_framebuffer(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
     enum { ARG_self, ARG_framebuffer};
     static const mp_arg_t allowed_args[] = {
@@ -85,7 +76,7 @@ mp_obj_t mp_lcd_bus_free_framebuffer(size_t n_args, const mp_obj_t *pos_args, mp
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
+    mp_sdl_obj_t *self = (mp_sdl_obj_t *)args[ARG_self].u_obj;
 
     if (args[ARG_framebuffer].u_obj == mp_const_none) {
         return mp_const_none;
@@ -120,10 +111,10 @@ mp_obj_t mp_lcd_bus_free_framebuffer(size_t n_args, const mp_obj_t *pos_args, mp
 }
 
 
-MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_bus_free_framebuffer_obj, 2, mp_lcd_bus_free_framebuffer);
+MP_DEFINE_CONST_FUN_OBJ_KW(mp_sdl_free_framebuffer_obj, 2, mp_sdl_free_framebuffer);
 
 
-mp_obj_t mp_lcd_bus_allocate_framebuffer(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
+mp_obj_t mp_sdl_allocate_framebuffer(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
     enum { ARG_self, ARG_size, ARG_caps };
     static const mp_arg_t allowed_args[] = {
@@ -134,15 +125,15 @@ mp_obj_t mp_lcd_bus_allocate_framebuffer(size_t n_args, const mp_obj_t *pos_args
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
+    mp_sdl_obj_t *self = (mp_sdl_obj_t *)args[ARG_self].u_obj;
 
     return lcd_panel_io_allocate_framebuffer(&self->panel_io_handle, (uint32_t)args[ARG_size].u_int, (uint32_t)args[ARG_caps].u_int);
 }
 
-MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_bus_allocate_framebuffer_obj, 3, mp_lcd_bus_allocate_framebuffer);
+MP_DEFINE_CONST_FUN_OBJ_KW(mp_sdl_allocate_framebuffer_obj, 3, mp_sdl_allocate_framebuffer);
 
 
-mp_obj_t mp_lcd_bus_tx_param(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
+mp_obj_t mp_sdl_tx_param(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
     enum { ARG_self, ARG_cmd, ARG_params };
     static const mp_arg_t allowed_args[] = {
@@ -153,7 +144,7 @@ mp_obj_t mp_lcd_bus_tx_param(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
+    mp_sdl_obj_t *self = (mp_sdl_obj_t *)args[ARG_self].u_obj;
     mp_lcd_err_t ret;
 
     if (args[ARG_params].u_obj != mp_const_none) {
@@ -171,10 +162,10 @@ mp_obj_t mp_lcd_bus_tx_param(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
     return mp_const_none;
 }
 
-MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_bus_tx_param_obj, 2, mp_lcd_bus_tx_param);
+MP_DEFINE_CONST_FUN_OBJ_KW(mp_sdl_tx_param_obj, 2, mp_sdl_tx_param);
 
 
-mp_obj_t mp_lcd_bus_tx_color(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
+mp_obj_t mp_sdl_tx_color(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
     enum { ARG_self, ARG_cmd, ARG_data, ARG_x_start, ARG_y_start, ARG_x_end, ARG_y_end };
     static const mp_arg_t allowed_args[] = {
@@ -189,7 +180,7 @@ mp_obj_t mp_lcd_bus_tx_color(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
+    mp_sdl_obj_t *self = (mp_sdl_obj_t *)args[ARG_self].u_obj;
 
     mp_buffer_info_t bufinfo;
     mp_get_buffer_raise(args[ARG_data].u_obj, &bufinfo, MP_BUFFER_READ);
@@ -208,12 +199,12 @@ mp_obj_t mp_lcd_bus_tx_color(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
     return mp_const_none;
 }
 
-MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_bus_tx_color_obj, 7, mp_lcd_bus_tx_color);
+MP_DEFINE_CONST_FUN_OBJ_KW(mp_sdl_tx_color_obj, 7, mp_sdl_tx_color);
 
 
-mp_obj_t mp_lcd_bus_deinit(mp_obj_t self_in)
+mp_obj_t mp_sdl_deinit(mp_obj_t self_in)
 {
-    mp_lcd_bus_obj_t *self = self_in;
+    mp_sdl_obj_t *self = self_in;
 
     mp_lcd_err_t ret = lcd_panel_io_del(&self->panel_io_handle);
     if (ret != 0) {
@@ -223,10 +214,10 @@ mp_obj_t mp_lcd_bus_deinit(mp_obj_t self_in)
     return mp_const_none;
 }
 
-MP_DEFINE_CONST_FUN_OBJ_1(mp_lcd_bus_deinit_obj, mp_lcd_bus_deinit);
+MP_DEFINE_CONST_FUN_OBJ_1(mp_sdl_deinit_obj, mp_sdl_deinit);
 
 
-mp_obj_t mp_lcd_bus_rx_param(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
+mp_obj_t mp_sdl_rx_param(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
     enum { ARG_self, ARG_cmd, ARG_data };
     static const mp_arg_t allowed_args[] = {
@@ -238,7 +229,7 @@ mp_obj_t mp_lcd_bus_rx_param(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
+    mp_sdl_obj_t *self = (mp_sdl_obj_t *)args[ARG_self].u_obj;
 
     mp_buffer_info_t bufinfo;
     mp_get_buffer_raise(args[ARG_data].u_obj, &bufinfo, MP_BUFFER_WRITE);
@@ -251,10 +242,10 @@ mp_obj_t mp_lcd_bus_rx_param(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
     return mp_const_none;
 }
 
-MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_bus_rx_param_obj, 3, mp_lcd_bus_rx_param);
+MP_DEFINE_CONST_FUN_OBJ_KW(mp_sdl_rx_param_obj, 3, mp_sdl_rx_param);
 
 
-mp_obj_t mp_lcd_bus_register_callback(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
+mp_obj_t mp_sdl_register_callback(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
     enum { ARG_self, ARG_callback };
     static const mp_arg_t allowed_args[] = {
@@ -264,66 +255,45 @@ mp_obj_t mp_lcd_bus_register_callback(size_t n_args, const mp_obj_t *pos_args, m
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
+    mp_sdl_obj_t *self = (mp_sdl_obj_t *)args[ARG_self].u_obj;
 
     self->callback = args[ARG_callback].u_obj;
 
     return mp_const_none;
 }
 
-MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_bus_register_callback_obj, 2, mp_lcd_bus_register_callback);
+MP_DEFINE_CONST_FUN_OBJ_KW(mp_sdl_register_callback_obj, 2, mp_sdl_register_callback);
 
 
-STATIC const mp_rom_map_elem_t mp_lcd_bus_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_get_lane_count),       MP_ROM_PTR(&mp_lcd_bus_get_lane_count_obj)       },
-    { MP_ROM_QSTR(MP_QSTR_allocate_framebuffer), MP_ROM_PTR(&mp_lcd_bus_allocate_framebuffer_obj) },
-    { MP_ROM_QSTR(MP_QSTR_free_framebuffer),     MP_ROM_PTR(&mp_lcd_bus_free_framebuffer_obj)     },
-    { MP_ROM_QSTR(MP_QSTR_register_callback),    MP_ROM_PTR(&mp_lcd_bus_register_callback_obj)    },
-    { MP_ROM_QSTR(MP_QSTR_tx_param),             MP_ROM_PTR(&mp_lcd_bus_tx_param_obj)             },
-    { MP_ROM_QSTR(MP_QSTR_tx_color),             MP_ROM_PTR(&mp_lcd_bus_tx_color_obj)             },
-    { MP_ROM_QSTR(MP_QSTR_rx_param),             MP_ROM_PTR(&mp_lcd_bus_rx_param_obj)             },
-    { MP_ROM_QSTR(MP_QSTR_init),                 MP_ROM_PTR(&mp_lcd_bus_init_obj)                 },
-    { MP_ROM_QSTR(MP_QSTR_deinit),               MP_ROM_PTR(&mp_lcd_bus_deinit_obj)               },
-    { MP_ROM_QSTR(MP_QSTR___del__),              MP_ROM_PTR(&mp_lcd_bus_deinit_obj)               }
+STATIC const mp_rom_map_elem_t mp_sdl_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_get_lane_count),       MP_ROM_PTR(&mp_sdl_get_lane_count_obj)       },
+    { MP_ROM_QSTR(MP_QSTR_allocate_framebuffer), MP_ROM_PTR(&mp_sdl_allocate_framebuffer_obj) },
+    { MP_ROM_QSTR(MP_QSTR_free_framebuffer),     MP_ROM_PTR(&mp_sdl_free_framebuffer_obj)     },
+    { MP_ROM_QSTR(MP_QSTR_register_callback),    MP_ROM_PTR(&mp_sdl_register_callback_obj)    },
+    { MP_ROM_QSTR(MP_QSTR_tx_param),             MP_ROM_PTR(&mp_sdl_tx_param_obj)             },
+    { MP_ROM_QSTR(MP_QSTR_tx_color),             MP_ROM_PTR(&mp_sdl_tx_color_obj)             },
+    { MP_ROM_QSTR(MP_QSTR_rx_param),             MP_ROM_PTR(&mp_sdl_rx_param_obj)             },
+    { MP_ROM_QSTR(MP_QSTR_init),                 MP_ROM_PTR(&mp_sdl_init_obj)                 },
+    { MP_ROM_QSTR(MP_QSTR_deinit),               MP_ROM_PTR(&mp_sdl_deinit_obj)               },
+    { MP_ROM_QSTR(MP_QSTR___del__),              MP_ROM_PTR(&mp_sdl_deinit_obj)               }
 };
 
-MP_DEFINE_CONST_DICT(mp_lcd_bus_locals_dict, mp_lcd_bus_locals_dict_table);
+MP_DEFINE_CONST_DICT(mp_sdl_locals_dict, mp_sdl_locals_dict_table);
 
 
-STATIC const mp_map_elem_t mp_module_lcd_bus_globals_table[] = {
-    { MP_ROM_QSTR(MP_QSTR___name__),           MP_OBJ_NEW_QSTR(MP_QSTR_lcd_bus)      },
-    { MP_ROM_QSTR(MP_QSTR_RGBBus),             (mp_obj_t)&mp_lcd_rgb_bus_type        },
-    { MP_ROM_QSTR(MP_QSTR_SPIBus),             (mp_obj_t)&mp_lcd_spi_bus_type        },
-    { MP_ROM_QSTR(MP_QSTR_I2CBus),             (mp_obj_t)&mp_lcd_i2c_bus_type        },
-    { MP_ROM_QSTR(MP_QSTR_I80Bus),             (mp_obj_t)&mp_lcd_i80_bus_type        },
-
-    #ifdef SDL_INCLUDE_PATH
-        { MP_ROM_QSTR(MP_QSTR_SDLBus),         (mp_obj_t)&mp_lcd_sdl_bus_type        },
-    #endif
-
-    #ifdef ESP_IDF_VERSION
-        { MP_ROM_QSTR(MP_QSTR_MEMORY_32BIT),    MP_ROM_INT(MALLOC_CAP_32BIT)    },
-        { MP_ROM_QSTR(MP_QSTR_MEMORY_8BIT),     MP_ROM_INT(MALLOC_CAP_8BIT)     },
-        { MP_ROM_QSTR(MP_QSTR_MEMORY_DMA),      MP_ROM_INT(MALLOC_CAP_DMA)      },
-        { MP_ROM_QSTR(MP_QSTR_MEMORY_SPIRAM),   MP_ROM_INT(MALLOC_CAP_SPIRAM)   },
-        { MP_ROM_QSTR(MP_QSTR_MEMORY_INTERNAL), MP_ROM_INT(MALLOC_CAP_INTERNAL) },
-        { MP_ROM_QSTR(MP_QSTR_MEMORY_DEFAULT),  MP_ROM_INT(MALLOC_CAP_DEFAULT)  },
-    #else
-        { MP_ROM_QSTR(MP_QSTR_MEMORY_32BIT),    MP_ROM_INT(0) },
-        { MP_ROM_QSTR(MP_QSTR_MEMORY_8BIT),     MP_ROM_INT(0) },
-        { MP_ROM_QSTR(MP_QSTR_MEMORY_DMA),      MP_ROM_INT(0) },
-        { MP_ROM_QSTR(MP_QSTR_MEMORY_SPIRAM),   MP_ROM_INT(0) },
-        { MP_ROM_QSTR(MP_QSTR_MEMORY_INTERNAL), MP_ROM_INT(0) },
-        { MP_ROM_QSTR(MP_QSTR_MEMORY_DEFAULT),  MP_ROM_INT(0) },
-    #endif /* ESP_IDF_VERSION */
+STATIC const mp_map_elem_t mp_module_sdl_globals_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___name__),   MP_OBJ_NEW_QSTR(MP_QSTR_sdl)       },
+    { MP_ROM_QSTR(MP_QSTR_Mouse),      (mp_obj_t)&mp_sdl_mouse_type       },
+    { MP_ROM_QSTR(MP_QSTR_Mousewheel), (mp_obj_t)&mp_sdl_mousewheel_type  },
+    { MP_ROM_QSTR(MP_QSTR_Keyboard),   (mp_obj_t)&mp_sdl_keyboard_type    },
 };
 
-STATIC MP_DEFINE_CONST_DICT(mp_module_lcd_bus_globals, mp_module_lcd_bus_globals_table);
+STATIC MP_DEFINE_CONST_DICT(mp_module_sdl_globals, mp_module_sdl_globals_table);
 
 
-const mp_obj_module_t mp_module_lcd_bus = {
+const mp_obj_module_t mp_module_sdl = {
     .base    = {&mp_type_module},
-    .globals = (mp_obj_dict_t *)&mp_module_lcd_bus_globals,
+    .globals = (mp_obj_dict_t *)&mp_module_sdl_globals,
 };
 
-MP_REGISTER_MODULE(MP_QSTR_lcd_bus, mp_module_lcd_bus);
+MP_REGISTER_MODULE(MP_QSTR_sdl, mp_module_sdl);

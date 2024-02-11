@@ -373,15 +373,17 @@
             mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_panel_draw_bitmap)"), ret);
         }
 
+        /*
         if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
             mp_call_function_n_kw(self->callback, 0, 0, NULL);
         }
-        /*
+        */
+
         if (self->callback == mp_const_none) {
             while (!self->trans_done) {}
             self->trans_done = false;
         }
-        */
+
         return mp_const_none;
     }
 
@@ -392,6 +394,10 @@
         { MP_ROM_QSTR(MP_QSTR_get_lane_count),    MP_ROM_PTR(&mp_lcd_bus_get_lane_count_obj)    },
         { MP_ROM_QSTR(MP_QSTR_register_callback), MP_ROM_PTR(&mp_lcd_bus_register_callback_obj)     },
         { MP_ROM_QSTR(MP_QSTR_tx_color),          MP_ROM_PTR(&mp_lcd_rgb_bus_tx_color_obj)          },
+        { MP_ROM_QSTR(MP_QSTR_rx_param),          MP_ROM_PTR(&mp_lcd_rgb_bus_rx_param_obj)          },
+        { MP_ROM_QSTR(MP_QSTR_tx_param),          MP_ROM_PTR(&mp_lcd_rgb_bus_tx_param_obj)          },
+        { MP_ROM_QSTR(MP_QSTR_free_framebuffer),     MP_ROM_PTR(&mp_lcd_bus_free_framebuffer_obj)     },
+        { MP_ROM_QSTR(MP_QSTR_allocate_framebuffer), MP_ROM_PTR(&mp_lcd_bus_allocate_framebuffer_obj) },
         { MP_ROM_QSTR(MP_QSTR_init),              MP_ROM_PTR(&mp_lcd_bus_init_obj)              },
         { MP_ROM_QSTR(MP_QSTR_deinit),            MP_ROM_PTR(&mp_lcd_bus_deinit_obj)            },
         { MP_ROM_QSTR(MP_QSTR___del__),           MP_ROM_PTR(&mp_lcd_bus_deinit_obj)            }

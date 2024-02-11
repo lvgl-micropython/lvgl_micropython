@@ -76,7 +76,6 @@
     mp_lcd_err_t lcd_panel_io_tx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size);
     mp_lcd_err_t lcd_panel_io_tx_color(lcd_panel_io_t *io, int lcd_cmd, void *color, size_t color_size);
     mp_obj_t lcd_panel_io_allocate_framebuffer(lcd_panel_io_t *io, uint32_t size, uint32_t caps);
-
     mp_lcd_err_t lcd_panel_io_del(lcd_panel_io_t *io);
 
     typedef struct _mp_lcd_bus_obj_t {
