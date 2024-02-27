@@ -44,7 +44,7 @@ def generate_manifest(script_dir, manifest_path, frozen_manifest, *addl_manifest
         f'{script_dir}/driver/frozen/indev/touch_calibration/touch_calibrate.py',
         f'{script_dir}/driver/frozen/indev/button_framework.py',
         f'{script_dir}/driver/frozen/indev/encoder_framework.py',
-        f'{script_dir}/driver/frozen/indev/keyboard_framework.py',
+#        f'{script_dir}/driver/frozen/indev/keyboard_framework.py',
         f'{script_dir}/driver/frozen/indev/pointer_framework.py',
         f'{script_dir}/driver/frozen/other/i2c.py',
         f'{script_dir}/driver/frozen/other/io_expander_framework.py',
