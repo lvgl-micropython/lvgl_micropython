@@ -263,7 +263,7 @@ class DisplayDriver:
                 frame_buffer1 = data_bus.allocate_framebuffer(buffer_size, 0)
                 frame_buffer2 = data_bus.allocate_framebuffer(buffer_size, 0)
 
-                self._disp_drv.set_draw_buffers(
+                self._disp_drv.set_buffers(
                     frame_buffer1,
                     frame_buffer2,
                     len(frame_buffer1),
@@ -290,7 +290,7 @@ class DisplayDriver:
                 else:
                     render_mode = lv.DISPLAY_RENDER_MODE.PARTIAL
 
-                self._disp_drv.set_draw_buffers(
+                self._disp_drv.set_buffers(
                     frame_buffer1,
                     frame_buffer2,
                     len(frame_buffer1),
