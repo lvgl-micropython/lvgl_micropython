@@ -61,9 +61,9 @@ class ST7789(display_driver_framework.DisplayDriver):
         )
         self.set_params(_MADCTL, param_mv[:1])
 
-        param_buf[1] = 0x0A
-        param_buf[2] = 0x82
-        self.set_params(0xB6, param_mv[:3])
+        param_buf[0] = 0x0A
+        param_buf[1] = 0x82
+        self.set_params(0xB6, param_mv[:2])
 
         param_buf[0] = 0x00
         param_buf[1] = 0xE0
