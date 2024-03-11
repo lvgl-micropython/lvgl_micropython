@@ -286,7 +286,7 @@ def setup_idf_environ():
             output = [line for line in output.split('\n') if '=' in line]
             env = {
                 line.split('=', 1)[0]: line.split('=', 1)[1]
-                for line in output
+                for line in output if line.split('=', 1)[1] != ''
             }
             print(env)
         else:
