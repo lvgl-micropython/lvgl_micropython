@@ -280,6 +280,15 @@
         LCD_UNUSED(param_size);
         return LCD_OK;
     }
+    STATIC mp_obj_t mp_rgb_rx_param(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
+    {
+        LCD_UNUSED(n_args);
+        LCD_UNUSED(pos_args);
+        LCD_UNUSED(kw_args);
+        return mp_const_true;
+
+    }
+    STATIC MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_rgb_bus_rx_param_obj, 4, mp_rgb_rx_param);
 
 
     mp_lcd_err_t rgb_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
@@ -290,7 +299,15 @@
         LCD_UNUSED(param_size);
         return LCD_OK;
     }
+    STATIC mp_obj_t mp_rgb_tx_param(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
+    {
+        LCD_UNUSED(n_args);
+        LCD_UNUSED(pos_args);
+        LCD_UNUSED(kw_args);
+        return mp_const_true;
 
+    }
+    STATIC MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_rgb_bus_tx_param_obj, 4, mp_rgb_tx_param);
 
     mp_lcd_err_t rgb_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap)
     {
