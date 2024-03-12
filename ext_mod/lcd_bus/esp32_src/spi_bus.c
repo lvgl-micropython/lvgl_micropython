@@ -368,7 +368,7 @@ mp_lcd_err_t spi_del(mp_obj_t obj)
 {
     mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
 
-    mp_lcd_err_t ret = esp_lcd_panel_io_del(io->panel_io);
+    mp_lcd_err_t ret = esp_lcd_panel_io_del(self->panel_io_handle.panel_io);
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_panel_io_del)"), ret);
     }
@@ -411,7 +411,7 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(spi_bus_initialize)"), ret);
     }
 
-    ret = esp_lcd_new_panel_io_spi(self->bus_handle, &self->panel_io_config, &io->panel_io);
+    ret = esp_lcd_new_panel_io_spi(self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io);
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_spi)"), ret);
     }
