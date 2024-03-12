@@ -258,7 +258,9 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
         env=env
     )
 
-    print(cmd_)
+    if out_to_screen:
+        print(cmd_)
+
     event = threading.Event()
 
     if spinner:
@@ -319,7 +321,7 @@ def mpy_cross():
         sys.exit(return_code)
 
 
-def build_manifest(target, script_dir, frozen_manifest):
+def build_manifest(target, script_dir, displays, indevs, frozen_manifest):
     update_mphalport(target)
     if target == 'teensy':
         manifest_path = f'lib/micropython/ports/{target}/manifest.py'
@@ -329,13 +331,7 @@ def build_manifest(target, script_dir, frozen_manifest):
     if not os.path.exists(manifest_path):
         raise RuntimeError(f'Unable to locate manifest file "{manifest_path}"')
 
-    manifest_files = [
-        f'{script_dir}/driver/display/display_driver_framework.py',
-        f'{script_dir}/driver/fs_driver.py',
-        f'{script_dir}/utils/lv_utils.py',
-    ]
-
-    generate_manifest(manifest_path, frozen_manifest, *manifest_files)
+    generate_manifest(script_dir, manifest_path, displays, indevs, frozen_manifest)
 
 
 def parse_args(extra_args, lv_cflags, board):

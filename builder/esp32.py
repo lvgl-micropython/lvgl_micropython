@@ -129,7 +129,7 @@ def get_espidf():
         'lib/esp-idf'
     ]
 
-    result, _ = spawn(cmd)
+    result, _ = spawn(cmd, spinner=True)
     if result != 0:
         sys.exit(result)
 
@@ -283,10 +283,23 @@ def setup_idf_environ():
                 sys.exit(result)
 
             output = [line for line in output.split('\n') if '=' in line]
-            env = {
+            env = {key: value for (key, value) in os.environ.items()}
+
+            temp_env = {
                 line.split('=', 1)[0]: line.split('=', 1)[1]
                 for line in output
             }
+            for item in (
+                'PATH',
+                'IDF_TOOLS_EXPORT_CMD',
+                'IDF_TOOLS_INSTALL_CMD',
+                'IDF_PATH'
+            ):
+                if item not in temp_env:
+                    raise RuntimeError(f'"{item}" not found in environment.')
+
+                env[item] = temp_env[item]
+
         else:
             args = sys.argv[:]
 
