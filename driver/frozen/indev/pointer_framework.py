@@ -17,19 +17,9 @@ class PointerDriver:
     def get_rotation(self):
         return self._disp_drv.get_rotation()
 
-    def add_cursor(self, cursor):
-        if cursor not in self._cursors:
-            self._cursors.append(cursor)
-
-    def remove_cursor(self, cursor):
-        if cursor in self._cursors:
-            self._cursors.remove(cursor)
-
-
     def __init__(self, touch_cal=None):  # NOQA
         self.__class__._instance_counter += 1
         self.id = self.__class__._instance_counter
-        self._cursors = []
 
         if not lv.is_initialized():
             lv.init()
@@ -86,7 +76,7 @@ class PointerDriver:
 
     def _get_coords(self):
         # this method needs to be overridden.
-        # the returned value from this method is going to be a tuple of x, y
+        # the returned value from this method is going to be a tuple of state, x, y
         # or None if no touch even has occured
         raise NotImplementedError
 
@@ -107,49 +97,56 @@ class PointerDriver:
             data.continue_reading = False
             return res
 
-        x, y = coords
+        state, x, y = coords
 
-        config = self._config
-        orientation = self.get_rotation()
-        left = config.left
-        right = config.right
-        top = config.top
-        bottom = config.bottom
+        if None not in (x, y):
 
-        if left is None:
-            left = 0
-        if right is None:
-            right = self._width
-        if top is None:
-            top = 0
-        if bottom is None:
-            bottom = self._height
+            config = self._config
+            orientation = self.get_rotation()
+            left = config.left
+            right = config.right
+            top = config.top
+            bottom = config.bottom
 
-        if orientation == lv.DISPLAY_ROTATION._0:  # NOQA
-            xpos = _remap(x, left, right, 0, self._width)
-            ypos = _remap(y, top, bottom, 0, self._height)
-        elif orientation == lv.DISPLAY_ROTATION._90:  # NOQA
-            xpos = _remap(y, top, bottom, 0, self._width)
-            ypos = _remap(x, right, left, 0, self._height)
-        elif orientation == lv.DISPLAY_ROTATION._270:  # NOQA
-            xpos = _remap(x, right, left, 0, self._width)
-            ypos = _remap(y, bottom, top, 0, self._height)
-        elif orientation == lv.DISPLAY_ROTATION._180:  # NOQA
-            xpos = _remap(y, bottom, top, 0, self._width)
-            ypos = _remap(x, left, right, 0, self._height)
-        else:
-            raise RuntimeError
+            if left is None:
+                left = 0
+            if right is None:
+                right = self._width
+            if top is None:
+                top = 0
+            if bottom is None:
+                bottom = self._height
 
-        self._last_x = data.point.x = xpos
-        self._last_y = data.point.y = ypos
-        self._current_state = data.state = lv.INDEV_STATE.PRESSED
+            if orientation == lv.DISPLAY_ROTATION._0:  # NOQA
+                xpos = _remap(x, left, right, 0, self._width)
+                ypos = _remap(y, top, bottom, 0, self._height)
+            elif orientation == lv.DISPLAY_ROTATION._90:  # NOQA
+                xpos = _remap(y, top, bottom, 0, self._width)
+                ypos = _remap(x, right, left, 0, self._height)
+            elif orientation == lv.DISPLAY_ROTATION._270:  # NOQA
+                xpos = _remap(x, right, left, 0, self._width)
+                ypos = _remap(y, bottom, top, 0, self._height)
+            elif orientation == lv.DISPLAY_ROTATION._180:  # NOQA
+                xpos = _remap(y, bottom, top, 0, self._width)
+                ypos = _remap(x, left, right, 0, self._height)
+            else:
+                raise RuntimeError
+
+            self._last_x = xpos
+            self._last_y = ypos
+
+        if state is not None:
+            if state:
+                self._current_state = lv.INDEV_STATE.PRESSED
+            else:
+                self._current_state = lv.INDEV_STATE.RELEASED
+
+        data.state = self._current_state
+        data.point.x = self._last_x
+        data.point.y = self._last_y
 
         data.continue_reading = True
         # print("raw(x={0}, y={1}) point(x={2} y={3})".format(x, y, data.point.x, data.point.y))  # NOQA
-        point = lv.point_t(dict(x=xpos, y=ypos))
-        for cursor in self._cursors:
-            if cursor(point):
-                break
 
         return True
 

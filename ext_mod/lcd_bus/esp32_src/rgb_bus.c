@@ -34,12 +34,14 @@
         return false;
     }
 
-    mp_lcd_err_t rgb_del(lcd_panel_io_t *io);
-    mp_lcd_err_t rgb_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size);
-    mp_lcd_err_t rgb_get_lane_count(lcd_panel_io_t *io, uint8_t *lane_count);
-    mp_lcd_err_t rgb_rx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size);
-    mp_lcd_err_t rgb_tx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size);
-    mp_obj_t rgb_allocate_framebuffer(lcd_panel_io_t *io, uint32_t size, uint32_t caps);
+    esp_lcd_rgb_panel_event_callbacks_t callbacks = { .on_vsync = rgb_bus_trans_done_cb };
+
+    mp_lcd_err_t rgb_del(mp_obj_t obj);
+    mp_lcd_err_t rgb_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap);
+    mp_lcd_err_t rgb_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
+    mp_lcd_err_t rgb_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
+    mp_lcd_err_t rgb_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
+    mp_obj_t rgb_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps);
 
     mp_obj_t mp_lcd_rgb_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
@@ -187,14 +189,15 @@
         self->panel_io_handle.rx_param = rgb_rx_param;
         self->panel_io_handle.tx_param = rgb_tx_param;
         self->panel_io_handle.allocate_framebuffer = rgb_allocate_framebuffer;
+        self->panel_io_handle.init = rgb_init;
 
         return MP_OBJ_FROM_PTR(self);
     }
 
 
-    mp_obj_t rgb_allocate_framebuffer(lcd_panel_io_t *io, uint32_t size, uint32_t caps)
+    mp_obj_t rgb_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps)
     {
-        mp_lcd_rgb_bus_obj_t *self = __containerof(io, mp_lcd_rgb_bus_obj_t, panel_io_handle);
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
 
         if (self->panel_io_config.bits_per_pixel != 0) {
             if (self->buf1 != NULL) {
@@ -245,7 +248,6 @@
                 mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE, 1, self->buf1));
                 view->typecode |= 0x80; // used to indicate writable buffer
                 return MP_OBJ_FROM_PTR(view);
-
             } else if (self->buf2 == NULL) {
                 self->panel_io_config.num_fbs = 2;
 
@@ -261,18 +263,18 @@
     }
 
 
-    mp_lcd_err_t rgb_del(lcd_panel_io_t *io)
+    mp_lcd_err_t rgb_del(mp_obj_t obj)
     {
-        mp_lcd_rgb_bus_obj_t *self = __containerof(io, mp_lcd_rgb_bus_obj_t, panel_io_handle);
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
 
         mp_lcd_err_t ret = esp_lcd_panel_del(self->panel_handle);
         return ret;
     }
 
 
-    mp_lcd_err_t rgb_rx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size)
+    mp_lcd_err_t rgb_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
     {
-        LCD_UNUSED(io);
+        LCD_UNUSED(obj);
         LCD_UNUSED(lcd_cmd);
         LCD_UNUSED(param);
         LCD_UNUSED(param_size);
@@ -280,9 +282,9 @@
     }
 
 
-    mp_lcd_err_t rgb_tx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size)
+    mp_lcd_err_t rgb_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
     {
-        LCD_UNUSED(io);
+        LCD_UNUSED(obj);
         LCD_UNUSED(lcd_cmd);
         LCD_UNUSED(param);
         LCD_UNUSED(param_size);
@@ -290,9 +292,9 @@
     }
 
 
-    mp_lcd_err_t rgb_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size)
+    mp_lcd_err_t rgb_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap)
     {
-        mp_lcd_rgb_bus_obj_t *self = __containerof(io, mp_lcd_rgb_bus_obj_t, panel_io_handle);
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
 
         self->panel_io_config.timings.h_res = (uint32_t)width;
         self->panel_io_config.timings.v_res = (uint32_t)height;
@@ -304,7 +306,6 @@
             return ret;
         }
 
-        esp_lcd_rgb_panel_event_callbacks_t callbacks = { .on_vsync = rgb_bus_trans_done_cb };
         ret = esp_lcd_rgb_panel_register_event_callbacks(self->panel_handle, &callbacks, self);
         if (ret != 0) {
             mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_rgb_panel_register_event_callbacks)"), ret);
@@ -328,7 +329,7 @@
 
     mp_lcd_err_t rgb_get_lane_count(lcd_panel_io_t *io, uint8_t *lane_count)
     {
-        mp_lcd_rgb_bus_obj_t *self = __containerof(io, mp_lcd_rgb_bus_obj_t, panel_io_handle);
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
         *lane_count = (uint8_t)self->panel_io_config.data_width;
         return LCD_OK;
     }
@@ -394,8 +395,8 @@
         { MP_ROM_QSTR(MP_QSTR_get_lane_count),    MP_ROM_PTR(&mp_lcd_bus_get_lane_count_obj)    },
         { MP_ROM_QSTR(MP_QSTR_register_callback), MP_ROM_PTR(&mp_lcd_bus_register_callback_obj)     },
         { MP_ROM_QSTR(MP_QSTR_tx_color),          MP_ROM_PTR(&mp_lcd_rgb_bus_tx_color_obj)          },
-        { MP_ROM_QSTR(MP_QSTR_rx_param),          MP_ROM_PTR(&mp_lcd_rgb_bus_rx_param_obj)          },
-        { MP_ROM_QSTR(MP_QSTR_tx_param),          MP_ROM_PTR(&mp_lcd_rgb_bus_tx_param_obj)          },
+        { MP_ROM_QSTR(MP_QSTR_rx_param),          MP_ROM_PTR(&mp_lcd_bus_rx_param_obj)          },
+        { MP_ROM_QSTR(MP_QSTR_tx_param),          MP_ROM_PTR(&mp_lcd_bus_tx_param_obj)          },
         { MP_ROM_QSTR(MP_QSTR_free_framebuffer),     MP_ROM_PTR(&mp_lcd_bus_free_framebuffer_obj)     },
         { MP_ROM_QSTR(MP_QSTR_allocate_framebuffer), MP_ROM_PTR(&mp_lcd_bus_allocate_framebuffer_obj) },
         { MP_ROM_QSTR(MP_QSTR_init),              MP_ROM_PTR(&mp_lcd_bus_init_obj)              },

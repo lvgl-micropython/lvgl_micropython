@@ -23,7 +23,7 @@ argParser.add_argument(
 
 
 args1, extra_args = argParser.parse_known_args(sys.argv[1:])
-argParser = ArgumentParser(prefix_chars='mcsLBF')
+argParser = ArgumentParser(prefix_chars='mcsLBFDI')
 
 argParser.add_argument(
     'mpy_cross',
@@ -69,6 +69,30 @@ argParser.add_argument(
     default=None
 )
 
+argParser.add_argument(
+    'DISPLAY',
+    dest='displays',
+    help=(
+        'display name or path (absolute) to display driver. '
+        'Display name is the name of the source file under '
+        'driver/display (without the ".py")'
+    ),
+    action='append',
+    default=[]
+)
+
+argParser.add_argument(
+    'INDEV',
+    dest='indevs',
+    help=(
+        'indev device name or path (absolue) to indev driver. '
+        'Indev name is the name of the source file under '
+        'driver/indev (without the ".py")'
+    ),
+    action='append',
+    default=[]
+)
+
 args2, extra_args = argParser.parse_known_args(extra_args)
 
 target = args1.target[0]
@@ -78,6 +102,8 @@ submodules = args2.submodules
 mpy_cross = args2.mpy_cross
 board = args2.board
 frozen_manifest = args2.frozen_manifest
+displays = args2.displays
+indevs = args2.indevs
 
 extra_args.append(f'FROZEN_MANIFEST="{SCRIPT_DIR}/build/manifest.py"')
 
@@ -136,7 +162,7 @@ if __name__ == '__main__':
     if clean:
         mod.clean()
 
-    mod.build_manifest(target, SCRIPT_DIR, frozen_manifest)
+    mod.build_manifest(target, SCRIPT_DIR, displays, indevs, frozen_manifest)
     create_lvgl_header()
     mod.compile()
 

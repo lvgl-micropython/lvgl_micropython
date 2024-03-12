@@ -4,47 +4,52 @@ import machine
 
 class I2CBus(object):
 
+    _busses = {}
+
     def __init__(self, scl, sda, freq=4000000, host=None, use_pullups=False, use_locks=False):
-
-        if use_pullups:
-            kwargs = dict(
-                scl=machine.Pin(scl, pull=machine.Pin.PULL_UP),
-                sda=machine.Pin(sda, pull=machine.Pin.PULL_UP),
-                freq=freq
-
-            )
-        else:
-            kwargs = dict(
-                scl=machine.Pin(scl),
-                sda=machine.Pin(sda),
-                freq=freq
-            )
-
         if host is None:
             if (scl, sda) == (19, 18):
-                self._bus = machine.I2C(0, **kwargs)
+                host = 0
             else:
-                self._bus = machine.I2C(1, **kwargs)
+                host = 1
+
+        key = (scl, sda, freq, host)
+
+        if key in I2CBus._busses:
+            self.__dict__.update(I2CBus._busses[key].__dict__)
         else:
+            if use_pullups:
+                kwargs = dict(
+                    scl=machine.Pin(scl, pull=machine.Pin.PULL_UP),
+                    sda=machine.Pin(sda, pull=machine.Pin.PULL_UP),
+                    freq=freq
+                )
+            else:
+                kwargs = dict(
+                    scl=machine.Pin(scl),
+                    sda=machine.Pin(sda),
+                    freq=freq
+                )
+
             self._bus = machine.I2C(host, **kwargs)
 
-        if use_locks:
-            import _thread
-            self._lock = _thread.allocate_lock()
+            if use_locks:
+                import _thread
+                self._lock = _thread.allocate_lock()
 
-        else:
-            class Lock(object):
+            else:
+                class Lock(object):
 
-                def acquire(self):
-                    pass
+                    def acquire(self):
+                        pass
 
-                def release(self):
-                    pass
+                    def release(self):
+                        pass
 
-                def is_locked(self):
-                    return False
+                    def is_locked(self):
+                        return False
 
-            self._lock = Lock()
+                self._lock = Lock()
 
     def __enter__(self):
         self._lock.acquire()
@@ -57,6 +62,7 @@ class I2CBus(object):
         self._lock.acquire()
         data = self._bus.scan()
         self._lock.release()
+        return data
 
     def start(self):
         self._bus.start()

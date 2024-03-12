@@ -9,29 +9,17 @@ EXIO7 = 0x40
 EXIO8 = 0x60
 
 
-def BIT64(nr):
-    return 1 << nr
-
-
-def BIT(nr):
-    return 1 << nr
-
-
 class Pin(object):
     IN = 0x00
     OUT = 0x01
 
     def __init__(self, id, mode=-1, value=None):
         self._id = id
-        self._mode = mode
+        self._mode = 0
         self._buf = bytearray(2)
         self._mv = memoryview(self._buf)
 
-        if value is not None:
-            self._set_level(value)
-
-        if mode != -1:
-            self._set_dir(mode)
+        self.init(mode, value)
 
     def init(self, mode=-1, value=None):
         if mode != -1:
@@ -53,11 +41,11 @@ class Pin(object):
         else:
             return self._get_level()
 
-    def on(self):
-        self.value(1)
-
     def off(self):
         self.value(0)
+
+    def on(self):
+        self.value(1)
 
     def low(self):
         self.value(0)

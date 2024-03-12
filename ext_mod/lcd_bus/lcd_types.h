@@ -1,10 +1,6 @@
 #ifndef _LCD_TYPES_H_
     #define _LCD_TYPES_H_
 
-    #ifndef __containerof
-        #define __containerof(ptr, type, member) (type *)((char *)ptr - offsetof(type, member))
-    #endif
-
     #define LCD_UNUSED(x) ((void)x)
 
     // micropython includes
@@ -29,17 +25,6 @@
 
         typedef int mp_lcd_err_t;
 
-        struct _lcd_panel_io_t {
-            mp_lcd_err_t (*get_lane_count)(lcd_panel_io_t *io, uint8_t *lane_count);
-            mp_lcd_err_t (*init)(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size);
-            mp_lcd_err_t (*rx_param)(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size);
-            mp_lcd_err_t (*tx_param)(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size);
-            mp_lcd_err_t (*tx_color)(lcd_panel_io_t *io, int lcd_cmd, void *color, size_t color_size);
-            mp_obj_t (*allocate_framebuffer)(lcd_panel_io_t *io, uint32_t size, uint32_t caps);
-            mp_lcd_err_t (*del)(lcd_panel_io_t *io);
-            esp_lcd_panel_io_handle_t panel_io;
-        };
-
         void cb_isr(mp_obj_t cb);
         bool bus_trans_done_cb(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx);
 
@@ -54,29 +39,33 @@
             LCD_ERR_NOT_SUPPORTED = 0x106
         } mp_lcd_err_t;
 
-        struct _lcd_panel_io_t {
-            mp_lcd_err_t (*get_lane_count)(lcd_panel_io_t *io, uint8_t *lane_count);
-            mp_lcd_err_t (*init)(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size);
-            mp_lcd_err_t (*rx_param)(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size);
-            mp_lcd_err_t (*tx_param)(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size);
-            mp_lcd_err_t (*tx_color)(lcd_panel_io_t *io, int lcd_cmd, void *color, size_t color_size);
-            mp_obj_t (*allocate_framebuffer)(lcd_panel_io_t *io, uint32_t size, uint32_t caps);
-            mp_lcd_err_t (*del)(lcd_panel_io_t *io);
-        };
-
         bool bus_trans_done_cb(lcd_panel_io_t *panel_io, void *edata, void *user_ctx);
 
-    #endif
+
+
+    struct _lcd_panel_io_t {
+        mp_lcd_err_t (*get_lane_count)(mp_obj_t obj, uint8_t *lane_count);
+        mp_lcd_err_t (*init)(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap);
+        mp_lcd_err_t (*rx_param)(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
+        mp_lcd_err_t (*tx_param)(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
+        mp_lcd_err_t (*tx_color)(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size);
+        mp_obj_t (*allocate_framebuffer)(mp_obj_t obj, uint32_t size, uint32_t caps);
+        mp_lcd_err_t (*del)(mp_obj_t obj);
+
+        #ifdef ESP_IDF_VERSION
+            esp_lcd_panel_io_handle_t panel_io;
+        #endif
+    };
 
     // typedef struct lcd_panel_io_t *lcd_panel_io_handle_t; /*!< Type of LCD panel IO handle */
 
-    mp_lcd_err_t lcd_panel_io_get_lane_count(lcd_panel_io_t *io, uint8_t *lane_count);
-    mp_lcd_err_t lcd_panel_io_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size);
-    mp_lcd_err_t lcd_panel_io_rx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size);
-    mp_lcd_err_t lcd_panel_io_tx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size);
-    mp_lcd_err_t lcd_panel_io_tx_color(lcd_panel_io_t *io, int lcd_cmd, void *color, size_t color_size);
-    mp_obj_t lcd_panel_io_allocate_framebuffer(lcd_panel_io_t *io, uint32_t size, uint32_t caps);
-    mp_lcd_err_t lcd_panel_io_del(lcd_panel_io_t *io);
+    mp_lcd_err_t lcd_panel_io_get_lane_count(mp_obj_t *obj, uint8_t *lane_count);
+    mp_lcd_err_t lcd_panel_io_init(mp_obj_t *obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap);
+    mp_lcd_err_t lcd_panel_io_rx_param(mp_obj_t *obj, int lcd_cmd, void *param, size_t param_size);
+    mp_lcd_err_t lcd_panel_io_tx_param(mp_obj_t *obj, int lcd_cmd, void *param, size_t param_size);
+    mp_lcd_err_t lcd_panel_io_tx_color(mp_obj_t *obj, int lcd_cmd, void *color, size_t color_size);
+    mp_obj_t lcd_panel_io_allocate_framebuffer(mp_obj_t *obj, uint32_t size, uint32_t caps);
+    mp_lcd_err_t lcd_panel_io_del(mp_obj_t *obj);
 
     typedef struct _mp_lcd_bus_obj_t {
         mp_obj_base_t base;

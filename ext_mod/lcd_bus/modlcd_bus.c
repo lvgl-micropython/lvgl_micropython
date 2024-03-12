@@ -23,10 +23,8 @@
 
 mp_obj_t mp_lcd_bus_get_lane_count(size_t n_args, const mp_obj_t *args)
 {
-    mp_lcd_i80_bus_obj_t *self = MP_OBJ_TO_PTR(args[0]);
-
     uint8_t lane_count;
-    mp_lcd_err_t ret = lcd_panel_io_get_lane_count(&self->panel_io_handle, &lane_count);
+    mp_lcd_err_t ret = lcd_panel_io_get_lane_count(MP_OBJ_TO_PTR(args[0]), &lane_count);
 
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_OSError, MP_ERROR_TEXT("%d(lcd_panel_io_init)"), ret);
@@ -52,18 +50,13 @@ mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
-
-
-    if (args[ARG_bpp].u_int == 16) {
-        self->rgb565_byte_swap = (bool)args[ARG_rgb565_byte_swap].u_bool;
-    } else {
-        self->rgb565_byte_swap = false;
-    }
-
-    mp_lcd_err_t ret = lcd_panel_io_init(&self->panel_io_handle,  (uint16_t)args[ARG_width].u_int,
-        (uint16_t)args[ARG_height].u_int, (uint8_t)args[ARG_bpp].u_int,
-        (uint32_t)args[ARG_buffer_size].u_int
+    mp_lcd_err_t ret = lcd_panel_io_init(
+        args[ARG_self].u_obj,
+        (uint16_t)args[ARG_width].u_int,
+        (uint16_t)args[ARG_height].u_int,
+        (uint8_t)args[ARG_bpp].u_int,
+        (uint32_t)args[ARG_buffer_size].u_int,
+        (bool)args[ARG_rgb565_byte_swap].u_bool
     );
 
     if (ret != 0) {
@@ -134,9 +127,7 @@ mp_obj_t mp_lcd_bus_allocate_framebuffer(size_t n_args, const mp_obj_t *pos_args
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
-
-    return lcd_panel_io_allocate_framebuffer(&self->panel_io_handle, (uint32_t)args[ARG_size].u_int, (uint32_t)args[ARG_caps].u_int);
+    return lcd_panel_io_allocate_framebuffer(args[ARG_self].u_obj, (uint32_t)args[ARG_size].u_int, (uint32_t)args[ARG_caps].u_int);
 }
 
 MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_bus_allocate_framebuffer_obj, 3, mp_lcd_bus_allocate_framebuffer);
@@ -153,15 +144,14 @@ mp_obj_t mp_lcd_bus_tx_param(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
     mp_lcd_err_t ret;
 
     if (args[ARG_params].u_obj != mp_const_none) {
         mp_buffer_info_t bufinfo;
         mp_get_buffer_raise(args[ARG_params].u_obj, &bufinfo, MP_BUFFER_READ);
-        ret = lcd_panel_io_tx_param(&self->panel_io_handle, (int)args[ARG_cmd].u_int, bufinfo.buf, (size_t)bufinfo.len);
+        ret = lcd_panel_io_tx_param(args[ARG_self].u_obj, (int)args[ARG_cmd].u_int, bufinfo.buf, (size_t)bufinfo.len);
     } else {
-        ret = lcd_panel_io_tx_param(&self->panel_io_handle, (int)args[ARG_cmd].u_int, NULL, 0);
+        ret = lcd_panel_io_tx_param(args[ARG_self].u_obj, (int)args[ARG_cmd].u_int, NULL, 0);
     }
 
     if (ret != 0) {
@@ -189,12 +179,10 @@ mp_obj_t mp_lcd_bus_tx_color(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
-
     mp_buffer_info_t bufinfo;
     mp_get_buffer_raise(args[ARG_data].u_obj, &bufinfo, MP_BUFFER_READ);
 
-    mp_lcd_err_t ret = lcd_panel_io_tx_color(&self->panel_io_handle, (int)args[ARG_cmd].u_int, bufinfo.buf, (size_t)bufinfo.len);
+    mp_lcd_err_t ret = lcd_panel_io_tx_color(args[ARG_self].u_obj, (int)args[ARG_cmd].u_int, bufinfo.buf, (size_t)bufinfo.len);
 
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_OSError, MP_ERROR_TEXT("%d(lcd_panel_io_tx_color)"), ret);
@@ -211,11 +199,9 @@ mp_obj_t mp_lcd_bus_tx_color(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
 MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_bus_tx_color_obj, 7, mp_lcd_bus_tx_color);
 
 
-mp_obj_t mp_lcd_bus_deinit(mp_obj_t self_in)
+mp_obj_t mp_lcd_bus_deinit(mp_obj_t obj)
 {
-    mp_lcd_bus_obj_t *self = self_in;
-
-    mp_lcd_err_t ret = lcd_panel_io_del(&self->panel_io_handle);
+    mp_lcd_err_t ret = lcd_panel_io_del(obj);
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(lcd_panel_io_del)"), ret);
     }
@@ -238,12 +224,10 @@ mp_obj_t mp_lcd_bus_rx_param(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
-
     mp_buffer_info_t bufinfo;
     mp_get_buffer_raise(args[ARG_data].u_obj, &bufinfo, MP_BUFFER_WRITE);
 
-    mp_lcd_err_t ret = lcd_panel_io_rx_param(&self->panel_io_handle, (int)args[ARG_cmd].u_int, bufinfo.buf, (size_t)bufinfo.len);
+    mp_lcd_err_t ret = lcd_panel_io_rx_param(args[ARG_self].u_obj, (int)args[ARG_cmd].u_int, bufinfo.buf, (size_t)bufinfo.len);
 
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_OSError, MP_ERROR_TEXT("%d(lcd_panel_io_rx_param)"), ret);
