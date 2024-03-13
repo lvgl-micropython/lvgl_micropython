@@ -127,9 +127,11 @@ def create_lvgl_header():
         f.write(
             f'#include "{SCRIPT_DIR}/lib/lvgl/lvgl.h"\n'
         )
-
         f.write(
             f'#include "{SCRIPT_DIR}/lib/lvgl/src/lvgl_private.h"\n'
+        )
+        f.write(
+            f'#include "{SCRIPT_DIR}/ext_mod/lvgl_addons/include/color_addons.h"\n'
         )
 
 
