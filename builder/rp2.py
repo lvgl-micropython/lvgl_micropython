@@ -1,11 +1,35 @@
 import os
 import sys
+from argparse import ArgumentParser
 from . import spawn
 from . import generate_manifest
 from . import update_mphalport
 
 
+board_variant = None
+
+
 def parse_args(extra_args, lv_cflags, board):
+    global board_variant
+
+    if board == 'WEACTSTUDIO':
+        rp2_argParser = ArgumentParser(prefix_chars='-B')
+
+        rp2_argParser.add_argument(
+            'BOARD_VARIANT',
+            dest='board_variant',
+            default='',
+            action='store'
+        )
+        rp2_args, extra_args = rp2_argParser.parse_known_args(extra_args)
+
+        board_variant = rp2_args.board_variant
+
+    else:
+        for arg in extra_args:
+            if arg.startswith('BOARD_VARIANT'):
+                raise RuntimeError(f'BOARD_VARIANT not supported by "{board}"')
+
     return extra_args, lv_cflags, board
 
 
@@ -34,8 +58,12 @@ def build_commands(_, extra_args, __, lv_cflags, board):
     if board is not None:
         if lv_cflags is not None:
             rp2_cmd.insert(7, f'BOARD={board}')
+            if board_variant:
+                rp2_cmd.insert(8, f'BOARD_VARIANT={board_variant}')
         else:
             rp2_cmd.insert(6, f'BOARD={board}')
+            if board_variant:
+                rp2_cmd.insert(7, f'BOARD_VARIANT={board_variant}')
 
     clean_cmd.extend(rp2_cmd[:])
     clean_cmd[1] = 'clean'

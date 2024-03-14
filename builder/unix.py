@@ -23,7 +23,7 @@ def parse_args(extra_args, lv_cflags, board):
     return extra_args, lv_cflags, board
 
 
-def build_commands(_, extra_args, script_dir, lv_cflags, __):
+def build_commands(_, extra_args, script_dir, lv_cflags, board):
     if lv_cflags is not None:
         lv_cflags += ' -DMICROPY_SDL=1'
     else:
@@ -36,6 +36,9 @@ def build_commands(_, extra_args, script_dir, lv_cflags, __):
     ]
 
     mp_bus_flags = ' '.join(mp_bus_flags)
+
+    if board:
+        unix_cmd.append(f'VARIANT={board}')
 
     unix_cmd.extend([
         f'LCD_BUS_CFLAGS="{mp_bus_flags}"',

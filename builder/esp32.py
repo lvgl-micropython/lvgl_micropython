@@ -153,12 +153,17 @@ def parse_args(extra_args, lv_cflags, board):
         action='store_true'
     )
 
-    esp_argParser.add_argument(
-        'BOARD_VARIANT',
-        dest='board_variant',
-        default='',
-        action='store'
-    )
+    if board in ('ESP32_GENERIC', 'ESP32_GENERIC_S3'):
+        esp_argParser.add_argument(
+            'BOARD_VARIANT',
+            dest='board_variant',
+            default='',
+            action='store'
+        )
+    else:
+        for arg in extra_args:
+            if arg.startswith('BOARD_VARIANT'):
+                raise RuntimeError(f'BOARD_VARIANT not supported by "{board}"')
 
     esp_argParser.add_argument(
         '--partition-size',

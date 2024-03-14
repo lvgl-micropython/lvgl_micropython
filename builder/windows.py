@@ -14,7 +14,7 @@ def parse_args(extra_args, lv_cflags, board):
     return extra_args, lv_cflags, board
 
 
-def build_commands(_, extra_args, script_dir, lv_cflags, __):
+def build_commands(_, extra_args, script_dir, lv_cflags, board):
     if sys.platform.startswith('win'):
         try:
             import pyMSVC

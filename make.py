@@ -13,9 +13,8 @@ argParser.add_argument(
     'target',
     help='build target',
     choices=[
-        'esp32', 'windows', 'stm32', 'unix', 'rp2', 'esp8266', 'teensy',
-        'teensy', 'zephyr', 'renesas-ra', 'nrf', 'mimxrt', 'samd',
-        'webassembly'
+        'esp32', 'windows', 'stm32', 'unix', 'rp2'
+        'renesas-ra', 'nrf', 'mimxrt', 'samd'
     ],
     action='store',
     nargs=1
@@ -23,6 +22,8 @@ argParser.add_argument(
 
 
 args1, extra_args = argParser.parse_known_args(sys.argv[1:])
+target = args1.target[0]
+
 argParser = ArgumentParser(prefix_chars='mcsLBFDI')
 
 argParser.add_argument(
@@ -53,13 +54,22 @@ argParser.add_argument(
     default=None
 )
 
-argParser.add_argument(
-    'BOARD',
-    dest='board',
-    help='optional, board to compile for.',
-    action='store',
-    default=None
-)
+if target in ('windows', 'unix'):
+    argParser.add_argument(
+        'VARIANT',
+        dest='board',
+        help='optional, board to compile for.',
+        action='store',
+        default=None
+    )
+else:
+    argParser.add_argument(
+        'BOARD',
+        dest='board',
+        help='optional, board to compile for.',
+        action='store',
+        default=None
+    )
 
 argParser.add_argument(
     'FROZEN_MANIFEST',
@@ -95,7 +105,6 @@ argParser.add_argument(
 
 args2, extra_args = argParser.parse_known_args(extra_args)
 
-target = args1.target[0]
 lv_cflags = args2.lv_cflags
 clean = args2.clean
 submodules = args2.submodules
