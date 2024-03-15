@@ -8,6 +8,7 @@ list(APPEND LV_CFLAGS ${LV_CFLAGS_ENV} -Wno-unused-function)
 include(${CMAKE_CURRENT_LIST_DIR}/ext_mod/micropython.cmake)
 
 set(LVGL_HEADER "${CMAKE_CURRENT_LIST_DIR}/build/lvgl_header.h")
+set(LVGL_ADDONS_SRC "${CMAKE_CURRENT_LIST_DIR}/ext_mod/lvgl_addons/src/color_addons.c")
 
 file(GLOB_RECURSE LVGL_HEADERS ${CMAKE_CURRENT_LIST_DIR}/lib/lvgl/src/*.h ${CMAKE_CURRENT_LIST_DIR}/lib/lv_conf.h)
 
@@ -36,19 +37,18 @@ endif()
 # file(WRITE ${CMAKE_BINARY_DIR}/lv_mp.c ${mpy_output})
 
 file(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_LIST_DIR}/lib/lvgl/src/*.c)
+list(APPEND SOURCES ${LVGL_ADDONS_SRC})
 
 add_library(lvgl_interface INTERFACE)
 
 target_sources(lvgl_interface INTERFACE ${SOURCES})
 target_compile_options(lvgl_interface INTERFACE ${LV_CFLAGS})
 
-
 set(LVGL_MPY_INCLUDES
     ${CMAKE_CURRENT_LIST_DIR}/lib/micropython
     ${CMAKE_CURRENT_LIST_DIR}
     ${CMAKE_CURRENT_LIST_DIR}/include
 )
-
 
 add_library(usermod_lvgl INTERFACE)
 target_sources(usermod_lvgl INTERFACE ${CMAKE_BINARY_DIR}/lv_mp.c)

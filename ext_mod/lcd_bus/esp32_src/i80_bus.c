@@ -19,9 +19,9 @@
     #include "hal/lcd_types.h"
 
 
-    mp_lcd_err_t i80_del(lcd_panel_io_t *io);
-    mp_lcd_err_t i80_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size);
-    mp_lcd_err_t i80_get_lane_count(lcd_panel_io_t *io, uint8_t *lane_count);
+    mp_lcd_err_t i80_del(mp_obj_t obj);
+    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap);
+    mp_lcd_err_t i80_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
 
     STATIC mp_obj_t mp_lcd_i80_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
@@ -164,9 +164,15 @@
     }
     
 
-    mp_lcd_err_t i80_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size)
+    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap)
     {
-        mp_lcd_i80_bus_obj_t *self = __containerof(io, mp_lcd_i80_bus_obj_t, panel_io_handle);
+        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)obj;
+
+        if (bpp == 16) {
+            self->rgb565_byte_swap = rgb565_byte_swap;
+        } else {
+            self->rgb565_byte_swap = false;
+        }
 
         self->bus_config.max_transfer_bytes = (size_t)buffer_size;
 
@@ -186,9 +192,9 @@
     }
 
 
-    mp_lcd_err_t i80_del(lcd_panel_io_t *io)
+    mp_lcd_err_t i80_del(mp_obj_t obj)
     {
-        mp_lcd_i80_bus_obj_t *self = __containerof(io, mp_lcd_i80_bus_obj_t, panel_io_handle);
+        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)obj;
 
         mp_lcd_err_t ret = esp_lcd_panel_io_del(self->panel_io_handle.panel_io);
         if (ret != 0) {
@@ -203,9 +209,9 @@
         return ret;
     }
 
-    mp_lcd_err_t i80_get_lane_count(lcd_panel_io_t *io, uint8_t *lane_count)
+    mp_lcd_err_t i80_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
     {
-        mp_lcd_i80_bus_obj_t *self = __containerof(io, mp_lcd_i80_bus_obj_t, panel_io_handle);
+        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)obj;
         *lane_count = (uint8_t)self->bus_config.bus_width;
         return LCD_OK;
     }

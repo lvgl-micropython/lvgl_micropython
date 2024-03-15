@@ -23,7 +23,7 @@ def parse_args(extra_args, lv_cflags, board):
     return extra_args, lv_cflags, board
 
 
-def build_commands(_, extra_args, script_dir, lv_cflags, __):
+def build_commands(_, extra_args, script_dir, lv_cflags, board):
     if lv_cflags is not None:
         lv_cflags += ' -DMICROPY_SDL=1'
     else:
@@ -37,8 +37,11 @@ def build_commands(_, extra_args, script_dir, lv_cflags, __):
 
     mp_bus_flags = ' '.join(mp_bus_flags)
 
+    if board:
+        unix_cmd.append(f'VARIANT={board}')
+
     unix_cmd.extend([
-        f'MP_BUS_CFLAGS="{mp_bus_flags}"',
+        f'LCD_BUS_CFLAGS="{mp_bus_flags}"',
         f'LV_CFLAGS="{lv_cflags}"',
         f'LV_PORT=unix',
         f'USER_C_MODULES="{script_dir}/ext_mod"'
@@ -55,7 +58,7 @@ def build_commands(_, extra_args, script_dir, lv_cflags, __):
     submodules_cmd[1] = 'submodules'
 
 
-def build_manifest(target, script_dir, frozen_manifest):
+def build_manifest(target, script_dir, displays, indevs, frozen_manifest):
     update_mphalport(target)
 
     manifest_path = 'lib/micropython/ports/unix/variants/manifest.py'
@@ -64,7 +67,7 @@ def build_manifest(target, script_dir, frozen_manifest):
         f'{script_dir}/driver/fs_driver.py',
         f'{script_dir}/driver/linux/lv_timer.py',
     ]
-    generate_manifest(script_dir, manifest_path, frozen_manifest, *manifest_files)
+    generate_manifest(script_dir, manifest_path, displays, indevs, frozen_manifest, *manifest_files)
 
 
 def clean():
@@ -194,7 +197,7 @@ def compile():  # NOQA
         with open(mpconfigvariant_common_path, 'w') as f:
             f.write(mpconfigvariant_common)
 
-    return_code, _ = spawn(compile_cmd)
+    return_code, _ = spawn(compile_cmd, cmpl=True)
     if return_code != 0:
         sys.exit(return_code)
 

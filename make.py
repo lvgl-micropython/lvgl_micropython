@@ -13,9 +13,8 @@ argParser.add_argument(
     'target',
     help='build target',
     choices=[
-        'esp32', 'windows', 'stm32', 'unix', 'rp2', 'esp8266', 'teensy',
-        'teensy', 'zephyr', 'renesas-ra', 'nrf', 'mimxrt', 'samd',
-        'webassembly'
+        'esp32', 'windows', 'stm32', 'unix', 'rp2'
+        'renesas-ra', 'nrf', 'mimxrt', 'samd'
     ],
     action='store',
     nargs=1
@@ -23,7 +22,9 @@ argParser.add_argument(
 
 
 args1, extra_args = argParser.parse_known_args(sys.argv[1:])
-argParser = ArgumentParser(prefix_chars='mcsLBF')
+target = args1.target[0]
+
+argParser = ArgumentParser(prefix_chars='mcsLBFDI')
 
 argParser.add_argument(
     'mpy_cross',
@@ -53,13 +54,22 @@ argParser.add_argument(
     default=None
 )
 
-argParser.add_argument(
-    'BOARD',
-    dest='board',
-    help='optional, board to compile for.',
-    action='store',
-    default=None
-)
+if target in ('windows', 'unix'):
+    argParser.add_argument(
+        'VARIANT',
+        dest='board',
+        help='optional, board to compile for.',
+        action='store',
+        default=None
+    )
+else:
+    argParser.add_argument(
+        'BOARD',
+        dest='board',
+        help='optional, board to compile for.',
+        action='store',
+        default=None
+    )
 
 argParser.add_argument(
     'FROZEN_MANIFEST',
@@ -69,15 +79,40 @@ argParser.add_argument(
     default=None
 )
 
+argParser.add_argument(
+    'DISPLAY',
+    dest='displays',
+    help=(
+        'display name or path (absolute) to display driver. '
+        'Display name is the name of the source file under '
+        'driver/display (without the ".py")'
+    ),
+    action='append',
+    default=[]
+)
+
+argParser.add_argument(
+    'INDEV',
+    dest='indevs',
+    help=(
+        'indev device name or path (absolue) to indev driver. '
+        'Indev name is the name of the source file under '
+        'driver/indev (without the ".py")'
+    ),
+    action='append',
+    default=[]
+)
+
 args2, extra_args = argParser.parse_known_args(extra_args)
 
-target = args1.target[0]
 lv_cflags = args2.lv_cflags
 clean = args2.clean
 submodules = args2.submodules
 mpy_cross = args2.mpy_cross
 board = args2.board
 frozen_manifest = args2.frozen_manifest
+displays = args2.displays
+indevs = args2.indevs
 
 extra_args.append(f'FROZEN_MANIFEST="{SCRIPT_DIR}/build/manifest.py"')
 
@@ -101,9 +136,11 @@ def create_lvgl_header():
         f.write(
             f'#include "{SCRIPT_DIR}/lib/lvgl/lvgl.h"\n'
         )
-
         f.write(
             f'#include "{SCRIPT_DIR}/lib/lvgl/src/lvgl_private.h"\n'
+        )
+        f.write(
+            f'#include "{SCRIPT_DIR}/ext_mod/lvgl_addons/include/color_addons.h"\n'
         )
 
 
@@ -136,7 +173,7 @@ if __name__ == '__main__':
     if clean:
         mod.clean()
 
-    mod.build_manifest(target, SCRIPT_DIR, frozen_manifest)
+    mod.build_manifest(target, SCRIPT_DIR, displays, indevs, frozen_manifest)
     create_lvgl_header()
     mod.compile()
 

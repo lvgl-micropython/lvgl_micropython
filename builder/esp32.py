@@ -129,7 +129,7 @@ def get_espidf():
         'lib/esp-idf'
     ]
 
-    result, _ = spawn(cmd)
+    result, _ = spawn(cmd, spinner=True)
     if result != 0:
         sys.exit(result)
 
@@ -153,12 +153,17 @@ def parse_args(extra_args, lv_cflags, board):
         action='store_true'
     )
 
-    esp_argParser.add_argument(
-        'BOARD_VARIANT',
-        dest='board_variant',
-        default='',
-        action='store'
-    )
+    if board in ('ESP32_GENERIC', 'ESP32_GENERIC_S3'):
+        esp_argParser.add_argument(
+            'BOARD_VARIANT',
+            dest='board_variant',
+            default='',
+            action='store'
+        )
+    else:
+        for arg in extra_args:
+            if arg.startswith('BOARD_VARIANT'):
+                raise RuntimeError(f'BOARD_VARIANT not supported by "{board}"')
 
     esp_argParser.add_argument(
         '--partition-size',
@@ -232,7 +237,7 @@ def get_idf_version():
             return version
 
 
-def build_manifest(target, script_dir, frozen_manifest):
+def build_manifest(target, script_dir, displays, indevs, frozen_manifest):
     update_mphalport(target)
 
     with open(f'lib/micropython/ports/esp32/boards/sdkconfig.base', 'r') as f:
@@ -249,7 +254,7 @@ def build_manifest(target, script_dir, frozen_manifest):
 
     manifest_path = 'lib/micropython/ports/esp32/boards/manifest.py'
 
-    generate_manifest(script_dir, manifest_path, frozen_manifest)
+    generate_manifest(script_dir, manifest_path, displays, indevs, frozen_manifest)
 
 
 def clean():
@@ -282,13 +287,24 @@ def setup_idf_environ():
                 print(output)
                 sys.exit(result)
 
-            print(output)
             output = [line for line in output.split('\n') if '=' in line]
-            env = {
+            env = {key: value for (key, value) in os.environ.items()}
+
+            temp_env = {
                 line.split('=', 1)[0]: line.split('=', 1)[1]
                 for line in output
             }
-            print(env)
+            for item in (
+                'PATH',
+                'IDF_TOOLS_EXPORT_CMD',
+                'IDF_TOOLS_INSTALL_CMD',
+                'IDF_PATH'
+            ):
+                if item not in temp_env:
+                    raise RuntimeError(f'"{item}" not found in environment.')
+
+                env[item] = temp_env[item]
+
         else:
             args = sys.argv[:]
 
@@ -367,7 +383,7 @@ def compile():  # NOQA
     else:
         deploy = False
 
-    ret_code, output = spawn(compile_cmd, env=env)
+    ret_code, output = spawn(compile_cmd, env=env, cmpl=True)
     if ret_code != 0:
         if (
             'partition is too small ' not in output or
@@ -401,7 +417,7 @@ def compile():  # NOQA
         if deploy:
             compile_cmd.append('deploy')
 
-        ret_code, output = spawn(compile_cmd, env=env)
+        ret_code, output = spawn(compile_cmd, env=env, cmpl=True)
 
         if ret_code != 0:
             sys.exit(ret_code)
@@ -414,7 +430,6 @@ def compile():  # NOQA
                 partition_file_name
             )
             partition = Partition(partition_file_name)
-
 
             remaining = output.rsplit('application')[-1]
             remaining = int(
@@ -455,7 +470,7 @@ def compile():  # NOQA
                 compile_cmd.append('deploy')
 
             if remaining > 4096 or partition_size != -1 or deploy:
-                ret_code, output = spawn(compile_cmd, env=env)
+                ret_code, output = spawn(compile_cmd, env=env, cmpl=True)
 
                 if ret_code != 0:
                     sys.exit(ret_code)

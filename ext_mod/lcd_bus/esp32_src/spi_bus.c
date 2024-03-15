@@ -22,9 +22,9 @@
 #include <string.h>
 
 
-mp_lcd_err_t spi_del(lcd_panel_io_t *io);
-mp_lcd_err_t spi_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size);
-mp_lcd_err_t spi_get_lane_count(lcd_panel_io_t *io, uint8_t *lane_count);
+mp_lcd_err_t spi_del(mp_obj_t obj);
+mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap);
+mp_lcd_err_t spi_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
 
 
 STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
@@ -364,11 +364,11 @@ STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
 }
 
 
-mp_lcd_err_t spi_del(lcd_panel_io_t *io)
+mp_lcd_err_t spi_del(mp_obj_t obj)
 {
-    mp_lcd_spi_bus_obj_t *self = __containerof(io, mp_lcd_spi_bus_obj_t, panel_io_handle);
+    mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
 
-    mp_lcd_err_t ret = esp_lcd_panel_io_del(io->panel_io);
+    mp_lcd_err_t ret = esp_lcd_panel_io_del(self->panel_io_handle.panel_io);
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_panel_io_del)"), ret);
     }
@@ -394,9 +394,15 @@ mp_lcd_err_t spi_del(lcd_panel_io_t *io)
 }
 
 
-mp_lcd_err_t spi_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size)
+mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap)
 {
-    mp_lcd_spi_bus_obj_t *self = __containerof(io, mp_lcd_spi_bus_obj_t, panel_io_handle);
+    mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
+
+    if (bpp == 16) {
+        self->rgb565_byte_swap = rgb565_byte_swap;
+    } else {
+        self->rgb565_byte_swap = false;
+    }
 
     self->bus_config.max_transfer_sz = (size_t)buffer_size;
 
@@ -405,7 +411,7 @@ mp_lcd_err_t spi_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(spi_bus_initialize)"), ret);
     }
 
-    ret = esp_lcd_new_panel_io_spi(self->bus_handle, &self->panel_io_config, &io->panel_io);
+    ret = esp_lcd_new_panel_io_spi(self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io);
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_spi)"), ret);
     }
@@ -414,9 +420,9 @@ mp_lcd_err_t spi_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8
 }
 
 
-mp_lcd_err_t spi_get_lane_count(lcd_panel_io_t *io, uint8_t *lane_count)
+mp_lcd_err_t spi_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
 {
-    mp_lcd_spi_bus_obj_t *self = __containerof(io, mp_lcd_spi_bus_obj_t, panel_io_handle);
+    mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
 
     *lane_count = 1;
 
@@ -431,10 +437,27 @@ mp_lcd_err_t spi_get_lane_count(lcd_panel_io_t *io, uint8_t *lane_count)
 }
 
 
+STATIC const mp_rom_map_elem_t mp_lcd_spi_bus_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_get_lane_count),       MP_ROM_PTR(&mp_lcd_bus_get_lane_count_obj)       },
+    { MP_ROM_QSTR(MP_QSTR_allocate_framebuffer), MP_ROM_PTR(&mp_lcd_bus_allocate_framebuffer_obj) },
+    { MP_ROM_QSTR(MP_QSTR_free_framebuffer),     MP_ROM_PTR(&mp_lcd_bus_free_framebuffer_obj)     },
+    { MP_ROM_QSTR(MP_QSTR_register_callback),    MP_ROM_PTR(&mp_lcd_bus_register_callback_obj)    },
+    { MP_ROM_QSTR(MP_QSTR_tx_param),             MP_ROM_PTR(&mp_lcd_bus_tx_param_obj)             },
+    { MP_ROM_QSTR(MP_QSTR_tx_color),             MP_ROM_PTR(&mp_lcd_bus_tx_color_obj)             },
+    { MP_ROM_QSTR(MP_QSTR_rx_param),             MP_ROM_PTR(&mp_lcd_bus_rx_param_obj)             },
+    { MP_ROM_QSTR(MP_QSTR_init),                 MP_ROM_PTR(&mp_lcd_bus_init_obj)                 },
+    { MP_ROM_QSTR(MP_QSTR_deinit),               MP_ROM_PTR(&mp_lcd_bus_deinit_obj)               },
+    { MP_ROM_QSTR(MP_QSTR___del__),              MP_ROM_PTR(&mp_lcd_bus_deinit_obj)               },
+    { MP_ROM_QSTR(MP_QSTR_MAXIMUM_BUFFER_SIZE),  MP_ROM_INT(SOC_SPI_MAXIMUM_BUFFER_SIZE)          },
+};
+
+STATIC MP_DEFINE_CONST_DICT(mp_lcd_spi_bus_locals_dict, mp_lcd_spi_bus_locals_dict_table);
+
+
 MP_DEFINE_CONST_OBJ_TYPE(
     mp_lcd_spi_bus_type,
     MP_QSTR_SPI_Bus,
     MP_TYPE_FLAG_NONE,
     make_new, mp_lcd_spi_bus_make_new,
-    locals_dict, (mp_obj_dict_t *)&mp_lcd_bus_locals_dict
+    locals_dict, (mp_obj_dict_t *)&mp_lcd_spi_bus_locals_dict
 );
