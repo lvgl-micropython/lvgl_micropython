@@ -273,7 +273,7 @@ def setup_idf_environ():
                 cmds.append(['export'])
                 cmds.append(['set'])
             else:
-                cmds.append(['. ./export.sh'])
+                cmds.append(['/usr/bin/bash -c "source ./export.sh"'])
                 cmds.append(['printenv'])
 
             result, output = spawn(cmds, out_to_screen=False)
@@ -320,8 +320,10 @@ def submodules():
 
         if sys.platform.startswith('win'):
             cmds.append(['install', 'all'])
+            cmds.append(['export'])
         else:
             cmds.append(['./install.sh', 'all'])
+            cmds.append(['/usr/bin/bash -c "source ./export.sh"'])
 
         print('setting up ESP-IDF v5.0.4')
         print('this might take a bit...')
