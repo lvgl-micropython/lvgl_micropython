@@ -184,23 +184,22 @@ class DisplayDriver:
                 buf_size = int(
                     display_width *
                     display_height *
-                    lv.color_format_get_size(self._color_space)
+                    lv.color_format_get_size(color_space)
                 )
                 gc.collect()
 
                 if isinstance(data_bus, lcd_bus.RGBBus):
-                    if frame_buffer1 is None:
-                        if buf_size > 100000:
-                            caps = lcd_bus.MEMORY_SPIRAM
-                        else:
-                            caps = lcd_bus.MEMORY_INTERNAL
+                    if buf_size > 100000:
+                        caps = lcd_bus.MEMORY_SPIRAM
+                    else:
+                        caps = lcd_bus.MEMORY_INTERNAL
 
-                        frame_buffer1 = data_bus.allocate_framebuffer(
-                            buf_size, caps
-                        )
-                        frame_buffer2 = data_bus.allocate_framebuffer(
-                            buf_size, caps
-                        )
+                    frame_buffer1 = data_bus.allocate_framebuffer(
+                        buf_size, caps
+                    )
+                    frame_buffer2 = data_bus.allocate_framebuffer(
+                        buf_size, caps
+                    )
                 else:
                     buf_size = int(buf_size // 10)
 
@@ -244,7 +243,7 @@ class DisplayDriver:
                 buffer_size = int(
                     display_width *
                     display_height *
-                    lv.color_format_get_size(self._color_space)
+                    lv.color_format_get_size(color_space)
                 )
             else:
                 buffer_size = len(frame_buffer1)

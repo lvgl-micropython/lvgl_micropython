@@ -8,8 +8,8 @@ MOD_DIR := $(USERMOD_DIR)
 
 LVGL_BINDING_DIR = $(subst /ext_mod/lvgl,,$(MOD_DIR))
 LVGL_DIR = $(LVGL_BINDING_DIR)/lib/lvgl
+LVGL_ADDON_DIR = $(LVGL_BINDING_DIR)/ext_mod/lvgl_addons
 LVGL_HEADER = $(LVGL_BINDING_DIR)/build/lvgl_header.h
-
 
 CFLAGS_USERMOD += -I$(LVGL_BINDING_DIR)
 CFLAGS_USERMOD += -I$(LVGL_DIR)
@@ -32,7 +32,7 @@ LVGL_MPY: $(LVGL_MPY)
 
 CFLAGS_USERMOD += -Wno-unused-function
 SRC_USERMOD_LIB_C += $(shell find $(LVGL_DIR)/src -type f -name "*.c")
-
+SRC_USERMOD_LIB_C += $(LVGL_ADDON_DIR)/src/color_addons.c
 SRC_USERMOD_C += $(LVGL_MPY)
 
 ifneq (,$(findstring MICROPY_SDL=1, $(LV_CFLAGS)))

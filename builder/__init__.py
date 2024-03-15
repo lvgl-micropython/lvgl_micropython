@@ -27,7 +27,7 @@ def update_mphalport(target):
             f.write(data.encode('utf-8'))
 
 
-def generate_manifest(script_dir, manifest_path, frozen_manifest, *addl_manifest_files):
+def generate_manifest(script_dir, manifest_path, displays, indevs, frozen_manifest, *addl_manifest_files):
     if not os.path.exists('build'):
         os.mkdir('build')
 
@@ -44,7 +44,7 @@ def generate_manifest(script_dir, manifest_path, frozen_manifest, *addl_manifest
         f'{script_dir}/driver/frozen/indev/touch_calibration/touch_calibrate.py',
         f'{script_dir}/driver/frozen/indev/button_framework.py',
         f'{script_dir}/driver/frozen/indev/encoder_framework.py',
-#        f'{script_dir}/driver/frozen/indev/keyboard_framework.py',
+        f'{script_dir}/driver/frozen/indev/keypad_framework.py',
         f'{script_dir}/driver/frozen/indev/pointer_framework.py',
         f'{script_dir}/driver/frozen/other/i2c.py',
         f'{script_dir}/driver/frozen/other/io_expander_framework.py',
@@ -52,19 +52,47 @@ def generate_manifest(script_dir, manifest_path, frozen_manifest, *addl_manifest
     ]
 
     for file in frozen_manifest_files:
-        print(file)
         if not os.path.exists(file):
             raise RuntimeError(f'File not found "{file}"')
 
+        print(file)
         file_path, file_name = os.path.split(file)
         entry = f"freeze('{file_path}', '{file_name}')"
         manifest_files.append(entry)
 
     for file in addl_manifest_files:
-        print(file)
         if not os.path.exists(file):
             raise RuntimeError(f'File not found "{file}"')
 
+        print(file)
+        file_path, file_name = os.path.split(file)
+        entry = f"freeze('{file_path}', '{file_name}')"
+        manifest_files.append(entry)
+
+    for file in indevs:
+        if not os.path.exists(file):
+            tmp_file = f'{script_dir}/driver/indev/{file}.py'
+
+            if not os.path.exists(tmp_file):
+                raise RuntimeError(f'File not found "{file}"')
+
+            file = tmp_file
+
+        print(file)
+        file_path, file_name = os.path.split(file)
+        entry = f"freeze('{file_path}', '{file_name}')"
+        manifest_files.append(entry)
+
+    for file in displays:
+        if not os.path.exists(file):
+            tmp_file = f'{script_dir}/driver/display/{file}.py'
+
+            if not os.path.exists(tmp_file):
+                raise RuntimeError(f'File not found "{file}"')
+
+            file = tmp_file
+
+        print(file)
         file_path, file_name = os.path.split(file)
         entry = f"freeze('{file_path}', '{file_name}')"
         manifest_files.append(entry)
@@ -142,7 +170,7 @@ def _busy_spinner(evnt):
             wait = random.randint(10, 100) * 0.001
 
 
-def spawn(cmd_, out_to_screen=True, spinner=False, env=None):
+def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
     if env is None:
         env = os.environ
 
@@ -166,7 +194,7 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None):
             while o_char != b'':
 
                 output_buffer += o_char
-                if out_to_screen and not spinner:
+                if out_to_screen and not spinner and cmpl:
                     if o_char == b'\n':
                         newline = True
                         o_char = p.stdout.read(1)
@@ -230,7 +258,9 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None):
         env=env
     )
 
-    print(cmd_)
+    if out_to_screen:
+        print(cmd_)
+
     event = threading.Event()
 
     if spinner:
@@ -291,7 +321,7 @@ def mpy_cross():
         sys.exit(return_code)
 
 
-def build_manifest(target, script_dir, frozen_manifest):
+def build_manifest(target, script_dir, displays, indevs, frozen_manifest):
     update_mphalport(target)
     if target == 'teensy':
         manifest_path = f'lib/micropython/ports/{target}/manifest.py'
@@ -301,13 +331,7 @@ def build_manifest(target, script_dir, frozen_manifest):
     if not os.path.exists(manifest_path):
         raise RuntimeError(f'Unable to locate manifest file "{manifest_path}"')
 
-    manifest_files = [
-        f'{script_dir}/driver/display/display_driver_framework.py',
-        f'{script_dir}/driver/fs_driver.py',
-        f'{script_dir}/utils/lv_utils.py',
-    ]
-
-    generate_manifest(manifest_path, frozen_manifest, *manifest_files)
+    generate_manifest(script_dir, manifest_path, displays, indevs, frozen_manifest)
 
 
 def parse_args(extra_args, lv_cflags, board):

@@ -14,7 +14,7 @@ def parse_args(extra_args, lv_cflags, board):
     return extra_args, lv_cflags, board
 
 
-def build_commands(_, extra_args, script_dir, lv_cflags, __):
+def build_commands(_, extra_args, script_dir, lv_cflags, board):
     if sys.platform.startswith('win'):
         try:
             import pyMSVC
@@ -60,12 +60,12 @@ def build_commands(_, extra_args, script_dir, lv_cflags, __):
     compile_cmd.extend(extra_args)
 
 
-def build_manifest(target, script_dir, frozen_manifest):
+def build_manifest(target, script_dir, displays, indevs, frozen_manifest):
     update_mphalport(target)
     
     manifest_path = 'lib/micropython/ports/windows/variants/manifest.py'
 
-    generate_manifest(script_dir, manifest_path, frozen_manifest)
+    generate_manifest(script_dir, manifest_path, displays, indevs, frozen_manifest)
 
 
 def clean():
@@ -77,7 +77,7 @@ def submodules():
 
 
 def compile():  # NOQA
-    return_code, _ = spawn(compile_cmd)
+    return_code, _ = spawn(compile_cmd, cmpl=True)
     if return_code != 0:
         sys.exit(return_code)
 

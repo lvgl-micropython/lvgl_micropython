@@ -18,9 +18,9 @@
 
 
 
-mp_lcd_err_t i2c_del(lcd_panel_io_t *io);
-mp_lcd_err_t i2c_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size);
-mp_lcd_err_t i2c_get_lane_count(lcd_panel_io_t *io, uint8_t *lane_count);
+mp_lcd_err_t i2c_del(mp_obj_t obj);
+mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap);
+mp_lcd_err_t i2c_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
 
 
 STATIC mp_obj_t mp_lcd_i2c_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
@@ -102,11 +102,11 @@ STATIC mp_obj_t mp_lcd_i2c_bus_make_new(const mp_obj_type_t *type, size_t n_args
 }
 
 
-mp_lcd_err_t i2c_del(lcd_panel_io_t *io)
+mp_lcd_err_t i2c_del(mp_obj_t obj)
 {
-    mp_lcd_i2c_bus_obj_t *self = __containerof(io, mp_lcd_i2c_bus_obj_t, panel_io_handle);
+    mp_lcd_i2c_bus_obj_t *self = (mp_lcd_i2c_bus_obj_t *)obj;
 
-    mp_lcd_err_t ret = esp_lcd_panel_io_del(io->panel_io);
+    mp_lcd_err_t ret = esp_lcd_panel_io_del(self->panel_io_handle.panel_io);
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_panel_io_del)"), ret);
     }
@@ -119,9 +119,15 @@ mp_lcd_err_t i2c_del(lcd_panel_io_t *io)
 }
 
 
-mp_lcd_err_t i2c_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size)
+mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap)
 {
-    mp_lcd_i2c_bus_obj_t *self = __containerof(io, mp_lcd_i2c_bus_obj_t, panel_io_handle);
+    mp_lcd_i2c_bus_obj_t *self = (mp_lcd_i2c_bus_obj_t *)obj;
+
+    if (bpp == 16) {
+        self->rgb565_byte_swap = rgb565_byte_swap;
+    } else {
+        self->rgb565_byte_swap = false;
+    }
 
     mp_lcd_err_t ret = i2c_param_config(self->host, &self->bus_config);
     if (ret != 0) {
@@ -133,7 +139,7 @@ mp_lcd_err_t i2c_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8
         mp_raise_msg_varg(&mp_type_OSError, MP_ERROR_TEXT("%d(i2c_driver_install)"), ret);
     }
 
-    ret = esp_lcd_new_panel_io_i2c(self->bus_handle , &self->panel_io_config, &io->panel_io);
+    ret = esp_lcd_new_panel_io_i2c(self->bus_handle , &self->panel_io_config, &self->panel_io_handle.panel_io);
 
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_i2c)"), ret);
@@ -143,8 +149,9 @@ mp_lcd_err_t i2c_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8
 }
 
 
-mp_lcd_err_t i2c_get_lane_count(lcd_panel_io_t *io, uint8_t *lane_count)
+mp_lcd_err_t i2c_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
 {
+    LCD_UNUSED(obj);
     *lane_count = 1;
     return LCD_OK;
 }

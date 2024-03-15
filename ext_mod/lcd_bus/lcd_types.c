@@ -94,38 +94,42 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
     }
 
 
-    mp_lcd_err_t lcd_panel_io_rx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size)
+    mp_lcd_err_t lcd_panel_io_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
     {
-        if (io->rx_param == NULL) {
-            return esp_lcd_panel_io_rx_param(io->panel_io, lcd_cmd, param, param_size);
+       mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
+
+        if (self->panel_io_handle.rx_param == NULL) {
+            return esp_lcd_panel_io_rx_param(self->panel_io_handle.panel_io, lcd_cmd, param, param_size);
         } else {
-            return io->rx_param(io, lcd_cmd, param, param_size);
+            return self->panel_io_handle.rx_param(obj, lcd_cmd, param, param_size);
         }
     }
 
 
-    mp_lcd_err_t lcd_panel_io_tx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size)
+    mp_lcd_err_t lcd_panel_io_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
     {
-        if (io->tx_param == NULL) {
-            return esp_lcd_panel_io_tx_param(io->panel_io, lcd_cmd, param, param_size);
+        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
+
+        if (self->panel_io_handle.tx_param == NULL) {
+            return esp_lcd_panel_io_tx_param(self->panel_io_handle.panel_io, lcd_cmd, param, param_size);
         } else {
-            return io->tx_param(io, lcd_cmd, param, param_size);
+            return self->panel_io_handle.tx_param(obj, lcd_cmd, param, param_size);
         }
     }
 
 
-    mp_lcd_err_t lcd_panel_io_tx_color(lcd_panel_io_t *io, int lcd_cmd, void *color, size_t color_size)
+    mp_lcd_err_t lcd_panel_io_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size)
     {
-        if (io->tx_color == NULL) {
+        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
 
-            mp_lcd_bus_obj_t *self = __containerof(io, mp_lcd_bus_obj_t, panel_io_handle);
+        if (self->panel_io_handle.tx_color == NULL) {
             if (self->rgb565_byte_swap) {
                 rgb565_byte_swap((uint16_t *)color, (uint32_t)(color_size / 2));
             }
 
-            return esp_lcd_panel_io_tx_color(io->panel_io, lcd_cmd, color, color_size);
+            return esp_lcd_panel_io_tx_color(self->panel_io_handle.panel_io, lcd_cmd, color, color_size);
         } else {
-            return io->tx_color(io, lcd_cmd, color, color_size);
+            return self->panel_io_handle.tx_color(obj, lcd_cmd, color, color_size);
         }
     }
 
@@ -142,36 +146,41 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
     }
 
 
-    mp_lcd_err_t lcd_panel_io_rx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size)
+    mp_lcd_err_t lcd_panel_io_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
     {
-        if (io->rx_param == NULL) return LCD_ERR_NOT_SUPPORTED;
-        return io->rx_param(io, lcd_cmd, param, param_size);
+        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
+
+        if (self->panel_io_handle.rx_param == NULL) return LCD_ERR_NOT_SUPPORTED;
+        return self->panel_io_handle.rx_param(obj, lcd_cmd, param, param_size);
     }
 
 
-    mp_lcd_err_t lcd_panel_io_tx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size)
+    mp_lcd_err_t lcd_panel_io_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
     {
+        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
+
         return io->tx_param(io, lcd_cmd, param, param_size);
     }
 
 
-    mp_lcd_err_t lcd_panel_io_tx_color(lcd_panel_io_t *io, int lcd_cmd, void *color, size_t color_size)
+    mp_lcd_err_t lcd_panel_io_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size)
     {
-        mp_lcd_bus_obj_t *self = __containerof(io, mp_lcd_bus_obj_t, panel_io_handle);
+        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
+
         if (self->rgb565_byte_swap) {
             rgb565_byte_swap((uint16_t *)color, (uint32_t)(color_size / 2));
         }
 
-        return io->tx_color(io, lcd_cmd, color, color_size);
+        return self->panel_io_handle.tx_color(obj, lcd_cmd, color, color_size);
     }
 #endif
 
 
-mp_obj_t lcd_panel_io_allocate_framebuffer(lcd_panel_io_t *io, uint32_t size, uint32_t caps) 
+mp_obj_t lcd_panel_io_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps)
 {
-    if (io->allocate_framebuffer == NULL) {
-        mp_lcd_bus_obj_t *self = __containerof(io, mp_lcd_bus_obj_t, panel_io_handle);
+    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
 
+    if (self->panel_io_handle.allocate_framebuffer == NULL) {
         #ifdef ESP_IDF_VERSION
             void *buf = heap_caps_calloc(1, size, caps);
         #else
@@ -202,27 +211,33 @@ mp_obj_t lcd_panel_io_allocate_framebuffer(lcd_panel_io_t *io, uint32_t size, ui
             return MP_OBJ_FROM_PTR(view);
         }
     } else {
-        return io->allocate_framebuffer(io, size, caps);
+        return self->panel_io_handle.allocate_framebuffer(obj, size, caps);
     }
 }
 
-mp_lcd_err_t lcd_panel_io_del(lcd_panel_io_t  *io)
+mp_lcd_err_t lcd_panel_io_del(mp_obj_t obj)
 {
-    if (io->del != NULL) {
-        return io->del(io);
+    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
+
+    if (self->panel_io_handle.del != NULL) {
+        return self->panel_io_handle.del(obj);
     } else {
         return LCD_OK;
     }
 }
 
 
-mp_lcd_err_t lcd_panel_io_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size)
+mp_lcd_err_t lcd_panel_io_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap)
 {
-    return io->init(io, width, height, bpp, buffer_size);
+    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
+
+    return self->panel_io_handle.init(obj, width, height, bpp, buffer_size, rgb565_byte_swap);
 }
 
 
-mp_lcd_err_t lcd_panel_io_get_lane_count(lcd_panel_io_t *io, uint8_t *lane_count)
+mp_lcd_err_t lcd_panel_io_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
 {
-    return io->get_lane_count(io, lane_count);
+    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
+
+    return self->panel_io_handle.get_lane_count(obj, lane_count);
 }
