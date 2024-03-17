@@ -25,7 +25,7 @@ class XPT2046(pointer_framework.PointerDriver):
         self._mv = memoryview(self._buf)
 
         self._spi = machine.SPI(
-            host,
+            host + 1,
             baudrate=freq,
             sck=machine.Pin(clk, machine.Pin.OUT),
             mosi=machine.Pin(mosi, machine.Pin.OUT),
