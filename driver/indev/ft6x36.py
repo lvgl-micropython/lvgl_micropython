@@ -206,4 +206,4 @@ class FT6x36(pointer_framework.PointerDriver):
             ((buf[3] & _MSB_MASK) << 8) |
             (buf[4] & _LSB_MASK)
         )
-        return x, y
+        return self.PRESSED, x, y

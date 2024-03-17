@@ -3,8 +3,6 @@ import lvgl as lv  # NOQA
 
 lv_indev_get_driver_data
 lv_indev_get_user_data
-
-
 lv_indev_
 
 

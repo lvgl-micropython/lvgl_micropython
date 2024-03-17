@@ -5,10 +5,10 @@
 # read more about it's use in the stub files.
 
 
+from micropython import const
 import pointer_framework
 import i2c
 
-from micropython import const
 
 _GT911_ADDRESS = const(0x5D)
 _GT911_READ_XY_REG = const(0x814E)
@@ -47,5 +47,4 @@ class GT911(pointer_framework.PointerDriver):
             buf[0] = 0x00
             self._i2c.write_mem(_GT911_READ_XY_REG, mv[:1])
 
-            return x, y
-
+            return self.PRESSED, x, y

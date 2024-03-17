@@ -2,7 +2,6 @@ import time
 from micropython import const  # NOQA
 
 import lvgl as lv  # NOQA
-import lcd_bus  # NOQA
 import display_driver_framework
 
 

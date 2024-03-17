@@ -8,6 +8,9 @@ def _remap(value, old_min, old_max, new_min, new_max):
 class PointerDriver:
     _instance_counter = 1
 
+    PRESSED = lv.INDEV_STATE.PRESSED
+    RELEASED = lv.INDEV_STATE.RELEASED
+
     def get_width(self):
         return self._width
 
@@ -39,7 +42,7 @@ class PointerDriver:
 
         self._last_x = -1
         self._last_y = -1
-        self._current_state = lv.INDEV_STATE.RELEASED
+        self._current_state = self.RELEASED
 
         self._height = height
         self._width = width
@@ -76,16 +79,16 @@ class PointerDriver:
 
     def _get_coords(self):
         # this method needs to be overridden.
-        # the returned value from this method is going to be a tuple of state, x, y
-        # or None if no touch even has occured
+        # the returned value from this method is going to be a tuple
+        # of (state, x, y) or None if no touch even has occured
         raise NotImplementedError
 
     def _read(self, drv, data):  # NOQA
         coords = self._get_coords()
 
         if coords is None:  # ignore no touch & multi touch
-            if self._current_state != lv.INDEV_STATE.RELEASED:
-                self._current_state = lv.INDEV_STATE.RELEASED
+            if self._current_state != self.RELEASED:
+                self._current_state = self.RELEASED
                 res = True
             else:
                 res = False
@@ -100,7 +103,6 @@ class PointerDriver:
         state, x, y = coords
 
         if None not in (x, y):
-
             config = self._config
             orientation = self.get_rotation()
             left = config.left
@@ -136,19 +138,27 @@ class PointerDriver:
             self._last_y = ypos
 
         if state is not None:
-            if state:
-                self._current_state = lv.INDEV_STATE.PRESSED
+            if self._current_state == state == self.RELEASED:
+                res = False
+                data.continue_reading = False
             else:
-                self._current_state = lv.INDEV_STATE.RELEASED
+                res = True
+                data.continue_reading = True
+
+            self._current_state = state
+
+        elif self._current_state == self.RELEASED:
+            res = False
+            data.continue_reading = False
+        else:
+            data.continue_reading = True
+            res = True
 
         data.state = self._current_state
         data.point.x = self._last_x
         data.point.y = self._last_y
 
-        data.continue_reading = True
-        # print("raw(x={0}, y={1}) point(x={2} y={3})".format(x, y, data.point.x, data.point.y))  # NOQA
-
-        return True
+        return res
 
     def get_type(self):
         return self._indev_drv.get_type()
