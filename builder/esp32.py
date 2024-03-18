@@ -205,6 +205,14 @@ submodules_cmd = []
 
 
 def build_commands(_, extra_args, __, lv_cflags, board):
+    clean_cmd.extend(esp_cmd[:])
+    clean_cmd[1] = 'clean'
+    clean_cmd.append(f'BOARD={board}')
+
+    submodules_cmd.extend(esp_cmd[:])
+    submodules_cmd[1] = 'submodules'
+    submodules_cmd.append(f'BOARD={board}')
+
     esp_cmd.extend([
         f'LV_CFLAGS="{lv_cflags}"',
         f'LV_PORT=esp32',
@@ -214,19 +222,13 @@ def build_commands(_, extra_args, __, lv_cflags, board):
 
     esp_cmd.extend(extra_args)
 
-    clean_cmd.extend(esp_cmd[:])
-    clean_cmd[1] = 'clean'
-
     compile_cmd.extend(esp_cmd[:])
     compile_cmd.pop(1)
 
-    submodules_cmd.extend(esp_cmd[:])
-    submodules_cmd[1] = 'submodules'
-
     if board_variant:
-        clean_cmd.insert(8, f'BOARD_VARIANT={board_variant}')
+        clean_cmd.append(f'BOARD_VARIANT={board_variant}')
         compile_cmd.insert(7, f'BOARD_VARIANT={board_variant}')
-        submodules_cmd.insert(8, f'BOARD_VARIANT={board_variant}')
+        submodules_cmd.append(f'BOARD_VARIANT={board_variant}')
 
 
 def get_idf_version():
@@ -258,10 +260,11 @@ def build_manifest(target, script_dir, displays, indevs, frozen_manifest):
 
 
 def clean():
+    env = setup_idf_environ()
     if 'deploy' in clean_cmd:
         clean_cmd.remove('deploy')
 
-    spawn(clean_cmd)
+    spawn(clean_cmd, env=env)
 
 
 def setup_idf_environ():
@@ -350,7 +353,9 @@ def submodules():
     if 'deploy' in submodules_cmd:
         submodules_cmd.remove('deploy')
 
-    return_code, _ = spawn(submodules_cmd)
+    env = setup_idf_environ()
+
+    return_code, _ = spawn(submodules_cmd, env=env)
     if return_code != 0:
         sys.exit(return_code)
 
