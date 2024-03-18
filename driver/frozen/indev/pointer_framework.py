@@ -35,7 +35,7 @@ class PointerDriver:
                 'before the pointer driver'
             )
 
-        self._disp_drv = disp.get_driver_data()
+        self._disp_drv = disp
 
         width = self._disp_drv.get_physical_horizontal_resolution()
         height = self._disp_drv.get_physical_vertical_resolution()
@@ -54,13 +54,13 @@ class PointerDriver:
 
         self._config = touch_cal
 
-        indev_drv = lv.indev_t()
+        indev_drv = lv.indev_create()
         indev_drv.init()  # NOQA
-        indev_drv.type = lv.INDEV_TYPE.POINTER
-        indev_drv.read_cb = self._read
-        self._indev_drv = indev_drv.register()  # NOQA
-        self._indev_drv.set_driver_data(self)
-        self._indev_drv.set_disp(disp)
+        indev_drv.set_type(lv.INDEV_TYPE.POINTER)
+        indev_drv.set_read_cb(self._read)
+        indev_drv.set_driver_data(self)
+        indev_drv.set_display(disp)
+        self._indev_drv = indev_drv
 
     def calibrate(self):
         import touch_calibrate

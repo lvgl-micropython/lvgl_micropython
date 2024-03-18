@@ -330,10 +330,12 @@
             return ret;
         }
 
-        ret = esp_lcd_rgb_panel_register_event_callbacks(self->panel_handle, &callbacks, self);
-        if (ret != 0) {
-            mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_rgb_panel_register_event_callbacks)"), ret);
-            return ret;
+        if (self->panel_io_config.flags.double_fb) {
+            ret = esp_lcd_rgb_panel_register_event_callbacks(self->panel_handle, &callbacks, self);
+            if (ret != 0) {
+                mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_rgb_panel_register_event_callbacks)"), ret);
+                return ret;
+            }
         }
 
         ret = esp_lcd_panel_reset(self->panel_handle);
@@ -360,6 +362,12 @@
             self->view2->items = (void *)rgb_panel->fbs[1];
             self->view2->len = buffer_size;
             heap_caps_free(buf2);
+        }
+
+        if (bpp == 16 && rgb565_byte_swap) {
+            self->rgb565_byte_swap = true;
+        } else {
+            self->rgb565_byte_swap = false;
         }
 
         return LCD_OK;
@@ -397,7 +405,11 @@
         }
         */
 
-        if (self->callback == mp_const_none) {
+        if (!self->panel_io_config.flags.double_fb) {
+            if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
+                mp_call_function_n_kw(self->callback, 0, 0, NULL);
+            }
+        } else if (self->callback == mp_const_none) {
             while (!self->trans_done) {}
             self->trans_done = false;
         }
