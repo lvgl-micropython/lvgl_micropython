@@ -9,8 +9,9 @@
 
     // esp-idf includes
     #include "hal/lcd_hal.h"
-    #include "esp_lcd_common.h"
     #include "esp_pm.h"
+    #include "esp_intr_alloc.h"
+    #include "esp_heap_caps.h"
 
     #include "esp_lcd_panel_io.h"
     #include "esp_lcd_panel_ops.h"
@@ -28,7 +29,7 @@
     #include <string.h>
 
 
-    struct rgb_panel_t {
+    typedef struct {
         esp_lcd_panel_t base;  // Base class of generic lcd panel
         int panel_id;          // LCD panel ID
         lcd_hal_context_t hal; // Hal layer object
@@ -43,7 +44,7 @@
         esp_pm_lock_handle_t pm_lock; // Power management lock
         size_t num_dma_nodes;  // Number of DMA descriptors that used to carry the frame buffer
         uint8_t *fbs[3]; // Frame buffers
-    };
+    } rgb_panel_t;
 
     bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel_io, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
     {
@@ -252,28 +253,25 @@
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
 
         if (self->panel_handle != NULL) {
-            mp_raise_msg(
-                &mp_type_ValueError,
-                MP_ERROR_TEXT("Frame buffers can not be freed once the display has been initilized"),
-            );
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unable to free buffer"));
             return mp_const_none;
         }
 
         mp_obj_array_t *array_buf = (mp_obj_array_t *)MP_OBJ_TO_PTR(buf);
-        void *buf = array_buf->items;
+        void *item_buf = array_buf->items;
 
         if (array_buf == self->view1) {
-            heap_caps_free(buf);
+            heap_caps_free(item_buf);
             self->view1 = NULL;
         } else if (array_buf == self->view2) {
-            heap_caps_free(buf);
+            heap_caps_free(item_buf);
             self->view2 = NULL;
         } else {
             mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("No matching buffer found"));
         }
         return mp_const_none;
     }
-    
+
     mp_obj_t rgb_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps)
     {
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
@@ -305,10 +303,7 @@
             self->view2 = view;
             return MP_OBJ_FROM_PTR(view);
         } else {
-            mp_raise_msg(
-                &mp_type_ValueError,
-                MP_ERROR_TEXT("There is a maximum of 2 frame buffers allowed"),
-            );
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("There is a maximum of 2 frame buffers allowed"));
             return mp_const_none;
         }
     }
@@ -353,7 +348,7 @@
             return ret;
         }
 
-        rgb_panel_t *rgb_panel = __containerof(self->panel_handle, rgb_panel_t, base);
+        rgb_panel_t *rgb_panel = __containerof((esp_lcd_panel_t *)self->panel_handle, rgb_panel_t, base);
 
         void *buf1 = self->view1->items;
         self->view1->items = (void *)rgb_panel->fbs[0];

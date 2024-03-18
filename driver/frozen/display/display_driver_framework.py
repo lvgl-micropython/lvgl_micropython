@@ -200,7 +200,7 @@ class DisplayDriver:
                     try:
                         frame_buffer1 = data_bus.allocate_framebuffer(buf_size, flags)
 
-                        if flags | lcd_bus.MEMORY_DMA == flags:
+                        if (flags | lcd_bus.MEMORY_DMA) == flags:
                             frame_buffer2 = data_bus.allocate_framebuffer(buf_size, flags)
 
                         break
@@ -210,12 +210,11 @@ class DisplayDriver:
 
                 if frame_buffer1 is None:
                     raise MemoryError(
-                        f'Unable to allocate memory for '
-                        f'frame buffer ({buf_size})'
+                        f'Unable to allocate memory for frame buffer ({buf_size})'
                     )
 
             if frame_buffer2 is None and isinstance(data_bus, lcd_bus.SPIBus):
-                buffer_size = data_bus.MAXIMUM_BUFFER_SIZE
+                buffer_size = data_bus.SPI_MAXIMUM_BUFFER_SIZE
 
             elif isinstance(data_bus, lcd_bus.RGBBus):
                 buffer_size = int(
