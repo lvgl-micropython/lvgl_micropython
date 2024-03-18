@@ -502,7 +502,8 @@ def compile():  # NOQA
             )
 
         out_cmd = ' '.join(out_cmd)
-
+        print()
+        print()
         print('To flash firmware:')
         print('Replace "(PORT)" with the serial port for your esp32')
         print('and run the commands.')
