@@ -8,9 +8,13 @@
     #include "rgb_bus.h"
 
     // esp-idf includes
+    #include "hal/lcd_hal.h"
+    #include "esp_lcd_common.h"
+    #include "esp_pm.h"
+
     #include "esp_lcd_panel_io.h"
     #include "esp_lcd_panel_ops.h"
-
+    #include "esp_lcd_panel_interface.h"
     #include "esp_lcd_panel_rgb.h"
 
     // micropython includes
@@ -22,6 +26,24 @@
 
     // stdlib includes
     #include <string.h>
+
+
+    struct rgb_panel_t {
+        esp_lcd_panel_t base;  // Base class of generic lcd panel
+        int panel_id;          // LCD panel ID
+        lcd_hal_context_t hal; // Hal layer object
+        size_t data_width;     // Number of data lines
+        size_t fb_bits_per_pixel; // Frame buffer color depth, in bpp
+        size_t num_fbs;           // Number of frame buffers
+        size_t output_bits_per_pixel; // Color depth seen from the output data line. Default to fb_bits_per_pixel, but can be changed by YUV-RGB conversion
+        size_t sram_trans_align;  // Alignment for framebuffer that allocated in SRAM
+        size_t psram_trans_align; // Alignment for framebuffer that allocated in PSRAM
+        int disp_gpio_num;     // Display control GPIO, which is used to perform action like "disp_off"
+        intr_handle_t intr;    // LCD peripheral interrupt handle
+        esp_pm_lock_handle_t pm_lock; // Power management lock
+        size_t num_dma_nodes;  // Number of DMA descriptors that used to carry the frame buffer
+        uint8_t *fbs[3]; // Frame buffers
+    };
 
     bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel_io, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
     {
@@ -41,7 +63,9 @@
     mp_lcd_err_t rgb_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
     mp_lcd_err_t rgb_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
     mp_lcd_err_t rgb_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
+    mp_lcd_err_t rgb_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end);
     mp_obj_t rgb_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps);
+    mp_obj_t rgb_free_framebuffer(mp_obj_t obj, mp_obj_t buf);
 
     mp_obj_t mp_lcd_rgb_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
@@ -84,19 +108,19 @@
         };
 
         const mp_arg_t allowed_args[] = {
-            { MP_QSTR_hsync,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
-            { MP_QSTR_vsync,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
-            { MP_QSTR_de,                 MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
-            { MP_QSTR_disp,               MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
-            { MP_QSTR_pclk,               MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
-            { MP_QSTR_data0,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
-            { MP_QSTR_data1,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
-            { MP_QSTR_data2,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
-            { MP_QSTR_data3,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
-            { MP_QSTR_data4,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
-            { MP_QSTR_data5,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
-            { MP_QSTR_data6,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
-            { MP_QSTR_data7,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED                      },
+            { MP_QSTR_hsync,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
+            { MP_QSTR_vsync,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
+            { MP_QSTR_de,                 MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
+            { MP_QSTR_disp,               MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
+            { MP_QSTR_pclk,               MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
+            { MP_QSTR_data0,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
+            { MP_QSTR_data1,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
+            { MP_QSTR_data2,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
+            { MP_QSTR_data3,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
+            { MP_QSTR_data4,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
+            { MP_QSTR_data5,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
+            { MP_QSTR_data6,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
+            { MP_QSTR_data7,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
             { MP_QSTR_data8,              MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
             { MP_QSTR_data9,              MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
             { MP_QSTR_data10,             MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
@@ -172,6 +196,7 @@
         self->panel_io_config.flags.disp_active_low = (uint32_t)args[ARG_disp_active_low].u_bool;
         self->panel_io_config.flags.refresh_on_demand = (uint32_t)args[ARG_refresh_on_demand].u_bool;
         self->panel_io_config.flags.fb_in_psram = 0;
+        self->panel_io_config.flags.double_fb = 0;
         // self->panel_io_config.flags.no_fb = true;
         // self->panel_io_config.flags.bb_invalidate_cache = (uint32_t)args[ARG_bb_invalidate_cache].u_bool;
 
@@ -188,80 +213,13 @@
         self->panel_io_handle.del = rgb_del;
         self->panel_io_handle.rx_param = rgb_rx_param;
         self->panel_io_handle.tx_param = rgb_tx_param;
+        self->panel_io_handle.tx_color = rgb_tx_color;
         self->panel_io_handle.allocate_framebuffer = rgb_allocate_framebuffer;
+        self->panel_io_handle.free_framebuffer = rgb_free_framebuffer;
         self->panel_io_handle.init = rgb_init;
 
         return MP_OBJ_FROM_PTR(self);
     }
-
-
-    mp_obj_t rgb_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps)
-    {
-        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
-
-        if (self->panel_io_config.bits_per_pixel != 0) {
-            if (self->buf1 != NULL) {
-                heap_caps_free(self->buf1);
-                self->buf1 = NULL;
-
-                void *buf;
-                esp_lcd_rgb_panel_get_frame_buffer(self->panel_handle, 1, &buf);
-
-                if (buf == NULL) {
-                    LCD_UNUSED(size);
-                    return mp_const_none;
-                } else {
-                    mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE, size, buf));
-                    view->typecode |= 0x80; // used to indicate writable buffer
-                    return MP_OBJ_FROM_PTR(view);
-                }
-            } else if (self->buf2 != NULL) {
-                heap_caps_free(self->buf2);
-                self->buf2 = NULL;
-
-                void *buf1;
-                void *buf2;
-                esp_lcd_rgb_panel_get_frame_buffer(self->panel_handle, 2, &buf1, &buf2);
-                if (buf2 == NULL) {
-                    LCD_UNUSED(size);
-                    return mp_const_none;
-                } else {
-                    mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE, size, buf2));
-                    view->typecode |= 0x80; // used to indicate writable buffer
-                    return MP_OBJ_FROM_PTR(view);
-                }
-            } else {
-                mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("Frame buffers already collected"));
-                return mp_const_none;
-            }
-
-        } else {
-            LCD_UNUSED(size);
-            if ((caps | MALLOC_CAP_SPIRAM) == caps) {
-                self->panel_io_config.flags.fb_in_psram = 1;
-            }
-
-            if (self->buf1 == NULL) {
-                self->panel_io_config.num_fbs = 1;
-
-                self->buf1 = heap_caps_calloc(1, 1, caps);
-                mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE, 1, self->buf1));
-                view->typecode |= 0x80; // used to indicate writable buffer
-                return MP_OBJ_FROM_PTR(view);
-            } else if (self->buf2 == NULL) {
-                self->panel_io_config.num_fbs = 2;
-
-                self->buf2 = heap_caps_calloc(1, 1, caps);
-                mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE, 1, self->buf2));
-                view->typecode |= 0x80; // used to indicate writable buffer
-                return MP_OBJ_FROM_PTR(view);
-            } else {
-                mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("Maximum number of frame buffers is 2"));
-                return mp_const_none;
-            }
-        }
-    }
-
 
     mp_lcd_err_t rgb_del(mp_obj_t obj)
     {
@@ -289,9 +247,83 @@
         return LCD_OK;
     }
 
+    mp_obj_t rgb_free_framebuffer(mp_obj_t obj, mp_obj_t buf)
+    {
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
+
+        if (self->panel_handle != NULL) {
+            mp_raise_msg(
+                &mp_type_ValueError,
+                MP_ERROR_TEXT("Frame buffers can not be freed once the display has been initilized"),
+            );
+            return mp_const_none;
+        }
+
+        mp_obj_array_t *array_buf = (mp_obj_array_t *)MP_OBJ_TO_PTR(buf);
+        void *buf = array_buf->items;
+
+        if (array_buf == self->view1) {
+            heap_caps_free(buf);
+            self->view1 = NULL;
+        } else if (array_buf == self->view2) {
+            heap_caps_free(buf);
+            self->view2 = NULL;
+        } else {
+            mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("No matching buffer found"));
+        }
+        return mp_const_none;
+    }
+    
+    mp_obj_t rgb_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps)
+    {
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
+
+        if (self->view1 == NULL) {
+            if ((caps | MALLOC_CAP_SPIRAM) == caps) {
+                self->panel_io_config.flags.fb_in_psram = 1;
+            }
+            self->buffer_size = size;
+            void *buf = heap_caps_calloc(1, 1, MALLOC_CAP_INTERNAL);
+
+            mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE, 1, buf));
+            view->typecode |= 0x80; // used to indicate writable buffer
+            self->view1 = view;
+            return MP_OBJ_FROM_PTR(view);
+        } else if (self->view2 == NULL) {
+            if (self->buffer_size != size) {
+                mp_raise_msg_varg(
+                    &mp_type_ValueError,
+                    MP_ERROR_TEXT("Frame buffer sizes do not match (%d)"),
+                    size
+                );
+                return mp_const_none;
+            }
+            self->panel_io_config.flags.double_fb = 1;
+            void *buf = heap_caps_calloc(1, 1, MALLOC_CAP_INTERNAL);
+            mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE, 1, buf));
+            view->typecode |= 0x80; // used to indicate writable buffer
+            self->view2 = view;
+            return MP_OBJ_FROM_PTR(view);
+        } else {
+            mp_raise_msg(
+                &mp_type_ValueError,
+                MP_ERROR_TEXT("There is a maximum of 2 frame buffers allowed"),
+            );
+            return mp_const_none;
+        }
+    }
+
     mp_lcd_err_t rgb_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap)
     {
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
+
+        if (buffer_size != self->buffer_size) {
+            mp_raise_msg_varg(
+                &mp_type_ValueError,
+                MP_ERROR_TEXT("Frame buffer size is not correct for the display size (%d)"),
+                buffer_size
+            );
+        }
 
         self->panel_io_config.timings.h_res = (uint32_t)width;
         self->panel_io_config.timings.v_res = (uint32_t)height;
@@ -320,6 +352,21 @@
             mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_panel_init)"), ret);
             return ret;
         }
+
+        rgb_panel_t *rgb_panel = __containerof(self->panel_handle, rgb_panel_t, base);
+
+        void *buf1 = self->view1->items;
+        self->view1->items = (void *)rgb_panel->fbs[0];
+        self->view1->len = buffer_size;
+        heap_caps_free(buf1);
+
+        if (self->panel_io_config.flags.double_fb) {
+            void *buf2 = self->view2->items;
+            self->view2->items = (void *)rgb_panel->fbs[1];
+            self->view2->len = buffer_size;
+            heap_caps_free(buf2);
+        }
+
         return LCD_OK;
     }
 
@@ -331,44 +378,22 @@
         return LCD_OK;
     }
 
-
-    STATIC mp_obj_t mp_lcd_rgb_bus_tx_color(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
+    mp_lcd_err_t rgb_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end)
     {
-        enum { ARG_self, ARG_cmd, ARG_data, ARG_x_start, ARG_y_start, ARG_x_end, ARG_y_end };
-        static const mp_arg_t allowed_args[] = {
-            { MP_QSTR_self,    MP_ARG_OBJ | MP_ARG_REQUIRED  },
-            { MP_QSTR_cmd,     MP_ARG_INT | MP_ARG_REQUIRED  },
-            { MP_QSTR_data,    MP_ARG_OBJ | MP_ARG_REQUIRED  },
-            { MP_QSTR_x_start, MP_ARG_INT | MP_ARG_REQUIRED  },
-            { MP_QSTR_y_start, MP_ARG_INT | MP_ARG_REQUIRED  },
-            { MP_QSTR_x_end,   MP_ARG_INT | MP_ARG_REQUIRED  },
-            { MP_QSTR_y_end,   MP_ARG_INT | MP_ARG_REQUIRED  },
-        };
-        mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
-        mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
-
-        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)args[ARG_self].u_obj;
-
-        mp_buffer_info_t bufinfo;
-
-        if (self->rgb565_byte_swap) {
-            mp_get_buffer_raise(args[ARG_data].u_obj, &bufinfo, MP_BUFFER_READ | MP_BUFFER_WRITE);
-            rgb565_byte_swap(bufinfo.buf, (uint32_t)(bufinfo.len / 2));
-        } else {
-            mp_get_buffer_raise(args[ARG_data].u_obj, &bufinfo, MP_BUFFER_READ);
-        }
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
 
         esp_err_t ret = esp_lcd_panel_draw_bitmap(
             self->panel_handle,
-            (int)args[ARG_x_start].u_int,
-            (int)args[ARG_y_start].u_int,
-            (int)args[ARG_x_end].u_int,
-            (int)args[ARG_y_end].u_int,
-            bufinfo.buf
+            x_start,
+            y_start,
+            x_end,
+            y_end,
+            color
         );
 
         if (ret != 0) {
             mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_panel_draw_bitmap)"), ret);
+            return LCD_OK;
         }
 
         /*
@@ -382,34 +407,15 @@
             self->trans_done = false;
         }
 
-        return mp_const_none;
+        return LCD_OK;
     }
-
-    STATIC MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_rgb_bus_tx_color_obj, 7, mp_lcd_rgb_bus_tx_color);
-
-
-    STATIC const mp_rom_map_elem_t mp_lcd_rgb_bus_locals_dict_table[] = {
-        { MP_ROM_QSTR(MP_QSTR_get_lane_count),    MP_ROM_PTR(&mp_lcd_bus_get_lane_count_obj)    },
-        { MP_ROM_QSTR(MP_QSTR_register_callback), MP_ROM_PTR(&mp_lcd_bus_register_callback_obj)     },
-        { MP_ROM_QSTR(MP_QSTR_tx_color),          MP_ROM_PTR(&mp_lcd_rgb_bus_tx_color_obj)          },
-        { MP_ROM_QSTR(MP_QSTR_rx_param),          MP_ROM_PTR(&mp_lcd_bus_rx_param_obj)          },
-        { MP_ROM_QSTR(MP_QSTR_tx_param),          MP_ROM_PTR(&mp_lcd_bus_tx_param_obj)          },
-        { MP_ROM_QSTR(MP_QSTR_free_framebuffer),     MP_ROM_PTR(&mp_lcd_bus_free_framebuffer_obj)     },
-        { MP_ROM_QSTR(MP_QSTR_allocate_framebuffer), MP_ROM_PTR(&mp_lcd_bus_allocate_framebuffer_obj) },
-        { MP_ROM_QSTR(MP_QSTR_init),              MP_ROM_PTR(&mp_lcd_bus_init_obj)              },
-        { MP_ROM_QSTR(MP_QSTR_deinit),            MP_ROM_PTR(&mp_lcd_bus_deinit_obj)            },
-        { MP_ROM_QSTR(MP_QSTR___del__),           MP_ROM_PTR(&mp_lcd_bus_deinit_obj)            }
-    };
-
-    STATIC MP_DEFINE_CONST_DICT(mp_lcd_rgb_bus_locals_dict, mp_lcd_rgb_bus_locals_dict_table);
-
 
     MP_DEFINE_CONST_OBJ_TYPE(
         mp_lcd_rgb_bus_type,
         MP_QSTR_RGBBus,
         MP_TYPE_FLAG_NONE,
         make_new, mp_lcd_rgb_bus_make_new,
-        locals_dict, (mp_obj_dict_t *)&mp_lcd_rgb_bus_locals_dict
+        locals_dict, (mp_obj_dict_t *)&mp_lcd_bus_locals_dict
     );
 #else
     #include "../common_src/rgb_bus.c"

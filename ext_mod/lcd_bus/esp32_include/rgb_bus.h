@@ -36,7 +36,9 @@
             esp_lcd_rgb_timing_t bus_config;
 
             esp_lcd_panel_handle_t panel_handle;
-
+            uint32_t buffer_size;
+            mp_obj_array_t *view1
+            mp_obj_array_t *view2
         } mp_lcd_rgb_bus_obj_t;
 
 
