@@ -131,6 +131,12 @@ def get_micropython():
     if result != 0:
         sys.exit(result)
 
+    cmd_ = ['cd lib/micropython && git checkout v1.22.2 && git pull']
+
+    result, _ = spawn(cmd_, spinner=True)
+    if result != 0:
+        sys.exit(result)
+
 
 def get_pycparser():
     cmd_ = [
