@@ -284,6 +284,9 @@ def setup_idf_environ():
                 cmds.append(['. ./export.sh'])
                 cmds.append(['printenv'])
 
+            env = {k: v for k, v in os.environ.items()}
+            env['IDF_PATH'] = os.path.abspath(idf_path)
+
             result, output = spawn(cmds, out_to_screen=False)
 
             if result != 0:
@@ -291,7 +294,6 @@ def setup_idf_environ():
                 sys.exit(result)
 
             output = [line for line in output.split('\n') if '=' in line]
-            env = {key: value for (key, value) in os.environ.items()}
 
             temp_env = {
                 line.split('=', 1)[0]: line.split('=', 1)[1]
@@ -300,8 +302,7 @@ def setup_idf_environ():
             for item in (
                 'PATH',
                 'IDF_TOOLS_EXPORT_CMD',
-                'IDF_TOOLS_INSTALL_CMD',
-                'IDF_PATH'
+                'IDF_TOOLS_INSTALL_CMD'
             ):
                 if item not in temp_env:
                     raise RuntimeError(f'"{item}" not found in environment.')
