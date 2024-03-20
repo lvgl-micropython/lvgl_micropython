@@ -287,7 +287,7 @@ def setup_idf_environ():
             env = {k: v for k, v in os.environ.items()}
             env['IDF_PATH'] = os.path.abspath(idf_path)
 
-            result, output = spawn(cmds, out_to_screen=False)
+            result, output = spawn(cmds, env=env, out_to_screen=False)
 
             if result != 0:
                 print(output)
