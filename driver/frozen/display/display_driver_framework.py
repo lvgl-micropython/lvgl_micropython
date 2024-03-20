@@ -443,7 +443,7 @@ class DisplayDriver:
 
         if self._initilized:
             self._param_buf[0] = (
-                self._madctl(self._color_byte_order, ~value, _ORIENTATION_TABLE)
+                self._madctl(self._color_byte_order, _ORIENTATION_TABLE, ~value)
             )
             self._data_bus.tx_param(_MADCTL, self._param_mv[:1])
 
