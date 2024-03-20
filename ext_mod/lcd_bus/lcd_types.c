@@ -93,6 +93,30 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
         return false;
     }
 
+    mp_obj_t lcd_panel_io_free_framebuffer(mp_obj_t obj, mp_obj_t buf)
+    {
+        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
+
+        if (self->panel_io_handle.free_framebuffer == NULL) {
+            mp_obj_array_t *array_buf = (mp_obj_array_t *)MP_OBJ_TO_PTR(buf);
+
+            void *buf = array_buf->items;
+
+            if (buf == self->buf1) {
+                heap_caps_free(buf);
+                self->buf1 = NULL;
+            } else if (buf == self->buf2) {
+                heap_caps_free(buf);
+                self->buf2 = NULL;
+            } else {
+                mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("No matching buffer found"));
+            }
+
+            return mp_const_none;
+        } else {
+            return self->panel_io_handle.free_framebuffer(obj, buf);
+        }
+    }
 
     mp_lcd_err_t lcd_panel_io_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
     {
@@ -118,18 +142,22 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
     }
 
 
-    mp_lcd_err_t lcd_panel_io_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size)
+    mp_lcd_err_t lcd_panel_io_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end)
     {
         mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
 
-        if (self->panel_io_handle.tx_color == NULL) {
-            if (self->rgb565_byte_swap) {
-                rgb565_byte_swap((uint16_t *)color, (uint32_t)(color_size / 2));
-            }
+        if (self->rgb565_byte_swap) {
+            rgb565_byte_swap((uint16_t *)color, (uint32_t)(color_size / 2));
+        }
 
+        if (self->panel_io_handle.tx_color == NULL) {
+            LCD_UNUSED(x_start);
+            LCD_UNUSED(y_start);
+            LCD_UNUSED(x_end);
+            LCD_UNUSED(y_end);
             return esp_lcd_panel_io_tx_color(self->panel_io_handle.panel_io, lcd_cmd, color, color_size);
         } else {
-            return self->panel_io_handle.tx_color(obj, lcd_cmd, color, color_size);
+            return self->panel_io_handle.tx_color(obj, lcd_cmd, color, color_size, x_start, y_start, x_end, y_end);
         }
     }
 
@@ -143,6 +171,30 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
         }
         self->trans_done = true;
         return false;
+    }
+
+    mp_obj_t lcd_panel_io_free_framebuffer(mp_obj_t obj, mp_obj_t buf)
+    {
+        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
+
+        if (self->panel_io_handle.free_framebuffer == NULL) {
+            mp_obj_array_t *array_buf = (mp_obj_array_t *)MP_OBJ_TO_PTR(buf);
+
+            void *buf = array_buf->items;
+
+            if (buf == self->buf1) {
+                m_free(buf);
+                self->buf1 = NULL;
+            } else if (buf == self->buf2) {
+                m_free(buf);
+                self->buf2 = NULL;
+            } else {
+                mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("No matching buffer found"));
+            }
+            return mp_const_none;
+        } else {
+            return self->panel_io_handle.free_framebuffer(obj, buf);
+        }
     }
 
 
@@ -163,7 +215,7 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
     }
 
 
-    mp_lcd_err_t lcd_panel_io_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size)
+    mp_lcd_err_t lcd_panel_io_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end)
     {
         mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
 
@@ -171,7 +223,7 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
             rgb565_byte_swap((uint16_t *)color, (uint32_t)(color_size / 2));
         }
 
-        return self->panel_io_handle.tx_color(obj, lcd_cmd, color, color_size);
+        return self->panel_io_handle.tx_color(obj, lcd_cmd, color, color_size, int x_start, int y_start, int x_end, int y_end);
     }
 #endif
 

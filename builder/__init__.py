@@ -116,6 +116,12 @@ def get_lvgl():
     if result != 0:
         sys.exit(result)
 
+    cmd_ = ['cd lib/lvgl && git checkout master']
+
+    result, _ = spawn(cmd_, spinner=True)
+    if result != 0:
+        sys.exit(result)
+
 
 def get_micropython():
     cmd_ = [
@@ -126,6 +132,12 @@ def get_micropython():
         '--',
         f'lib/micropython'
     ]
+
+    result, _ = spawn(cmd_, spinner=True)
+    if result != 0:
+        sys.exit(result)
+
+    cmd_ = ['cd lib/micropython && git checkout v1.22.2']
 
     result, _ = spawn(cmd_, spinner=True)
     if result != 0:
