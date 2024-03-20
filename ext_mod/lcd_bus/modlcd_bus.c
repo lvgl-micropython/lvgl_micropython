@@ -72,43 +72,16 @@ mp_obj_t mp_lcd_bus_free_framebuffer(size_t n_args, const mp_obj_t *pos_args, mp
 {
     enum { ARG_self, ARG_framebuffer};
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_self,    MP_ARG_OBJ | MP_ARG_REQUIRED  },
+        { MP_QSTR_self,           MP_ARG_OBJ | MP_ARG_REQUIRED  },
         { MP_QSTR_framebuffer,    MP_ARG_OBJ | MP_ARG_REQUIRED  },
     };
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
-
     if (args[ARG_framebuffer].u_obj == mp_const_none) {
         return mp_const_none;
     } else {
-        mp_obj_array_t *array_buf = (mp_obj_array_t *)args[ARG_framebuffer].u_obj;
-        void *buf = array_buf->items;
-
-        if (buf == self->buf1) {
-
-            #ifdef ESP_IDF_VERSION
-                heap_caps_free(buf);
-            #else
-                m_free(buf);
-            #endif /* ESP_IDF_VERSION */
-
-            self->buf1 = NULL;
-        } else if (buf == self->buf2) {
-
-            #ifdef ESP_IDF_VERSION
-                heap_caps_free(buf);
-            #else
-                m_free(buf);
-            #endif /* ESP_IDF_VERSION */
-
-            self->buf2 = NULL;
-        } else {
-            mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("No matching buffer found"));
-        }
-
-        return mp_const_none;
+        return lcd_panel_io_free_framebuffer(args[ARG_self].u_obj, args[ARG_framebuffer].u_obj);
     }
 }
 
@@ -184,7 +157,16 @@ mp_obj_t mp_lcd_bus_tx_color(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
     mp_buffer_info_t bufinfo;
     mp_get_buffer_raise(args[ARG_data].u_obj, &bufinfo, MP_BUFFER_READ);
 
-    mp_lcd_err_t ret = lcd_panel_io_tx_color(args[ARG_self].u_obj, (int)args[ARG_cmd].u_int, bufinfo.buf, (size_t)bufinfo.len);
+    mp_lcd_err_t ret = lcd_panel_io_tx_color(
+        args[ARG_self].u_obj,
+        (int)args[ARG_cmd].u_int,
+        bufinfo.buf,
+        (size_t)bufinfo.len,
+        (int)args[ARG_x_start].u_int,
+        (int)args[ARG_y_start].u_int,
+        (int)args[ARG_x_end].u_int,
+        (int)args[ARG_y_end].u_int
+    );
 
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_OSError, MP_ERROR_TEXT("%d(lcd_panel_io_tx_color)"), ret);

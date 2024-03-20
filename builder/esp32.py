@@ -205,6 +205,14 @@ submodules_cmd = []
 
 
 def build_commands(_, extra_args, __, lv_cflags, board):
+    clean_cmd.extend(esp_cmd[:])
+    clean_cmd[1] = 'clean'
+    clean_cmd.append(f'BOARD={board}')
+
+    submodules_cmd.extend(esp_cmd[:])
+    submodules_cmd[1] = 'submodules'
+    submodules_cmd.append(f'BOARD={board}')
+
     esp_cmd.extend([
         f'LV_CFLAGS="{lv_cflags}"',
         f'LV_PORT=esp32',
@@ -214,19 +222,13 @@ def build_commands(_, extra_args, __, lv_cflags, board):
 
     esp_cmd.extend(extra_args)
 
-    clean_cmd.extend(esp_cmd[:])
-    clean_cmd[1] = 'clean'
-
     compile_cmd.extend(esp_cmd[:])
     compile_cmd.pop(1)
 
-    submodules_cmd.extend(esp_cmd[:])
-    submodules_cmd[1] = 'submodules'
-
     if board_variant:
-        clean_cmd.insert(8, f'BOARD_VARIANT={board_variant}')
+        clean_cmd.append(f'BOARD_VARIANT={board_variant}')
         compile_cmd.insert(7, f'BOARD_VARIANT={board_variant}')
-        submodules_cmd.insert(8, f'BOARD_VARIANT={board_variant}')
+        submodules_cmd.append(f'BOARD_VARIANT={board_variant}')
 
 
 def get_idf_version():
@@ -258,10 +260,11 @@ def build_manifest(target, script_dir, displays, indevs, frozen_manifest):
 
 
 def clean():
+    env = setup_idf_environ()
     if 'deploy' in clean_cmd:
         clean_cmd.remove('deploy')
 
-    spawn(clean_cmd)
+    spawn(clean_cmd, env=env)
 
 
 def setup_idf_environ():
@@ -281,14 +284,16 @@ def setup_idf_environ():
                 cmds.append(['. ./export.sh'])
                 cmds.append(['printenv'])
 
-            result, output = spawn(cmds, out_to_screen=False)
+            env = {k: v for k, v in os.environ.items()}
+            env['IDF_PATH'] = os.path.abspath(idf_path)
+
+            result, output = spawn(cmds, env=env, out_to_screen=False)
 
             if result != 0:
                 print(output)
                 sys.exit(result)
 
             output = [line for line in output.split('\n') if '=' in line]
-            env = {key: value for (key, value) in os.environ.items()}
 
             temp_env = {
                 line.split('=', 1)[0]: line.split('=', 1)[1]
@@ -297,8 +302,7 @@ def setup_idf_environ():
             for item in (
                 'PATH',
                 'IDF_TOOLS_EXPORT_CMD',
-                'IDF_TOOLS_INSTALL_CMD',
-                'IDF_PATH'
+                'IDF_TOOLS_INSTALL_CMD'
             ):
                 if item not in temp_env:
                     raise RuntimeError(f'"{item}" not found in environment.')
@@ -350,7 +354,9 @@ def submodules():
     if 'deploy' in submodules_cmd:
         submodules_cmd.remove('deploy')
 
-    return_code, _ = spawn(submodules_cmd)
+    env = setup_idf_environ()
+
+    return_code, _ = spawn(submodules_cmd, env=env)
     if return_code != 0:
         sys.exit(return_code)
 
@@ -502,7 +508,8 @@ def compile():  # NOQA
             )
 
         out_cmd = ' '.join(out_cmd)
-
+        print()
+        print()
         print('To flash firmware:')
         print('Replace "(PORT)" with the serial port for your esp32')
         print('and run the commands.')

@@ -40,12 +40,12 @@
     /* end macros */
 
     /* forward declarations */
-    mp_lcd_err_t s_spi_del(lcd_panel_io_t *io);
-    mp_lcd_err_t s_spi_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size);
-    mp_lcd_err_t s_spi_get_lane_count(lcd_panel_io_t *io, uint8_t *lane_count);
-    mp_lcd_err_t s_spi_rx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size);
-    mp_lcd_err_t s_spi_tx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size);
-    mp_lcd_err_t s_spi_tx_color(lcd_panel_io_t *io, int lcd_cmd, void *color, size_t color_size);
+    mp_lcd_err_t s_spi_del(mp_obj_t obj);
+    mp_lcd_err_t s_spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size);
+    mp_lcd_err_t s_spi_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
+    mp_lcd_err_t s_spi_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
+    mp_lcd_err_t s_spi_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
+    mp_lcd_err_t s_spi_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end);
 
     void send_param_16(mp_lcd_spi_bus_obj_t *self, void *param, size_t param_size);
     void send_param_8(mp_lcd_spi_bus_obj_t *self, void *param, size_t param_size);
@@ -191,17 +191,16 @@
     }
 
 
-    mp_lcd_err_t s_spi_del(lcd_panel_io_t *io)
+    mp_lcd_err_t s_spi_del(mp_obj_t obj)
     {
-        mp_lcd_spi_bus_obj_t *self = __containerof(io, mp_lcd_spi_bus_obj_t, panel_io_handle);
-        LCD_UNUSED(self);
+        LCD_UNUSED(obj);
         return LCD_OK;
     }
 
 
-    mp_lcd_err_t s_spi_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size)
+    mp_lcd_err_t s_spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size)
     {
-        mp_lcd_spi_bus_obj_t *self = __containerof(io, mp_lcd_spi_bus_obj_t, panel_io_handle);
+        mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
 
         if (self->panel_io_config.lcd_cmd_bits == 16) {
             self->send_cmd = send_cmd_16;
@@ -219,17 +218,17 @@
     }
 
 
-    mp_lcd_err_t s_spi_get_lane_count(lcd_panel_io_t *io, uint8_t *lane_count)
+    mp_lcd_err_t s_spi_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
     {
-        LCD_UNUSED(io);
+        LCD_UNUSED(obj);
         *lane_count = 1;
         return LCD_OK;
     }
 
 
-    mp_lcd_err_t s_spi_rx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size)
+    mp_lcd_err_t s_spi_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
     {
-        mp_lcd_spi_bus_obj_t *self = __containerof(io, mp_lcd_spi_bus_obj_t, panel_io_handle);
+        mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
 
         CS_ON();
 
@@ -244,9 +243,9 @@
     }
 
 
-    mp_lcd_err_t s_spi_tx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size)
+    mp_lcd_err_t s_spi_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
     {
-        mp_lcd_spi_bus_obj_t *self = __containerof(io, mp_lcd_spi_bus_obj_t, panel_io_handle);
+        mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
 
         CS_ON();
         self->send_cmd(self, lcd_cmd);
@@ -260,9 +259,13 @@
     }
 
 
-    mp_lcd_err_t s_spi_tx_color(lcd_panel_io_t *io, int lcd_cmd, void *color, size_t color_size)
+    mp_lcd_err_t s_spi_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end)
     {
-        mp_lcd_spi_bus_obj_t *self = __containerof(io, mp_lcd_spi_bus_obj_t, panel_io_handle);
+        LCD_UNUSED(x_start);
+        LCD_UNUSED(y_start);
+        LCD_UNUSED(x_end);
+        LCD_UNUSED(y_end);
+        mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
 
         CS_ON();
         if (lcd_cmd >= 0x00) {

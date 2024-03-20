@@ -2,13 +2,7 @@ import lvgl as lv  # NOQA
 
 
 class KeypadDriver:
-    _instance_counter = 1
-
-    def __init__(self, touch_cal=None):  # NOQA
-        self.__class__._instance_counter += 1
-        self.id = self.__class__._instance_counter
-        self._cursors = []
-
+    def __init__(self):  # NOQA
         if not lv.is_initialized():
             lv.init()
 
@@ -34,14 +28,14 @@ class KeypadDriver:
 
     def _get_key(self):
         # this method needs to be overridden.
-        # the returned value from this method is going to be a keycode
+        # the returned value from this method is going to be (state, keycode)
         # or None if no key event has occured
         raise NotImplementedError
 
     def _read(self, drv, data):  # NOQA
         key = self._get_key()
 
-        if key is None:  # ignore no touch & multi touch
+        if key is None:  # ignore no key
             if self._current_state != lv.INDEV_STATE.RELEASED:
                 self._current_state = lv.INDEV_STATE.RELEASED
                 res = True
@@ -53,14 +47,23 @@ class KeypadDriver:
             data.continue_reading = False
             return res
 
+        state, key = key
+
         self._last_key = key
-        self._current_state = data.state = lv.INDEV_STATE.PRESSED
+
+        if self._current_state == state == lv.INDEV_STATE.RELEASED:
+            res = False
+            data.continue_reading = False
+        else:
+            res = True
+            data.continue_reading = True
+
+        self._current_state = state
 
         data.key = self._last_key
         data.state = self._current_state
-        data.continue_reading = True
 
-        return True
+        return res
 
     def get_type(self):
         return self._indev_drv.get_type()

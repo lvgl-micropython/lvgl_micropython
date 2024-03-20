@@ -8,6 +8,9 @@ def _remap(value, old_min, old_max, new_min, new_max):
 class PointerDriver:
     _instance_counter = 1
 
+    PRESSED = lv.INDEV_STATE.PRESSED
+    RELEASED = lv.INDEV_STATE.RELEASED
+
     def get_width(self):
         return self._width
 
@@ -32,14 +35,14 @@ class PointerDriver:
                 'before the pointer driver'
             )
 
-        self._disp_drv = disp.get_driver_data()
+        self._disp_drv = disp
 
         width = self._disp_drv.get_physical_horizontal_resolution()
         height = self._disp_drv.get_physical_vertical_resolution()
 
         self._last_x = -1
         self._last_y = -1
-        self._current_state = lv.INDEV_STATE.RELEASED
+        self._current_state = self.RELEASED
 
         self._height = height
         self._width = width
@@ -51,13 +54,13 @@ class PointerDriver:
 
         self._config = touch_cal
 
-        indev_drv = lv.indev_t()
+        indev_drv = lv.indev_create()
         indev_drv.init()  # NOQA
-        indev_drv.type = lv.INDEV_TYPE.POINTER
-        indev_drv.read_cb = self._read
-        self._indev_drv = indev_drv.register()  # NOQA
-        self._indev_drv.set_driver_data(self)
-        self._indev_drv.set_disp(disp)
+        indev_drv.set_type(lv.INDEV_TYPE.POINTER)
+        indev_drv.set_read_cb(self._read)
+        indev_drv.set_driver_data(self)
+        indev_drv.set_display(disp)
+        self._indev_drv = indev_drv
 
     def calibrate(self):
         import touch_calibrate
@@ -76,16 +79,16 @@ class PointerDriver:
 
     def _get_coords(self):
         # this method needs to be overridden.
-        # the returned value from this method is going to be a tuple of state, x, y
-        # or None if no touch even has occured
+        # the returned value from this method is going to be a tuple
+        # of (state, x, y) or None if no touch even has occured
         raise NotImplementedError
 
     def _read(self, drv, data):  # NOQA
         coords = self._get_coords()
 
         if coords is None:  # ignore no touch & multi touch
-            if self._current_state != lv.INDEV_STATE.RELEASED:
-                self._current_state = lv.INDEV_STATE.RELEASED
+            if self._current_state != self.RELEASED:
+                self._current_state = self.RELEASED
                 res = True
             else:
                 res = False
@@ -100,7 +103,6 @@ class PointerDriver:
         state, x, y = coords
 
         if None not in (x, y):
-
             config = self._config
             orientation = self.get_rotation()
             left = config.left
@@ -136,19 +138,27 @@ class PointerDriver:
             self._last_y = ypos
 
         if state is not None:
-            if state:
-                self._current_state = lv.INDEV_STATE.PRESSED
+            if self._current_state == state == self.RELEASED:
+                res = False
+                data.continue_reading = False
             else:
-                self._current_state = lv.INDEV_STATE.RELEASED
+                res = True
+                data.continue_reading = True
+
+            self._current_state = state
+
+        elif self._current_state == self.RELEASED:
+            res = False
+            data.continue_reading = False
+        else:
+            data.continue_reading = True
+            res = True
 
         data.state = self._current_state
         data.point.x = self._last_x
         data.point.y = self._last_y
 
-        data.continue_reading = True
-        # print("raw(x={0}, y={1}) point(x={2} y={3})".format(x, y, data.point.x, data.point.y))  # NOQA
-
-        return True
+        return res
 
     def get_type(self):
         return self._indev_drv.get_type()

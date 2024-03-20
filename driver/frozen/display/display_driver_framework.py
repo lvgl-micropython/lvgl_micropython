@@ -188,57 +188,34 @@ class DisplayDriver:
                 )
                 gc.collect()
 
-                if isinstance(data_bus, lcd_bus.RGBBus):
-                    if buf_size > 100000:
-                        caps = lcd_bus.MEMORY_SPIRAM
-                    else:
-                        caps = lcd_bus.MEMORY_INTERNAL
-
-                    frame_buffer1 = data_bus.allocate_framebuffer(
-                        buf_size, caps
-                    )
-                    frame_buffer2 = data_bus.allocate_framebuffer(
-                        buf_size, caps
-                    )
-                else:
+                if not isinstance(data_bus, lcd_bus.RGBBus):
                     buf_size = int(buf_size // 10)
 
+                for flags in (
+                    lcd_bus.MEMORY_INTERNAL | lcd_bus.MEMORY_DMA,
+                    lcd_bus.MEMORY_SPIRAM | lcd_bus.MEMORY_DMA,
+                    lcd_bus.MEMORY_INTERNAL,
+                    lcd_bus.MEMORY_SPIRAM
+                ):
                     try:
-                        frame_buffer1 = data_bus.allocate_framebuffer(
-                            buf_size,
-                            lcd_bus.MEMORY_INTERNAL | lcd_bus.MEMORY_DMA
-                        )
-                        frame_buffer2 = data_bus.allocate_framebuffer(
-                            buf_size,
-                            lcd_bus.MEMORY_INTERNAL | lcd_bus.MEMORY_DMA
-                        )
+                        frame_buffer1 = data_bus.allocate_framebuffer(buf_size, flags)
+
+                        if (flags | lcd_bus.MEMORY_DMA) == flags:
+                            frame_buffer2 = data_bus.allocate_framebuffer(buf_size, flags)
+
+                        break
+
                     except MemoryError:
                         frame_buffer1 = data_bus.free_framebuffer(frame_buffer1)
 
-                        try:
-                            frame_buffer1 = data_bus.allocate_framebuffer(
-                                buf_size,
-                                lcd_bus.MEMORY_SPIRAM | lcd_bus.MEMORY_DMA
-                            )
-                            frame_buffer2 = data_bus.allocate_framebuffer(
-                                buf_size,
-                                lcd_bus.MEMORY_SPIRAM | lcd_bus.MEMORY_DMA
-                            )
-                        except MemoryError:
-                            data_bus.free_framebuffer(frame_buffer1)
-                            try:
-                                frame_buffer1 = data_bus.allocate_framebuffer(
-                                    buf_size,
-                                    lcd_bus.MEMORY_INTERNAL
-                                )
-                            except MemoryError:
-                                frame_buffer1 = data_bus.allocate_framebuffer(
-                                    buf_size,
-                                    lcd_bus.MEMORY_SPIRAM
-                                )
+                if frame_buffer1 is None:
+                    raise MemoryError(
+                        f'Unable to allocate memory for frame buffer ({buf_size})'
+                    )
 
             if frame_buffer2 is None and isinstance(data_bus, lcd_bus.SPIBus):
-                buffer_size = data_bus.MAXIMUM_BUFFER_SIZE
+                buffer_size = data_bus.SPI_MAXIMUM_BUFFER_SIZE
+
             elif isinstance(data_bus, lcd_bus.RGBBus):
                 buffer_size = int(
                     display_width *
@@ -259,9 +236,6 @@ class DisplayDriver:
             self._disp_drv.set_flush_cb(self._flush_cb)
 
             if isinstance(data_bus, lcd_bus.RGBBus):
-                frame_buffer1 = data_bus.allocate_framebuffer(buffer_size, 0)
-                frame_buffer2 = data_bus.allocate_framebuffer(buffer_size, 0)
-
                 self._disp_drv.set_buffers(
                     frame_buffer1,
                     frame_buffer2,
@@ -583,11 +557,6 @@ class DisplayDriver:
     def _dummy_set_memory_location(self, *_, **__):  # NOQA
         return _RAMWR
 
-    # this function is handeled in the viper code emitter. This will
-    # increase the performance to near C code execution times. While this is
-    # not really heavy lifting in terms of work being done every cycle counts
-    # and it adds up over time. Need to keep things running as fast as possible.
-
     def _set_memory_location(self, x1, y1, x2, y2):
         # Column addresses
         param_buf = self._param_buf  # NOQA
@@ -627,7 +596,6 @@ class DisplayDriver:
         # we have to use the __dereference__ method because this method is
         # what converts from the C_Array object the binding passes into a
         # memoryview object that can be passed to the bus drivers
-
         data_view = color_p.__dereference__(size)
         self._data_bus.tx_color(cmd, data_view, x1, y1, x2, y2)
 

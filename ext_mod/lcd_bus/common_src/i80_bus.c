@@ -74,12 +74,12 @@
 
 
     /* forward declarations */
-    mp_lcd_err_t i80_tx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size);
-    mp_lcd_err_t i80_tx_color(lcd_panel_io_t *io, int lcd_cmd, void *color, size_t color_size);
-    mp_lcd_err_t i80_del(lcd_panel_io_t *io);
-    mp_lcd_err_t i80_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size);
-    mp_lcd_err_t i80_get_lane_count(lcd_panel_io_t *io, uint8_t *lane_count);
-
+    mp_lcd_err_t i80_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
+    mp_lcd_err_t i80_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
+    mp_lcd_err_t i80_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end);
+    mp_lcd_err_t i80_del(mp_obj_t obj);
+    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size);
+    mp_lcd_err_t i80_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
 
     void write_color8(mp_lcd_i80_bus_obj_t *self, void *color, size_t color_size);
     void write_color16(mp_lcd_i80_bus_obj_t *self, void *color, size_t color_size);
@@ -270,6 +270,7 @@
 
             self->panel_io_handle.tx_param = i80_tx_param;
             self->panel_io_handle.tx_color = i80_tx_color;
+            self->panel_io_handle.rx_param = i80_rx_param;
             self->panel_io_handle.del = i80_del;
             self->panel_io_handle.init = i80_init;
             self->panel_io_handle.get_lane_count = i80_get_lane_count;
@@ -279,9 +280,9 @@
     }
 
 
-    mp_lcd_err_t i80_tx_param(lcd_panel_io_t *io, int lcd_cmd, void *param, size_t param_size)
+    mp_lcd_err_t i80_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
     {
-        mp_lcd_i80_bus_obj_t *self = __containerof(io, mp_lcd_i80_bus_obj_t, panel_io_handle);
+        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)obj;
 
         CS_LOW();
         DC_CMD();
@@ -336,10 +337,24 @@
         return LCD_OK;
     }
 
-
-    mp_lcd_err_t i80_tx_color(lcd_panel_io_t *io, int lcd_cmd, void *color, size_t color_size)
+    mp_lcd_err_t i80_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
     {
-        mp_lcd_i80_bus_obj_t *self = __containerof(io, mp_lcd_i80_bus_obj_t, panel_io_handle);
+        LCD_UNUSED(obj);
+        LCD_UNUSED(lcd_cmd);
+        LCD_UNUSED(param);
+        LCD_UNUSED(param_size);
+        return LCD_OK;
+    }
+
+
+    mp_lcd_err_t i80_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end)
+    {
+        LCD_UNUSED(x_start);
+        LCD_UNUSED(y_start);
+        LCD_UNUSED(x_end);
+        LCD_UNUSED(y_end);
+
+        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)obj;
 
         CS_LOW();
         DC_CMD();
@@ -377,15 +392,15 @@
     }
 
 
-    mp_lcd_err_t i80_del(lcd_panel_io_t *io)
+    mp_lcd_err_t i80_del(mp_obj_t obj)
     {
         return LCD_OK;
 
     }
 
-    mp_lcd_err_t i80_init(lcd_panel_io_t *io, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size)
+    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size)
     {
-        mp_lcd_i80_bus_obj_t *self = __containerof(io, mp_lcd_i80_bus_obj_t, panel_io_handle);
+        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)obj;
 
         self->buffer_size = buffer_size;
         self->bpp = bpp;
@@ -424,9 +439,9 @@
     }
 
 
-    mp_lcd_err_t i80_get_lane_count(lcd_panel_io_t *io, uint8_t *lane_count)
+    mp_lcd_err_t i80_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
     {
-        mp_lcd_i80_bus_obj_t *self = __containerof(io, mp_lcd_i80_bus_obj_t, panel_io_handle);
+        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)obj;
         *lane_count = (uint8_t)self->bus_config.bus_width;
         return LCD_OK;
     }
