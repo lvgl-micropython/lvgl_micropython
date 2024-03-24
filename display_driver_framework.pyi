@@ -293,3 +293,4 @@ class DisplayDriver:
 
     def _madctl(self, colormode: int, rotations: Tuple[int, int, int, int], rotation: Optional[int] = None) -> int:
         ...
+

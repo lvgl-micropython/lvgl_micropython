@@ -2,7 +2,7 @@
 import time
 from micropython import const  # NOQA
 
-import lvgl as lv
+import lvgl as lv  # NOQA
 import lcd_bus  # NOQA
 import display_driver_framework
 
@@ -76,7 +76,7 @@ class ST7796(display_driver_framework.DisplayDriver):
         param_buf[0] = (
             self._madctl(
                 self._color_byte_order,
-                display_driver_framework._ORIENTATION_TABLE
+                display_driver_framework._ORIENTATION_TABLE  # NOQA
             )
         )
         self.set_params(_MADCTL, param_mv[:1])

@@ -93,6 +93,10 @@ _BACKLIGHT_PIN = const(45)
 _OFFSET_X = const(0)
 _OFFSET_Y = const(0)
 
+
+import lvgl as lv  # NOQA
+
+
 display = st7796.ST7796(
     data_bus=display_bus,
     display_width=_WIDTH,
@@ -107,7 +111,9 @@ display = st7796.ST7796(
     backlight_pin=_BACKLIGHT_PIN,
     backlight_on_state=st7796.STATE_HIGH,
     offset_x=_OFFSET_X,
-    offset_y=_OFFSET_Y
+    offset_y=_OFFSET_Y,
+    color_space=lv.COLOR_FORMAT.RGB565,
+    rgb565_byte_swap=True
 )
 
 # Remember you are going to need to power the display
@@ -116,15 +122,38 @@ display = st7796.ST7796(
 # it is ideal to have this in place no matter what so if you change the display
 # to one that does have the power pin the only thing you are going
 # to need to change is the pin number
-display.power = True
+display.set_power(True)
 
 # The old drivers used to inot the display automatically. I have decided against
 # doing that to save memory. So the init must be done at some point before
 # you create any LVGL objects.
 display.init()
 
-import lvgl as lv  # NOQA
+display.set_backlight(100)
 
-import task_handler  # NOQA
 
-task_handler.TaskHandler()
+# you can use the built in handling for calling the task_handler and updating
+# the time in LVGL. I personally don't like using this because of it using an
+# ISR which uses up CPU time. I also don't like it because it has to schedule
+# a task using the scheduler so the display update is able t take pplace
+# outside of an ISR. The issue with the scheduler is it will run when it is
+# able to. so there is a big unknown as to when it will actually run.
+
+# import task_handler  # NOQA
+
+# task_handler.TaskHandler()
+
+# This is my prefered method of updating the display. This has time keeping
+# that is accurate to the nanosecond.
+
+import time
+time_passed = 1000000
+
+while True:
+    start_time = time.time_ns()
+    time.sleep_ns(1000000)
+    lv.tick_inc(int(time_passed // 1000000))
+    time_passed -= int(time_passed // 1000000) * 1000000
+    lv.task_handler()
+    end_time = time.time_ns()
+    time_passed += time.ticks_diff(end_time, start_time)
