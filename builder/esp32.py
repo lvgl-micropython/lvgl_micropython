@@ -288,7 +288,9 @@ def setup_idf_environ():
                 cmds.append(['. ./export.sh'])
                 cmds.append(['printenv'])
 
-            env = {k: v for k, v in os.environ.items()}
+            # this removes any IDF environment variable that may exist if the user
+            # has the ESP-IDF installed
+            env = {k: v for k, v in os.environ.items() if not k.startswith('IDF')}
             env['IDF_PATH'] = os.path.abspath(idf_path)
 
             result, output = spawn(cmds, env=env, out_to_screen=False)
@@ -305,6 +307,7 @@ def setup_idf_environ():
             }
             for item in (
                 'PATH',
+                'IDF_PATH',
                 'IDF_TOOLS_EXPORT_CMD',
                 'IDF_TOOLS_INSTALL_CMD'
             ):
@@ -351,7 +354,10 @@ def submodules():
         print('this might take a bit...')
         print()
 
-        result, _ = spawn(cmds)
+        env = {k: v for k, v in os.environ.items() if not k.startswith('IDF')}
+        env['IDF_PATH'] = os.path.abspath(idf_path)
+
+        result, _ = spawn(cmds, env=env)
         if result != 0:
             sys.exit(result)
 
