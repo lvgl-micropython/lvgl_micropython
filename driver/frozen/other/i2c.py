@@ -18,6 +18,8 @@ class I2CBus(object):
         if key in I2CBus._busses:
             self.__dict__.update(I2CBus._busses[key].__dict__)
         else:
+            I2CBus._busses[key] = self
+
             if use_pullups:
                 kwargs = dict(
                     scl=machine.Pin(scl, pull=machine.Pin.PULL_UP),

@@ -268,6 +268,10 @@ def clean():
 
 
 def setup_idf_environ():
+    # There were some modifications made with how the environment gets set up
+    # @cheops put quite a bit of time in to research the best solution
+    # and also with the testing of the code.
+
     idf_ver = get_idf_version()
     env = None
 
