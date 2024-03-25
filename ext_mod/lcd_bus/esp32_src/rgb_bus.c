@@ -278,7 +278,26 @@
 
         if (self->view1 == NULL) {
             if ((caps | MALLOC_CAP_SPIRAM) == caps) {
+                uint32_t available = (uint32_t)heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
+                if (available < size) {
+                    mp_raise_msg_varg(
+                        &mp_type_MemoryError,
+                        MP_ERROR_TEXT("Not enough memory available in SPIRAM (%d)"),
+                        size
+                    );
+                    return mp_const_none;
+                }
                 self->panel_io_config.flags.fb_in_psram = 1;
+            } else {
+                uint32_t available = (uint32_t)heap_caps_get_largest_free_block(caps);
+                if (available < size) {
+                    mp_raise_msg_varg(
+                        &mp_type_MemoryError,
+                        MP_ERROR_TEXT("Not enough memory available (%d)"),
+                        size
+                    );
+                    return mp_const_none;
+                }
             }
             self->buffer_size = size;
             void *buf = heap_caps_calloc(1, 1, MALLOC_CAP_INTERNAL);
@@ -290,12 +309,35 @@
         } else if (self->view2 == NULL) {
             if (self->buffer_size != size) {
                 mp_raise_msg_varg(
-                    &mp_type_ValueError,
+                    &mp_type_MemoryError,
                     MP_ERROR_TEXT("Frame buffer sizes do not match (%d)"),
                     size
                 );
                 return mp_const_none;
             }
+
+            if (self->panel_io_config.flags.fb_in_psram == 1) {
+                uint32_t available = (uint32_t)heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
+                if (available < size) {
+                    mp_raise_msg_varg(
+                        &mp_type_MemoryError,
+                        MP_ERROR_TEXT("Not enough memory available in SPIRAM (%d)"),
+                        size
+                    );
+                    return mp_const_none;
+                }
+            } else {
+                uint32_t available = (uint32_t)heap_caps_get_largest_free_block(caps);
+                if (available < size) {
+                    mp_raise_msg_varg(
+                        &mp_type_MemoryError,
+                        MP_ERROR_TEXT("Not enough memory available (%d)"),
+                        size
+                    );
+                    return mp_const_none;
+                }
+            }
+
             self->panel_io_config.flags.double_fb = 1;
             void *buf = heap_caps_calloc(1, 1, MALLOC_CAP_INTERNAL);
             mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE, 1, buf));
@@ -303,7 +345,7 @@
             self->view2 = view;
             return MP_OBJ_FROM_PTR(view);
         } else {
-            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("There is a maximum of 2 frame buffers allowed"));
+            mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("There is a maximum of 2 frame buffers allowed"));
             return mp_const_none;
         }
     }
