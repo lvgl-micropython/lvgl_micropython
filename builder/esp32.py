@@ -532,7 +532,7 @@ def compile():  # NOQA
             f'lib/micropython/ports/esp32/{build_name}'
         )
         build_bin_file = os.path.join(build_bin_file, f'{build_name}.bin')
-        cmd = f'{python_path} {esp_tool_path}, {out_cmd}'
+        cmd = f'{python_path} {esp_tool_path} {out_cmd}'
         cmd = cmd.replace('write_flash', f'merge_bin -o {build_bin_file}')
         cmd = cmd.replace('--flash_freq 80m ', '')
         cmd = cmd.replace('-p (PORT) ', '')
