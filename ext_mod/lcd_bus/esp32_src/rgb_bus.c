@@ -362,6 +362,32 @@
             );
         }
 
+        if (bpp == 16 && rgb565_byte_swap) {
+            /*
+            We change the pins aound when the bus width is 16 and wanting to
+            swap bytes. This does the same thing as moving the bytes around in
+            the buffer but without having to iterate over the entire buffer to
+            swap the bytes around. Swapping the bytes around on larger displays
+            has a serious performance impact on the speed. Moving the pins
+            eliminates the need to do that.
+            */
+            if (self->panel_io_config.data_width == 16) {
+                int temp_pin;
+
+                for (uint8_t i = 0; i < 8; i++) {
+                    temp_pin = self->panel_io_config.data_gpio_nums[i];
+                    self->panel_io_config.data_gpio_nums[i] = self->panel_io_config.data_gpio_nums[i + 8];
+                    self->panel_io_config.data_gpio_nums[i + 8] = temp_pin;
+                }
+
+                self->rgb565_byte_swap = false;
+            } else {
+                self->rgb565_byte_swap = true;
+            }
+        } else {
+            self->rgb565_byte_swap = false;
+        }
+
         self->panel_io_config.timings.h_res = (uint32_t)width;
         self->panel_io_config.timings.v_res = (uint32_t)height;
         self->panel_io_config.bits_per_pixel = (size_t)bpp;
@@ -404,12 +430,6 @@
             self->view2->items = (void *)rgb_panel->fbs[1];
             self->view2->len = buffer_size;
             heap_caps_free(buf2);
-        }
-
-        if (bpp == 16 && rgb565_byte_swap) {
-            self->rgb565_byte_swap = true;
-        } else {
-            self->rgb565_byte_swap = false;
         }
 
         return LCD_OK;
