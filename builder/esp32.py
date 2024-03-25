@@ -135,14 +135,18 @@ def get_espidf():
 
 
 board_variant = None
+board = None
 skip_partition_resize = False
 partition_size = None
 
 
-def parse_args(extra_args, lv_cflags, board):
+def parse_args(extra_args, lv_cflags, brd):
+    global board
     global board_variant
     global skip_partition_resize
     global partition_size
+
+    board = brd
 
     esp_argParser = ArgumentParser(prefix_chars='-B')
 
@@ -204,7 +208,7 @@ compile_cmd = []
 submodules_cmd = []
 
 
-def build_commands(_, extra_args, __, lv_cflags, board):
+def build_commands(_, extra_args, __, lv_cflags, ___):
     clean_cmd.extend(esp_cmd[:])
     clean_cmd[1] = 'clean'
     clean_cmd.append(f'BOARD={board}')
@@ -518,6 +522,28 @@ def compile():  # NOQA
             )
 
         out_cmd = ' '.join(out_cmd)
+
+        build_name = f'build-{board}'
+
+        if board_variant is not None:
+            build_name += f'-{board_variant}'
+
+        build_bin_file = os.path.abspath(
+            f'lib/micropython/ports/esp32/{build_name}'
+        )
+        build_bin_file = os.path.join(build_bin_file, f'{build_name}.bin')
+        cmd = f'{python_path} {esp_tool_path}, {out_cmd}'
+        cmd = cmd.replace('write_flash', f'merge_bin -o {build_bin_file}')
+        cmd = cmd.replace('--flash_freq 80m ', '')
+        cmd = cmd.replace('-p (PORT) ', '')
+        cmd = cmd.replace('-b 460800 ', '')
+        cmd = cmd.replace('--before default_reset ', '')
+        cmd = cmd.replace('--after no_reset ', '')
+
+        result, _ = spawn([cmd])
+        if result:
+            sys.exit(result)
+
         print()
         print()
         print('To flash firmware:')
@@ -527,8 +553,16 @@ def compile():  # NOQA
         print(
             python_path, esp_tool_path, '-p (PORT) -b 460800 erase_flash'
         )
+        # print()
+        # print(python_path, esp_tool_path, out_cmd.replace('-b 460800', '-b 921600'))
+        # print()
+
+        cmd = f'{python_path} {esp_tool_path}, {out_cmd}'
+        cmd = cmd.split('write_flash', 1)[0]
+        cmd += f'write_flash 0x0 {build_bin_file}'
+
         print()
-        print(python_path, esp_tool_path, out_cmd.replace('-b 460800', '-b 921600'))
+        print(cmd.replace('-b 460800', '-b 921600'))
         print()
 
 
