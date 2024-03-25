@@ -557,7 +557,7 @@ def compile():  # NOQA
         # print(python_path, esp_tool_path, out_cmd.replace('-b 460800', '-b 921600'))
         # print()
 
-        cmd = f'{python_path} {esp_tool_path}, {out_cmd}'
+        cmd = f'{python_path} {esp_tool_path} {out_cmd}'
         cmd = cmd.split('write_flash', 1)[0]
         cmd += f'write_flash 0x0 {build_bin_file}'
 
