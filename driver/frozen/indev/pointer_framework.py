@@ -55,11 +55,11 @@ class PointerDriver:
         self._config = touch_cal
 
         indev_drv = lv.indev_create()
-        indev_drv.init()  # NOQA
         indev_drv.set_type(lv.INDEV_TYPE.POINTER)
         indev_drv.set_read_cb(self._read)
         indev_drv.set_driver_data(self)
         indev_drv.set_display(disp)
+        indev_drv.enable(True)
         self._indev_drv = indev_drv
 
     def calibrate(self):

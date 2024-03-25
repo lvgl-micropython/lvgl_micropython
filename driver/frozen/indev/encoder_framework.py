@@ -20,20 +20,20 @@ class EncoderDriver:
                 'before the encoder driver'
             )
 
-        self._disp_drv = disp.get_driver_data()
+        self._disp_drv = disp
 
         self._last_enc_value = 0
         self._last_enc_diff = 0
         self._last_key = 0
         self._current_state = lv.INDEV_STATE.RELEASED
 
-        indev_drv = lv.indev_t()
-        indev_drv.init()  # NOQA
-        indev_drv.type = lv.INDEV_TYPE.ENCODER
-        indev_drv.read_cb = self._read
-        self._indev_drv = indev_drv.register()  # NOQA
-        self._indev_drv.set_driver_data(self)
-        self._indev_drv.set_disp(disp)
+        indev_drv = lv.indev_create()
+        indev_drv.set_type(lv.INDEV_TYPE.ENCODER)
+        indev_drv.set_read_cb(self._read)
+        indev_drv.set_driver_data(self)
+        indev_drv.set_display(disp)
+        indev_drv.enable(True)
+        self._indev_drv = indev_drv
 
     def _get_enc(self):
         # this method needs to be overridden.
