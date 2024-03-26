@@ -3643,5 +3643,9 @@ if args.metadata:
     with open(args.metadata, 'w') as metadata_file:
         json.dump(metadata, metadata_file, indent=4)
 
+    import stub_gen
+
+    stub_gen.run(args.metadata)
+
 stdout.close()
 
