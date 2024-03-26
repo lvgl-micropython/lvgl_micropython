@@ -1,4 +1,5 @@
 import lvgl as lv  # NOQA
+import display_driver_framework
 
 
 def _remap(value, old_min, old_max, new_min, new_max):
@@ -36,6 +37,16 @@ class PointerDriver:
             )
 
         self._disp_drv = disp
+
+        displays = display_driver_framework.DisplayDriver.get_displays()
+        for display in displays:
+            if display._disp_drv == disp:
+                self._py_disp_drv = display
+                break
+        else:
+            raise RuntimeError(
+                'Display driver needs to initilized before indev driver'
+            )
 
         width = self._disp_drv.get_physical_horizontal_resolution()
         height = self._disp_drv.get_physical_vertical_resolution()

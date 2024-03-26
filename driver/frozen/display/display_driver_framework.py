@@ -71,10 +71,17 @@ class DisplayDriver:
     #     buffer_size, heap_caps.CAP_INTERNAL | heap_caps.CAP_DMA
     # )
 
+    _displays = []
+
     @staticmethod
     def get_default():
         disp = lv.display_get_default()
-        return disp.get_driver_data()
+
+        for d in DisplayDriver.get_displays():
+            if d._disp_drv == disp:
+                return disp
+
+        return None
 
     def __init__(
         self,
@@ -276,6 +283,12 @@ class DisplayDriver:
             self._frame_buffer2 = frame_buffer2
 
             self.set_default()
+
+        self._displays.append(self)
+
+    @staticmethod
+    def get_displays():
+        return DisplayDriver._displays
 
     def set_physical_resolution(self, width, height):
         self._physical_width = width

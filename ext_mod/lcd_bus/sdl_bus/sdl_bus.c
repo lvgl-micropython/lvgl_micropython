@@ -209,6 +209,7 @@
         }
     }
 
+
     mp_obj_t mp_lcd_sdl_register_controller_axis_motion_callback(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
     {
         enum { ARG_self, ARG_callback };
@@ -447,7 +448,6 @@
     }
 
     MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_sdl_register_window_callback_obj, 2, mp_lcd_sdl_register_window_callback);
-
 
 
     mp_obj_t mp_lcd_sdl_set_window_size(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
@@ -805,6 +805,7 @@
         { MP_ROM_QSTR(MP_QSTR_WINDOW_TOOLTIP),            MP_ROM_INT(SDL_WINDOW_TOOLTIP)            },
         { MP_ROM_QSTR(MP_QSTR_WINDOW_POPUP_MENU),         MP_ROM_INT(SDL_WINDOW_POPUP_MENU)         }
     };
+
 
     STATIC MP_DEFINE_CONST_DICT(mp_lcd_sdl_bus_locals_dict, mp_lcd_sdl_bus_locals_dict_table);
 

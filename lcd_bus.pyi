@@ -108,6 +108,168 @@ class SPIBus:
         ...
 
 
+class SDLBus:
+    WINDOW_FULLSCREEN: int = ...
+    WINDOW_FULLSCREEN_DESKTOP: int = ...
+    WINDOW_BORDERLESS: int = ...
+    WINDOW_MINIMIZED: int = ...
+    WINDOW_MAXIMIZED: int = ...
+    WINDOW_ALLOW_HIGHDPI: int = ...
+    WINDOW_ALWAYS_ON_TOP: int = ...
+    WINDOW_SKIP_TASKBAR: int = ...
+    WINDOW_UTILITY: int = ...
+    WINDOW_TOOLTIP: int = ...
+    WINDOW_POPUP_MENU: int = ...
+
+    def __init__(
+        self,
+        *,
+        flags: int
+    ):
+        ...
+
+    def init(
+        self,
+        width: int,
+        height: int,
+        bpp: int,
+        buffer_size: int,
+        rgb565_byte_swap: bool,
+        /
+    ) -> None:
+        ...
+
+    def deinit(self) -> None:
+        ...
+
+    def register_controller_axis_motion_callback(
+        self,
+        callback: Callable[[dict], None],
+        /
+    ) -> None:
+        ...
+
+    def register_controller_button_callback(
+        self,
+        callback: Callable[[dict], None],
+        /
+    ) -> None:
+        ...
+
+    def register_touch_callback(
+        self,
+        callback: Callable[[dict], None],
+        /
+    ) -> None:
+        ...
+
+    def register_keypad_callback(
+        self,
+        callback: Callable[[dict], None],
+        /
+    ) -> None:
+        ...
+
+    def register_joystick_axis_motion_callback(
+        self,
+        callback: Callable[[dict], None],
+        /
+    ) -> None:
+        ...
+
+    def joystick_ball_motion_callback(
+        self,
+        callback: Callable[[dict], None],
+        /
+    ) -> None:
+        ...
+
+    def register_joystick_hat_motion_callback(
+        self,
+        callback: Callable[[dict], None],
+        /
+    ) -> None:
+        ...
+
+    def register_joystick_button_callback(
+        self,
+        callback: Callable[[dict], None],
+        /
+    ) -> None:
+        ...
+
+    def register_mouse_motion_callback(
+        self,
+        callback: Callable[[dict], None],
+        /
+    ) -> None:
+        ...
+
+    def register_mouse_button_callback(
+        self,
+        callback: Callable[[dict], None],
+        /
+    ) -> None:
+        ...
+
+    def register_mouse_wheel_callback(
+        self,
+        callback: Callable[[dict], None],
+        /
+    ) -> None:
+        ...
+
+    def register_window_callback(
+        self,
+        callback: Callable[[dict], None],
+        /
+    ) -> None:
+        ...
+
+    def set_window_size(
+        self,
+        width: int,
+        height: int,
+        px_format: int,
+        ignore_size_chg: bool,
+        /
+    ) -> None:
+
+    def realloc_buffer(
+        self,
+        size: int,
+        buf_num: int,
+        /
+    ) -> Union[None, memoryview]:
+        ...
+
+    def register_callback(
+        self,
+        callback: Callable[[Any, Any], None],
+        /
+    ) -> None:
+        ...
+
+    def tx_param(
+        self,
+        cmd: int,
+        params: Optional[_BufferType] = None,
+        /
+    ) -> None:
+        ...
+
+    def tx_color(self, cmd: int, data: _BufferType, /) -> None:
+        ...
+
+    def rx_param(self, cmd: int, params: _BufferType, /) -> None:
+        ...
+
+    def get_lane_count(self) -> int:
+        ...
+
+    def allocate_framebuffer(self, size: int, caps: int, /) -> Union[None, memoryview]:
+        ...
+
 class RGBBus:
 
     def __init__(

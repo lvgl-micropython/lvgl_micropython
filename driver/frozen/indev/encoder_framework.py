@@ -1,4 +1,5 @@
 import lvgl as lv  # NOQA
+import display_driver_framework
 
 
 class EncoderDriver:
@@ -21,6 +22,16 @@ class EncoderDriver:
             )
 
         self._disp_drv = disp
+
+        displays = display_driver_framework.DisplayDriver.get_displays()
+        for display in displays:
+            if display._disp_drv == disp:
+                self._py_disp_drv = display
+                break
+        else:
+            raise RuntimeError(
+                'Display driver needs to initilized before indev driver'
+            )
 
         self._last_enc_value = 0
         self._last_enc_diff = 0
