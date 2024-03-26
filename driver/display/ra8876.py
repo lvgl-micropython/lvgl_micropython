@@ -9,181 +9,122 @@ import display_driver_framework
 
 #  Software Reset Register (SRR)
 _SRR = const(0x00)
-
 #  Chip Configuration Register (CRR)
 _CCR = const(0x01)
-
 #  Memory Access Control Register (MACR)
 _MACR = const(0x02)
-
 #  Input Control Register (ICR)
 _ICR = const(0x03)
-
 #  Memory Data Read/Write Port (MRWDP)
 _MRWDP = const(0x04)
-
 #  SCLK PLL Control Register 1 (PPLLC1)
 _PPLLC1 = const(0x05)
-
 #  SCLK PLL Control Register 2 (PPLLC2)
 _PPLLC2 = const(0x06)
-
 #  MCLK PLL Control Register 1 (MPLLC1)
 _MPLLC1 = const(0x07)
-
 #  MCLK PLL Control Register 2 (MPLLC2)
 _MPLLC2 = const(0x08)
-
 #  CCLK PLL Control Register 1 (SPLLC1)
 _SPLLC1 = const(0x09)
-
 #  CCLK PLL Control Register 2 (SPLLC2)
 _SPLLC2 = const(0x0A)
-
 #  Main/PIP Window Control Register (MPWCTR)
 _MPWCTR = const(0x10)
-
 #  Display Configuration Register (DPCR)
 _DPCR = const(0x12)
-
 #  Panel scan Clock and Data Setting Register (PCSR)
 _PCSR = const(0x13)
-
 #  Horizontal Display Width Register (HDWR)
 _HDWR = const(0x14)
-
 #  Horizontal Display Width Fine Tune Register (HDWFTR)
 _HDWFTR = const(0x15)
-
 #  Horizontal Non-Display Period Register (HNDR)
 _HNDR = const(0x16)
-
 #  Horizontal Non-Display Period Fine Tune Register (HNDFTR)
 _HNDFTR = const(0x17)
-
 #  HSYNC Start Position Register (HSTR)
 _HSTR = const(0x18)
-
 #  HSYNC Pulse Width Register (HPWR)
 _HPWR = const(0x19)
-
 #  Vertical Display Height Register 0 (VDHR0)
 _VDHR0 = const(0x1A)
-
 #  Vertical Display Height Register 1 (VDHR1)
 _VDHR1 = const(0x1B)
-
 #  Vertical Non-Display Period Register 0 (VNDR0)
 _VNDR0 = const(0x1C)
-
 #  Vertical Non-Display Period Register 1 (VNDR1)
 _VNDR1 = const(0x1D)
-
 #  VSYNC Start Position Register (VSTR)
 _VSTR = const(0x1E)
-
 #  VSYNC Pulse Width Register (VPWR)
 _VPWR = const(0x1F)
-
 #  Main Image Start Address 0 (MISA0)
 _MISA0 = const(0x20)
-
 #  Main Image Start Address 1 (MISA1)
 _MISA1 = const(0x21)
-
 #  Main Image Start Address 2 (MISA2)
 _MISA2 = const(0x22)
-
 #  Main Image Start Address 3 (MISA3)
 _MISA3 = const(0x23)
-
 #  Main Image Width 0 (MIW0)
 _MIW0 = const(0x24)
-
 #  Main Image Width 1 (MIW1)
 _MIW1 = const(0x25)
-
 #  Main Window Upper-Left corner X-coordinates 0 (MWULX0)
 _MWULX0 = const(0x26)
-
 #  Main Window Upper-Left corner X-coordinates 1 (MWULX1)
 _MWULX1 = const(0x27)
-
 #  Main Window Upper-Left corner Y-coordinates 0 (MWULY0)
 _MWULY0 = const(0x28)
-
 #  Main Window Upper-Left corner Y-coordinates 1 (MWULY1)
 _MWULY1 = const(0x29)
-
 #  Canvas Start address 0 (CVSSA0)
 _CVSSA0 = const(0x50)
-
 #  Canvas Start address 1 (CVSSA1)
 _CVSSA1 = const(0x51)
-
 #  Canvas Start address 2 (CVSSA2)
 _CVSSA2 = const(0x52)
-
 #  Canvas Start address 3 (CVSSA3)
 _CVSSA3 = const(0x53)
-
 #  Canvas image width 0 (CVS_IMWTH0)
 _CVS_IMWTH0 = const(0x54)
-
 #  Canvas image width 1 (CVS_IMWTH1)
 _CVS_IMWTH1 = const(0x55)
-
 #  Active Window Upper-Left corner X-coordinates 0 (AWUL_X0)
 _AWUL_X0 = const(0x56)
-
 #  Active Window Upper-Left corner X-coordinates 1 (AWUL_X1)
 _AWUL_X1 = const(0x57)
-
 #  Active Window Upper-Left corner Y-coordinates 0 (AWUL_Y0)
 _AWUL_Y0 = const(0x58)
-
 #  Active Window Upper-Left corner Y-coordinates 1 (AWUL_Y1)
 _AWUL_Y1 = const(0x59)
-
 #  Active Window Width 0 (AW_WTH0)
 _AW_WTH0 = const(0x5A)
-
 #  Active Window Width 1 (AW_WTH1)
 _AW_WTH1 = const(0x5B)
-
 #  Active Window Height 0 (AW_HT0)
 _AW_HT0 = const(0x5C)
-
 #  Active Window Height 1 (AW_HT1)
 _AW_HT1 = const(0x5D)
-
 #  Color Depth of Canvas & Active Window (AW_COLOR)
 _AW_COLOR = const(0x5E)
-
 #  Graphic Read/Write position Horizontal Position Register 0 (CURH0)
 _CURH0 = const(0x5F)
-
 #  Graphic Read/Write position Horizontal Position Register 1 (CURH1)
 _CURH1 = const(0x60)
-
 #  Graphic Read/Write position Vertical Position Register 0 (CURV0)
 _CURV0 = const(0x61)
-
 #  Graphic Read/Write position Vertical Position Register 1 (CURV1)
 _CURV1 = const(0x62)
-
 #  SDRAM attribute register (SDRAR)
 _SDRAR = const(0xE0)
-
 #  SDRAM mode register & extended mode register (SDRMD)
 _SDRMD = const(0xE1)
-
 #  SDRAM auto refresh interval (SDR_REG_ITVL0)
 _SDR_REF_ITVL0 = const(0xE2)
-
 #  SDRAM auto refresh interval (SDR_REG_ITVL1)
 _SDR_REF_ITVL1 = const(0xE3)
-
 #  SDRAM Control register (SDRCR)
 _SDRCR = const(0xE4)
 
@@ -199,11 +140,6 @@ _PLL_DIV_64 = const(0x36)  # PLL divided by 64
 STATE_HIGH = display_driver_framework.STATE_HIGH
 STATE_LOW = display_driver_framework.STATE_LOW
 STATE_PWM = display_driver_framework.STATE_PWM
-
-PORTRAIT = display_driver_framework.PORTRAIT
-LANDSCAPE = display_driver_framework.LANDSCAPE
-REVERSE_PORTRAIT = display_driver_framework.REVERSE_PORTRAIT
-REVERSE_LANDSCAPE = display_driver_framework.REVERSE_LANDSCAPE
 
 BYTE_ORDER_RGB = display_driver_framework.BYTE_ORDER_RGB
 BYTE_ORDER_BGR = display_driver_framework.BYTE_ORDER_BGR
