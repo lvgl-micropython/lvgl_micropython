@@ -124,7 +124,7 @@ int i2c_write(i2c_port_t port, uint32_t freq, uint16_t addr, size_t len, uint8_t
 {
     esp_err_t err = ESP_OK;
 
-    if (flags & MP_MACHINE_I2C_FLAG_STOP) {
+    if (flags & MP_MACHINE_I2C_FLAG_STOP && buf != NULL) {
         err = i2c_master_write_to_device(
             port, addr, buf, len,
             (((1 + len) * 8 * 1000000) / freq) / portTICK_PERIOD_MS
@@ -133,23 +133,20 @@ int i2c_write(i2c_port_t port, uint32_t freq, uint16_t addr, size_t len, uint8_t
         uint8_t buffer[I2C_BUF_MIN_SIZE] = { 0 };
 
         i2c_cmd_handle_t handle = i2c_cmd_link_create_static(buffer, sizeof(buffer));
+        i2c_master_start(handle);
+        i2c_master_write_byte(handle, addr << 1 | I2C_MASTER_WRITE, true);
+        i2c_master_write(handle, buf, len, true);
 
-        err = i2c_master_start(handle);
-        if (err != ESP_OK) goto end;
-
-        err = i2c_master_write_byte(handle, addr << 1 | I2C_MASTER_WRITE, true);
-        if (err != ESP_OK) goto end;
-
-        err = i2c_master_write(handle, buf, len, true);
-        if (err != ESP_OK) goto end;
+        if (flags & MP_MACHINE_I2C_FLAG_STOP) {
+            i2c_master_stop(handle);
+        }
 
         err = i2c_master_cmd_begin(
             port, handle,
             (((1 + len) * 8 * 1000000) / freq) / portTICK_PERIOD_MS
         );
 
-        end:
-            i2c_cmd_link_delete_static(handle);
+        i2c_cmd_link_delete_static(handle);
     }
 
     if (err == ESP_FAIL) {
