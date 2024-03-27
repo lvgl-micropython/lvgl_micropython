@@ -55,7 +55,7 @@
 
 #define I2C_UNUSED(x) ((void)x)
 
-if CONFIG_IDF_TARGET_ESP32S3
+#if CONFIG_IDF_TARGET_ESP32S3
     #define I2C_MASTER_FREQ_HZ    2000000
 #else
     #define I2C_MASTER_FREQ_HZ    1000000
