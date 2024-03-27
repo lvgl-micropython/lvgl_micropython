@@ -135,9 +135,9 @@ int i2c_write(i2c_port_t port, uint32_t freq, uint16_t addr, size_t len, uint8_t
         i2c_cmd_handle_t handle = i2c_cmd_link_create_static(buffer, sizeof(buffer));
         i2c_master_start(handle);
         i2c_master_write_byte(handle, addr << 1 | I2C_MASTER_WRITE, true);
-        i2c_master_write(handle, buf, len, true);
-
-        if (flags & MP_MACHINE_I2C_FLAG_STOP) {
+        if (buf != NULL) {
+            i2c_master_write(handle, buf, len, true);
+        } else {
             i2c_master_stop(handle);
         }
 
