@@ -37,6 +37,8 @@
 #include "hal/i2c_ll.h"
 #include "hal/i2c_types.h"
 #include "driver/i2c.h"
+#include "esp_private/esp_clk.h"
+
 
 #ifndef MICROPY_HW_I2C0_SCL
 #define MICROPY_HW_I2C0_SCL (GPIO_NUM_18)
@@ -62,10 +64,12 @@
 #endif
 
 #if CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S2
-    #define I2C_DEFAULT_TIMEOUT_US (104000) // 104ms
+    #define I2C_MAX_TIMEOUT_US (104000) // 104ms
 #else
-    #define I2C_DEFAULT_TIMEOUT_US (50000) // 50ms
+    #define I2C_MAX_TIMEOUT_US (50000) // 50ms
 #endif
+
+#define I2C_DEFAULT_TIMEOUT_US   (50000)
 
 #define I2C_BUF_MIN_SIZE (sizeof(dummy_i2c_cmd_desc_t) + sizeof(dummy_i2c_cmd_link_t) * 8)
 
@@ -149,7 +153,7 @@ STATIC void machine_hw_i2c_init(machine_hw_i2c_obj_t *self, uint32_t freq, uint3
 
 
     #if CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S2
-        int tout = (int)(sizeof(uint32_t) * 8 - __builtin_clz(timeout_us << 14);
+        int tout = (int)(sizeof(uint32_t) * 8 - __builtin_clz(timeout_us << 14));
         i2c_set_timeout(port, tout);
     #else
         uint32_t src_clk = s_get_src_clk_freq(I2C_CLK_SRC_DEFAULT);
@@ -335,7 +339,7 @@ STATIC void machine_hw_i2c_print(const mp_print_t *print, mp_obj_t self_in, mp_p
     int h, l;
     i2c_get_period(self->port, &h, &l);
     mp_printf(print, "I2C(%u, scl=%u, sda=%u, freq=%u)",
-        self->port, self->scl, self->sda, I2C_SCLK_FREQ / (h + l));
+        self->port, self->scl, self->sda, s_get_src_clk_freq(I2C_CLK_SRC_DEFAULT) / (h + l));
 }
 
 mp_obj_t machine_hw_i2c_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
@@ -388,6 +392,10 @@ mp_obj_t machine_hw_i2c_make_new(const mp_obj_type_t *type, size_t n_args, size_
 
     if (args[ARG_freq].u_int > I2C_MASTER_FREQ_HZ) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("Maximum frequency allowed is %dhz "), I2C_MASTER_FREQ_HZ);
+    }
+
+    if (args[ARG_timeout].u_int > I2C_MAX_TIMEOUT_US) {
+        mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("Maximum timeout allowed is %dus"), I2C_MAX_TIMEOUT_US);
     }
 
     // Initialise the I2C peripheral
