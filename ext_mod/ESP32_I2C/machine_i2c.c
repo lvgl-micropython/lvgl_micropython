@@ -147,9 +147,10 @@ STATIC void machine_hw_i2c_init(machine_hw_i2c_obj_t *self, uint32_t freq, uint3
     self->freq = freq;
     i2c_param_config(self->port, &conf);
 
+
     #if CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S2
         int tout = (int)(sizeof(uint32_t) * 8 - __builtin_clz(timeout_us << 14);
-        i2c_set_timeout(port, I2C_LL_MAX_TIMEOUT);
+        i2c_set_timeout(port, tout);
     #else
         uint32_t src_clk = s_get_src_clk_freq(I2C_CLK_SRC_DEFAULT);
         int tout = (int)(src_clk / 1000000 * timeout_us);

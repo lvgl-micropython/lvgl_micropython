@@ -6,7 +6,7 @@ class I2CBus(object):
 
     _busses = {}
 
-    def __init__(self, scl, sda, freq=4000000, host=None, use_pullups=False, use_locks=False):
+    def __init__(self, scl, sda, freq=400000, host=None, timeout=50000, use_locks=False):
         if host is None:
             if (scl, sda) == (19, 18):
                 host = 0
@@ -20,20 +20,13 @@ class I2CBus(object):
         else:
             I2CBus._busses[key] = self
 
-            if use_pullups:
-                kwargs = dict(
-                    scl=machine.Pin(scl, pull=machine.Pin.PULL_UP),
-                    sda=machine.Pin(sda, pull=machine.Pin.PULL_UP),
-                    freq=freq
-                )
-            else:
-                kwargs = dict(
-                    scl=machine.Pin(scl),
-                    sda=machine.Pin(sda),
-                    freq=freq
-                )
-
-            self._bus = machine.I2C(host, **kwargs)
+            self._bus = machine.I2C(
+                host,
+                scl=machine.Pin(scl),
+                sda=machine.Pin(sda),
+                freq=freq,
+                timeout=timeout
+            )
 
             if use_locks:
                 import _thread
