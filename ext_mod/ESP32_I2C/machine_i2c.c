@@ -29,8 +29,14 @@
 #include "py/mperrno.h"
 #include "extmod/modmachine.h"
 
-#include "driver/i2c.h"
+#include "esp_attr.h"
+#include "esp_system.h"
+#include "soc/soc_caps.h"
+#include "soc/i2c_periph.h"
+#include "hal/i2c_hal.h"
 #include "hal/i2c_ll.h"
+#include "hal/i2c_types.h"
+#include "driver/i2c.h"
 
 #ifndef MICROPY_HW_I2C0_SCL
 #define MICROPY_HW_I2C0_SCL (GPIO_NUM_18)
@@ -49,13 +55,12 @@
 
 #define I2C_UNUSED(x) ((void)x)
 
-#if CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32S3
-    #define I2C_SCLK_FREQ XTAL_CLK_FREQ
-#elif CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2
-    #define I2C_SCLK_FREQ APB_CLK_FREQ
+if CONFIG_IDF_TARGET_ESP32S3
+    #define I2C_MASTER_FREQ_HZ    2000000
 #else
-    #error "unsupported I2C for ESP32 SoC variant"
+    #define I2C_MASTER_FREQ_HZ    1000000
 #endif
+
 
 #define I2C_DEFAULT_TIMEOUT_US (50000) // 50ms
 
@@ -98,6 +103,28 @@ typedef struct {
 
 STATIC machine_hw_i2c_obj_t machine_hw_i2c_obj[I2C_NUM_MAX];
 
+// borrowed form the esp-idf driver/i2c.c
+static uint32_t s_get_src_clk_freq(i2c_clock_source_t clk_src)
+{
+    uint32_t periph_src_clk_hz = 0;
+    switch (clk_src) {
+    #if SOC_I2C_SUPPORT_APB
+        case I2C_CLK_SRC_APB:
+            periph_src_clk_hz = esp_clk_apb_freq();
+            break;
+    #endif
+    #if SOC_I2C_SUPPORT_XTAL
+        case I2C_CLK_SRC_XTAL:
+            periph_src_clk_hz = esp_clk_xtal_freq();
+            break;
+    #endif
+    default:
+        mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("clock source %d is not supported"), clk_src);
+        break;
+    }
+    return periph_src_clk_hz;
+}
+
 
 STATIC void machine_hw_i2c_init(machine_hw_i2c_obj_t *self, uint32_t freq, uint32_t timeout_us, bool first_init)
 {
@@ -111,11 +138,16 @@ STATIC void machine_hw_i2c_init(machine_hw_i2c_obj_t *self, uint32_t freq, uint3
         .scl_io_num = self->scl,
         .scl_pullup_en = GPIO_PULLUP_DISABLE,
         .master.clk_speed = freq,
+        .clk_flags = I2C_SCLK_SRC_FLAG_FOR_NOMAL,
     };
+
     self->freq = freq;
     i2c_param_config(self->port, &conf);
-    int timeout = I2C_SCLK_FREQ / 1000000 * timeout_us;
-    i2c_set_timeout(self->port, (timeout > I2C_LL_MAX_TIMEOUT) ? I2C_LL_MAX_TIMEOUT : timeout);
+
+    uint32_t src_clk = s_get_src_clk_freq(I2C_CLK_SRC_DEFAULT);
+
+    int timeout = src_clk / 1000000 * timeout_us;
+    i2c_set_timeout(port, (timeout > I2C_LL_MAX_TIMEOUT) ? I2C_LL_MAX_TIMEOUT : timeout);
     i2c_driver_install(self->port, I2C_MODE_MASTER, 0, 0, 0);
 }
 
@@ -343,6 +375,10 @@ mp_obj_t machine_hw_i2c_make_new(const mp_obj_type_t *type, size_t n_args, size_
     }
     if (args[ARG_sda].u_obj != MP_OBJ_NULL) {
         self->sda = machine_pin_get_id(args[ARG_sda].u_obj);
+    }
+
+    if (args[ARG_freq].u_int > I2C_MASTER_FREQ_HZ) {
+        mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("Maximum frequency allowed is %dhz "), I2C_MASTER_FREQ_HZ);
     }
 
     // Initialise the I2C peripheral

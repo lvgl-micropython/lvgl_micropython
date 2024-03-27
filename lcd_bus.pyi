@@ -64,7 +64,7 @@ class SPIBus:
         *,
         dc: int,
         host: int,
-        sck: int,
+        sclk: int,
         freq: int,
         mosi: int,
         miso: Optional[int] = -1,
