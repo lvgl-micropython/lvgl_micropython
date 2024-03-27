@@ -61,8 +61,11 @@ if CONFIG_IDF_TARGET_ESP32S3
     #define I2C_MASTER_FREQ_HZ    1000000
 #endif
 
-
-#define I2C_DEFAULT_TIMEOUT_US (50000) // 50ms
+#if CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S2
+    #define I2C_DEFAULT_TIMEOUT_US (104000) // 104ms
+#else
+    #define I2C_DEFAULT_TIMEOUT_US (50000) // 50ms
+#endif
 
 #define I2C_BUF_MIN_SIZE (sizeof(dummy_i2c_cmd_desc_t) + sizeof(dummy_i2c_cmd_link_t) * 8)
 
@@ -144,10 +147,16 @@ STATIC void machine_hw_i2c_init(machine_hw_i2c_obj_t *self, uint32_t freq, uint3
     self->freq = freq;
     i2c_param_config(self->port, &conf);
 
-    uint32_t src_clk = s_get_src_clk_freq(I2C_CLK_SRC_DEFAULT);
 
-    int timeout = src_clk / 1000000 * timeout_us;
-    i2c_set_timeout(port, (timeout > I2C_LL_MAX_TIMEOUT) ? I2C_LL_MAX_TIMEOUT : timeout);
+    #if CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S2
+        int tout = (int)(sizeof(uint32_t) * 8 - __builtin_clz(timeout_us << 14);
+        i2c_set_timeout(port, tout);
+    #else
+        uint32_t src_clk = s_get_src_clk_freq(I2C_CLK_SRC_DEFAULT);
+        int tout = (int)(src_clk / 1000000 * timeout_us);
+        i2c_set_timeout(port, (tout > I2C_LL_MAX_TIMEOUT) ? I2C_LL_MAX_TIMEOUT : tout);
+    #endif
+
     i2c_driver_install(self->port, I2C_MODE_MASTER, 0, 0, 0);
 }
 
