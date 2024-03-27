@@ -378,6 +378,13 @@ def submodules():
 def compile():  # NOQA
     env = setup_idf_environ()
 
+    machine_i2c_dst_path = 'lib/micropython/ports/esp32/machine_i2c.c'
+    machine_i2c_src_path = 'ext_mod/ESP32_I2C/machine_i2c.c'
+
+    with open(machine_i2c_src_path, 'rb') as src:
+        with open(machine_i2c_dst_path, 'wb') as dst:
+            dst.write(src.read())
+
     mpconfigport_path = 'lib/micropython/ports/esp32/mpconfigport.h'
 
     with open(mpconfigport_path, 'rb') as f:

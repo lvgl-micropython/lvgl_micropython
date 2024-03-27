@@ -103,7 +103,7 @@ class GT911(pointer_framework.PointerDriver):
 
         buf[0] = _PRODUCT_ID_REG_LOW
         buf[1] = _PRODUCT_ID_REG_HIGH
-        self._i2c.write(mv[:2])
+        self._i2c.write(mv[:2], stop=False)
 
         buf[0] = 0x00
         buf[1] = 0x00
@@ -113,7 +113,7 @@ class GT911(pointer_framework.PointerDriver):
 
         buf[0] = _FIRMWARE_VERSION_LOW
         buf[1] = _FIRMWARE_VERSION_HIGH
-        self._i2c.write(mv[:2])
+        self._i2c.write(mv[:2], stop=False)
 
         buf[0] = 0x00
         buf[1] = 0x00
@@ -123,7 +123,7 @@ class GT911(pointer_framework.PointerDriver):
 
         buf[0] = _VENDOR_ID_LOW
         buf[1] = _VENDOR_ID_HIGH
-        self._i2c.write(mv[:2])
+        self._i2c.write(mv[:2], stop=False)
 
         buf[0] = 0x00
         buf[1] = 0x00
@@ -133,7 +133,7 @@ class GT911(pointer_framework.PointerDriver):
 
         buf[0] = _X_CORD_RES_LOW
         buf[1] = _X_CORD_RES_HIGH
-        self._i2c.write(mv[:2])
+        self._i2c.write(mv[:2], stop=False)
 
         buf[0] = 0x00
         buf[1] = 0x00
@@ -143,7 +143,7 @@ class GT911(pointer_framework.PointerDriver):
 
         buf[0] = _Y_CORD_RES_LOW
         buf[1] = _Y_CORD_RES_HIGH
-        self._i2c.write(mv[:2])
+        self._i2c.write(mv[:2], stop=False)
 
         buf[0] = 0x00
         buf[1] = 0x00
@@ -172,7 +172,7 @@ class GT911(pointer_framework.PointerDriver):
 
         buf[0] = _CONFIG_START_REG_LOW
         buf[1] = _CONFIG_START_REG_HIGH
-        self._i2c.write(buf[:2])
+        self._i2c.write(buf[:2], stop=False)
 
         buf[0] = 0x00
         buf[1] = 0x00
@@ -222,7 +222,7 @@ class GT911(pointer_framework.PointerDriver):
         buf[0] = _READ_XY_REG_LOW
         buf[1] = _READ_XY_REG_HIGH
         
-        self._i2c.write(mv[:2])
+        self._i2c.write(mv[:2], stop=False)
         
         buf[0] = 0x00
         self._i2c.read(buf=mv[:1])
@@ -244,7 +244,7 @@ class GT911(pointer_framework.PointerDriver):
 
             buf[0] = _READ_XY_REG_LOW
             buf[1] = _READ_XY_REG_HIGH
-            self._i2c.write(buf=mv[:2])
+            self._i2c.write(buf=mv[:2], stop=False)
             buf[1] = 0x00
             buf[2] = 0x00
             buf[3] = 0x00

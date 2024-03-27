@@ -82,8 +82,8 @@ class I2CDevice(object):
                 addrsize=self._reg_bits
             )
 
-    def read(self, nbytes: Optional[int] = None, buf: Optional[_BUFFER_TYPE] = None) -> Optional[bytearray]:
+    def read(self, nbytes: Optional[int] = None, buf: Optional[_BUFFER_TYPE] = None, stop: bool=True) -> Optional[bytearray]:
         ...
 
-    def write(self, buf: _BUFFER_TYPE) -> None:
+    def write(self, buf: _BUFFER_TYPE, stop: bool=True) -> None:
         ...

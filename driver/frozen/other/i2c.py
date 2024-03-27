@@ -134,13 +134,13 @@ class I2CDevice(object):
                 addrsize=self._reg_bits
             )
 
-    def read(self, nbytes=None, buf=None):
+    def read(self, nbytes=None, buf=None, stop=True):
         with self._bus:
             if buf is None:
-                return self._bus.readfrom(self.dev_id, nbytes)
+                return self._bus.readfrom(self.dev_id, nbytes, stop)
             else:
-                self._bus.readfrom_into(self.dev_id, buf)
+                self._bus.readfrom_into(self.dev_id, buf, stop)
 
-    def write(self, buf):
+    def write(self, buf, stop=True):
         with self._bus:
-            self._bus.writeto(self.dev_id, buf)
+            self._bus.writeto(self.dev_id, buf, stop)
