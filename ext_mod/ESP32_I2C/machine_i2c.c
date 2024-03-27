@@ -59,6 +59,8 @@
 
 #define I2C_DEFAULT_TIMEOUT_US (50000) // 50ms
 
+#define I2C_BUF_MIN_SIZE (sizeof(dummy_i2c_cmd_desc_t) + sizeof(dummy_i2c_cmd_link_t) * 8)
+
 typedef struct _machine_hw_i2c_obj_t {
     mp_obj_base_t base;
     i2c_port_t port : 8;
@@ -66,6 +68,32 @@ typedef struct _machine_hw_i2c_obj_t {
     gpio_num_t sda : 8;
     uint32_t freq;
 } machine_hw_i2c_obj_t;
+
+
+typedef struct {
+    i2c_hw_cmd_t hw_cmd;
+    union {
+        uint8_t* data;
+        uint8_t data_byte;
+    };
+    size_t bytes_used;
+    size_t total_bytes;
+} dummy_i2c_cmd_t;
+
+typedef struct dummy_i2c_cmd_link {
+    dummy_i2c_cmd_t cmd;
+    struct dummy_i2c_cmd_link *next;
+} dummy_i2c_cmd_link_t;
+
+
+typedef struct {
+    dummy_i2c_cmd_link_t *head;
+    dummy_i2c_cmd_link_t *cur;
+    dummy_i2c_cmd_link_t *free;
+
+    void     *free_buffer;
+    uint32_t  free_size;
+} dummy_i2c_cmd_desc_t;
 
 
 STATIC machine_hw_i2c_obj_t machine_hw_i2c_obj[I2C_NUM_MAX];
@@ -102,7 +130,7 @@ int i2c_write(i2c_port_t port, uint32_t freq, uint16_t addr, size_t len, uint8_t
             (((1 + len) * 8 * 1000000) / freq) / portTICK_PERIOD_MS
         );
     } else {
-        uint8_t buffer[I2C_TRANS_BUF_MINIMUM_SIZE] = { 0 };
+        uint8_t buffer[I2C_BUF_MIN_SIZE] = { 0 };
 
         i2c_cmd_handle_t handle = i2c_cmd_link_create_static(buffer, sizeof(buffer));
 
@@ -116,7 +144,7 @@ int i2c_write(i2c_port_t port, uint32_t freq, uint16_t addr, size_t len, uint8_t
         if (err != ESP_OK) goto end;
 
         err = i2c_master_cmd_begin(
-            i2c_num, handle,
+            port, handle,
             (((1 + len) * 8 * 1000000) / freq) / portTICK_PERIOD_MS
         );
 
@@ -146,7 +174,7 @@ int i2c_read(i2c_port_t port, uint32_t freq, uint16_t addr, size_t len, uint8_t 
             (((1 + len) * 8 * 1000000) / freq) / portTICK_PERIOD_MS
         );
     } else {
-        uint8_t buffer[I2C_TRANS_BUF_MINIMUM_SIZE] = { 0 };
+        uint8_t buffer[I2C_BUF_MIN_SIZE] = { 0 };
 
         i2c_cmd_handle_t handle = i2c_cmd_link_create_static(buffer, sizeof(buffer));
 
@@ -180,7 +208,7 @@ int i2c_read(i2c_port_t port, uint32_t freq, uint16_t addr, size_t len, uint8_t 
 }
 
 
-int machine_hw_i2c_transfer_single(mp_obj_base_t *obj, uint16_t addr, size_t len, uint8_t *buf, unsigned int flags)
+int machine_hw_i2c_transfer_single(mp_obj_base_t *self_in, uint16_t addr, size_t len, uint8_t *buf, unsigned int flags)
 {
     machine_hw_i2c_obj_t *self = MP_OBJ_TO_PTR(self_in);
     return i2c_write(self->port, self->freq, addr, len, buf, flags);
