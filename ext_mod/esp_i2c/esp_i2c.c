@@ -119,22 +119,22 @@ STATIC size_t fill_memaddr_buf(uint8_t *memaddr_buf, uint32_t memaddr, uint8_t a
 {
     switch (addrsize){
         case 8:
-            memaddr_buf[0] = memaddr
+            memaddr_buf[0] = memaddr;
             break;
         case 16:
-            memaddr_buf[0] = memaddr & 0xFF
-            memaddr_buf[1] = (memaddr >> 8) & 0xFF
+            memaddr_buf[0] = memaddr & 0xFF;
+            memaddr_buf[1] = (memaddr >> 8) & 0xFF;
             break;
         case 24:
-            memaddr_buf[0] = memaddr & 0xFF
-            memaddr_buf[1] = (memaddr >> 8) & 0xFF
-            memaddr_buf[2] = (memaddr >> 16) & 0xFF
+            memaddr_buf[0] = memaddr & 0xFF;
+            memaddr_buf[1] = (memaddr >> 8) & 0xFF;
+            memaddr_buf[2] = (memaddr >> 16) & 0xFF;
             break;
         case 32:
-            memaddr_buf[0] = memaddr & 0xFF
-            memaddr_buf[1] = (memaddr >> 8) & 0xFF
-            memaddr_buf[2] = (memaddr >> 16) & 0xFF
-            memaddr_buf[3] = (memaddr >> 24) & 0xFF
+            memaddr_buf[0] = memaddr & 0xFF;
+            memaddr_buf[1] = (memaddr >> 8) & 0xFF;
+            memaddr_buf[2] = (memaddr >> 16) & 0xFF;
+            memaddr_buf[3] = (memaddr >> 24) & 0xFF;
             break;
         default:
             mp_raise_ValueError(MP_ERROR_TEXT("invalid addrsize"));
@@ -304,7 +304,7 @@ STATIC mp_obj_t mp_esp_i2c_scan(mp_obj_t self_in)
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_esp_i2c_scan_obj, mp_esp_i2c_scan);
 
 
-STATIC mp_obj_t mp_esp_i2c_readfrom(size_t n_args, const mp_obj_t *args)
+STATIC mp_obj_t mp_esp_i2c_readfrom(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
 
     enum { ARG_self, ARG_addr, ARG_num_bytes, ARG_stop };
@@ -357,7 +357,7 @@ STATIC mp_obj_t mp_esp_i2c_readfrom(size_t n_args, const mp_obj_t *args)
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(mp_esp_i2c_readfrom_obj, 3, mp_esp_i2c_readfrom);
 
 
-STATIC mp_obj_t mp_esp_i2c_readfrom_into(size_t n_args, const mp_obj_t *args)
+STATIC mp_obj_t mp_esp_i2c_readfrom_into(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
     enum { ARG_self, ARG_addr, ARG_buf, ARG_stop };
     
@@ -409,7 +409,7 @@ STATIC mp_obj_t mp_esp_i2c_readfrom_into(size_t n_args, const mp_obj_t *args)
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(mp_esp_i2c_readfrom_into_obj, 3, mp_esp_i2c_readfrom_into);
 
 
-STATIC mp_obj_t mp_esp_i2c_writeto(size_t n_args, const mp_obj_t *args)
+STATIC mp_obj_t mp_esp_i2c_writeto(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
     enum { ARG_self, ARG_addr, ARG_buf, ARG_stop };
     
