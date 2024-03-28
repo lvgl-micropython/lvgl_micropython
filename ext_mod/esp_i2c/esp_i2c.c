@@ -27,7 +27,6 @@
 #include "py/runtime.h"
 #include "py/mphal.h"
 #include "py/mperrno.h"
-#include "extmod/modmachine.h"
 
 #include "esp_attr.h"
 #include "esp_system.h"
@@ -194,7 +193,7 @@ STATIC mp_obj_t mp_esp_i2c_make_new(const mp_obj_type_t *type, size_t n_args, si
     mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
     // Get I2C bus
-    i2c_port_t i2c_id = (i2c_port_t)args[ARG_id].u_int);
+    i2c_port_t i2c_id = (i2c_port_t)args[ARG_id].u_int;
     if (!(I2C_NUM_0 <= i2c_id && i2c_id < I2C_NUM_MAX)) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("I2C(%d) doesn't exist"), i2c_id);
     }
@@ -234,7 +233,7 @@ STATIC mp_obj_t mp_esp_i2c_make_new(const mp_obj_type_t *type, size_t n_args, si
     }
     
     self->freq = args[ARG_freq].u_int;
-    uint32_t timeout_us = args[ARG_timeout].u_int
+    // uint32_t timeout_us = args[ARG_timeout].u_int;
         
     if (!first_init) {
         i2c_driver_delete(self->port);
@@ -277,6 +276,7 @@ STATIC mp_obj_t mp_esp_i2c_scan(mp_obj_t self_in)
     
     mp_obj_t list = mp_obj_new_list(0, NULL);
     uint32_t timeout = ((2 * 8 * 1000000) / self->freq) / portTICK_PERIOD_MS;
+    esp_err_t err;
     
     // 7-bit addresses 0b0000xxx and 0b1111xxx are reserved
     for (int addr = 0x08; addr < 0x78; ++addr) {
@@ -287,7 +287,7 @@ STATIC mp_obj_t mp_esp_i2c_scan(mp_obj_t self_in)
         i2c_master_write_byte(handle, addr << 1 | I2C_MASTER_WRITE, true);
         i2c_master_stop(handle);
         
-        err = i2c_master_cmd_begin(port, handle, timeout);
+        err = i2c_master_cmd_begin(self->port, handle, timeout);
         i2c_cmd_link_delete_static(handle);
                  
         if (err == 0) {
@@ -550,7 +550,7 @@ STATIC mp_obj_t mp_esp_i2c_readfrom_mem(size_t n_args, const mp_obj_t *pos_args,
     size_t memaddr_len = fill_memaddr_buf(&memaddr_buf[0], args[ARG_memaddr].u_int, args[ARG_addrsize].u_int);
     
     esp_err_t err = i2c_master_write_read_device(
-        self->port, args[ARG_addr].u_int, memaddr_buf, memaddr_len, (uint8_t *)vsr.buf, vstr.len,
+        self->port, args[ARG_addr].u_int, memaddr_buf, memaddr_len, (uint8_t *)vstr.buf, vstr.len,
         (((2 + memaddr_len + vstr.len) * 8000000) / self->freq) / portTICK_PERIOD_MS
     );
         
