@@ -138,6 +138,9 @@ STATIC void machine_hw_i2c_init(machine_hw_i2c_obj_t *self, uint32_t freq, uint3
     if (!first_init) {
         i2c_driver_delete(self->port);
     }
+
+    i2c_driver_install(self->port, I2C_MODE_MASTER, 0, 0, 0);
+
     i2c_config_t conf = {
         .mode = I2C_MODE_MASTER,
         .sda_io_num = self->sda,
@@ -151,7 +154,6 @@ STATIC void machine_hw_i2c_init(machine_hw_i2c_obj_t *self, uint32_t freq, uint3
     self->freq = freq;
     i2c_param_config(self->port, &conf);
 
-
     #if CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S2
         int tout = (int)(sizeof(uint32_t) * 8 - __builtin_clz(timeout_us << 14));
         i2c_set_timeout(self->port, tout);
@@ -160,8 +162,6 @@ STATIC void machine_hw_i2c_init(machine_hw_i2c_obj_t *self, uint32_t freq, uint3
         int tout = (int)(src_clk / 1000000 * timeout_us);
         i2c_set_timeout(self->port, (tout > I2C_LL_MAX_TIMEOUT) ? I2C_LL_MAX_TIMEOUT : tout);
     #endif
-
-    i2c_driver_install(self->port, I2C_MODE_MASTER, 0, 0, 0);
 }
 
 
