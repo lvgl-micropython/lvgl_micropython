@@ -118,9 +118,7 @@ def get_lvgl():
 
     cmd_ = ['cd lib/lvgl && git checkout master']
 
-    result, _ = spawn(cmd_, spinner=True)
-    if result != 0:
-        sys.exit(result)
+    spawn(cmd_, out_to_screen=False)
 
 
 def get_micropython():
@@ -139,9 +137,7 @@ def get_micropython():
 
     cmd_ = ['cd lib/micropython && git checkout v1.22.2']
 
-    result, _ = spawn(cmd_, spinner=True)
-    if result != 0:
-        sys.exit(result)
+    spawn(cmd_, out_to_screen=False)
 
 
 def get_pycparser():

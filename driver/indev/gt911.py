@@ -11,64 +11,39 @@ import machine
 import time
 
 
-_CONFIG_START_REG_HIGH = const(0x80)
-_CONFIG_START_REG_LOW = const(0x47)
+_CONFIG_START_REG = const(0x8047)
 
 _X_OUTPUT_MAX_LOW_POS = const(0x01)
-_X_OUTPUT_MAX_LOW_REG_HIGH = const(0x80)
-_X_OUTPUT_MAX_LOW_REG_LOW = const(0x48)
+_X_OUTPUT_MAX_LOW_REG = const(0x8048)
 
 _X_OUTPUT_MAX_HIGH_POS = const(0x02)
-_X_OUTPUT_MAX_HIGH_REG_HIGH = const(0x80)
-_X_OUTPUT_MAX_HIGH_REG_LOW = const(0x49)
+_X_OUTPUT_MAX_HIGH_REG = const(0x8049)
 
 _Y_OUTPUT_MAX_LOW_POS = const(0x03)
-_Y_OUTPUT_MAX_LOW_REG_HIGH = const(0x80)
-_Y_OUTPUT_MAX_LOW_REG_LOW = const(0x4A)
+_Y_OUTPUT_MAX_LOW_REG = const(0x804A)
 
 _Y_OUTPUT_MAX_HIGH_POS = const(0x04)
-_Y_OUTPUT_MAX_HIGH_REG_HIGH = const(0x80)
-_Y_OUTPUT_MAX_HIGH_REG_LOW = const(0x4B)
+_Y_OUTPUT_MAX_HIGH_REG = const(0x804B)
 
 _CONFIG_CHKSUM_POS = const(0x88)
-_CONFIG_CHKSUM_REG_HIGH = const(0x80)
-_CONFIG_CHKSUM_REG_LOW = const(0xFF)
+_CONFIG_CHKSUM_REG = const(0x80FF)
 
-_CONFIG_FRESH_REG_HIGH = const(0x81)
-_CONFIG_FRESH_REG_LOW = const(0x00)
+_CONFIG_FRESH_REG = const(0x8100)
 
-_READ_XY_REG_HIGH = const(0x81)
-_READ_XY_REG_LOW = const(0x4E)
+_READ_XY_REG = const(0x814E)
 
-_POINT_1_REG_HIGH = const(0x81)
-_POINT_1_REG_LOW = const(0x4F)
+_POINT_1_REG = const(0x814F)
+_POINT_2_REG = const(0x8157)
+_POINT_3_REG = const(0x815F)
+_POINT_4_REG = const(0x8167)
+_POINT_5_REG = const(0x816F)
 
-_POINT_2_RE_HIGHG = const(0x81)
-_POINT_2_REG_LOW = const(0x57)
+_PRODUCT_ID_REG = const(0x8140)
+_FIRMWARE_VERSION_REG = const(0x8144)
+_VENDOR_ID_REG = const(0x814A)
 
-_POINT_3_REG_HIGH = const(0x81)
-_POINT_3_REG_LOW = const(0x5F)
-
-_POINT_4_REG_HIGH = const(0x81)
-_POINT_4_REG_LOW = const(0x67)
-
-_POINT_5_REG_HIGH = const(0x81)
-_POINT_5_REG_LOW = const(0x6F)
-
-_PRODUCT_ID_REG_HIGH = const(0x81)
-_PRODUCT_ID_REG_LOW = const(0x40)
-
-_FIRMWARE_VERSION_HIGH = const(0x81)
-_FIRMWARE_VERSION_LOW = const(0x44)
-
-_X_CORD_RES_HIGH = const(0x81)
-_X_CORD_RES_LOW = const(0x46)
-
-_Y_CORD_RES_HIGH = const(0x81)
-_Y_CORD_RES_LOW = const(0x48)
-
-_VENDOR_ID_HIGH = const(0x81)
-_VENDOR_ID_LOW = const(0x4A)
+_X_CORD_RES_REG = const(0x8146)
+_Y_CORD_RES_REG = const(0x8148)
 
 _ADDR1 = const(0x5D)
 _ADDR2 = const(0x14)
@@ -82,8 +57,6 @@ class GT911(pointer_framework.PointerDriver):
 
         self._i2c = i2c.I2CDevice(i2c_bus, _ADDR1)
 
-        super().__init__(touch_cal=touch_cal)
-
         if isinstance(reset_pin, int):
             reset_pin = machine.Pin(reset_pin, machine.Pin.OUT)
 
@@ -93,57 +66,24 @@ class GT911(pointer_framework.PointerDriver):
         self._reset_pin = reset_pin
         self._interrupt_pin = interrupt_pin
 
-        self.touch_reset()
+        # self.touch_reset()
 
-        buf[0] = _PRODUCT_ID_REG_LOW
-        buf[1] = _PRODUCT_ID_REG_HIGH
-        self._i2c.write(mv[:2], stop=False)
+        self._i2c.read_mem(_PRODUCT_ID_REG, buf=mv[:4])
+        print('Product id:', buf[:4])
 
-        buf[0] = 0x00
-        buf[1] = 0x00
-        self._i2c.read(buf=mv[:4])
-
-        print('Product id:', buf[:4].decode('utf-8'))
-
-        buf[0] = _FIRMWARE_VERSION_LOW
-        buf[1] = _FIRMWARE_VERSION_HIGH
-        self._i2c.write(mv[:2], stop=False)
-
-        buf[0] = 0x00
-        buf[1] = 0x00
-        self._i2c.read(buf=mv[:2])  # 2 bytes low byte first
-
+        self._i2c.read_mem(_FIRMWARE_VERSION_REG, buf=mv[:2])
         print('Firmware version:', hex(buf[0] + (buf[1] << 8)))
 
-        buf[0] = _VENDOR_ID_LOW
-        buf[1] = _VENDOR_ID_HIGH
-        self._i2c.write(mv[:2], stop=False)
-
-        buf[0] = 0x00
-        buf[1] = 0x00
-        self._i2c.read(buf=mv[:1])
-
+        self._i2c.read_mem(_VENDOR_ID_REG, buf=mv[:1])
         print('Vendor id:', hex(buf[0]))
 
-        buf[0] = _X_CORD_RES_LOW
-        buf[1] = _X_CORD_RES_HIGH
-        self._i2c.write(mv[:2], stop=False)
-
-        buf[0] = 0x00
-        buf[1] = 0x00
-        self._i2c.read(buf=mv[:2])  # 2 bytes low byte first
-
+        self._i2c.read_mem(_X_CORD_RES_REG, buf=mv[:2])
         print('Configured width:', buf[0] + (buf[1] << 8))
 
-        buf[0] = _Y_CORD_RES_LOW
-        buf[1] = _Y_CORD_RES_HIGH
-        self._i2c.write(mv[:2], stop=False)
-
-        buf[0] = 0x00
-        buf[1] = 0x00
-        self._i2c.read(buf=mv[:2])  # 2 bytes low byte first
-
+        self._i2c.read_mem(_Y_CORD_RES_REG, buf=mv[:2])
         print('Configured height:', buf[0] + (buf[1] << 8))
+
+        super().__init__(touch_cal=touch_cal)
 
     def touch_reset(self):
         if self._interrupt_pin and self._reset_pin:
@@ -164,13 +104,7 @@ class GT911(pointer_framework.PointerDriver):
         buf = bytearray(185)
         mv = memoryview(buf)
 
-        buf[0] = _CONFIG_START_REG_LOW
-        buf[1] = _CONFIG_START_REG_HIGH
-        self._i2c.write(buf[:2], stop=False)
-
-        buf[0] = 0x00
-        buf[1] = 0x00
-        self._i2c.read(buf=mv)
+        self._i2c.read_mem(_CONFIG_START_REG, buf=mv)
 
         buf[_X_OUTPUT_MAX_LOW_POS] = width & 0xFF
         buf[_X_OUTPUT_MAX_HIGH_POS] = (width >> 8) & 0xFF
@@ -179,79 +113,47 @@ class GT911(pointer_framework.PointerDriver):
 
         checksum = ((~sum(buf)) + 1) & 0xFF
 
-        buf[0] = _X_OUTPUT_MAX_LOW_REG_LOW
-        buf[1] = _X_OUTPUT_MAX_LOW_REG_HIGH
-        buf[2] = width & 0xFF
-        self._i2c.write(mv[:3])
+        buf[0] = width & 0xFF
+        self._i2c.write_mem(_X_OUTPUT_MAX_LOW_REG, buf=mv[:1])
 
-        buf[0] = _X_OUTPUT_MAX_HIGH_REG_LOW
-        buf[1] = _X_OUTPUT_MAX_HIGH_REG_HIGH
-        buf[2] = (width >> 8) & 0xFF
-        self._i2c.write(mv[:3])
+        buf[0] = (width >> 8) & 0xFF
+        self._i2c.write_mem(_X_OUTPUT_MAX_HIGH_REG, buf=mv[:1])
 
-        buf[0] = _Y_OUTPUT_MAX_LOW_REG_LOW
-        buf[1] = _Y_OUTPUT_MAX_LOW_REG_HIGH
-        buf[2] = height & 0xFF
-        self._i2c.write(mv[:3])
+        buf[0] = height & 0xFF
+        self._i2c.write_mem(_Y_OUTPUT_MAX_LOW_REG, buf=mv[:1])
 
-        buf[0] = _Y_OUTPUT_MAX_HIGH_REG_LOW
-        buf[1] = _Y_OUTPUT_MAX_HIGH_REG_HIGH
-        buf[2] = (height >> 8) & 0xFF
-        self._i2c.write(mv[:3])
+        buf[0] = (height >> 8) & 0xFF
+        self._i2c.write_mem(_Y_OUTPUT_MAX_HIGH_REG, buf=mv[:1])
 
-        buf[0] = _CONFIG_CHKSUM_REG_LOW
-        buf[1] = _CONFIG_CHKSUM_REG_HIGH
-        buf[2] = checksum
-        self._i2c.write(mv[:3])
+        buf[0] = checksum
+        self._i2c.write_mem(_CONFIG_CHKSUM_REG, buf=mv[:1])
 
-        buf[0] = _CONFIG_FRESH_REG_LOW
-        buf[1] = _CONFIG_FRESH_REG_HIGH
-        buf[2] = 0x01
-        self._i2c.write(mv[:3])
+        buf[0] = 0x01
+        self._i2c.write_mem(_CONFIG_FRESH_REG, buf=mv[:1])
 
     def _get_coords(self):
         buf = self._buf
         mv = self._mv
-        
-        buf[0] = _READ_XY_REG_LOW
-        buf[1] = _READ_XY_REG_HIGH
-        
-        self._i2c.write(mv[:2], stop=False)
-        
-        buf[0] = 0x00
-        self._i2c.read(buf=mv[:1])
+
+        self._i2c.read_mem(_READ_XY_REG, buf=mv[:1])
 
         if (buf[0] & 0x80) == 0x00:
-            buf[0] = _READ_XY_REG_LOW
-            buf[1] = _READ_XY_REG_HIGH
-            buf[2] = 0x00
-            self._i2c.write(buf=mv[:3])
+            buf[0] = 0x00
+            self._i2c.write_mem(_READ_XY_REG, buf=mv[:1])
             return None
         else:
             touch_cnt = buf[0] & 0x0F
             if touch_cnt > 5 or touch_cnt == 0:
-                buf[0] = _READ_XY_REG_LOW
-                buf[1] = _READ_XY_REG_HIGH
-                buf[2] = 0x00
-                self._i2c.write(buf=mv[:3])
+                buf[0] = 0x00
+                self._i2c.write_mem(_READ_XY_REG, buf=mv[:1])
                 return None
 
-            buf[0] = _READ_XY_REG_LOW
-            buf[1] = _READ_XY_REG_HIGH
-            self._i2c.write(buf=mv[:2], stop=False)
-            buf[1] = 0x00
-            buf[2] = 0x00
-            buf[3] = 0x00
-            buf[4] = 0x00
-
-            self._i2c.read(buf=mv)
+            self._i2c.read_mem(_READ_XY_REG, buf=mv)
 
             x = buf[1] + (buf[2] << 8)
             y = buf[3] + (buf[4] << 8)
 
-            buf[0] = _READ_XY_REG_LOW
-            buf[1] = _READ_XY_REG_HIGH
-            buf[2] = 0x00
-            self._i2c.write(buf=mv[:3])
+            buf[0] = 0x00
+            self._i2c.write_mem(_READ_XY_REG, buf=mv[:1])
 
             return self.PRESSED, x, y

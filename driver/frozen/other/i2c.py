@@ -1,9 +1,3 @@
-
-try:
-    from esp_i2c import I2C as _I2C
-except ImportError:
-    from machine import I2C as _I2C
-
 import machine
 
 
@@ -18,38 +12,31 @@ class I2CBus(object):
             else:
                 host = 1
 
-        key = (scl, sda, freq, host)
+        self._bus = machine.I2C(
+            host,
+            scl=machine.Pin(scl),
+            sda=machine.Pin(sda),
+            freq=freq,
+            timeout=timeout
+        )
 
-        if key in I2CBus._busses:
-            self.__dict__.update(I2CBus._busses[key].__dict__)
+        if use_locks:
+            import _thread
+            self._lock = _thread.allocate_lock()
+
         else:
-            I2CBus._busses[key] = self
+            class Lock(object):
 
-            self._bus = _I2C(
-                host,
-                scl=machine.Pin(scl),
-                sda=machine.Pin(sda),
-                freq=freq,
-                timeout=timeout
-            )
+                def acquire(self):
+                    pass
 
-            if use_locks:
-                import _thread
-                self._lock = _thread.allocate_lock()
+                def release(self):
+                    pass
 
-            else:
-                class Lock(object):
+                def is_locked(self):
+                    return False
 
-                    def acquire(self):
-                        pass
-
-                    def release(self):
-                        pass
-
-                    def is_locked(self):
-                        return False
-
-                self._lock = Lock()
+            self._lock = Lock()
 
     def __enter__(self):
         self._lock.acquire()
@@ -95,7 +82,7 @@ class I2CDevice(object):
 
     def read_mem(self, memaddr, num_bytes=None, buf=None):
         with self._bus:
-            if buf is None:
+            if num_bytes is not None:
                 return self._bus.readfrom_mem(
                     self.dev_id,
                     memaddr,
@@ -120,10 +107,10 @@ class I2CDevice(object):
                 addrsize=self._reg_bits
             )
 
-    def read(self, nbytes=None, buf=None, stop=True):
+    def read(self, num_bytes=None, buf=None, stop=True):
         with self._bus:
-            if buf is None:
-                return self._bus.readfrom(self.dev_id, nbytes, stop)
+            if num_bytes is not None:
+                return self._bus.readfrom(self.dev_id, num_bytes, stop)
             else:
                 self._bus.readfrom_into(self.dev_id, buf, stop)
 
