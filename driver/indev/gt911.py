@@ -70,7 +70,6 @@ _Y_CORD_RES_LOW = const(0x48)
 _VENDOR_ID_HIGH = const(0x81)
 _VENDOR_ID_LOW = const(0x4A)
 
-
 _ADDR1 = const(0x5D)
 _ADDR2 = const(0x14)
 
@@ -81,12 +80,7 @@ class GT911(pointer_framework.PointerDriver):
         buf = self._buf = bytearray(7)
         mv = self._mv = memoryview(self._buf)
 
-        if _ADDR1 in i2c_bus.scan():
-            self._addr = _ADDR1
-        else:
-            self._addr = _ADDR2
-
-        self._i2c = i2c.I2CDevice(i2c_bus, self._addr)
+        self._i2c = i2c.I2CDevice(i2c_bus, _ADDR1)
 
         super().__init__(touch_cal=touch_cal)
 
@@ -157,7 +151,7 @@ class GT911(pointer_framework.PointerDriver):
             self._interrupt_pin(0)
             self._reset_pin(0)
             time.sleep_ms(10)
-            self._interrupt_pin(int(self._addr == _ADDR2))
+            self._interrupt_pin(0)
             time.sleep_ms(1)
             self._reset_pin(1)
             time.sleep_ms(5)

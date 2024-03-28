@@ -1,4 +1,9 @@
 
+try:
+    from esp_i2c import I2C as _I2C
+except ImportError:
+    from machine import I2C as _I2C
+
 import machine
 
 
@@ -20,7 +25,7 @@ class I2CBus(object):
         else:
             I2CBus._busses[key] = self
 
-            self._bus = machine.I2C(
+            self._bus = _I2C(
                 host,
                 scl=machine.Pin(scl),
                 sda=machine.Pin(sda),
@@ -58,18 +63,6 @@ class I2CBus(object):
         data = self._bus.scan()
         self._lock.release()
         return data
-
-    def start(self):
-        self._bus.start()
-
-    def stop(self):
-        self._bus.stop()
-
-    def readinto(self, buf, nack=True):
-        self._bus.readinto(buf, nack)
-
-    def write(self, buf):
-        self._bus.write(buf)
 
     def readfrom(self, addr, nbytes, stop=True):
         return self._bus.readfrom(addr, nbytes, stop)
