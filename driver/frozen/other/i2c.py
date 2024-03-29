@@ -3,9 +3,7 @@ import machine
 
 class I2CBus(object):
 
-    _busses = {}
-
-    def __init__(self, scl, sda, freq=400000, host=None, timeout=50000, use_locks=False):
+    def __init__(self, scl, sda, freq=400000, host=None, use_locks=False):
         if host is None:
             if (scl, sda) == (19, 18):
                 host = 0
@@ -16,14 +14,12 @@ class I2CBus(object):
             host,
             scl=machine.Pin(scl),
             sda=machine.Pin(sda),
-            freq=freq,
-            timeout=timeout
+            freq=freq
         )
 
         if use_locks:
             import _thread
             self._lock = _thread.allocate_lock()
-
         else:
             class Lock(object):
 
@@ -51,6 +47,18 @@ class I2CBus(object):
         self._lock.release()
         return data
 
+    def start(self):
+        self._bus.start()
+
+    def stop(self):
+        self._bus.stop()
+
+    def readinto(self, buf, nack=True):
+        self._bus.readinto(buf, nack)
+
+    def write(self, buf):
+        self._bus.write(buf)
+
     def readfrom(self, addr, nbytes, stop=True):
         return self._bus.readfrom(addr, nbytes, stop)
 
@@ -71,6 +79,9 @@ class I2CBus(object):
 
     def writeto_mem(self, addr, memaddr, buf, addrsize=8):
         self._bus.writeto_mem(addr, memaddr, buf, addrsize=addrsize)
+
+    def add_device(self, dev_id, reg_bits=8):
+        return I2CDevice(self, dev_id, reg_bits)
 
 
 class I2CDevice(object):
@@ -107,13 +118,13 @@ class I2CDevice(object):
                 addrsize=self._reg_bits
             )
 
-    def read(self, num_bytes=None, buf=None, stop=True):
+    def read(self, num_bytes=None, buf=None):
         with self._bus:
             if num_bytes is not None:
-                return self._bus.readfrom(self.dev_id, num_bytes, stop)
+                return self._bus.readfrom(self.dev_id, num_bytes)
             else:
-                self._bus.readfrom_into(self.dev_id, buf, stop)
+                self._bus.readfrom_into(self.dev_id, buf)
 
-    def write(self, buf, stop=True):
+    def write(self, buf):
         with self._bus:
-            self._bus.writeto(self.dev_id, buf, stop)
+            self._bus.writeto(self.dev_id, buf)
