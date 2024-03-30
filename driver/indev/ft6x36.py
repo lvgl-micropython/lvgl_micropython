@@ -1,6 +1,5 @@
 from micropython import const
 import pointer_framework
-import i2c as _i2c
 
 # FT3267
 # FT5336GQQ
@@ -9,98 +8,6 @@ import i2c as _i2c
 # FT5x46
 # FT5x26
 # ft5302
-
-1.143
-
-'''
-18.8%
-11.9%
-
-
-3,378.80
- 
-3,432.80
-
-In 2022 Jefferson County employees receive an
-additional average amount of 34.64 % of such
-compensation for fringe benefits. 
-
-2022 saleries: 225,425,700
-2022 benifits: 65,571,000
-That comes out to 29.0% in fringe benifits 2022, so where is the other 5.64%??
-5.64% is 12,714,009.48 dollars
-
-in 2022 there were 3,335 employees and in 2024 there is 3,432.80. 97 more positions now than there was in 2022.
-2022 saleries and benifits cost 290,996,700 and in 2024 the cost is 350,283,700, That's a difference of 59,287,000 dollars.
-there are 54 new positions from 2023 to 2024 but there is an increase of saleries of 18.8%. 18.8% in a single year!!!!!... 
-That's a difference of 42,022,900 dollars!!. somehow I don't think the 54 new employees are each making 778,201 dollars a year. 
-
-
-42,022,900
-
-
-290,996,700
-
-
-50,087,000
-
-341,083,700
-31.6% in 2024
-Libraries
-
-This is being spent from the general fund
-8.4 million for Library buildings
-8.7 million for the South Jefferson County Library 
-5.8 million to continue the South Library
-22.9 million total
-
-Here are the budgets for the last few years
-
-2021 $37,716,700
-2022 $39,485,300
-2023 $91,877,700
-2024 $66,042,300
-
-
-Expendatures
-Salaries: 25,014,600 (312.00 jobs)
-Supplies: 7,590,700
-Other 6,590,700
-Capital Outlay (buying books and movies): 23,044,800
-
-Expendatures where the money goes out without the money being used for the Libraries
-Intergovernmental: 0.00
-Interdepartmental: 3,801,500
-
-I want to note that Jefferson County has 11 Libraries.
-2024 has 14 new positions for the library
-
-
-
-Road and Bridge
-
-$16.8 million for roadway projects
-
-Here are the budgets for the last few years
-
-2021 $46,724,700
-2022 $48,976,000
-2023 $66,797,600
-2024 $58,092,900
-
-Expendatures
-
-Salaries: 15,482,200  (186 employees)
-Supplies: 4,037,800
-Other: 9,035,400
-Capital Outlay: 13,635,000
-
-Expendatures where the money goes out without the money being used for the roads and bridges
-Intergovernmental: 4,048,100
-Interdepartmental 11,854,400
-
-
-'''
 
 _I2C_SLAVE_ADDR = const(0x38)
 
@@ -144,10 +51,12 @@ class FT6x36(pointer_framework.PointerDriver):
         self._buf[0] = data
         self._i2c.write_mem(register_addr, self._mv[:1])
 
-    def __init__(self, bus, touch_cal=None):  # NOQA
+    def __init__(self, i2c_bus, touch_cal=None):  # NOQA
         self._buf = bytearray(5)
         self._mv = memoryview(self._buf)
-        self._i2c = _i2c.I2CDevice(bus, _I2C_SLAVE_ADDR)
+
+        self._i2c_bus = i2c_bus
+        self._i2c = i2c_bus.add_device(_I2C_SLAVE_ADDR, 8)
 
         data = self._i2c_read8(_PANEL_ID_REG)
         print("Device ID: 0x%02x" % data)

@@ -1,6 +1,5 @@
 from micropython import const
 import pointer_framework
-import i2c as _i2c
 
 _DEV_MODE = const(0x00)
 _GEST_ID = const(0x01)
@@ -46,30 +45,33 @@ class FT5x06(pointer_framework.PointerDriver):
         self._buf[0] = data
         self._i2c.write_mem(register_addr, self._mv[:1])
 
-    def __init__(self, bus, touch_cal=None):  # NOQA
+    def __init__(self, i2c_bus, touch_cal=None):  # NOQA
         self._buf = bytearray(5)
         self._mv = memoryview(self._buf)
-        self._i2c = _i2c.I2CDevice(bus, _I2C_SLAVE_ADDR)
 
-        data = self._i2c_read8(_PANEL_ID_REG)
-        print("Device ID: 0x%02x" % data)
-        if data != _VENDID:
-            raise RuntimeError()
+        self._i2c_bus = i2c_bus
+        self._i2c = i2c_bus.add_device(_I2C_SLAVE_ADDR, 8)
 
-        data = self._i2c_read8(_CHIPID_REG)
-        print("Chip ID: 0x%02x" % data)
+        venid = self._i2c_read8(_PANEL_ID_REG)
+        print("Touch Device ID: 0x%02x" % venid)
 
-        if data not in (_FT5x06_CHIPID,):
-            raise RuntimeError()
+        chipid = self._i2c_read8(_CHIPID_REG)
+        print("Touch Chip ID: 0x%02x" % chipid)
 
         data = self._i2c_read8(_DEV_MODE_REG)
-        print("Device mode: 0x%02x" % data)
+        print("Touch Device mode: 0x%02x" % data)
 
         data = self._i2c_read8(_FIRMWARE_ID_REG)
-        print("Firmware ID: 0x%02x" % data)
+        print("Touch Firmware ID: 0x%02x" % data)
 
         data = self._i2c_read8(_RELEASECODE_REG)
-        print("Release code: 0x%02x" % data)
+        print("Touch Release code: 0x%02x" % data)
+
+        if chipid not in (_FT5x06_CHIPID,):
+            raise RuntimeError()
+
+        if venid != _VENDID:
+            raise RuntimeError()
 
         self._i2c_write8(_DEV_MODE_REG, _DEV_MODE_WORKING)
         self._i2c_write8(_PERIOD_ACTIVE_REG, 0x0E)

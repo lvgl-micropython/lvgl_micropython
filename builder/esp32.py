@@ -378,6 +378,46 @@ def submodules():
 def compile():  # NOQA
     env = setup_idf_environ()
 
+    if board in ('ESP32_GENERIC_S2', 'ESP32_GENERIC_S3'):
+
+        mphalport_path = 'lib/micropython/ports/esp32/mphalport.c'
+
+        with open(mphalport_path, 'rb') as f:
+            data = f.read().decode('utf-8')
+
+        data = data.replace('#elif CONFIG_USB_OTG_SUPPORTED', '#elif MP_USB_OTG')
+
+        with open(mphalport_path, 'wb') as f:
+            f.write(data.encode('utf-8'))
+
+        main_path = 'lib/micropython/ports/esp32/main.c'
+
+        with open(main_path, 'rb') as f:
+            data = f.read().decode('utf-8')
+
+        data = data.replace(
+            '#elif CONFIG_USB_OTG_SUPPORTED',
+            '#elif MP_USB_OTG'
+        )
+
+        with open(main_path, 'wb') as f:
+            f.write(data.encode('utf-8'))
+
+        mpconfigboard_path = f'lib/micropython/ports/esp32/boards/{board}/mpconfigboard.h'
+        with open(mpconfigboard_path, 'rb') as f:
+            data = f.read().decode('utf-8')
+
+        if 'MP_USB_OTG' not in data:
+            data += (
+                '\n'
+                '#ifndef MP_USB_OTG\n'
+                '#define MP_USB_OTG    (0)\n'
+                '#endif'
+            )
+
+            with open(mpconfigboard_path, 'wb') as f:
+                f.write(data.encode('utf-8'))
+
     mpconfigport_path = 'lib/micropython/ports/esp32/mpconfigport.h'
 
     with open(mpconfigport_path, 'rb') as f:

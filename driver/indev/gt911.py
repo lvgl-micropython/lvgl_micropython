@@ -76,19 +76,19 @@ class GT911(pointer_framework.PointerDriver):
         # self.touch_reset()
 
         self._i2c.read_mem(_PRODUCT_ID_REG, buf=self._mv[:4])
-        print('Product id:', self._buf[:4])
+        print('Touch Product id:', self._buf[:4])
 
         self._i2c.read_mem(_FIRMWARE_VERSION_REG, buf=self._mv[:2])
-        print('Firmware version:', hex(self._buf[0] + (self._buf[1] << 8)))
+        print('Touch Firmware version:', hex(self._buf[0] + (self._buf[1] << 8)))
 
         self._i2c.read_mem(_VENDOR_ID_REG, buf=self._mv[:1])
-        print('Vendor id:', hex(self._buf[0]))
+        print('Touch Vendor id:', hex(self._buf[0]))
 
         self._i2c.read_mem(_X_CORD_RES_REG, buf=self._mv[:2])
-        print('Configured width:', self._buf[0] + (self._buf[1] << 8))
+        print('Touch Configured width:', self._buf[0] + (self._buf[1] << 8))
 
         self._i2c.read_mem(_Y_CORD_RES_REG, buf=self._mv[:2])
-        print('Configured height:', self._buf[0] + (self._buf[1] << 8))
+        print('Touoch Configured height:', self._buf[0] + (self._buf[1] << 8))
 
         self._buf[0] = 0x00
         self._i2c.write_mem(_ESD_CHECK_REG, buf=self._mv[:1])
@@ -158,8 +158,6 @@ class GT911(pointer_framework.PointerDriver):
 
             x = self._buf[0] + (self._buf[1] << 8)
             y = self._buf[2] + (self._buf[3] << 8)
-
-            print(x, y)
 
             self._buf[0] = 0x00
             self._i2c.write_mem(_STATUS_REG, buf=self._mv[:1])

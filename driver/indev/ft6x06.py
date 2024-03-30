@@ -1,6 +1,5 @@
 from micropython import const
 import pointer_framework
-import i2c as _i2c
 
 _DEV_MODE = const(0x00)
 _GEST_ID = const(0x01)
@@ -46,10 +45,12 @@ class FT6x06(pointer_framework.PointerDriver):
         self._buf[0] = data
         self._i2c.write_mem(register_addr, self._mv[:1])
 
-    def __init__(self, bus, touch_cal=None):  # NOQA
+    def __init__(self, i2c_bus, touch_cal=None):  # NOQA
         self._buf = bytearray(5)
         self._mv = memoryview(self._buf)
-        self._i2c = _i2c.I2CDevice(bus, _I2C_SLAVE_ADDR)
+
+        self._i2c_bus = i2c_bus
+        self._i2c = i2c_bus.add_device(_I2C_SLAVE_ADDR, 8)
 
         data = self._i2c_read8(_PANEL_ID_REG)
         print("Device ID: 0x%02x" % data)
