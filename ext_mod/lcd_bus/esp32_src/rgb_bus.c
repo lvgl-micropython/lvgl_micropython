@@ -210,14 +210,14 @@
 
         self->panel_io_config.data_width = (size_t) i;
 
-        self->panel_io_handle.get_lane_count = rgb_get_lane_count;
-        self->panel_io_handle.del = rgb_del;
-        self->panel_io_handle.rx_param = rgb_rx_param;
-        self->panel_io_handle.tx_param = rgb_tx_param;
-        self->panel_io_handle.tx_color = rgb_tx_color;
-        self->panel_io_handle.allocate_framebuffer = rgb_allocate_framebuffer;
-        self->panel_io_handle.free_framebuffer = rgb_free_framebuffer;
-        self->panel_io_handle.init = rgb_init;
+        self->panel_io_handle.get_lane_count = &rgb_get_lane_count;
+        self->panel_io_handle.del = &rgb_del;
+        self->panel_io_handle.rx_param = &rgb_rx_param;
+        self->panel_io_handle.tx_param = &rgb_tx_param;
+        self->panel_io_handle.tx_color = &rgb_tx_color;
+        self->panel_io_handle.allocate_framebuffer = &rgb_allocate_framebuffer;
+        self->panel_io_handle.free_framebuffer = &rgb_free_framebuffer;
+        self->panel_io_handle.init = &rgb_init;
 
         return MP_OBJ_FROM_PTR(self);
     }

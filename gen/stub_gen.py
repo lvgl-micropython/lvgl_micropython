@@ -349,9 +349,12 @@ def run(json_path):
 
     build_objects(root['objects'])
     build_functions(root['functions'])
-    build_enums(root['enums'])
-    build_variables(root['variables'])
-    build_int_constants(root['int_constants'])
+    if 'enums' in root:
+        build_enums(root['enums'])
+    if 'variables' in root:
+        build_variables(root['variables'])
+    if 'int_constants' in root:
+        build_int_constants(root['int_constants'])
     build_structs(root['structs'])
 
     output = output_template.format(

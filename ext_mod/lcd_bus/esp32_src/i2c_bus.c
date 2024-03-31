@@ -94,9 +94,9 @@ STATIC mp_obj_t mp_lcd_i2c_bus_make_new(const mp_obj_type_t *type, size_t n_args
     self->panel_io_config.flags.dc_low_on_data = (unsigned int)args[ARG_dc_low_on_data].u_bool;
     self->panel_io_config.flags.disable_control_phase = (unsigned int)args[ARG_disable_control_phase].u_bool;
 
-    self->panel_io_handle.del = i2c_del;
-    self->panel_io_handle.init = i2c_init;
-    self->panel_io_handle.get_lane_count = i2c_get_lane_count;
+    self->panel_io_handle.del = &i2c_del;
+    self->panel_io_handle.init = &i2c_init;
+    self->panel_io_handle.get_lane_count = &i2c_get_lane_count;
 
     return MP_OBJ_FROM_PTR(self);
 }

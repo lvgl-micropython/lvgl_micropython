@@ -20,12 +20,11 @@ ALL_LVGL_SRC = $(shell find $(LVGL_DIR) -type f -name '*.h') $(LVGL_BINDING_DIR)
 LVGL_MPY = $(BUILD)/lv_mpy.c
 LVGL_MPY_METADATA = $(BUILD)/lv_mpy.json
 
-CFLAGS_USERMOD += $(LV_CFLAGS) 
-
+CFLAGS_USERMOD += $(LV_CFLAGS)
 $(LVGL_MPY): $(ALL_LVGL_SRC) $(LVGL_BINDING_DIR)/gen/gen_mpy.py 
 	$(ECHO) "LVGL-GEN $@"
 	$(Q)mkdir -p $(dir $@)
-	$(Q)$(PYTHON) $(LVGL_BINDING_DIR)/gen/gen_mpy.py $(LV_CFLAGS) --board=$(LV_PORT) --output=$(LVGL_MPY) --include=$(LVGL_BINDING_DIR) --include=$(LVGL_DIR) --include=$(LVGL_BINDING_DIR)/include --module_name=lvgl --module_prefix=lv --metadata=$(LVGL_MPY_METADATA) $(LVGL_HEADER)
+	$(Q)$(PYTHON) $(LVGL_BINDING_DIR)/gen/$(GEN_SCRIPT)_api_gen_mpy.py $(LV_CFLAGS) --board=$(LV_PORT) --output=$(LVGL_MPY) --include=$(LVGL_BINDING_DIR) --include=$(LVGL_DIR) --include=$(LVGL_BINDING_DIR)/include --module_name=lvgl --module_prefix=lv --metadata=$(LVGL_MPY_METADATA) $(LVGL_HEADER)
 
 .PHONY: LVGL_MPY
 LVGL_MPY: $(LVGL_MPY)

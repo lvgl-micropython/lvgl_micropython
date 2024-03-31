@@ -37,3 +37,4 @@
 
     extern const mp_obj_type_t mp_lcd_spi_bus_type;
 #endif /* _ESP32_SPI_BUS_H_ */
+

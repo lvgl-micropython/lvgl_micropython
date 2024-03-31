@@ -142,7 +142,7 @@
         self->panel_io_config.cs_gpio_num = (int)args[ARG_cs].u_int;
         self->panel_io_config.pclk_hz = (uint32_t)args[ARG_freq].u_int;
         self->panel_io_config.trans_queue_depth = 1;
-        self->panel_io_config.on_color_trans_done = bus_trans_done_cb;
+        self->panel_io_config.on_color_trans_done = &bus_trans_done_cb;
         self->panel_io_config.user_ctx = self;
         self->panel_io_config.lcd_cmd_bits = (int)args[ARG_cmd_bits].u_int;
         self->panel_io_config.lcd_param_bits = (int)args[ARG_param_bits].u_int;
@@ -156,9 +156,9 @@
         self->panel_io_config.flags.pclk_active_neg = (unsigned int)args[ARG_pclk_active_low].u_bool;
         self->panel_io_config.flags.pclk_idle_low = (unsigned int)args[ARG_pclk_idle_low].u_bool;
 
-        self->panel_io_handle.init = i80_init;
-        self->panel_io_handle.del = i80_del;
-        self->panel_io_handle.get_lane_count = i80_get_lane_count;
+        self->panel_io_handle.init = &i80_init;
+        self->panel_io_handle.del = &i80_del;
+        self->panel_io_handle.get_lane_count = &i80_get_lane_count;
 
         return MP_OBJ_FROM_PTR(self);
     }

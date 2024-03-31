@@ -24,7 +24,7 @@ argParser.add_argument(
 args1, extra_args = argParser.parse_known_args(sys.argv[1:])
 target = args1.target[0]
 
-argParser = ArgumentParser(prefix_chars='mcsLBFDI')
+argParser = ArgumentParser(prefix_chars='mscLBFDIV')
 
 argParser.add_argument(
     'mpy_cross',
@@ -114,7 +114,30 @@ frozen_manifest = args2.frozen_manifest
 displays = args2.displays
 indevs = args2.indevs
 
+
+argParser = ArgumentParser(prefix_chars='-')
+argParser.add_argument(
+    '--LVGL_API',
+    dest='lvgl_api',
+    help=(
+        'Sets the API to be used. If this flag gets set '
+        'then the api that is used is the same as what the C API is for LVGL.'
+    ),
+    action='store_true',
+    default=False
+)
+
+args3, extra_args = argParser.parse_known_args(extra_args)
+
+lvgl_api = args3.lvgl_api
+
 extra_args.append(f'FROZEN_MANIFEST="{SCRIPT_DIR}/build/manifest.py"')
+
+if lvgl_api:
+    extra_args.append(f'GEN_SCRIPT=lvgl')
+else:
+    extra_args.append(f'GEN_SCRIPT=python')
+
 
 if lv_cflags is not None:
     lv_cflags = lv_cflags.replace('"', '')

@@ -20,7 +20,7 @@ file(GLOB_RECURSE LVGL_HEADERS ${CMAKE_CURRENT_LIST_DIR}/lib/lvgl/src/*.h ${CMAK
 # found to go about doing it.
 execute_process(
     COMMAND
-        ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/gen/gen_mpy.py ${LV_CFLAGS} --output=${CMAKE_BINARY_DIR}/lv_mp.c --include=${CMAKE_CURRENT_LIST_DIR} --include=${CMAKE_CURRENT_LIST_DIR}/include --include=${CMAKE_CURRENT_LIST_DIR}/lvgl --board=$(LV_PORT) --module_name=lvgl --module_prefix=lv --metadata=${CMAKE_BINARY_DIR}/lv_mp.c.json ${LVGL_HEADER}
+        ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/gen/$ENV{GEN_SCRIPT}_api_gen_mpy.py ${LV_CFLAGS} --output=${CMAKE_BINARY_DIR}/lv_mp.c --include=${CMAKE_CURRENT_LIST_DIR} --include=${CMAKE_CURRENT_LIST_DIR}/include --include=${CMAKE_CURRENT_LIST_DIR}/lvgl --board=$ENV{LV_PORT} --module_name=lvgl --module_prefix=lv --metadata=${CMAKE_BINARY_DIR}/lv_mp.c.json ${LVGL_HEADER}
     WORKING_DIRECTORY
         ${CMAKE_CURRENT_LIST_DIR}
 
