@@ -27,7 +27,7 @@ def update_mphalport(target):
             f.write(data.encode('utf-8'))
 
 
-def generate_manifest(script_dir, manifest_path, displays, indevs, frozen_manifest, *addl_manifest_files):
+def generate_manifest(script_dir, lvgl_api, manifest_path, displays, indevs, frozen_manifest, *addl_manifest_files):
     if not os.path.exists('build'):
         os.mkdir('build')
 
@@ -38,17 +38,24 @@ def generate_manifest(script_dir, manifest_path, displays, indevs, frozen_manife
     if frozen_manifest is not None:
         manifest_files.append(f"include('{frozen_manifest}')")
 
+    if lvgl_api:
+        api_path = f'{script_dir}/api_drivers/lvgl_api_drivers'
+    else:
+        api_path = f'{script_dir}/api_drivers/py_api_drivers'
+
     frozen_manifest_files = [
-        f'{script_dir}/driver/frozen/display/display_driver_framework.py',
-        f'{script_dir}/driver/frozen/indev/touch_calibration/touch_cal_data.py',
-        f'{script_dir}/driver/frozen/indev/touch_calibration/touch_calibrate.py',
-        f'{script_dir}/driver/frozen/indev/button_framework.py',
-        f'{script_dir}/driver/frozen/indev/encoder_framework.py',
-        f'{script_dir}/driver/frozen/indev/keypad_framework.py',
-        f'{script_dir}/driver/frozen/indev/pointer_framework.py',
-        f'{script_dir}/driver/frozen/other/i2c.py',
-        f'{script_dir}/driver/frozen/other/io_expander_framework.py',
-        f'{script_dir}/driver/frozen/other/task_handler.py'
+        f'{api_path}/frozen/display/display_driver_framework.py',
+        f'{api_path}/frozen/indev/touch_calibration/touch_cal_data.py',
+        f'{api_path}/frozen/indev/touch_calibration/touch_calibrate.py',
+        f'{api_path}/frozen/indev/_indev_base.py',
+        f'{api_path}/frozen/indev/button_framework.py',
+        f'{api_path}/frozen/indev/encoder_framework.py',
+        f'{api_path}/frozen/indev/keypad_framework.py',
+        f'{api_path}/frozen/indev/pointer_framework.py',
+        f'{api_path}/fs_driver.py',
+        f'{script_dir}/api_drivers/common_api_drivers/frozen/other/i2c.py',
+        f'{script_dir}/api_drivers/common_api_drivers/frozen/other/io_expander_framework.py',
+        f'{script_dir}/api_drivers/common_api_drivers/frozen/other/task_handler.py'
     ]
 
     for file in frozen_manifest_files:
@@ -71,7 +78,7 @@ def generate_manifest(script_dir, manifest_path, displays, indevs, frozen_manife
 
     for file in indevs:
         if not os.path.exists(file):
-            tmp_file = f'{script_dir}/driver/indev/{file}.py'
+            tmp_file = f'{script_dir}/api_drivers/common_api_drivers/indev/{file}.py'
 
             if not os.path.exists(tmp_file):
                 raise RuntimeError(f'File not found "{file}"')
@@ -85,7 +92,7 @@ def generate_manifest(script_dir, manifest_path, displays, indevs, frozen_manife
 
     for file in displays:
         if not os.path.exists(file):
-            tmp_file = f'{script_dir}/driver/display/{file}.py'
+            tmp_file = f'{script_dir}/api_drivers/common_api_drivers/display/{file}.py'
 
             if not os.path.exists(tmp_file):
                 raise RuntimeError(f'File not found "{file}"')

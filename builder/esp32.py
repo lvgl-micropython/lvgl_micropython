@@ -243,7 +243,7 @@ def get_idf_version():
             return version
 
 
-def build_manifest(target, script_dir, displays, indevs, frozen_manifest):
+def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manifest):
     update_mphalport(target)
 
     with open(f'lib/micropython/ports/esp32/boards/sdkconfig.base', 'r') as f:
@@ -260,7 +260,7 @@ def build_manifest(target, script_dir, displays, indevs, frozen_manifest):
 
     manifest_path = 'lib/micropython/ports/esp32/boards/manifest.py'
 
-    generate_manifest(script_dir, manifest_path, displays, indevs, frozen_manifest)
+    generate_manifest(script_dir, lvgl_api, manifest_path, displays, indevs, frozen_manifest)
 
 
 def clean():

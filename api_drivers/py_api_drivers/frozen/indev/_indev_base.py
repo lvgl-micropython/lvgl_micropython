@@ -2,8 +2,17 @@ import lvgl as lv  # NOQA
 import display_driver_framework
 
 
-class KeypadDriver:
+class IndevBase:
+    _instance_counter = 1
+    _indevs = []
+
+    PRESSED = lv.INDEV_STATE.PRESSED
+    RELEASED = lv.INDEV_STATE.RELEASED
+
     def __init__(self):  # NOQA
+        self.__class__._instance_counter += 1
+        self.id = self.__class__._instance_counter
+
         if not lv.is_initialized():
             lv.init()
 
@@ -11,7 +20,8 @@ class KeypadDriver:
 
         if disp is None:
             raise RuntimeError(
-                'the display driver must be initilized before the keypad driver'
+                'the display driver must be initilized '
+                'before the pointer driver'
             )
 
         self._disp_drv = disp
@@ -26,55 +36,33 @@ class KeypadDriver:
                 'Display driver needs to initilized before indev driver'
             )
 
-        self._last_key = -1
-        self._current_state = lv.INDEV_STATE.RELEASED
+        self._height = self._py_disp_drv.get_physical_horizontal_resolution()
+        self._width = self._py_disp_drv.get_physical_vertical_resolution()
+
+        self._current_state = self.RELEASED
 
         indev_drv = lv.indev_create()
-        indev_drv.set_type(lv.INDEV_TYPE.KEYPAD)
         indev_drv.set_read_cb(self._read)
-        indev_drv.set_driver_data(self)
         indev_drv.set_display(disp)
         indev_drv.enable(True)
         self._indev_drv = indev_drv
 
-    def _get_key(self):
-        # this method needs to be overridden.
-        # the returned value from this method is going to be (state, keycode)
-        # or None if no key event has occured
-        raise NotImplementedError
+        self._indevs.append(self)
+
+    def get_width(self):
+        return self._width
+
+    def get_height(self):
+        return self._height
+
+    def get_rotation(self):
+        return self._disp_drv.get_rotation()
+
+    def _set_type(self, type_):
+        self._indev_drv.set_type(type_)
 
     def _read(self, drv, data):  # NOQA
-        key = self._get_key()
-
-        if key is None:  # ignore no key
-            if self._current_state != lv.INDEV_STATE.RELEASED:
-                self._current_state = lv.INDEV_STATE.RELEASED
-                res = True
-            else:
-                res = False
-
-            data.key = self._last_key
-            data.state = self._current_state
-            data.continue_reading = False
-            return res
-
-        state, key = key
-
-        self._last_key = key
-
-        if self._current_state == state == lv.INDEV_STATE.RELEASED:
-            res = False
-            data.continue_reading = False
-        else:
-            res = True
-            data.continue_reading = True
-
-        self._current_state = state
-
-        data.key = self._last_key
-        data.state = self._current_state
-
-        return res
+        raise NotImplementedError
 
     def get_type(self):
         return self._indev_drv.get_type()
@@ -112,21 +100,6 @@ class KeypadDriver:
     def wait_release(self):
         self._indev_drv.wait_release()
 
-    def get_vect(self, point):
-        self._indev_drv.get_vect(point)
-
-    def get_scroll_obj(self):
-        return self._indev_drv.get_scroll_obj()
-
-    def get_scroll_dir(self):
-        return self._indev_drv.get_scroll_dir()
-
-    def get_gesture_dir(self):
-        return self._indev_drv.get_gesture_dir()
-
-    def get_point(self, point):
-        self._indev_drv.get_point(point)
-
     def get_state(self):
         return self._indev_drv.get_state()
 
@@ -139,24 +112,15 @@ class KeypadDriver:
     def set_group(self, group):
         self._indev_drv.set_group(group)
 
-    def set_cursor(self, cur_obj):
-        self._indev_drv.set_cursor(cur_obj)
-
-    def reset_long_press(self):
-        self._indev_drv.reset_long_press()
-
     def reset(self, obj):
         self._indev_drv.reset(obj)
 
     def get_disp(self):
-        return self._disp_drv
+        return self._py_disp_drv
 
     @staticmethod
     def active():
         indev = lv.indev_active()
-        return indev.get_driver_data()
-
-
-
-
-
+        for i in IndevBase._indevs:
+            if i._indev_drv == indev:
+                return i

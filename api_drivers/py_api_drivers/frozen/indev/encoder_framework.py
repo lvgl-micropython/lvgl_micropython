@@ -1,13 +1,8 @@
 import lvgl as lv  # NOQA
-import display_driver_framework
+import _indev_base
 
 
-# lv_indev_get_driver_data
-# lv_indev_get_user_data
-# lv_indev_
-
-
-class ButtonDriver:
+class EncoderDriver(_indev_base.IndevBase):
     _instance_counter = 1
 
     def __init__(self, touch_cal=None):  # NOQA
@@ -22,7 +17,8 @@ class ButtonDriver:
 
         if disp is None:
             raise RuntimeError(
-                'the display driver must be initilized before the button driver'
+                'the display driver must be initilized '
+                'before the encoder driver'
             )
 
         self._disp_drv = disp
@@ -37,47 +33,60 @@ class ButtonDriver:
                 'Display driver needs to initilized before indev driver'
             )
 
-        self._last_button = -1
-        self._button_points = []
+        self._last_enc_value = 0
+        self._last_enc_diff = 0
+        self._last_key = 0
         self._current_state = lv.INDEV_STATE.RELEASED
 
         indev_drv = lv.indev_create()
-        indev_drv.set_type(lv.INDEV_TYPE.BUTTON)
+        indev_drv.set_type(lv.INDEV_TYPE.ENCODER)
         indev_drv.set_read_cb(self._read)
         indev_drv.set_driver_data(self)
         indev_drv.set_display(disp)
         indev_drv.enable(True)
         self._indev_drv = indev_drv
 
-    def set_button_points(self, *points):
-        self._indev_drv.set_button_points(list(points))
-        self._button_points = list(points)
+        super().__init__()
+        self._set_type(lv.INDEV_TYPE.ENCODER)
 
-    def _get_button(self):
+    def _get_enc(self):
         # this method needs to be overridden.
         # the returned value from this method is going to be a keycode
         # or None if no key event has occured
         raise NotImplementedError
 
     def _read(self, drv, data):  # NOQA
-        button = self._get_button()
+        dta = self._get_enc()
 
-        if button is None:  # ignore no touch & multi touch
+        if dta is None:  # ignore no touch & multi touch
             if self._current_state != lv.INDEV_STATE.RELEASED:
                 self._current_state = lv.INDEV_STATE.RELEASED
                 res = True
             else:
                 res = False
 
-            data.enc_diff = self._last_button
+            data.key = self._last_key
+            data.enc_diff = self._last_enc_diff
             data.state = self._current_state
             data.continue_reading = False
             return res
 
-        self._last_button = button
-        self._current_state = data.state = lv.INDEV_STATE.PRESSED
+        enc, key = dta
 
-        data.btn_id = self._last_button
+        if key is None:
+            self._current_state = data.state = lv.INDEV_STATE.RELEASED
+        else:
+            self._current_state = data.state = lv.INDEV_STATE.PRESSED
+            self._last_key = key
+
+        if enc is None:
+            self._last_enc_diff = 0
+            self._last_enc_value = 0
+        else:
+            self._last_enc_diff = self._last_enc_value + enc
+            self._last_enc_value = enc
+
+        data.enc_diff = self._last_enc_diff
         data.state = self._current_state
         data.continue_reading = True
 

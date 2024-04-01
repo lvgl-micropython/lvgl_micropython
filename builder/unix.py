@@ -58,7 +58,7 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
     submodules_cmd[1] = 'submodules'
 
 
-def build_manifest(target, script_dir, displays, indevs, frozen_manifest):
+def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manifest):
     update_mphalport(target)
 
     manifest_path = 'lib/micropython/ports/unix/variants/manifest.py'
@@ -67,7 +67,7 @@ def build_manifest(target, script_dir, displays, indevs, frozen_manifest):
         f'{script_dir}/driver/fs_driver.py',
         f'{script_dir}/driver/linux/lv_timer.py',
     ]
-    generate_manifest(script_dir, manifest_path, displays, indevs, frozen_manifest, *manifest_files)
+    generate_manifest(script_dir, lvgl_api, manifest_path, displays, indevs, frozen_manifest, *manifest_files)
 
 
 def clean():

@@ -1,15 +1,9 @@
 import lvgl as lv  # NOQA
-import display_driver_framework
+import _indev_base
 
 
-class EncoderDriver:
-    _instance_counter = 1
-
-    def __init__(self, touch_cal=None):  # NOQA
-        self.__class__._instance_counter += 1
-        self.id = self.__class__._instance_counter
-        self._cursors = []
-
+class KeypadDriver(_indev_base.IndevBase):
+    def __init__(self):  # NOQA
         if not lv.is_initialized():
             lv.init()
 
@@ -17,8 +11,7 @@ class EncoderDriver:
 
         if disp is None:
             raise RuntimeError(
-                'the display driver must be initilized '
-                'before the encoder driver'
+                'the display driver must be initilized before the keypad driver'
             )
 
         self._disp_drv = disp
@@ -33,29 +26,30 @@ class EncoderDriver:
                 'Display driver needs to initilized before indev driver'
             )
 
-        self._last_enc_value = 0
-        self._last_enc_diff = 0
-        self._last_key = 0
+        self._last_key = -1
         self._current_state = lv.INDEV_STATE.RELEASED
 
         indev_drv = lv.indev_create()
-        indev_drv.set_type(lv.INDEV_TYPE.ENCODER)
+        indev_drv.set_type(lv.INDEV_TYPE.KEYPAD)
         indev_drv.set_read_cb(self._read)
         indev_drv.set_driver_data(self)
         indev_drv.set_display(disp)
         indev_drv.enable(True)
         self._indev_drv = indev_drv
 
-    def _get_enc(self):
+        super().__init__()
+        self._set_type(lv.INDEV_TYPE.KEYPAD)
+
+    def _get_key(self):
         # this method needs to be overridden.
-        # the returned value from this method is going to be a keycode
+        # the returned value from this method is going to be (state, keycode)
         # or None if no key event has occured
         raise NotImplementedError
 
     def _read(self, drv, data):  # NOQA
-        dta = self._get_enc()
+        key = self._get_key()
 
-        if dta is None:  # ignore no touch & multi touch
+        if key is None:  # ignore no key
             if self._current_state != lv.INDEV_STATE.RELEASED:
                 self._current_state = lv.INDEV_STATE.RELEASED
                 res = True
@@ -63,31 +57,27 @@ class EncoderDriver:
                 res = False
 
             data.key = self._last_key
-            data.enc_diff = self._last_enc_diff
             data.state = self._current_state
             data.continue_reading = False
             return res
 
-        enc, key = dta
+        state, key = key
 
-        if key is None:
-            self._current_state = data.state = lv.INDEV_STATE.RELEASED
+        self._last_key = key
+
+        if self._current_state == state == lv.INDEV_STATE.RELEASED:
+            res = False
+            data.continue_reading = False
         else:
-            self._current_state = data.state = lv.INDEV_STATE.PRESSED
-            self._last_key = key
+            res = True
+            data.continue_reading = True
 
-        if enc is None:
-            self._last_enc_diff = 0
-            self._last_enc_value = 0
-        else:
-            self._last_enc_diff = self._last_enc_value + enc
-            self._last_enc_value = enc
+        self._current_state = state
 
-        data.enc_diff = self._last_enc_diff
+        data.key = self._last_key
         data.state = self._current_state
-        data.continue_reading = True
 
-        return True
+        return res
 
     def get_type(self):
         return self._indev_drv.get_type()
@@ -168,3 +158,8 @@ class EncoderDriver:
     def active():
         indev = lv.indev_active()
         return indev.get_driver_data()
+
+
+
+
+

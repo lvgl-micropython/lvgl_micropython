@@ -60,12 +60,12 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
     compile_cmd.extend(extra_args)
 
 
-def build_manifest(target, script_dir, displays, indevs, frozen_manifest):
+def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manifest):
     update_mphalport(target)
     
     manifest_path = 'lib/micropython/ports/windows/variants/manifest.py'
 
-    generate_manifest(script_dir, manifest_path, displays, indevs, frozen_manifest)
+    generate_manifest(script_dir, lvgl_api, manifest_path, displays, indevs, frozen_manifest)
 
 
 def clean():
