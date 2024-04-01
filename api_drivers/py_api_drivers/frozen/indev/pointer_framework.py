@@ -12,6 +12,8 @@ class PointerDriver(_indev_base.IndevBase):
         self._last_x = -1
         self._last_y = -1
 
+        super().__init__()
+
         if touch_cal is None:
             from touch_cal_data import TouchCalData
 
@@ -19,7 +21,6 @@ class PointerDriver(_indev_base.IndevBase):
 
         self._config = touch_cal
 
-        super().__init__()
         self._set_type(lv.INDEV_TYPE.POINTER)
 
     def calibrate(self):
