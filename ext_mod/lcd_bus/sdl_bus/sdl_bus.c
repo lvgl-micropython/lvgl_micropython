@@ -8,22 +8,23 @@
  *********************/
 #include "sdl_bus.h"
 #include "lcd_types.h"
+#include "py/obj.h"
+#include "modlcd_bus.h"
+#include <stdbool.h>
+#include "sdl_bus.h"
+#include "py/objarray.h"
+#include "py/binary.h"
 
 
-#ifdef SDL_INCLUDE_PATH
-    #include <stdbool.h>
-
-    #define SDL_MAIN_HANDLED /*To fix SDL's "undefined reference to WinMain" issue*/
-
-    #include SDL_INCLUDE_PATH
-    #include SDL_THREAD_INCLUDE_PATH
-    #include SDL_IMAGE_INCLUDE_PATH
+#ifdef MP_PORT_UNIX
+    #include <SDL2/SDL.h>
+    #include <SDL2/SDL_thread.h>
 
     mp_lcd_err_t sdl_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
     mp_lcd_err_t sdl_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
-    mp_lcd_err_t sdl_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size);
+    mp_lcd_err_t sdl_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end);
     mp_lcd_err_t sdl_del(mp_obj_t obj);
-    mp_lcd_err_t sdl_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size);
+    mp_lcd_err_t sdl_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size,  bool rgb565_byte_swap);
     mp_lcd_err_t sdl_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
 
     int flush_thread(void *self_in);
@@ -95,9 +96,14 @@
         return LCD_OK;
     }
 
-
-    mp_lcd_err_t sdl_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size)
+    mp_lcd_err_t sdl_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end)
     {
+        LCD_UNUSED(x_start);
+        LCD_UNUSED(y_start);
+        LCD_UNUSED(x_end);
+        LCD_UNUSED(y_end);
+        LCD_UNUSED(color_size);
+
         mp_lcd_sdl_bus_obj_t *self = (mp_lcd_sdl_bus_obj_t *) obj;
 
         self->panel_io_config.buf_to_flush = color;
@@ -123,10 +129,12 @@
         return LCD_OK;
     }
 
-    mp_lcd_err_t sdl_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size)
+    mp_lcd_err_t sdl_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size,  bool rgb565_byte_swap)
     {
-        mp_lcd_sdl_bus_obj_t *self = (mp_lcd_sdl_bus_obj_t *)obj;
+        LCD_UNUSED(rgb565_byte_swap);
         LCD_UNUSED(buffer_size);
+
+        mp_lcd_sdl_bus_obj_t *self = (mp_lcd_sdl_bus_obj_t *)obj;
 
         self->panel_io_config.width = width;
         self->panel_io_config.height = height;
@@ -134,11 +142,6 @@
         SDL_Init(SDL_INIT_VIDEO);
         SDL_StartTextInput();
         SDL_FilterEvents(event_filter_cb, self);
-
-        if (!(IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG)) {
-            mp_raise_msg_varg(&mp_type_RuntimeError, MP_ERROR_TEXT("could not initialize sdl2_image: %s"), IMG_GetError());
-            return LCD_ERR_NOT_SUPPORTED;
-        }
 
         self->panel_io_config.sem = SDL_CreateSemaphore(0);
         SDL_SemWait(self->panel_io_config.sem);
@@ -149,7 +152,7 @@
             width,
             height,
             self->panel_io_config.flags
-        );       /*last param.  to hide borders*/
+        );
 
         self->renderer = SDL_CreateRenderer(self->window, -1, SDL_RENDERER_SOFTWARE);
 
@@ -207,6 +210,7 @@
                 bus_trans_done_cb(&self->panel_io_handle, NULL, (void *)self);
             }
         }
+        return 0;
     }
 
 
@@ -220,7 +224,7 @@
         mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
         mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
+        mp_lcd_sdl_bus_obj_t *self = (mp_lcd_sdl_bus_obj_t *)args[ARG_self].u_obj;
 
         self->controller_axis_motion_cb = args[ARG_callback].u_obj;
 
@@ -240,7 +244,7 @@
         mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
         mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
+        mp_lcd_sdl_bus_obj_t *self = (mp_lcd_sdl_bus_obj_t *)args[ARG_self].u_obj;
 
         self->controller_button_cb = args[ARG_callback].u_obj;
 
@@ -260,7 +264,7 @@
         mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
         mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
+        mp_lcd_sdl_bus_obj_t *self = (mp_lcd_sdl_bus_obj_t *)args[ARG_self].u_obj;
 
         self->touch_cb = args[ARG_callback].u_obj;
 
@@ -280,7 +284,7 @@
         mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
         mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
+        mp_lcd_sdl_bus_obj_t *self = (mp_lcd_sdl_bus_obj_t *)args[ARG_self].u_obj;
 
         self->keypad_cb = args[ARG_callback].u_obj;
 
@@ -300,7 +304,7 @@
         mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
         mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
+        mp_lcd_sdl_bus_obj_t *self = (mp_lcd_sdl_bus_obj_t *)args[ARG_self].u_obj;
 
         self->joystick_axis_motion_cb = args[ARG_callback].u_obj;
 
@@ -320,7 +324,7 @@
         mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
         mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
+        mp_lcd_sdl_bus_obj_t *self = (mp_lcd_sdl_bus_obj_t *)args[ARG_self].u_obj;
 
         self->joystick_ball_motion_cb = args[ARG_callback].u_obj;
 
@@ -340,7 +344,7 @@
         mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
         mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
+        mp_lcd_sdl_bus_obj_t *self = (mp_lcd_sdl_bus_obj_t *)args[ARG_self].u_obj;
 
         self->joystick_hat_motion_cb = args[ARG_callback].u_obj;
 
@@ -360,7 +364,7 @@
         mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
         mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
+        mp_lcd_sdl_bus_obj_t *self = (mp_lcd_sdl_bus_obj_t *)args[ARG_self].u_obj;
 
         self->joystick_button_cb = args[ARG_callback].u_obj;
 
@@ -380,7 +384,7 @@
         mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
         mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
+        mp_lcd_sdl_bus_obj_t *self = (mp_lcd_sdl_bus_obj_t *)args[ARG_self].u_obj;
 
         self->mouse_motion_cb = args[ARG_callback].u_obj;
 
@@ -400,7 +404,7 @@
         mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
         mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
+        mp_lcd_sdl_bus_obj_t *self = (mp_lcd_sdl_bus_obj_t *)args[ARG_self].u_obj;
 
         self->mouse_button_cb = args[ARG_callback].u_obj;
 
@@ -420,7 +424,7 @@
         mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
         mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
+        mp_lcd_sdl_bus_obj_t *self = (mp_lcd_sdl_bus_obj_t *)args[ARG_self].u_obj;
 
         self->mouse_wheel_cb = args[ARG_callback].u_obj;
 
@@ -440,7 +444,7 @@
         mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
         mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
+        mp_lcd_sdl_bus_obj_t *self = (mp_lcd_sdl_bus_obj_t *)args[ARG_self].u_obj;
 
         self->window_cb = args[ARG_callback].u_obj;
 
@@ -463,10 +467,10 @@
         mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
         mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
+        mp_lcd_sdl_bus_obj_t *self = (mp_lcd_sdl_bus_obj_t *)args[ARG_self].u_obj;
 
-        self->panel_io_config.width = (uint16_t)args[ARG_width].u_int
-        self->panel_io_config.height = (uint16_t)args[ARG_height].u_int
+        self->panel_io_config.width = (uint16_t)args[ARG_width].u_int;
+        self->panel_io_config.height = (uint16_t)args[ARG_height].u_int;
 
         if(self->texture) {
             SDL_DestroyTexture(self->texture);
@@ -504,7 +508,7 @@
         mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
         mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
+        mp_lcd_sdl_bus_obj_t *self = (mp_lcd_sdl_bus_obj_t *)args[ARG_self].u_obj;
 
         void *buf;
         size_t size = (size_t)args[ARG_size].u_int;
@@ -531,14 +535,15 @@
     {
         mp_lcd_sdl_bus_obj_t *self = (mp_lcd_sdl_bus_obj_t *)userdata;
         uint32_t window_id = SDL_GetWindowID(self->window);
+        mp_obj_t dict;
 
         switch(event->type) {
             case SDL_CONTROLLERAXISMOTION:
                 if (self->controller_axis_motion_cb == mp_const_none) {
-                    return;
+                    return 0;
                 }
 
-                mp_obj_t dict = mp_obj_new_dict(4);
+                dict = mp_obj_new_dict(4);
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("type"), mp_obj_new_int_from_uint(event->type));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("axis"), mp_obj_new_int_from_uint(event->caxis.axis));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("id"), mp_obj_new_int(event->caxis.which));
@@ -549,10 +554,9 @@
             case SDL_CONTROLLERBUTTONDOWN:
             case SDL_CONTROLLERBUTTONUP:
                 if (self->controller_button_cb == mp_const_none) {
-                    return;
+                    return 0;
                 }
-
-                mp_obj_t dict = mp_obj_new_dict(4);
+                dict = mp_obj_new_dict(4);
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("type"), mp_obj_new_int_from_uint(event->type));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("state"), mp_obj_new_int_from_uint(event->cbutton.state));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("id"), mp_obj_new_int(event->cbutton.which));
@@ -565,13 +569,13 @@
             case SDL_FINGERDOWN:
             case SDL_FINGERUP:
                 if (event->key.windowID != window_id) {
-                    return;
+                    return 0;
                 }
                 if (self->touch_cb == mp_const_none) {
-                    return;
+                    return 0;
                 }
 
-                mp_obj_t dict = mp_obj_new_dict(6);
+                dict = mp_obj_new_dict(4);
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("type"), mp_obj_new_int_from_uint(event->type));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("id"), mp_obj_new_int(event->tfinger.which));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("finger_id"), mp_obj_new_int(event->tfinger.fingerId));
@@ -585,10 +589,10 @@
             case SDL_CONTROLLERTOUCHPADDOWN:
             case SDL_CONTROLLERTOUCHPADUP:
                 if (self->touch_cb == mp_const_none) {
-                    return;
+                    return 0;
                 }
 
-                mp_obj_t dict = mp_obj_new_dict(6);
+                dict = mp_obj_new_dict(5);
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("type"), mp_obj_new_int_from_uint(event->type));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("id"), mp_obj_new_int(event->ctouchpad.which));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("finger_id"), mp_obj_new_int(event->ctouchpad.fingerId));
@@ -601,10 +605,10 @@
             case SDL_KEYDOWN:
             case SDL_KEYUP:
                 if (event->key.windowID != window_id) {
-                    return;
+                    return 0;
                 }
                 if (self->keypad_cb == mp_const_none) {
-                    return;
+                    return 0;
                 }
 
                 int key =  event->key.keysym.sym;
@@ -619,7 +623,7 @@
                     key -= 32;
                 }
 
-                mp_obj_t dict = mp_obj_new_dict(5);
+                dict = mp_obj_new_dict(5);
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("type"), mp_obj_new_int_from_uint(event->type));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("state"), mp_obj_new_int_from_uint(event->key.state));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("repeat"), mp_obj_new_int_from_uint(event->key.repeat));
@@ -631,10 +635,10 @@
 
             case SDL_JOYAXISMOTION:
                 if (self->joystick_axis_motion_cb == mp_const_none) {
-                    return;
+                    return 0;
                 }
 
-                mp_obj_t dict = mp_obj_new_dict(4);
+                dict = mp_obj_new_dict(4);
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("type"), mp_obj_new_int_from_uint(event->type));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("axis"), mp_obj_new_int_from_uint(event->jaxis.axis));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("id"), mp_obj_new_int(event->jaxis.which));
@@ -645,10 +649,10 @@
 
             case SDL_JOYBALLMOTION:
                 if (self->joystick_ball_motion_cb == mp_const_none) {
-                    return;
+                    return 0;
                 }
 
-                mp_obj_t dict = mp_obj_new_dict(5);
+                dict = mp_obj_new_dict(5);
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("type"), mp_obj_new_int_from_uint(event->type));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("ball"), mp_obj_new_int_from_uint(event->jball.ball));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("id"), mp_obj_new_int(event->jball.which));
@@ -660,10 +664,10 @@
 
             case SDL_JOYHATMOTION:
                 if (self->joystick_hat_motion_cb == mp_const_none) {
-                    return;
+                    return 0;
                 }
 
-                mp_obj_t dict = mp_obj_new_dict(4);
+                dict = mp_obj_new_dict(4);
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("type"), mp_obj_new_int_from_uint(event->type));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("hat"), mp_obj_new_int_from_uint(event->jhat.hat));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("id"), mp_obj_new_int(event->jhat.which));
@@ -676,10 +680,10 @@
             case SDL_JOYBUTTONDOWN:
             case SDL_JOYBUTTONUP:
                 if (self->joystick_button_cb == mp_const_none) {
-                    return;
+                    return 0;
                 }
 
-                mp_obj_t dict = mp_obj_new_dict(4);
+                dict = mp_obj_new_dict(4);
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("type"), mp_obj_new_int_from_uint(event->type));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("button"), mp_obj_new_int_from_uint(event->jbutton.button));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("id"), mp_obj_new_int(event->jbutton.which));
@@ -690,13 +694,13 @@
 
             case SDL_MOUSEMOTION:
                 if (event->key.windowID != window_id) {
-                    return;
+                    return 0;
                 }
                 if (self->mouse_motion_cb == mp_const_none) {
-                    return;
+                    return 0;
                 }
 
-                mp_obj_t dict = mp_obj_new_dict(5);
+                dict = mp_obj_new_dict(5);
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("type"), mp_obj_new_int_from_uint(event->type));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("state"), mp_obj_new_int_from_uint(event->motion.state));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("id"), mp_obj_new_int(event->motion.which));
@@ -709,13 +713,13 @@
             case SDL_MOUSEBUTTONDOWN:
             case SDL_MOUSEBUTTONUP:
                 if (event->key.windowID != window_id) {
-                    return;
+                    return 0;
                 }
                 if (self->mouse_button_cb == mp_const_none) {
-                    return;
+                    return 0;
                 }
 
-                mp_obj_t dict = mp_obj_new_dict(7);
+                dict = mp_obj_new_dict(7);
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("type"), mp_obj_new_int_from_uint(event->type));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("button"), mp_obj_new_int_from_uint(event->button.button));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("id"), mp_obj_new_int(event->button.which));
@@ -728,13 +732,13 @@
 
             case SDL_MOUSEWHEEL:
                 if (event->key.windowID != window_id) {
-                    return;
+                    return 0;
                 }
                 if (self->mouse_wheel_cb == mp_const_none) {
-                    return;
+                    return 0;
                 }
 
-                mp_obj_t dict = mp_obj_new_dict(6);
+                dict = mp_obj_new_dict(4);
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("type"), mp_obj_new_int_from_uint(event->type));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("id"), mp_obj_new_int(event->wheel.which));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("x"), mp_obj_new_int(event->wheel.x));
@@ -751,13 +755,13 @@
 
             case SDL_WINDOWEVENT:
                 if (event->key.windowID != window_id) {
-                    return;
+                    return 0;
                 }
                 if (self->window_cb == mp_const_none) {
-                    return;
+                    return 0;
                 }
 
-                mp_obj_t dict = mp_obj_new_dict(4);
+                dict = mp_obj_new_dict(4);
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("type"), mp_obj_new_int_from_uint(event->type));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("event"), mp_obj_new_int_from_uint(event->window.event));
                 mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR("data1"), mp_obj_new_int(event->window.data1));
@@ -766,14 +770,15 @@
                 mp_sched_schedule(self->mouse_motion_cb, dict);
                 break;
         }
+        return 0;
     }
 
     STATIC const mp_rom_map_elem_t mp_lcd_sdl_bus_locals_dict_table[] = {
         { MP_ROM_QSTR(MP_QSTR_get_lane_count),       MP_ROM_PTR(&mp_lcd_bus_get_lane_count_obj)       },
         { MP_ROM_QSTR(MP_QSTR_register_callback),    MP_ROM_PTR(&mp_lcd_bus_register_callback_obj)    },
-        { MP_ROM_QSTR(MP_QSTR_tx_color),             MP_ROM_PTR(&mp_lcd_rgb_bus_tx_color_obj)         },
-        { MP_ROM_QSTR(MP_QSTR_rx_param),             MP_ROM_PTR(&mp_lcd_rgb_bus_rx_param_obj)         },
-        { MP_ROM_QSTR(MP_QSTR_tx_param),             MP_ROM_PTR(&mp_lcd_rgb_bus_tx_param_obj)         },
+        { MP_ROM_QSTR(MP_QSTR_tx_color),             MP_ROM_PTR(&mp_lcd_bus_tx_color_obj)         },
+        { MP_ROM_QSTR(MP_QSTR_rx_param),             MP_ROM_PTR(&mp_lcd_bus_rx_param_obj)         },
+        { MP_ROM_QSTR(MP_QSTR_tx_param),             MP_ROM_PTR(&mp_lcd_bus_tx_param_obj)         },
         { MP_ROM_QSTR(MP_QSTR_free_framebuffer),     MP_ROM_PTR(&mp_lcd_bus_free_framebuffer_obj)     },
         { MP_ROM_QSTR(MP_QSTR_allocate_framebuffer), MP_ROM_PTR(&mp_lcd_bus_allocate_framebuffer_obj) },
         { MP_ROM_QSTR(MP_QSTR_init),                 MP_ROM_PTR(&mp_lcd_bus_init_obj)                 },

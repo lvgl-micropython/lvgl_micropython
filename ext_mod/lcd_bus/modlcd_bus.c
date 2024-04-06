@@ -5,7 +5,7 @@
 #include "i80_bus.h"
 #include "rgb_bus.h"
 
-#ifdef SDL_INCLUDE_PATH
+#ifdef MP_PORT_UNIX
     #include "sdl_bus.h"
 #endif
 
@@ -265,7 +265,7 @@ STATIC const mp_map_elem_t mp_module_lcd_bus_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_I2CBus),             (mp_obj_t)&mp_lcd_i2c_bus_type        },
     { MP_ROM_QSTR(MP_QSTR_I80Bus),             (mp_obj_t)&mp_lcd_i80_bus_type        },
 
-    #ifdef SDL_INCLUDE_PATH
+    #ifdef MP_PORT_UNIX
         { MP_ROM_QSTR(MP_QSTR_SDLBus),         (mp_obj_t)&mp_lcd_sdl_bus_type        },
     #endif
 

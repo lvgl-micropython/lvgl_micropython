@@ -99,7 +99,7 @@ class DisplayDriver:
         offset_x=0,
         offset_y=0,
         color_byte_order=BYTE_ORDER_RGB,
-        color_space=lv.COLOR_FORMAT.RGB888,
+        color_space=lv.COLOR_FORMAT_RGB888,
         rgb565_byte_swap=False
     ):
 
@@ -144,7 +144,7 @@ class DisplayDriver:
         self._initilized = False
         self._backup_set_memory_location = None
 
-        self._rotation = lv.DISPLAY_ROTATION._0  # NOQA
+        self._rotation = lv.DISPLAY_ROTATION_0  # NOQA
 
         if data_bus is None:
             self._reset_pin = None
@@ -184,7 +184,7 @@ class DisplayDriver:
 
             disp = self._disp_drv = lv.display_create(display_width, display_height)
 
-            lv.display.set_color_format(disp, color_space)
+            lv.display_set_color_format(disp, color_space)
 
             if frame_buffer1 is None:
                 buf_size = int(
@@ -317,8 +317,8 @@ class DisplayDriver:
         return None
 
     def set_offset(self, x, y):
-        rot90 = lv.DISPLAY_ROTATION._90  # NOQA
-        rot270 = lv.DISPLAY_ROTATION._270  # NOQA
+        rot90 = lv.DISPLAY_ROTATION_90  # NOQA
+        rot270 = lv.DISPLAY_ROTATION_270  # NOQA
 
         if self._rotation in (rot90, rot270):
             x, y = y, x
@@ -326,8 +326,8 @@ class DisplayDriver:
         self._offset_x, self._offset_y = x, y
 
     def get_offset_x(self):
-        rot90 = lv.DISPLAY_ROTATION._90  # NOQA
-        rot270 = lv.DISPLAY_ROTATION._270  # NOQA
+        rot90 = lv.DISPLAY_ROTATION_90  # NOQA
+        rot270 = lv.DISPLAY_ROTATION_270  # NOQA
 
         if self._rotation in (rot90, rot270):
             return self._offset_y
@@ -335,8 +335,8 @@ class DisplayDriver:
         return self._offset_x
 
     def get_offset_y(self):
-        rot90 = lv.DISPLAY_ROTATION._90  # NOQA
-        rot270 = lv.DISPLAY_ROTATION._270  # NOQA
+        rot90 = lv.DISPLAY_ROTATION_90  # NOQA
+        rot270 = lv.DISPLAY_ROTATION_270  # NOQA
 
         if self._rotation in (rot90, rot270):
             return self._offset_x
@@ -438,10 +438,10 @@ class DisplayDriver:
         return self._rotation
 
     def set_rotation(self, value):
-        rot0 = lv.DISPLAY_ROTATION._0  # NOQA
-        rot90 = lv.DISPLAY_ROTATION._90  # NOQA
-        rot180 = lv.DISPLAY_ROTATION._180  # NOQA
-        rot270 = lv.DISPLAY_ROTATION._270  # NOQA
+        rot0 = lv.DISPLAY_ROTATION_0  # NOQA
+        rot90 = lv.DISPLAY_ROTATION_90  # NOQA
+        rot180 = lv.DISPLAY_ROTATION_180  # NOQA
+        rot270 = lv.DISPLAY_ROTATION_270  # NOQA
 
         if (
             (

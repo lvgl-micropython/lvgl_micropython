@@ -12,7 +12,6 @@ unix_cmd = [
     '',
     f'-j {os.cpu_count()}',
     '-C',
-    'lib/micropython/ports/unix'
 ]
 
 compile_cmd = []
@@ -23,25 +22,24 @@ def parse_args(extra_args, lv_cflags, board):
     return extra_args, lv_cflags, board
 
 
+variant = None
+
+
 def build_commands(_, extra_args, script_dir, lv_cflags, board):
+    global variant
+    variant = board
+
     if lv_cflags is not None:
         lv_cflags += ' -DMICROPY_SDL=1'
     else:
         lv_cflags = '-DMICROPY_SDL=1'
 
-    mp_bus_flags = [
-        '-DSDL_INCLUDE_PATH=<SDL2/SDL.h>',
-        '-DSDL_THREAD_INCLUDE_PATH=<SDL2/SDL_thread.h>',
-        '-DSDL_IMAGE_INCLUDE_PATH=<SDL2/SDL_image.h>',
-    ]
-
-    mp_bus_flags = ' '.join(mp_bus_flags)
+    unix_cmd.append(f'{script_dir}/lib/micropython/ports/unix')
 
     if board:
         unix_cmd.append(f'VARIANT={board}')
 
     unix_cmd.extend([
-        f'LCD_BUS_CFLAGS="{mp_bus_flags}"',
         f'LV_CFLAGS="{lv_cflags}"',
         f'LV_PORT=unix',
         f'USER_C_MODULES="{script_dir}/ext_mod"'
@@ -64,8 +62,7 @@ def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manife
     manifest_path = 'lib/micropython/ports/unix/variants/manifest.py'
 
     manifest_files = [
-        f'{script_dir}/driver/fs_driver.py',
-        f'{script_dir}/driver/linux/lv_timer.py',
+        f'{script_dir}/api_drivers/common_api_drivers/linux/lv_timer.py'
     ]
     generate_manifest(script_dir, lvgl_api, manifest_path, displays, indevs, frozen_manifest, *manifest_files)
 
@@ -74,94 +71,78 @@ def clean():
     spawn(clean_cmd)
 
 
+def build_sdl():
+    cmd_ = [
+        'git',
+        'submodule',
+        'update',
+        '--init',
+        '--',
+        f'lib/SDL'
+    ]
+
+    result, _ = spawn(cmd_, spinner=True)
+    if result != 0:
+        sys.exit(result)
+
+    def _run(c):
+        res, _ = spawn(c)
+        if res != 0:
+            sys.exit(result)
+
+    cmd_ = ['cd lib/SDL && git checkout release-2.30.x']
+    _run(cmd_)
+
+    cmd_ = ['cd lib/SDL && mkdir build']
+    _run(cmd_)
+
+    cmd_ = [' '.join([
+        'apt-get --yes install'
+        'cmake',
+        'ninja-build',
+        'gnome-desktop-testing',
+        'libasound2-dev',
+        'libpulse-dev',
+        'libaudio-dev',
+        'libjack-dev',
+        'libsndio-dev',
+        'libx11-dev',
+        'libxext-dev',
+        'libxrandr-dev',
+        'libxcursor-dev',
+        'libxfixes-dev',
+        'libxi-dev',
+        'libxss-dev',
+        'libxkbcommon-dev',
+        'libdrm-dev',
+        'libgbm-dev',
+        'libgl1-mesa-dev',
+        'libgles2-mesa-dev',
+        'libegl1-mesa-dev',
+        'libdbus-1-dev',
+        'libibus-1.0-dev',
+        'libudev-dev',
+        'fcitx-libs-dev',
+        'libpipewire-0.3-dev',
+        'libwayland-dev',
+        'libdecor-0-dev'
+    ])]
+    _run(cmd_)
+
+    cmd_ = [
+        'cd lib/SDL/build &&'
+        'cmake .. -DCMAKE_BUILD_TYPE=Release &&'
+        'cmake --build . --config Release --parallel'
+    ]
+    _run(cmd_)
+
+
 def submodules():
     if not sys.platform.startswith('linux'):
         raise RuntimeError('Compiling for unix can only be done from Linux')
 
-    release_files = [
-        os.path.join('/etc', file)
-        for file in os.listdir('/etc')
-        if file.endswith('-release')
-    ]
-
-    if '/etc/os-release' in release_files:
-        release_files.remove('/etc/os-release')
-        release_files.insert(0, '/etc/os-release')
-
-    dist_id = None
-
-    for file in release_files:
-        with open(file, 'r') as f:
-            os_data = f.read().split('\n')
-
-        for line in os_data:
-            if line.startswith('ID='):
-                dist_id = line.split('=')[-1].replace('"', '')
-
-        if dist_id is not None:
-            break
-
-    if dist_id is not None:
-        mapping = {
-            ('amzn', 'centos', 'fedora', 'rhel'): {
-                'package_name': 'SDL2-devel',
-                'list': ['yum' 'list' 'installed'],
-                'install': ['yum', 'install'],
-                },
-            ('arch',): {
-                'package_name': 'sdl2',
-                'list': ['pacman' '-Qe'],
-                'install': ['pacman']
-            },
-            ('debian', 'ubuntu', 'kali', 'raspbian'): {
-                'package_name': 'libsdl2-dev',
-                'list': ['apt', 'list', '--installed'],
-                'install': ['apt', 'install']
-            },
-            ('fedora',): {
-                'package_name': 'SDL2-devel',
-                'list': ['dnf' 'list' 'installed'],
-                'install': ['dnf', 'install'],
-            },
-            ('opensuse', 'sles'): {
-                'package_name': 'SDL2-devel',
-                'list': ['zypper' 'search' '-i'],
-                'install': ['zypper', 'install'],
-            },
-            ('slackware',): {
-                'package_name': 'SDL2',
-                'list': ['ls', '-l', '/var/log/packages/'],
-                'install': ['slackpkg', 'install'],
-            }
-        }
-
-        values = []
-
-        for key, value in mapping.items():
-            if dist_id in key:
-                values.append(value)
-
-        for value in values:
-            ret_code, result = spawn(value['list'], out_to_screen=False)
-            if ret_code != 0:
-                continue
-
-            if value['package_name'] not in result:
-                value['install'].append(value['package_name'])
-                ret_code, _ = spawn(value['install'])
-                if ret_code != 0:
-                    print(
-                        'In order to install SDL2 you '
-                        'need to do one of the following:'
-                    )
-                    print('    Run this script again as a super user')
-                    print(
-                        '    Manually install the package '
-                        'before running this script'
-                    )
-                    sys.exit(ret_code)
-
-            break
+    if not os.path.exists('lib/SDL/src'):
+        build_sdl()
 
     return_code, _ = spawn(submodules_cmd)
     if return_code != 0:
@@ -197,9 +178,33 @@ def compile():  # NOQA
         with open(mpconfigvariant_common_path, 'w') as f:
             f.write(mpconfigvariant_common)
 
-    return_code, _ = spawn(compile_cmd, cmpl=True)
+    return_code, _ = spawn(compile_cmd, unix=True)
     if return_code != 0:
         sys.exit(return_code)
+
+    global variant
+
+    if variant is None:
+        variant = 'build-standard'
+
+    src = 'lib/SDL/build'
+    dst = f'lib/micropython/ports/unix/{variant}'
+
+    import shutil
+
+    def _iter_path(s):
+        for file_name in os.listdir():
+            file = os.path.join(s, file_name)
+            if os.path.isdir(file):
+                _iter_path(file)
+            elif not file_name.endswith('.so'):
+                continue
+
+            d = os.path.join(dst, file_name)
+            print('copying file:', file, '--->', d)
+            shutil.copyfile(file, d)
+
+    _iter_path(src)
 
 
 def mpy_cross():

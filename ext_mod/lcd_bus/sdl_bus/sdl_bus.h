@@ -1,10 +1,16 @@
+#include "py/obj.h"
+#include "modlcd_bus.h"
+#include <stdbool.h>
+
 
 #ifndef _SDL_BUS_H
     #define _SDL_BUS_H
 
-    #ifdef SDL_INCLUDE_PATH
-        #include SDL_INCLUDE_PATH
-        #include SDL_THREAD_INCLUDE_PATH
+    #define SDL_MAIN_HANDLED /*To fix SDL's "undefined reference to WinMain" issue*/
+
+    #ifdef MP_PORT_UNIX
+        #include <SDL2/SDL.h>
+        #include <SDL2/SDL_thread.h>
 
         typedef struct _panel_io_config_t {
             uint16_t width;
@@ -15,6 +21,7 @@
             SDL_Thread *thread;
             uint8_t bytes_per_pixel;
             SDL_sem *sem;
+            int flags;
         } panel_io_config_t;
 
         typedef struct _mp_lcd_sdl_bus_obj_t {

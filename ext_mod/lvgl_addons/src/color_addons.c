@@ -49,7 +49,7 @@ void lv_conical_gradient(uint8_t *buf, uint16_t radius, const lv_grad_dsc_t *gra
         run = radius;
 
         for (uint32_t x=0; x < diameter; x++) {
-            t = atan2((float)rise, (float)run) + PI - (float)angle;
+            t = (float)atan2((float)rise, (float)run) + (float)PI - (float)angle;
 
             if (twist > 0) {
                 t += TWO_PI * sqrtf((float)(rise * rise + run * run) / (float)twist);

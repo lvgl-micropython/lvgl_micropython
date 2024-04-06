@@ -211,7 +211,7 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
     {
         mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
 
-        return io->tx_param(io, lcd_cmd, param, param_size);
+        return self->panel_io_handle.tx_param(obj, lcd_cmd, param, param_size);
     }
 
 
@@ -223,7 +223,7 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
             rgb565_byte_swap((uint16_t *)color, (uint32_t)(color_size / 2));
         }
 
-        return self->panel_io_handle.tx_color(obj, lcd_cmd, color, color_size, int x_start, int y_start, int x_end, int y_end);
+        return self->panel_io_handle.tx_color(obj, lcd_cmd, color, color_size, x_start, y_start, x_end, y_end);
     }
 #endif
 

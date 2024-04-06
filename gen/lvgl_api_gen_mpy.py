@@ -415,6 +415,7 @@ def sanitize(id, kwlist =
 def simplify_identifier(id):
     # match_result = lv_func_pattern.match(id)
     # return match_result.group(1) if match_result else id
+    id = id.replace('lv_', '').replace('LV_', '')
     return id
 
 
@@ -745,9 +746,7 @@ def get_ctor(obj_name):
 
 def get_methods(obj_name):
     global funcs
-    return [func for func in funcs \
-            if is_method_of(func.name,obj_name) and \
-            (not func.name == ctor_name_from_obj_name(obj_name))]
+    return []
 
 @memoize
 def noncommon_part(member_name, stem_name):
@@ -783,8 +782,7 @@ def get_base_struct_name(struct_name):
 @memoize
 def get_struct_functions(struct_name):
     global funcs
-    if not struct_name:
-        return []
+    return []
     base_struct_name = get_base_struct_name(struct_name)
     # eprint("get_struct_functions %s: %s" % (struct_name, [get_type(func.type.args.params[0].type.type, remove_quals = True) for func in funcs if func.name.startswith(base_struct_name)]))
     # eprint("get_struct_functions %s: %s" % (struct_name, struct_aliases[struct_name] if struct_name in struct_aliases else ""))
@@ -802,7 +800,7 @@ def get_struct_functions(struct_name):
 
 @memoize
 def is_struct_function(func):
-    return func in get_struct_functions(get_first_arg_type(func))
+    return False
 
 # is_static_member returns true if function does not receive the obj as the first argument
 # and the object is not a struct function
@@ -1213,14 +1211,6 @@ typedef struct mp_lv_obj_type_t {{
     const mp_obj_type_t *mp_obj_type;
 }} mp_lv_obj_type_t;
 
-STATIC const mp_lv_obj_type_t mp_lv_{base_obj}_type;
-STATIC const mp_lv_obj_type_t *mp_lv_obj_types[];
-
-STATIC inline const mp_obj_type_t *get_BaseObj_type()
-{{
-    return mp_lv_{base_obj}_type.mp_obj_type;
-}}
-
 MP_DEFINE_EXCEPTION(LvReferenceError, Exception)
     """.format(
             obj_type = base_obj_type,
@@ -1379,10 +1369,10 @@ typedef struct mp_lv_obj_t {
 STATIC inline LV_OBJ_T *mp_to_lv(mp_obj_t mp_obj)
 {
     if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
-    mp_obj_t native_obj = get_native_obj(mp_obj);
-    if (MP_OBJ_TYPE_GET_SLOT_OR_NULL(mp_obj_get_type(native_obj), buffer) != mp_lv_obj_get_buffer)
-        return NULL;
-    mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(native_obj);
+    //mp_obj_t native_obj = get_native_obj(mp_obj);
+    //if (MP_OBJ_TYPE_GET_SLOT_OR_NULL(mp_obj_get_type(native_obj), buffer) != mp_lv_obj_get_buffer)
+    //    return NULL;
+    mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(mp_obj);
     if (mp_lv_obj->lv_obj == NULL) {
         nlr_raise(
             mp_obj_new_exception_msg(
@@ -1403,8 +1393,6 @@ STATIC inline LV_OBJ_T *mp_get_callbacks(mp_obj_t mp_obj)
     return mp_lv_obj->callbacks;
 }
 
-STATIC inline const mp_obj_type_t *get_BaseObj_type();
-
 STATIC void mp_lv_delete_cb(lv_event_t * e)
 {
     LV_OBJ_T *lv_obj = e->current_target;
@@ -1422,21 +1410,9 @@ STATIC inline mp_obj_t lv_to_mp(LV_OBJ_T *lv_obj)
     mp_lv_obj_t *self = (mp_lv_obj_t*)lv_obj->user_data;
     if (!self)
     {
-        // Find the object type
-        const mp_obj_type_t *mp_obj_type = get_BaseObj_type();
-        const lv_obj_class_t *lv_obj_class = lv_obj_get_class(lv_obj);
-        const mp_lv_obj_type_t **iter = &mp_lv_obj_types[0];
-        for (; *iter; iter++) {
-            if ((*iter)->lv_obj_class == lv_obj_class) {
-                mp_obj_type = (*iter)->mp_obj_type;
-                break;
-            }
-        }
-
         // Create the MP object
         self = m_new_obj(mp_lv_obj_t);
         *self = (mp_lv_obj_t){
-            .base = {(const mp_obj_type_t *)mp_obj_type},
             .lv_obj = lv_obj,
             .callbacks = NULL,
         };
@@ -3134,9 +3110,9 @@ from copy import deepcopy
 def gen_obj_methods(obj_name):
     global enums
     helper_members = ["{ MP_ROM_QSTR(MP_QSTR___cast__), MP_ROM_PTR(&cast_obj_class_method) }"] if len(obj_names) > 0 and obj_name == base_obj_name else []
-    members = ["{{ MP_ROM_QSTR(MP_QSTR_{method_name}), MP_ROM_PTR(&mp_{method}_mpobj) }}".
-                    format(method=method.name, method_name=sanitize(method_name_from_func_name(method.name))) for method in get_methods(obj_name)]
-    obj_metadata[obj_name]['members'].update({method_name_from_func_name(method.name): func_metadata[method.name] for method in get_methods(obj_name)})
+    return helper_members
+
+    members = []
     # add parent methods
     parent_members = []
     if obj_name in parent_obj_names and parent_obj_names[obj_name] != None:
@@ -3147,30 +3123,8 @@ def gen_obj_methods(obj_name):
             key = 'class_attributes'
 
         obj_metadata[obj_name]['members'].update(obj_metadata[parent_obj_names[obj_name]][key])
-    # add enum members
-    # enum_members = ["{{ MP_ROM_QSTR(MP_QSTR_{enum_member}), MP_ROM_PTR({enum_member_value}) }}".
-    #                 format(enum_member = sanitize(get_enum_member_name(enum_member_name)), enum_member_value = get_enum_value(obj_name, enum_member_name)) for enum_member_name in get_enum_members(obj_name)]
 
-    # obj_metadata[obj_name]['members'].update({get_enum_member_name(enum_member_name): {'c_type': obj_metadata[obj_name]['c_type'] + enum_member_name if enum_member_name.startswith('_') else obj_metadata[obj_name]['c_type'] + '_' + enum_member_name, 'py_type': 'int'} for enum_member_name in get_enum_members(obj_name)})
-
-    # add enums that match object name
-    # obj_enums = [enum_name for enum_name in enums.keys() if is_method_of(enum_name, obj_name)]
-    # enum_types = ["{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_lv_{enum}_type_base) }}".
-    #                 format(name=sanitize(method_name_from_func_name(enum_name)), enum=enum_name) for enum_name in obj_enums]
-
-    # obj_metadata[obj_name]['members'].update({method_name_from_func_name(enum_name): {'c_type': obj_metadata[obj_name]['c_type'] + enum_name if enum_name.startswith('_') else obj_metadata[obj_name]['c_type'] + '_' + enum_name, 'py_type': 'int'} for enum_name in obj_enums})
-    #
-    # for enum_name in obj_enums:
-    #     obj_metadata[obj_name]['classes'][method_name_from_func_name(enum_name)] = deepcopy(obj_metadata[obj_name]['members'][method_name_from_func_name(enum_name)])
-    #     del obj_metadata[obj_name]['members'][method_name_from_func_name(enum_name)]
-    #     obj_metadata[obj_name]['classes'][method_name_from_func_name(enum_name)].update(deepcopy(obj_metadata[enum_name]))
-    #     enum_referenced[enum_name] = True
-    #
-    #     obj_metadata[obj_name]['classes'][method_name_from_func_name(enum_name)]['c_type'] = 'enum'
-    #     obj_metadata[obj_name]['classes'][method_name_from_func_name(enum_name)]['class_attributes'] = obj_metadata[obj_name]['classes'][method_name_from_func_name(enum_name)]['members']
-    #     del obj_metadata[obj_name]['classes'][method_name_from_func_name(enum_name)]['members']
-
-    return members + parent_members + helper_members
+    return helper_members
 
 
 def gen_obj(obj_name):
@@ -3401,18 +3355,18 @@ def generate_struct_functions(struct_list):
 
         struct_funcs = get_struct_functions(struct_name)
         # print('/* Struct %s contains: %s */' % (struct_name, [f.name for f in struct_funcs]))
-        for struct_func in struct_funcs[:]: # clone list because we are changing it in the loop.
-            try:
-                if struct_func.name not in generated_funcs:
-                    gen_mp_func(struct_func, struct_name)
-
-                    if get_py_type(struct_name).replace('"', '') not in struct_metadata:
-                        struct_metadata[get_py_type(struct_name).replace('"', '')] = {'class_attributes': collections.OrderedDict(), 'attributes': collections.OrderedDict(), 'py_type': 'class', 'c_type': struct_name, 'methods': collections.OrderedDict()}
-
-                    struct_metadata[get_py_type(struct_name).replace('"', '')]['methods'][sanitize(noncommon_part(struct_func.name, struct_name))] = deepcopy(func_metadata[struct_func.name])
-            except MissingConversionException as exp:
-                gen_func_error(struct_func, exp)
-                struct_funcs.remove(struct_func)
+        # for struct_func in struct_funcs[:]: # clone list because we are changing it in the loop.
+        #     try:
+        #         if struct_func.name not in generated_funcs:
+        #             gen_mp_func(struct_func, struct_name)
+        #
+        #             if get_py_type(struct_name).replace('"', '') not in struct_metadata:
+        #                 struct_metadata[get_py_type(struct_name).replace('"', '')] = {'class_attributes': collections.OrderedDict(), 'attributes': collections.OrderedDict(), 'py_type': 'class', 'c_type': struct_name, 'methods': collections.OrderedDict()}
+        #
+        #             struct_metadata[get_py_type(struct_name).replace('"', '')]['methods'][sanitize(noncommon_part(struct_func.name, struct_name))] = deepcopy(func_metadata[struct_func.name])
+        #     except MissingConversionException as exp:
+        #         gen_func_error(struct_func, exp)
+        #         struct_funcs.remove(struct_func)
 
         if struct_name not in structs or structs[struct_name].decls:
             struct_size_attr = '{{ MP_ROM_QSTR(MP_QSTR___SIZE__), MP_ROM_PTR(MP_ROM_INT(sizeof({struct_tag}{struct_name}))) }},'.format(
@@ -3432,8 +3386,7 @@ STATIC MP_DEFINE_CONST_DICT(mp_{sanitized_struct_name}_locals_dict, mp_{sanitize
         '''.format(
             struct_size = struct_size_attr,
             sanitized_struct_name = sanitized_struct_name,
-            functions =  ''.join(['{{ MP_ROM_QSTR(MP_QSTR_{name}), MP_ROM_PTR(&mp_{func}_mpobj) }},\n    '.
-                format(name = sanitize(noncommon_part(f.name, struct_name)), func = f.name) for f in struct_funcs]),
+            functions =  '',
         ))
 
         generated_struct_functions[struct_name] = True

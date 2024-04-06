@@ -129,6 +129,7 @@ def get_lvgl():
 
 
 def get_micropython():
+
     cmd_ = [
         'git',
         'submodule',
@@ -185,7 +186,7 @@ def _busy_spinner(evnt):
             wait = random.randint(10, 100) * 0.001
 
 
-def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
+def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False, unix=False):
     if env is None:
         env = os.environ
 
@@ -201,13 +202,13 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
 
     def read():
         output_buffer = b''
+        line = ''
         r_beg = False
         newline = False
         last_line_len = 0
         while p.poll() is None:
             o_char = p.stdout.read(1)
             while o_char != b'':
-
                 output_buffer += o_char
                 if out_to_screen and not spinner and cmpl:
                     if o_char == b'\n':
@@ -246,6 +247,17 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
                         sys.stdout.write(str(o_char)[2:-1])
                     sys.stdout.flush()
 
+                elif out_to_screen and not cmpl:
+                    try:
+                        line += o_char.decode('utf-8')
+                    except UnicodeDecodeError:
+                        line += str(o_char)[2:-1]
+
+                    if o_char == b'\n':
+                        sys.stdout.write(line)
+                        line = ''
+                        sys.stdout.flush()
+
                 # output_buffer += o_char
                 o_char = p.stdout.read(1)
 
@@ -263,55 +275,68 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
             if output_buffer.endswith(prompt):
                 break
 
+            if not e_char and not o_char:
+                break
+
         return output_buffer
 
-    p = subprocess.Popen(
-        cmd_,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        shell=True,
-        env=env
-    )
+    if unix:
+        p = subprocess.Popen(
+            cmd_,
+            shell=True,
+            env=env
+        )
+        p.communicate()
 
-    if out_to_screen:
-        print(cmd_)
-
-    event = threading.Event()
-
-    if spinner:
-        t = threading.Thread(target=_busy_spinner, args=(event,))
-        t.daemon = True
-        t.start()
+        return p.returncode, None
     else:
-        t = None
+        p = subprocess.Popen(
+            cmd_,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True,
+            env=env
+        )
 
-    o_buf = read()
+        if out_to_screen:
+            print(cmd_)
 
-    try:
-        o_buf = o_buf.decode('utf-8')
-    except UnicodeDecodeError:
-        for char in o_buf:
-            if 32 <= char <= 125 or char in (b'\r', b'\n'):
-                continue
+        event = threading.Event()
 
-            o_buf = o_buf.replace(char, b'')
+        if spinner:
+            t = threading.Thread(target=_busy_spinner, args=(event,))
+            t.daemon = True
+            t.start()
+        else:
+            t = None
 
-        o_buf = o_buf.decode('utf-8')
+        o_buf = read()
 
-    if not p.stdout.closed:
-        p.stdout.close()
+        try:
+            o_buf = o_buf.decode('utf-8')
+        except UnicodeDecodeError:
+            for char in o_buf:
+                if 32 <= char <= 125 or char in (b'\r', b'\n'):
+                    continue
 
-    if not p.stderr.closed:
-        p.stderr.close()
+                o_buf = o_buf.replace(char, b'')
 
-    if t is not None:
-        event.set()
-        t.join()
+            o_buf = o_buf.decode('utf-8')
 
-    if out_to_screen and spinner:
-        print(o_buf)
+        if not p.stdout.closed:
+            p.stdout.close()
 
-    return p.returncode, o_buf
+        if not p.stderr.closed:
+            p.stderr.close()
+
+        if t is not None:
+            event.set()
+            t.join()
+
+        if out_to_screen and spinner:
+            print(o_buf)
+
+        return p.returncode, o_buf
 
 
 def clean():
