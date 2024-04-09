@@ -206,9 +206,12 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False, unix=Fa
         r_beg = False
         newline = False
         last_line_len = 0
+        o_char_seen = False
+        e_char_seen = False
         while p.poll() is None:
             o_char = p.stdout.read(1)
             while o_char != b'':
+                o_char_seen = True
                 output_buffer += o_char
                 if out_to_screen and not spinner and cmpl:
                     if o_char == b'\n':
@@ -263,6 +266,7 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False, unix=Fa
 
             e_char = p.stderr.read(1)
             while e_char != b'':
+                e_char_seen = True
                 if out_to_screen and not spinner:
                     try:
                         sys.stderr.write(e_char.decode('utf-8'))
@@ -275,7 +279,7 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False, unix=Fa
             if output_buffer.endswith(prompt):
                 break
 
-            if not e_char and not o_char:
+            if not e_char_seen and not o_char_seen:
                 break
 
         return output_buffer
