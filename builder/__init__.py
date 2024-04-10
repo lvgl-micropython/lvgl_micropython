@@ -186,142 +186,97 @@ def _busy_spinner(evnt):
             wait = random.randint(10, 100) * 0.001
 
 
-def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False, unix=False):
+def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
     if env is None:
         env = os.environ
-
-    if sys.platform.startswith('win'):
-        prompt = b'>'
-    else:
-        prompt = b'$'
 
     if isinstance(cmd_[0], str):
         cmd_ = ' '.join(cmd_)
     else:
         cmd_ = ' && '.join(' '.join(c) for c in cmd_)
 
-    def read():
-        output_buffer = b''
-        line = ''
-        r_beg = False
-        newline = False
-        last_line_len = 0
-        while p.poll() is None:
-            o_char = p.stdout.read(1)
-            while o_char != b'':
-                output_buffer += o_char
-                if out_to_screen and not spinner and cmpl:
-                    if o_char == b'\n':
-                        newline = True
-                        o_char = p.stdout.read(1)
-                        continue
-                    elif o_char == b'[':
-                        if newline:
-                            if r_beg:
-                                sys.stdout.write('\r')
-                                sys.stdout.write(' ' * last_line_len)
-                                sys.stdout.write('\r')
-                                sys.stdout.flush()
-                            else:
-                                sys.stdout.write('\n')
-                                sys.stdout.flush()
-                                r_beg = True
+    p = subprocess.Popen(
+        cmd_,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        shell=True,
+        env=env
+    )
 
-                            last_line_len = 0
-                            newline = False
+    os.set_blocking(p.stdout.fileno(), False)
+    os.set_blocking(p.stderr.fileno(), False)
 
-                        else:
-                            r_beg = False
+    event = threading.Event()
 
-                    if newline:
-                        last_line_len = 0
-                        newline = False
-                        sys.stdout.write('\n')
-                        sys.stdout.flush()
-                        r_beg = False
-
-                    last_line_len += 1
-                    try:
-                        sys.stdout.write(o_char.decode('utf-8'))
-                    except UnicodeDecodeError:
-                        sys.stdout.write(str(o_char)[2:-1])
-                    sys.stdout.flush()
-
-                elif out_to_screen and not cmpl:
-                    try:
-                        line += o_char.decode('utf-8')
-                    except UnicodeDecodeError:
-                        line += str(o_char)[2:-1]
-
-                    if o_char == b'\n':
-                        sys.stdout.write(line)
-                        line = ''
-                        sys.stdout.flush()
-
-                # output_buffer += o_char
-                o_char = p.stdout.read(1)
-
-            e_char = p.stderr.read(1)
-            while e_char != b'':
-                if out_to_screen and not spinner:
-                    try:
-                        sys.stderr.write(e_char.decode('utf-8'))
-                    except UnicodeDecodeError:
-                        sys.stderr.write(str(o_char)[2:-1])
-                    sys.stderr.flush()
-                output_buffer += e_char
-                e_char = p.stderr.read(1)
-
-            if output_buffer.endswith(prompt):
-                break
-
-            if not e_char and not o_char:
-                break
-
-        return output_buffer
-
-    if unix:
-        p = subprocess.Popen(
-            cmd_,
-            shell=True,
-            env=env
-        )
-        p.communicate()
-
-        return p.returncode, None
+    if spinner:
+        t = threading.Thread(target=_busy_spinner, args=(event,))
+        t.daemon = True
+        t.start()
     else:
-        p = subprocess.Popen(
-            cmd_,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            shell=True,
-            env=env
-        )
+        t = None
 
-        if out_to_screen:
-            print(cmd_)
+    output_buffer = []
+    last_line_len = -1
 
-        event = threading.Event()
-
-        if spinner:
-            t = threading.Thread(target=_busy_spinner, args=(event,))
-            t.daemon = True
-            t.start()
-        else:
-            t = None
-
-        o_buf = read()
-
+    def _convert_line(lne):
         try:
-            o_buf = o_buf.decode('utf-8')
+            lne = lne.decode('utf-8')
         except UnicodeDecodeError:
-            for char in o_buf:
+            for char in lne:
                 if 32 <= char <= 125 or char in (b'\r', b'\n'):
                     continue
 
-                o_buf = o_buf.replace(char, b'')
+                lne = lne.replace(char, b'')
+            lne = lne.decode('utf-8')
 
-            o_buf = o_buf.decode('utf-8')
+        return lne
+
+    try:
+        while p.poll() is None:
+            line = p.stdout.readline()
+            if line is not None and line.strip():
+                line = _convert_line(line.strip())
+                output_buffer.append(line)
+
+                if not spinner and out_to_screen:
+                    if cmpl and line.startswith('[') and last_line_len != -1:
+                        sys.stdout.write('\r')
+                        if len(line) < last_line_len:
+                            padding = ' ' * (last_line_len - len(line))
+                        else:
+                            padding = ''
+
+                        sys.stdout.write(line + padding)
+                        last_line_len = len(line)
+                    else:
+                        last_line_len = -1
+                        sys.stdout.write(line + '\n')
+
+                    sys.stdout.flush()
+
+            line = p.stderr.readline()
+            while line is not None and line.strip():
+                if not spinner and out_to_screen and cmpl and last_line_len != -1:
+                    sys.stdout.write('\n')
+                    sys.stdout.flush()
+                    last_line_len = -1
+
+                line = _convert_line(line.strip())
+                output_buffer.append(line)
+
+                if out_to_screen and not spinner:
+                    sys.stderr.write(line + '\n')
+                    sys.stderr.flush()
+
+                line = p.stderr.readline()
+
+    except KeyboardInterrupt:
+        if t is not None:
+            event.set()
+            t.join()
+
+        print()
+        print(output_buffer)
 
         if not p.stdout.closed:
             p.stdout.close()
@@ -329,14 +284,28 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False, unix=Fa
         if not p.stderr.closed:
             p.stderr.close()
 
-        if t is not None:
-            event.set()
-            t.join()
+        raise
 
-        if out_to_screen and spinner:
-            print(o_buf)
+    if not p.stdout.closed:
+        p.stdout.close()
 
-        return p.returncode, o_buf
+    if not p.stderr.closed:
+        p.stderr.close()
+
+    if t is not None:
+        event.set()
+        t.join()
+
+    output_buffer = '\n'.join(output_buffer)
+
+    if out_to_screen:
+        if spinner:
+            print(output_buffer)
+        elif cmpl and last_line_len != -1:
+            sys.stdout.write('\n')
+            sys.stdout.flush()
+
+    return p.returncode, output_buffer
 
 
 def clean():
