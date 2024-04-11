@@ -113,9 +113,7 @@
         mp_lcd_spi_bus_obj_t *self = m_new_obj(mp_lcd_spi_bus_obj_t);
         self->base.type = &mp_lcd_spi_bus_type;
 
-        #if !defined(mp_hal_pin_output) && !defined(IDF_VER)
-            mp_raise_msg(&mp_type_NotImplementedError, MP_ERROR_TEXT("LCD SPI but is not available for this MCU"));
-        #else
+        #if !defined(IDF_VER)
             self->callback = mp_const_none;
 
             mp_obj_base_t *spi;
@@ -185,7 +183,7 @@
             self->panel_io_handle.get_lane_count = s_spi_get_lane_count;
 
             self->panel_io_config.spi_transfer = ((mp_machine_spi_p_t *)MP_OBJ_TYPE_GET_SLOT(spi->type, protocol))->transfer;
-        #endif /* !defined(mp_hal_pin_output) && !defined(IDF_VER) */
+        #endif /* !defined(IDF_VER) */
 
         return MP_OBJ_FROM_PTR(self);
     }
