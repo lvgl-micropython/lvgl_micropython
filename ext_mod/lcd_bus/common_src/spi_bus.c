@@ -41,7 +41,7 @@
 
     /* forward declarations */
     mp_lcd_err_t s_spi_del(mp_obj_t obj);
-    mp_lcd_err_t s_spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size);
+    mp_lcd_err_t s_spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap);
     mp_lcd_err_t s_spi_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
     mp_lcd_err_t s_spi_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
     mp_lcd_err_t s_spi_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
@@ -196,8 +196,9 @@
     }
 
 
-    mp_lcd_err_t s_spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size)
+    mp_lcd_err_t s_spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap)
     {
+        LCD_UNUSED(rgb565_byte_swap);
         mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
 
         if (self->panel_io_config.lcd_cmd_bits == 16) {

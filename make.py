@@ -13,7 +13,7 @@ argParser.add_argument(
     'target',
     help='build target',
     choices=[
-        'esp32', 'windows', 'stm32', 'unix', 'rp2'
+        'esp32', 'windows', 'stm32', 'unix', 'rp2',
         'renesas-ra', 'nrf', 'mimxrt', 'samd'
     ],
     action='store',
