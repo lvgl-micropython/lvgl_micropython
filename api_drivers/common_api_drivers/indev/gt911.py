@@ -84,7 +84,7 @@ class GT911(pointer_framework.PointerDriver):
         self._i2c.read_mem(_VENDOR_ID_REG, buf=self._mv[:1])
         print(f'Touch Vendor id: 0x{hex(self._buf[0])[2:].upper()}')
         x, y = self.hw_size
-        print(f'Touch resolution: x={x}, y={y}')
+        print(f'Touch resolution: width={x}, height={y}')
 
     @property
     def hw_size(self):
