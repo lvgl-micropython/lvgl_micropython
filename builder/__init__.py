@@ -85,6 +85,14 @@ def generate_manifest(script_dir, lvgl_api, manifest_path, displays, indevs, fro
 
             file = tmp_file
 
+        directory, file_name = os.path.split(file)
+        extension_file = file_name.rsplit('.')[0] + '_extension.py'
+        extension = os.path.join(directory, extension_file)
+        if os.path.exists(extension):
+            print(extension_file)
+            entry = f"freeze('{directory}', '{extension_file}')"
+            manifest_files.append(entry)
+
         print(file)
         file_path, file_name = os.path.split(file)
         entry = f"freeze('{file_path}', '{file_name}')"
