@@ -38,6 +38,10 @@ class GT911(pointer_framework.PointerDriver):
         self._i2c_bus = i2c_bus
         self._i2c = i2c_bus.add_device(_ADDR1, 16)
 
+        self.__x = 0
+        self.__y = 0
+        self.__last_state = self.RELEASED
+
         if isinstance(reset_pin, int):
             reset_pin = machine.Pin(reset_pin, machine.Pin.OUT)
 
@@ -123,4 +127,13 @@ class GT911(pointer_framework.PointerDriver):
             self._buf[0] = 0x00
             self._i2c.write_mem(_STATUS_REG, buf=self._mv[:1])
 
+            self.__x = x
+            self.__y = y
+            self.__last_state = self.PRESSED
+
             return self.PRESSED, x, y
+
+        elif touch_cnt > 1 and self.__last_state == self.PRESSED:
+            return self.PRESSED, self.__x, self.__y
+
+        self.__last_state = self.RELEASED
