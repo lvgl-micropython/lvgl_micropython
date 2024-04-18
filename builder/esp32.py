@@ -187,10 +187,10 @@ def parse_args(extra_args, lv_cflags, brd):
 
     board_variant = esp_args.board_variant
 
-    if lv_cflags is None:
-        lv_cflags = '-DLV_KCONFIG_IGNORE=1'
-    else:
+    if lv_cflags:
         lv_cflags += ' -DLV_KCONFIG_IGNORE=1'
+    else:
+        lv_cflags = '-DLV_KCONFIG_IGNORE=1'
 
     return extra_args, lv_cflags, board
 

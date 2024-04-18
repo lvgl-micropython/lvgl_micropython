@@ -9,8 +9,14 @@
     #define SDL_MAIN_HANDLED /*To fix SDL's "undefined reference to WinMain" issue*/
 
     #ifdef MP_PORT_UNIX
-        #include <SDL2/SDL.h>
-        #include <SDL2/SDL_thread.h>
+        #include <SDL.h>
+        #include <SDL_thread.h>
+
+        typedef struct {
+            int32_t x;
+            int32_t y;
+            uint8_t state;
+        } pointer_event_t;
 
         typedef struct _panel_io_config_t {
             uint16_t width;
@@ -20,7 +26,7 @@
             void *buf_to_flush;
             SDL_Thread *thread;
             uint8_t bytes_per_pixel;
-            SDL_sem *sem;
+            SDL_mutex *mutex;
             int flags;
         } panel_io_config_t;
 
@@ -42,20 +48,14 @@
             SDL_Renderer *renderer;
             SDL_Texture *texture;
 
-            mp_obj_t controller_axis_motion_cb;
-            mp_obj_t controller_button_cb;
-            mp_obj_t touch_cb;
-            mp_obj_t keypad_cb;
-            mp_obj_t joystick_axis_motion_cb;
-            mp_obj_t joystick_ball_motion_cb;
-            mp_obj_t joystick_hat_motion_cb;
-            mp_obj_t joystick_button_cb;
-            mp_obj_t mouse_motion_cb;
-            mp_obj_t mouse_button_cb;
-            mp_obj_t mouse_wheel_cb;
-            mp_obj_t window_cb;
+            pointer_event_t pointer_event;
+            mp_obj_t keypad_callback;
+            mp_obj_t window_callback;
+            mp_obj_t mouse_callback;
+            mp_obj_t quit_callback;
 
             bool ignore_size_chg;
+            bool inited;
 
         } mp_lcd_sdl_bus_obj_t;
 

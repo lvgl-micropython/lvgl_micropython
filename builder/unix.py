@@ -3,6 +3,7 @@ import sys
 from . import spawn
 from . import generate_manifest
 from . import update_mphalport
+from argparse import ArgumentParser
 
 
 mpy_cross_cmd = []
@@ -16,9 +17,29 @@ unix_cmd = [
 
 compile_cmd = []
 submodules_cmd = []
+heap_size = 4194304
 
 
 def parse_args(extra_args, lv_cflags, board):
+    global heap_size
+    unix_argParser = ArgumentParser(prefix_chars='-')
+
+    unix_argParser.add_argument(
+        '--heap-size',
+        dest='heap_size',
+        help="heap size to use in bytes. Default is 4mb (4,194,304 bytes). "
+             "Must be more than 100k (102,104 bytes)",
+        default=4194304,
+        type=int,
+        action='store'
+    )
+    unix_args, extra_args = unix_argParser.parse_known_args(extra_args)
+
+    if unix_args.heap_size < 102400:
+        raise RuntimeError('heap size is too low, must be >= 102,104 bytes')
+
+    heap_size = unix_args.heap_size
+
     return extra_args, lv_cflags, board
 
 
@@ -28,11 +49,6 @@ variant = None
 def build_commands(_, extra_args, script_dir, lv_cflags, board):
     global variant
     variant = board
-
-    if lv_cflags is not None:
-        lv_cflags += ' -DMICROPY_SDL=1'
-    else:
-        lv_cflags = '-DMICROPY_SDL=1'
 
     unix_cmd.append(f'{script_dir}/lib/micropython/ports/unix')
 
@@ -68,81 +84,51 @@ def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manife
 
 
 def clean():
+    if os.path.exists('lib/SDL/build'):
+        import shutil
+        shutil.rmtree('lib/SDL/build')
+
     spawn(clean_cmd)
 
 
+def _run(c, spinner=False, cmpl=False):
+    res, _ = spawn(c, spinner=spinner, cmpl=cmpl)
+    if res != 0:
+        sys.exit(res)
+
+
 def build_sdl():
-    cmd_ = [
-        'git',
-        'submodule',
-        'update',
-        '--init',
-        '--',
-        f'lib/SDL'
-    ]
-
-    result, _ = spawn(cmd_, spinner=True)
-    if result != 0:
-        sys.exit(result)
-
-    def _run(c):
-        res, _ = spawn(c)
-        if res != 0:
-            sys.exit(result)
-
-    cmd_ = ['cd lib/SDL && git checkout release-2.30.x']
-    _run(cmd_)
-
     cmd_ = ['cd lib/SDL && mkdir build']
-    _run(cmd_)
-
-    cmd_ = [' '.join([
-        'apt-get --yes install'
-        'cmake',
-        'ninja-build',
-        'gnome-desktop-testing',
-        'libasound2-dev',
-        'libpulse-dev',
-        'libaudio-dev',
-        'libjack-dev',
-        'libsndio-dev',
-        'libx11-dev',
-        'libxext-dev',
-        'libxrandr-dev',
-        'libxcursor-dev',
-        'libxfixes-dev',
-        'libxi-dev',
-        'libxss-dev',
-        'libxkbcommon-dev',
-        'libdrm-dev',
-        'libgbm-dev',
-        'libgl1-mesa-dev',
-        'libgles2-mesa-dev',
-        'libegl1-mesa-dev',
-        'libdbus-1-dev',
-        'libibus-1.0-dev',
-        'libudev-dev',
-        'fcitx-libs-dev',
-        'libpipewire-0.3-dev',
-        'libwayland-dev',
-        'libdecor-0-dev'
-    ])]
     _run(cmd_)
 
     cmd_ = [
         'cd lib/SDL/build &&'
-        'cmake .. -DCMAKE_BUILD_TYPE=Release &&'
-        'cmake --build . --config Release --parallel'
+        f'cmake .. -DCMAKE_BUILD_TYPE=Release &&'
+        f'cmake --build . --config Release --parallel {os.cpu_count()}'
     ]
-    _run(cmd_)
+
+    res, _ = spawn(cmd_, cmpl=True)
+    if res != 0:
+        sys.exit(res)
 
 
 def submodules():
     if not sys.platform.startswith('linux'):
         raise RuntimeError('Compiling for unix can only be done from Linux')
 
-    if not os.path.exists('lib/SDL/src'):
-        build_sdl()
+    if not os.path.exists('lib/SDL/include'):
+        cmd_ = [
+            'git',
+            'submodule',
+            'update',
+            '--init',
+            '--',
+            f'lib/SDL'
+        ]
+        _run(cmd_)
+
+    cmd_ = ['cd lib/SDL && git checkout  release-2.30.2']
+    _run(cmd_)
 
     return_code, _ = spawn(submodules_cmd)
     if return_code != 0:
@@ -150,6 +136,19 @@ def submodules():
 
 
 def compile():  # NOQA
+    main_path = 'lib/micropython/ports/unix/main.c'
+
+    with open(main_path, 'rb') as f:
+        main = f.read().decode('utf-8').split('\n')
+
+    for i, line in enumerate(main):
+        if line.startswith('long heap_size ='):
+            main[i] = f'long heap_size = {heap_size};'
+            break
+
+    with open(main_path, 'wb') as f:
+        f.write('\n'.join(main).encode('utf-8'))
+
     mpconfigvariant_common_path = (
         'lib/micropython/ports/unix/variants/mpconfigvariant_common.h'
     )
@@ -178,6 +177,8 @@ def compile():  # NOQA
         with open(mpconfigvariant_common_path, 'w') as f:
             f.write(mpconfigvariant_common)
 
+    build_sdl()
+
     return_code, _ = spawn(compile_cmd)
     if return_code != 0:
         sys.exit(return_code)
@@ -186,27 +187,29 @@ def compile():  # NOQA
 
     if variant is None:
         variant = 'build-standard'
+    else:
+        variant = f'build-{variant}'
+
+    import shutil
 
     src = 'lib/SDL/build'
     dst = f'lib/micropython/ports/unix/{variant}'
 
-    import shutil
-
-    def _iter_path(s):
-        for file_name in os.listdir():
-            file = os.path.join(s, file_name)
-            if os.path.isdir(file):
-                _iter_path(file)
-            elif not file_name.endswith('.so'):
-                continue
-
-            d = os.path.join(dst, file_name)
-            print('copying file:', file, '--->', d)
-            shutil.copyfile(file, d)
-
-    _iter_path(src)
+    for file_name in os.listdir(src):
+        src_file = os.path.join(src, file_name)
+        dst_file = os.path.join(dst, file_name)
+        if os.path.isfile(src_file):
+            if '.so' in file_name:
+                shutil.copyfile(src_file, dst_file)
+            elif file_name.endswith('.a'):
+                shutil.copyfile(src_file, dst_file)
 
 
 def mpy_cross():
-    pass
+    _cmd = [
+        'make -C lib/micropython/mpy-cross'
+    ]
 
+    res, _ = spawn(_cmd)
+    if res:
+        sys.exit(res)

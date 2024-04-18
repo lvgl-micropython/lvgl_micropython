@@ -1,23 +1,15 @@
-from typing import Optional, ClassVar
-from typing import TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
+import _indev_base
 
 if TYPE_CHECKING:
-    import lvgl as lv  # NOQA
-    import display_driver_framework
+    import lvgl as _lv
 
 
-class ButtonDriver:
-    _instance_counter: ClassVar[int] = ...
-    id: int = ...
-    _disp_drv: lv.display_driver_t = ...
-    _py_disp_drv: display_driver_framework.DisplayDriver
+class ButtonDriver(_indev_base.IndevBase):
     _last_button: int = ...
-    _current_state: int = ...
-    _indev_drv: lv.indev_t = ...
 
-
-    def set_button_points(self, *points) -> None:
+    def set_button_points(self, *points: list[_lv.point_t]) -> None:
         """
         :param points: this is a varargs (*args) parameter.
                Example of use:
@@ -52,84 +44,5 @@ class ButtonDriver:
         """
         ...
 
-    def _read(self, drv, data) -> bool:  # NOQA
-        ...
-
-    def get_type(self) -> int:
-        ...
-
-    def read(self) -> None:
-        ...
-
-    def send_event(self, code, param):
-        ...
-
-    def remove_event(self, index):
-       ...
-
-    def get_event_dsc(self, index):
-        ...
-
-    def get_event_count(self):
-        ...
-
-    def add_event_cb(self, event_cb, filter, user_data):
-        ...
-
-    def search_obj(self, point):
-        ...
-
-    def delete_read_timer(self):
-        ...
-
-    def get_read_timer(self):
-        ...
-
-    def get_active_obj(self):
-        ...
-
-    def wait_release(self):
-        ...
-
-    def get_vect(self, point):
-        ...
-
-    def get_scroll_obj(self):
-        ...
-
-    def get_scroll_dir(self):
-        ...
-
-    def get_gesture_dir(self):
-        ...
-
-    def get_point(self, point):
-        ...
-
-    def get_state(self):
-        ...
-
-    def enable(self, en):
-        ...
-
-    def get_group(self):
-        ...
-
-    def set_group(self, group):
-        ...
-
-    def set_cursor(self, cur_obj):
-        ...
-
     def reset_long_press(self):
-        ...
-
-    def reset(self, obj):
-        ...
-
-    def get_disp(self):
-        ...
-
-    @staticmethod
-    def active():
         ...

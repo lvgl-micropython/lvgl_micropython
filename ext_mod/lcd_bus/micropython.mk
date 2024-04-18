@@ -3,7 +3,7 @@
 # lcd_bus build rules
 
 MOD_DIR := $(USERMOD_DIR)
-$(info    running $(MOD_DIR)/micropython.mk)
+LVGL_BINDING_DIR = $(subst /ext_mod/lcd_bus,,$(MOD_DIR))
 
 CFLAGS_USERMOD += $(LCD_BUS_CFLAGS)
 CFLAGS_USERMOD += -I$(MOD_DIR)
@@ -13,17 +13,15 @@ CFLAGS_USERMOD += -Wno-missing-field-initializers
 
 ifneq (,$(findstring unix, $(LV_PORT)))
     CFLAGS_USERMOD += -DMP_PORT_UNIX=1
-    CFLAGS_USERMOD += -I/usr/include
-
-endif
-
-ifneq (,$(findstring MICROPY_SDL=1, $(LV_CFLAGS)))
+    CFLAGS_USERMOD += -I$(LVGL_BINDING_DIR)/lib/SDL/build/include/SDL2
+    CFLAGS_USERMOD += -I$(LVGL_BINDING_DIR)/lib/SDL/build/include-config-release/SDL2
+    LDFLAGS_USERMOD += -L$(LVGL_BINDING_DIR)/lib/SDL/build
     LDFLAGS_USERMOD += -lSDL2
-    LDFLAGS_USERMOD += -lSDL2main
-
+    # CFLAGS_USERMOD += -Wl,--enable-new-dtags
+    CFLAGS_USERMOD += -lSDL2
+    CFLAGS_USERMOD += -L$(LVGL_BINDING_DIR)/lib/SDL/build
+    CFLAGS_USERMOD += -Wl,-rpath='${ORIGIN}'
 endif
-
-$(info    CFLAGS_USERMOD $(CFLAGS_USERMOD))
 
 SRC_USERMOD_C += $(MOD_DIR)/modlcd_bus.c
 SRC_USERMOD_C += $(MOD_DIR)/lcd_types.c

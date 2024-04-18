@@ -142,86 +142,30 @@ class SDLBus:
     def deinit(self) -> None:
         ...
 
-    def register_controller_axis_motion_callback(
+    def register_mouse_callback(
         self,
-        callback: Callable[[dict], None],
-        /
-    ) -> None:
-        ...
-
-    def register_controller_button_callback(
-        self,
-        callback: Callable[[dict], None],
-        /
-    ) -> None:
-        ...
-
-    def register_touch_callback(
-        self,
-        callback: Callable[[dict], None],
-        /
-    ) -> None:
-        ...
-
-    def register_keypad_callback(
-        self,
-        callback: Callable[[dict], None],
-        /
-    ) -> None:
-        ...
-
-    def register_joystick_axis_motion_callback(
-        self,
-        callback: Callable[[dict], None],
-        /
-    ) -> None:
-        ...
-
-    def joystick_ball_motion_callback(
-        self,
-        callback: Callable[[dict], None],
-        /
-    ) -> None:
-        ...
-
-    def register_joystick_hat_motion_callback(
-        self,
-        callback: Callable[[dict], None],
-        /
-    ) -> None:
-        ...
-
-    def register_joystick_button_callback(
-        self,
-        callback: Callable[[dict], None],
-        /
-    ) -> None:
-        ...
-
-    def register_mouse_motion_callback(
-        self,
-        callback: Callable[[dict], None],
-        /
-    ) -> None:
-        ...
-
-    def register_mouse_button_callback(
-        self,
-        callback: Callable[[dict], None],
-        /
-    ) -> None:
-        ...
-
-    def register_mouse_wheel_callback(
-        self,
-        callback: Callable[[dict], None],
+        callback: Callable[[list], None],
         /
     ) -> None:
         ...
 
     def register_window_callback(
         self,
-        callback: Callable[[dict], None],
+        callback: Callable[[list], None],
+        /
+    ) -> None:
+        ...
+
+    def register_keypad_callback(
+        self,
+        callback: Callable[[list], None],
+        /
+    ) -> None:
+        ...
+
+    def register_quit_callback(
+        self,
+        callback: Callable[[], None],
         /
     ) -> None:
         ...

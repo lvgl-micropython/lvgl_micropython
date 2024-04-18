@@ -1,9 +1,9 @@
 import lvgl as lv  # NOQA
-import micropython
+import micropython  # NOQA
 import sys
 
 try:
-    from machine import Timer
+    from machine import Timer  # NOQA
 except:
     try:
         from lv_timer import Timer  # NOQA
@@ -35,9 +35,7 @@ class TaskHandler(object):
     ):
         if TaskHandler._current_instance is not None:
             self.__dict__.update(TaskHandler._current_instance.__dict__)
-
         else:
-
             if not lv.is_initialized():
                 lv.init()
 

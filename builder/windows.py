@@ -49,7 +49,7 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
             f'LV_PORT=windows',
         ])
 
-    if lv_cflags is not None:
+    if lv_cflags:
         clean_cmd.append(f'LV_CFLAGS="{lv_cflags}"')
         compile_cmd.append(f'LV_CFLAGS="{lv_cflags}"')
 

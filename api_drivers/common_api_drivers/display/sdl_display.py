@@ -1,6 +1,7 @@
 import lvgl as lv  # NOQA
 import display_driver_framework
-from micropython import const
+from micropython import const  # NOQA
+import micropython  # NOQA
 
 # Window has been shown
 _SDL_WINDOWEVENT_SHOWN = const(1)
@@ -35,44 +36,34 @@ _SDL_WINDOWEVENT_CLOSE = const(14)
 # Window is being offered a focus (should SetWindowInputFocus()
 # on itself or a subwindow, or ignore)
 _SDL_WINDOWEVENT_TAKE_FOCUS = const(15)
+# Window had a hit test that wasn't SDL_HITTEST_NORMAL
+_SDL_WINDOWEVENT_HIT_TEST = const(16)
+# The ICC profile of the window's display has changed.
+_SDL_WINDOWEVENT_ICCPROF_CHANGED = const(17)
 # Window has been moved to display data1.
-_SDL_WINDOWEVENT_DISPLAY_CHANGED = const(16)
+_SDL_WINDOWEVENT_DISPLAY_CHANGED = const(18)
+
 
 _SDL_PIXELFORMAT_RGB888 = const(0x16161804)
 _SDL_PIXELFORMAT_BGR24 = const(0x17401803)
 _SDL_PIXELFORMAT_RGB565 = const(0x15151002)
+_SDL_PIXELFORMAT_INDEX1MSB = const(0x11200100)
+_SDL_PIXELFORMAT_INDEX4MSB = const(0x12200400)
+_SDL_PIXELFORMAT_INDEX8 = const(0x13000801)
+_SDL_PIXELFORMAT_RGB24 = const(0x17101803)
+_SDL_PIXELFORMAT_ARGB8888 = const(0x16362004)
+_SDL_PIXELFORMAT_XRGB8888 = const(0x16161804)
+_SDL_PIXELFORMAT_RGBA8888 = const(0x16462004)
+_SDL_PIXELFORMAT_IYUV = const(0x56555949)
+_SDL_PIXELFORMAT_NV21 = const(0x3132564e)
+_SDL_PIXELFORMAT_NV12 = const(0x3231564e)
+_SDL_PIXELFORMAT_YUY2 = const(0x32595559)
+_SDL_PIXELFORMAT_UYVY = const(0x59565955)
+
+_active_event_poll = False
 
 
-
-'''
-SDL_WINDOWEVENT = 0x200
-
-SDL_KEYDOWN = 0x300
-SDL_KEYUP = 0x301
-
-
-SDL_MOUSEMOTION = 0x400
-SDL_MOUSEBUTTONDOWN = 0x401
-SDL_MOUSEBUTTONUP = 0x402
-SDL_MOUSEWHEEL = 0x403
-
-
-SDL_JOYAXISMOTION = 0x600
-SDL_JOYBALLMOTION = 0x601
-SDL_JOYHATMOTION = 0x602
-SDL_JOYBUTTONDOWN = 0x603
-SDL_JOYBUTTONUP = 0x604
-    
-
-    
-
-    
-    
-SDL_RELEASED = 0
-SDL_PRESSED = 1
-
-'''
-class SDL(display_driver_framework.DisplayDriver):
+class SDLDisplay(display_driver_framework.DisplayDriver):
 
     def __init__(
         self,
@@ -81,17 +72,17 @@ class SDL(display_driver_framework.DisplayDriver):
         display_height,
         frame_buffer1=None,
         frame_buffer2=None,
-        reset_pin=None,
-        reset_state=display_driver_framework.STATE_HIGH,
-        power_pin=None,
-        power_on_state=display_driver_framework.STATE_HIGH,
-        backlight_pin=None,
-        backlight_on_state=display_driver_framework.STATE_HIGH,
+        reset_pin=None,  # NOQA
+        reset_state=display_driver_framework.STATE_HIGH,  # NOQA
+        power_pin=None,  # NOQA
+        power_on_state=display_driver_framework.STATE_HIGH,  # NOQA
+        backlight_pin=None,  # NOQA
+        backlight_on_state=display_driver_framework.STATE_HIGH,  # NOQA
         offset_x=0,
         offset_y=0,
-        color_byte_order=display_driver_framework.BYTE_ORDER_RGB,
+        color_byte_order=display_driver_framework.BYTE_ORDER_RGB,  # NOQA
         color_space=lv.COLOR_FORMAT.RGB888,
-        rgb565_byte_swap=False
+        rgb565_byte_swap=False  # NOQA
     ):
         super().__init__(
             data_bus=None,
@@ -114,21 +105,21 @@ class SDL(display_driver_framework.DisplayDriver):
 
         self._data_bus = data_bus
 
-        try:
-            import task_handler  # NOQA
-
-            self._task_handler = task_handler.TaskHandler()
-
-        except ImportError:
-            self._task_handler = None
-
         buffer_size = lv.color_format_get_size(color_space)
         buffer_size *= display_width * display_height
 
         if frame_buffer1 is None:
             frame_buffer1 = data_bus.allocate_framebuffer(buffer_size, 0)
-        if frame_buffer2 is None:
-            frame_buffer2 = data_bus.allocate_framebuffer(buffer_size, 0)
+
+            if frame_buffer2 is None:
+                frame_buffer2 = data_bus.allocate_framebuffer(buffer_size, 0)
+        else:
+            if buffer_size != len(frame_buffer1):
+                raise RuntimeError('frame buffer is not large enough')
+
+        if frame_buffer2 is not None:
+            if len(frame_buffer1) != len(frame_buffer2):
+                raise RuntimeError('Frame buffer sizes are not equal.')
 
         self._frame_buffer1 = frame_buffer1
         self._frame_buffer2 = frame_buffer2
@@ -138,11 +129,33 @@ class SDL(display_driver_framework.DisplayDriver):
         self._disp_drv.set_color_format(color_space)
         self._disp_drv.set_driver_data(self)
 
+        mapping = {
+            lv.COLOR_FORMAT.I1: _SDL_PIXELFORMAT_INDEX1MSB,
+            lv.COLOR_FORMAT.I4: _SDL_PIXELFORMAT_INDEX4MSB,
+            lv.COLOR_FORMAT.I8: _SDL_PIXELFORMAT_INDEX8,
+            lv.COLOR_FORMAT.RGB565: _SDL_PIXELFORMAT_RGB565,
+            lv.COLOR_FORMAT.RGB888: _SDL_PIXELFORMAT_RGB24,
+            lv.COLOR_FORMAT.ARGB8888: _SDL_PIXELFORMAT_ARGB8888,
+            lv.COLOR_FORMAT.XRGB8888: _SDL_PIXELFORMAT_RGB888,
+            lv.COLOR_FORMAT.I420: _SDL_PIXELFORMAT_IYUV,
+            lv.COLOR_FORMAT.NV21: _SDL_PIXELFORMAT_NV21,
+            lv.COLOR_FORMAT.NV12: _SDL_PIXELFORMAT_NV12,
+            lv.COLOR_FORMAT.YUY2: _SDL_PIXELFORMAT_YUY2,
+            lv.COLOR_FORMAT.UYVY: _SDL_PIXELFORMAT_UYVY,
+            lv.COLOR_FORMAT.RAW: _SDL_PIXELFORMAT_RGB24,
+            lv.COLOR_FORMAT.RAW_ALPHA: _SDL_PIXELFORMAT_RGBA8888
+        }
+
+        cf = self._cf = mapping.get(color_space, None)
+
+        if cf is None:
+            raise RuntimeError('Color format is not supported')
+
         data_bus.init(
             display_width,
             display_height,
             lv.color_format_get_size(color_space) * 8,
-            buffer_size,
+            cf,
             False
         )
 
@@ -159,46 +172,50 @@ class SDL(display_driver_framework.DisplayDriver):
 
         data_bus.register_callback(self._flush_ready_cb)
 
-        self._data_bus.register_window_callback(self._windows_event_cb)
-        self._disp_drv.add_event_cb(self._res_chg_event_cb, lv.EVENT.RESOLUTION_CHANGED, None)
-        self._disp_drv.add_event_cb(self._release_disp_cb, lv.EVENT.DELETE)
+        data_bus.register_quit_callback(self._quit_cb)
+        data_bus.register_window_callback(self._windows_event_cb)
 
-    def _res_chg_event_cb(self, e):
-        bpp = lv.color_format_get_size(self._disp_drv.get_color_format()) * 8
-        disp = e.get.current_target()
+        self._disp_drv.add_event_cb(
+            self._res_chg_event_cb, lv.EVENT.RESOLUTION_CHANGED, None)
+        self._disp_drv.add_event_cb(
+            self._release_disp_cb, lv.EVENT.DELETE, None)
 
-        hor_res = disp.get_horizontal_resolution()
-        ver_res = disp.get_vertical_resolution()
+        global _active_event_poll
 
-        if bpp == 32:
-            px_format = _SDL_PIXELFORMAT_RGB888
-        elif bpp == 24:
-            px_format = _SDL_PIXELFORMAT_BGR24
-        elif bpp == 16:
-            px_format = _SDL_PIXELFORMAT_RGB565
-        else:
-            return
+        if not _active_event_poll:
+            _active_event_poll = True
+            self._timer = lv.timer_create(self._timer_cb, 5, None)
+            self._timer.set_repeat_count(-1)
 
-        buf_size = int(hor_res * ver_res * bpp / 8)
+    def _timer_cb(self, _):
+        self._data_bus.poll_events()
+
+    def _quit_cb(self):
+        self._disp_drv.delete()
+
+    def _res_chg_event_cb(self, _):
+        bpp = lv.color_format_get_size(self._disp_drv.get_color_format())
+
+        hor_res = self._disp_drv.get_horizontal_resolution()
+        ver_res = self._disp_drv.get_vertical_resolution()
+
+        buf_size = int(hor_res * ver_res * bpp)
 
         self._frame_buffer1 = self._data_bus.realloc_buffer(buf_size, 1)
         self._frame_buffer2 = self._data_bus.realloc_buffer(buf_size, 2)
 
-        disp.set_buffers(
+        self._disp_drv.set_buffers(
             self._frame_buffer1,
             self._frame_buffer2,
             len(self._frame_buffer1),
             lv.DISPLAY_RENDER_MODE.DIRECT
         )
 
-        self._data_bus.set_window_size(hor_res, ver_res, px_format, self._ignore_size_chg)
+        self._data_bus.set_window_size(
+            hor_res, ver_res, self._cf, self._ignore_size_chg)
 
-    def _windows_event_cb(self, kwargs):
-        event = kwargs['event']
-
+    def _windows_event_cb(self, _, event, width, height):
         if event == _SDL_WINDOWEVENT_RESIZED:
-            width = kwargs['data1']
-            height = kwargs['data2']
             self._ignore_size_chg = True
             self._disp_drv.set_resolution(width, height)
             self._ignore_size_chg = False
@@ -209,6 +226,34 @@ class SDL(display_driver_framework.DisplayDriver):
             self._disp_drv.delete()
 
     def _release_disp_cb(self, _):
+        self._remove_timer()
+        self._data_bus.deinit()
+
+    def _remove_timer(self):
+        global _active_event_poll
+
+        try:
+            self._timer.pause()
+            self._timer.delete()
+            del self._timer
+            displays = self.get_displays()
+
+            if len(displays) == 1:
+                _active_event_poll = False
+            else:
+                disp = displays[0]
+                disp._timer = lv.timer_create(disp._timer_cb, 5, None)
+                disp._timer.set_repeat_count(-1)
+        except AttributeError:
+            pass
+
+    def __del__(self):
+        self._remove_timer()
+        self._displays.remove(self)
+
+        self._disp_drv.remove_event_cb_with_user_data(
+            self._release_disp_cb, None)
+        self._disp_drv.delete()
         self._data_bus.deinit()
 
     def set_offset(self, x, y):
@@ -227,7 +272,7 @@ class SDL(display_driver_framework.DisplayDriver):
     invert_colors = property(None, invert_colors)
 
     def set_rotation(self, value):
-        self._disp_drv.set_orientation(value)
+        self._disp_drv.set_rotation(value)
         self._rotation = value
 
     def init(self):
@@ -245,9 +290,6 @@ class SDL(display_driver_framework.DisplayDriver):
     def delete(self):
         self._disp_drv.delete()
 
-    def __del__(self):
-        self._disp_drv.delete()
-
     def reset(self):
         pass
 
@@ -260,15 +302,5 @@ class SDL(display_driver_framework.DisplayDriver):
     def _set_memory_location(self, x1, y1, x2, y2):
         return 0
 
-    def _flush_cb(self, _, area, color_p):
-        pass
-
-    def _flush_ready_cb(self):
-        pass
-
     def _madctl(self, colormode, rotations, rotation=None):
         return 0
-
-
-
-

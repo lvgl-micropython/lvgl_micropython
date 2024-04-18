@@ -52,11 +52,11 @@ submodules_cmd = []
 def build_commands(_, extra_args, __, lv_cflags, board):
     rp2_cmd.extend(extra_args)
 
-    if lv_cflags is not None:
+    if lv_cflags:
         rp2_cmd.insert(6, f'LV_CFLAGS="{lv_cflags}"')
 
     if board is not None:
-        if lv_cflags is not None:
+        if lv_cflags:
             rp2_cmd.insert(7, f'BOARD={board}')
             if board_variant:
                 rp2_cmd.insert(8, f'BOARD_VARIANT={board_variant}')

@@ -115,6 +115,10 @@ displays = args2.displays
 indevs = args2.indevs
 
 
+if lv_cflags is None:
+    lv_cflags = ''
+
+
 argParser = ArgumentParser(prefix_chars='-')
 argParser.add_argument(
     '--LVGL_API',

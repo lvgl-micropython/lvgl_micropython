@@ -164,11 +164,15 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
 #else
     bool bus_trans_done_cb(lcd_panel_io_t *panel_io, void *edata, void *user_ctx)
     {
+        LCD_UNUSED(edata);
+        LCD_UNUSED(panel_io);
+
         mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)user_ctx;
 
         if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
             mp_call_function_n_kw(self->callback, 0, 0, NULL);
         }
+
         self->trans_done = true;
         return false;
     }

@@ -1,30 +1,31 @@
-from micropython import const
+from micropython import const  # NOQA
 import lvgl as lv
-
+import micropython  # NQQA  # NOQA
 import keypad_framework
 
+
 KEY_UNKNOWN = 0
-KEY_BACKSPACE = 8  #            LV_KEY_BACKSPACE
-KEY_TAB = 9  #                  LV_KEY_NEXT
+KEY_BACKSPACE = 8  # LV_KEY_BACKSPACE
+KEY_TAB = 9  # LV_KEY_NEXT
 KEY_CLEAR = 12
-KEY_RETURN = 13  #              LV_KEY_ENTER
+KEY_RETURN = 13  # LV_KEY_ENTER
 KEY_PAUSE = 19  #
-KEY_ESCAPE = 27  #              LV_KEY_ESC
+KEY_ESCAPE = 27  # LV_KEY_ESC
 KEY_SPACE = 32  # " "
 KEY_EXCLAIM = 33  # !
 KEY_QUOTEDBL = 34  # "
 KEY_HASH = 35  # #
-KEY_DOLLAR = 36 # $
-KEY_AMPERSAND = 38 # &
-KEY_QUOTE = 39 # '
-KEY_LEFTPAREN = 40 # (
-KEY_RIGHTPAREN = 41 # )
-KEY_ASTERISK = 42 # *
-KEY_PLUS = 43 # +
-KEY_COMMA = 44 # ,
-KEY_MINUS = 45 # -
-KEY_PERIOD = 46 # .
-KEY_SLASH = 47 # /
+KEY_DOLLAR = 36  # $
+KEY_AMPERSAND = 38  # &
+KEY_QUOTE = 39  # '
+KEY_LEFTPAREN = 40  # (
+KEY_RIGHTPAREN = 41  # )
+KEY_ASTERISK = 42  # *
+KEY_PLUS = 43  # +
+KEY_COMMA = 44  # ,
+KEY_MINUS = 45  # -
+KEY_PERIOD = 46  # .
+KEY_SLASH = 47  # /
 
 KEY_0 = 48  # 0
 KEY_1 = 49  # 1
@@ -50,7 +51,7 @@ KEY_RIGHTBRACKET = 93  # ]
 KEY_CARET = 94  # |
 KEY_UNDERSCORE = 95  # _
 KEY_BACKQUOTE = 96  # `
-KEY_DELETE = 127  #             LV_KEY_DEL
+KEY_DELETE = 127  # LV_KEY_DEL
 
 # Numeric keypad
 # if MOD_KEY_NUM then it's numbers.
@@ -70,18 +71,18 @@ KEYPAD_DIVIDE = 267  # /
 KEYPAD_MULTIPLY = 268   # *
 KEYPAD_MINUS = 269  # -
 KEYPAD_PLUS = 270  # +
-KEYPAD_ENTER = 271  #           LV_KEY_ENTER
+KEYPAD_ENTER = 271  # LV_KEY_ENTER
 KEYPAD_EQUALS = 272  # =
 
 # Arrows + Home/End pad
 
-KEY_UP = 273  #                 LV_KEY_UP
-KEY_DOWN = 274  #               LV_KEY_DOWN
-KEY_RIGHT = 275  #              LV_KEY_RIGHT
-KEY_LEFT = 276  #               LV_KEY_LEFT
+KEY_UP = 273  # LV_KEY_UP
+KEY_DOWN = 274  # LV_KEY_DOWN
+KEY_RIGHT = 275  # LV_KEY_RIGHT
+KEY_LEFT = 276  # LV_KEY_LEFT
 KEY_INSERT = 277
-KEY_HOME = 278  #               LV_KEY_HOME
-KEY_END = 279  #                LV_KEY_END
+KEY_HOME = 278  # LV_KEY_HOME
+KEY_END = 279  # LV_KEY_END
 KEY_PAGEUP = 280
 KEY_PAGEDOWN = 281
 
@@ -130,7 +131,7 @@ KEY_SYSREQ = 317
 KEY_BREAK = 318 
 KEY_MENU = 319 
 # Power Macintosh power key
-KEY_POWER  = 320
+KEY_POWER = 320
 # Some european keyboards
 KEY_EURO = 321
 #  Atari keyboard has Undo
@@ -154,24 +155,25 @@ MOD_KEY_ALT = MOD_KEY_LALT | MOD_KEY_RALT
 MOD_KEY_META = MOD_KEY_LMETA | MOD_KEY_RMETA
 
 
-class KEYeyboard(keypad_framework.KeypadDriver):
+class SDLKeypad(keypad_framework.KeypadDriver):
 
     def __init__(self):
         super().__init__()
-        self._disp_drv._data_bus.register_keypad_callback(self._keypad_cb)
         self.__last_key = -1
-        self.__current_state = lv.INDEV_STATE.RELEASED
+        self.__current_state = self.RELEASED
 
         self.group = lv.group_create()
         self.group.set_default()
         self.set_group(self.group)
+        self.set_mode(lv.INDEV_MODE.EVENT)
 
-    def _get_key(self):
-        return self.__current_state, self.__last_key
+        self._py_disp_drv._data_bus.register_keypad_callback(self._keypad_cb)  # NOQA
 
-    def _keypad_cb(self, kwargs):
-        key = kwargs['key']
-        mod = kwargs['mod']
+    def set_mode(self, mode):
+        self._indev_drv.set_mode(mode)
+
+    def _keypad_cb(self, *args):
+        _, state, key, mod = args
 
         if KEYPAD_0 <= key <= KEYPAD_EQUALS:
             if mod == MOD_KEY_NUM:
@@ -236,7 +238,12 @@ class KEYeyboard(keypad_framework.KeypadDriver):
             }
             self.__last_key = mapping.get(key, key)
 
-        if kwargs['state']:
-            self.__current_state = lv.INDEV_STATE.PRESSED
+        if state:
+            self.__current_state = self.PRESSED
         else:
-            self.__current_state = lv.INDEV_STATE.RELEASED
+            self.__current_state = self.RELEASED
+
+        micropython.schedule(self.read, 0)
+
+    def _get_key(self):
+        return self.__current_state, self.__last_key

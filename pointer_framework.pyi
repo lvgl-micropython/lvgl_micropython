@@ -1,20 +1,14 @@
-from typing import Union, Optional, Tuple, ClassVar
-from typing import TYPE_CHECKING
+from typing import Optional, Tuple, TYPE_CHECKING
+import _indev_base
 
 
 if TYPE_CHECKING:
-    import touch_cal_data
-    import display_driver_framework
-    import lvgl as lv  # NOQA
+    import touch_cal_data as _touch_cal_data
+    import display_driver_framework as _display_driver_framework
+    import lvgl as _lv  # NOQA
 
 
-def _remap(
-    value: Union[float, int],
-    old_min: Union[float, int],
-    old_max: Union[float, int],
-    new_min: Union[float, int],
-    new_max: Union[float, int]
-) -> int:
+def _remap(value: int, old_min: int, old_max: int, new_min: int, new_max: int) -> int:
     """
     Internal use
 
@@ -30,40 +24,12 @@ def _remap(
     """
     ...
 
-class PointerDriver:
-    _instance_counter: ClassVar[int] = ...
-    id: int = ...
-    _disp_drv: lv.display_driver_t = ...
-    _py_disp_drv: display_driver_framework.DisplayDriver
+class PointerDriver(_indev_base.IndevBase):
     _last_x: int = ...
     _last_y: int = ...
-    _current_state: int = ...
-    _height: int = ...
-    _width: int = ...
-    _indev_drv: lv.indev_t = ...
-    _config: touch_cal_data.TouchCalData = ...
-    PRESSED: ClassVar[int] = ...
-    RELEASED: ClassVar[int] = ...
+    _config: _touch_cal_data.TouchCalData = ...
 
-    def get_width(self) -> int:
-        """
-        Touch panel width in pixels
-        """
-        ...
-
-    def get_height(self) -> int:
-        """
-        Touch panel height in pixels
-        """
-        ...
-
-    def get_rotation(self):
-        """
-        The rotation of the display
-        """
-        ...
-
-    def __init__(self, touch_cal: Optional[touch_cal_data.TouchCalData] = None):
+    def __init__(self, touch_cal: Optional[_touch_cal_data.TouchCalData] = None):
         ...
 
     def calibrate(self) -> None:
@@ -88,87 +54,23 @@ class PointerDriver:
         """
         ...
 
-    def _read(self, drv, data) -> bool:  # NOQA
+    def get_vect(self, point: _lv.point_t):
         ...
 
-    def get_type(self) -> int:
+    def get_scroll_obj(self) -> Optional[_lv.obj]:
         ...
 
-    def read(self) -> None:
+    def get_scroll_dir(self) -> int:
         ...
 
-    def send_event(self, code, param):
+    def get_gesture_dir(self) -> int:
         ...
 
-    def remove_event(self, index):
-       ...
-
-    def get_event_dsc(self, index):
+    def get_point(self, point: _lv.point_t) -> None:
         ...
 
-    def get_event_count(self):
+    def set_cursor(self, cur_obj) -> None:
         ...
 
-    def add_event_cb(self, event_cb, filter, user_data):
-        ...
-
-    def search_obj(self, point):
-        ...
-
-    def delete_read_timer(self):
-        ...
-
-    def get_read_timer(self):
-        ...
-
-    def get_active_obj(self):
-        ...
-
-    def wait_release(self):
-        ...
-
-    def get_vect(self, point):
-        ...
-
-    def get_scroll_obj(self):
-        ...
-
-    def get_scroll_dir(self):
-        ...
-
-    def get_gesture_dir(self):
-        ...
-
-    def get_point(self, point):
-        ...
-
-    def get_state(self):
-        ...
-
-    def enable(self, en):
-        ...
-
-    def set_button_points(self, points):
-        ...
-
-    def get_group(self):
-        ...
-
-    def set_group(self, group):
-        ...
-
-    def set_cursor(self, cur_obj):
-        ...
-
-    def reset_long_press(self):
-        ...
-
-    def reset(self, obj):
-        ...
-
-    def get_disp(self):
-        ...
-
-    @staticmethod
-    def active():
+    def reset_long_press(self) -> None:
         ...

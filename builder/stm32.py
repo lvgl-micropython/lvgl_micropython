@@ -26,20 +26,20 @@ submodules_cmd = []
 
 def build_commands(_, extra_args, script_dir, lv_cflags, board):
 
-    if lv_cflags is None:
-        lv_cflags = '-DLV_USE_TINY_TTF=0'
-    else:
+    if lv_cflags:
         lv_cflags += ' -DLV_USE_TINY_TTF=0'
+    else:
+        lv_cflags = '-DLV_USE_TINY_TTF=0'
 
     stm32_cmd.append(f'USER_C_MODULES="{script_dir}/ext_mod"')
 
     stm32_cmd.extend(extra_args)
 
-    if lv_cflags is not None:
+    if lv_cflags:
         stm32_cmd.insert(6, f'LV_CFLAGS="{lv_cflags}"')
 
     if board is not None:
-        if lv_cflags is not None:
+        if lv_cflags:
             stm32_cmd.insert(7, f'BOARD={board}')
         else:
             stm32_cmd.insert(6, f'BOARD={board}')

@@ -7,8 +7,10 @@ from micropython import const
 import lvgl as lv  # NOQA
 import lcd_bus
 
-
-micropython.alloc_emergency_exception_buf(256)  # NOQA
+try:
+    micropython.alloc_emergency_exception_buf(256)  # NOQA
+except AttributeError:
+    pass
 
 # Constants
 

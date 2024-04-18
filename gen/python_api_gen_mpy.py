@@ -9,10 +9,7 @@
 
 from __future__ import print_function
 import collections
-import sys
-import struct
 import copy
-from itertools import chain
 from functools import lru_cache
 import json
 
@@ -105,25 +102,24 @@ setattr(c_ast.Node, '__repr__', Node__repr__)
 #
 
 argParser = ArgumentParser()
-argParser.add_argument('-I', '--include', dest='include', help='Preprocesor include path', metavar='<Include Path>', action='append')
-argParser.add_argument('-D', '--define', dest='define', help='Define preprocessor macro', metavar='<Macro Name>', action='append')
-argParser.add_argument('--external-preprocessing', dest='ep', help='Prevent preprocessing. Assume input file is already preprocessed', metavar='<Preprocessed File>', action='store')
+argParser.add_argument('-I', '--include', dest='include', help='Preprocesor include path', metavar='<Include Path>', action='append', default=[])
+argParser.add_argument('-D', '--define', dest='define', help='Define preprocessor macro', metavar='<Macro Name>', action='append', default=[])
 argParser.add_argument('--module_name', dest='module_name', help='Module name', metavar='<Module name string>', action='store')
 argParser.add_argument('--module_prefix', dest='module_prefix', help='Module prefix that starts every function name', metavar='<Prefix string>', action='store')
 argParser.add_argument('--metadata', dest='metadata', help='Optional file to emit metadata (introspection)', metavar='<MetaData File Name>', action='store')
-argParser.add_argument('--board', dest='board', help='Board or OS', metavar='<Board or OS>', action='store')
+argParser.add_argument('--board', dest='board', help='Board or OS', metavar='<Board or OS>', action='store', default='')
 argParser.add_argument('--output', dest='output', help='Output file path', metavar='<Output path>', action='store')
 argParser.add_argument('--debug', dest='debug', help='enable debugging output', action='store_true')
+argParser.add_argument('--header_file', dest='input', action='append', default=[])
 
-argParser.add_argument('input', nargs='+')
-
-argParser.set_defaults(include=[], define=[], ep=None, input=[], board='')
 args, unknownargs = argParser.parse_known_args()
 
 module_name = args.module_name
 module_prefix = args.module_prefix if args.module_prefix else args.module_name
-
+input_headers = args.input[:]
 DEBUG = args.debug
+
+pp_file = args.output.rsplit('.', 1)[0] + '.pp'
 
 if DEBUG:
     log_file = open(os.path.join(os.path.dirname(__file__), 'log.txt'), 'w')
@@ -218,40 +214,92 @@ def get_sdl2():
 # the best way to handle the pyMSVC dependency as it is not needed for
 # folks running any other OS except Windows.
 if sys.platform.startswith('win'):
-    import pyMSVC  # NOQA
+    try:
+        import pyMSVC  # NOQA
+    except ImportError:
+        sys.stderr.write(
+            '\nThe pyMSVC library is missing, '
+            'please run "pip install pyMSVC" to install it.\n'
+        )
+        sys.stderr.flush()
+        sys.exit(-500)
 
-    environment = pyMSVC.setup_environment()
-    print(environment)
-    
-    cpp_path = 'cl'
-    cpp_args = [
-        '-std:c11',
-        '/TC',
-        '/MP',
-        '/wd4996',
-        '/wd4244',
-        '/wd4267'
-    ]
-    
-    if args.board == 'win':
-        sdl2_include, _ = get_sdl2()
-        cpp_args.append(f'-I"{sdl2_include}"')
-        
+    env = pyMSVC.setup_environment()  # NOQA
+    cpp_cmd = ['cl', '/std:c11', '/nologo', '/P']
+    output_pp = f'/Fi"{pp_file}"'
+    include_path_env_key = 'INCLUDE'
+
 elif sys.platform.startswith('darwin'):
-    cpp_args = ['-std=c11']
-    cpp_path = 'clang'
-
-else:
-    cpp_path = 'gcc'
-    cpp_args = [
-        '-std=c11', 
-        # '-Wno-incompatible-pointer-types',
+    include_path_env_key = 'C_INCLUDE_PATH'
+    cpp_cmd = [
+        'clang', '-std=c11', '-E', '-DINT32_MIN=0x80000000',
     ]
+    output_pp = f' >> "{pp_file}"'
+else:
+    include_path_env_key = 'C_INCLUDE_PATH'
+    cpp_cmd = [
+        'gcc', '-std=c11', '-E', '-Wno-incompatible-pointer-types',
+    ]
+    output_pp = f' >> "{pp_file}"'
 
-cpp_args.extend([f'-D{define}' for define in args.define])
-cpp_args.extend(['-DPYCPARSER', '-E', f'-I{fake_libc_path}'])
-cpp_args.extend([f'-I{include}' for include in args.include])
-cpp_args.extend(unknownargs)
+
+if include_path_env_key not in os.environ:
+    os.environ[include_path_env_key] = ''
+
+os.environ[include_path_env_key] = (
+    f'{fake_libc_path}{os.pathsep}{os.environ[include_path_env_key]}'
+)
+
+if 'PATH' not in os.environ:
+    os.environ['PATH'] = ''
+
+os.environ['PATH'] = (
+    f'{fake_libc_path}{os.pathsep}{os.environ["PATH"]}'
+)
+
+# cpp_cmd.extend(
+#     [
+#         '-DLV_LVGL_H_INCLUDE_SIMPLE',
+#         '-DLV_CONF_INCLUDE_SIMPLE',
+#         '-DLV_USE_DEV_VERSION'
+#     ]
+# )
+
+
+cpp_cmd.extend([f'-D{define}' for define in args.define])
+cpp_cmd.extend(['-DPYCPARSER', '-E', f'-I{fake_libc_path}'])
+cpp_cmd.extend([f'-I{include}' for include in args.include])
+cpp_cmd.append(f'"{input_headers[0]}"')
+
+
+if sys.platform.startswith('win'):
+    cpp_cmd.insert(len(cpp_cmd) - 2, output_pp)
+else:
+    cpp_cmd.append(output_pp)
+
+
+cpp_cmd.extend(unknownargs)
+
+cpp_cmd = ' '.join(cpp_cmd)
+
+p = subprocess.Popen(
+    cpp_cmd,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    env=os.environ,
+    shell=True
+)
+out, err = p.communicate()
+exit_code = p.returncode
+
+if not os.path.exists(pp_file):
+    sys.stdout.write(out.decode('utf-8').strip() + '\n')
+    sys.stdout.write('EXIT CODE: ' + str(exit_code) + '\n')
+    sys.stderr.write(err.decode('utf-8').strip() + '\n')
+    sys.stdout.flush()
+    sys.stderr.flush()
+
+    raise RuntimeError('Unknown Failure')
 
 #
 # AST parsing helper functions
@@ -555,6 +603,7 @@ def get_py_type(type_name):
 def is_struct(type):
     return isinstance(type, c_ast.Struct) or isinstance(type, c_ast.Union)
 
+
 obj_metadata = collections.OrderedDict()
 func_metadata = collections.OrderedDict()
 callback_metadata = collections.OrderedDict()
@@ -567,13 +616,11 @@ func_prototypes = {}
 parser = c_parser.CParser()
 gen = c_generator.CGenerator()
 
-ast = pycparser.parse_file(
-    args.input[0], 
-    use_cpp=True, 
-    cpp_path=cpp_path,
-    cpp_args=cpp_args
-)
+with open(pp_file, 'r') as f:
+    pp_data = f.read()
 
+cparser = pycparser.CParser()
+ast = cparser.parse(pp_data, input_headers[0])
 
 forward_struct_decls = {}
 
@@ -612,7 +659,7 @@ for item in ast.ext[:]:
 # ast_file.write(str(ast))
 # ast_file.close()
 
-pp_cmd = cpp_path + (' '.join(cpp_args))
+pp_cmd = ' '.join(cpp_cmd)
 
 # the stdout code below is to override output to stdout from the print
 # statements. This will output to a file instead of stdout. This is done
@@ -783,8 +830,8 @@ def get_struct_functions(struct_name):
 
     reverse_aliases = [alias for alias in struct_aliases if struct_aliases[alias] == struct_name]
 
-    return ([func for func in funcs \
-            if noncommon_part(simplify_identifier(func.name), simplify_identifier(struct_name)) != simplify_identifier(func.name) \
+    return ([func for func in funcs
+            if noncommon_part(simplify_identifier(func.name), simplify_identifier(struct_name)) != simplify_identifier(func.name)
             and get_first_arg_type(func) == struct_name] if (struct_name in structs or len(reverse_aliases) > 0) else []) + \
             (get_struct_functions(struct_aliases[struct_name]) if struct_name in struct_aliases else [])
 
@@ -1186,7 +1233,7 @@ print ("""
         cmd_line=' '.join(argv),
         pp_cmd=pp_cmd,
         objs=", ".join(['%s(%s)' % (objname, parent_obj_names[objname]) for objname in obj_names]),
-        lv_headers='\n'.join('#include "%s"' % header for header in args.input)))
+        lv_headers='\n'.join('#include "%s"' % header for header in input_headers)))
 
 #
 # Enable objects, if supported
@@ -2498,7 +2545,7 @@ STATIC inline const mp_obj_type_t *get_mp_{sanitized_struct_name}_type()
             struct_tag = 'struct ' if struct_name in structs_without_typedef.keys() else '',
             write_cases = ';\n                '.join(write_cases),
             read_cases  = ';\n            '.join(read_cases),
-            ));
+            ))
 
     lv_to_mp[struct_name] = 'mp_read_%s' % sanitized_struct_name
     lv_to_mp_byref[struct_name] = 'mp_read_byref_%s' % sanitized_struct_name

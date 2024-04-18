@@ -35,6 +35,34 @@ Linux
   * build-essential 
   * libffi-dev 
   * pkg-config
+  * cmake
+  * ninja-build
+  * gnome-desktop-testing
+  * libasound2-dev
+  * libpulse-dev   
+  * libaudio-dev
+  * libjack-dev
+  * libsndio-dev
+  * libx11-dev
+  * libxext-dev
+  * libxrandr-dev
+  * libxcursor-dev
+  * libxfixes-dev
+  * libxi-dev
+  * libxss-dev
+  * libxkbcommon-dev
+  * libdrm-dev
+  * libgbm-dev 
+  * libgl1-mesa-dev
+  * libgles2-mesa-dev
+  * libegl1-mesa-dev
+  * libdbus-1-dev
+  * libibus-1.0-dev
+  * libudev-dev
+  * fcitx-libs-dev
+  * libpipewire-0.3-dev
+  * libwayland-dev   
+  * libdecor-0-dev
 
 
 Compiling for STM32 unider Linux
@@ -354,5 +382,76 @@ I will provide directions on how to use the driver framework and also the driver
 with the binding in the coming weeks.
 
 <br>
+
+
+SDL fpr Unix is working properly. Make sure you review the requirements needed to compile for unix!!!
+The build system compiles the latest version of SDL2 so the list is pretty long for the requirements.
+
+To build for Unix use the following build command
+
+    python3 make.py unix clean DISPLAY=sdl_display INDEV=sdl_pointer
+
+
+Couple of notes:
+
+  * I recommend making 2 frame buffers as seen in the code example below. This will give you 
+    better performance. 
+  * **DO NOT** enable LV_USE_DRAW_SDL, I have not written code to allow for it's use (yet).
+  * I recommend running `lv.task_handler` once every 5 milliseconds, shorter than that and you 
+    will have a lot of CPU time comsumed. Linger than that and your mouse response is not 
+    going to be great.
+
+
+
+Here is some example code for the unix port
+
+
+    from micropython import const  # NOQA
+
+    _WIDTH = const(480)
+    _HEIGHT = const(320)
+    
+    _BUFFER_SIZE = _WIDTH * _HEIGHT * 3
+    
+    import lcd_bus  # NOQA
+    
+    bus = lcd_bus.SDLBus(flags=0)
+    
+    buf1 = bus.allocate_framebuffer(_BUFFER_SIZE, 0)
+    buf2 = bus.allocate_framebuffer(_BUFFER_SIZE, 0)
+    
+    import lvgl as lv  # NOQA
+    import sdl_display  # NOQA
+    
+    lv.init()
+    
+    display = sdl_display.SDLDisplay(
+        data_bus=bus,
+        display_width=_WIDTH,
+        display_height=_HEIGHT,
+        frame_buffer1=buf1,
+        frame_buffer2=buf2,
+        color_space=lv.COLOR_FORMAT.RGB888
+    )
+    
+    display.init()
+    
+    import sdl_pointer
+    
+    mouse = sdl_pointer.SDLPointer()
+    
+    scrn = lv.screen_active()
+    scrn.set_style_bg_color(lv.color_hex(0x000000), 0)
+    
+    slider = lv.slider(scrn)
+    slider.set_size(300, 25)
+    slider.center()
+    
+    
+    import task_handler
+    # the duration needs to be set to 5 to have a good response from the mouse.
+    # There is a thread that runs that facilitates double buffering. 
+    th = task_handler.TaskHandler(duration=5)
+
 
 Thank again and enjoy!!

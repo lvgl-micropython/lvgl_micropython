@@ -247,7 +247,11 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
                 output_buffer.append(line)
 
                 if not spinner and out_to_screen:
-                    if cmpl and line.startswith('[') and last_line_len != -1:
+                    if (
+                        cmpl and
+                        (line.startswith('[') or line.startswith('--')) and
+                        last_line_len != -1
+                    ):
                         sys.stdout.write('\r')
                         if len(line) < last_line_len:
                             padding = ' ' * (last_line_len - len(line))
@@ -338,7 +342,7 @@ def mpy_cross():
         sys.exit(return_code)
 
 
-def build_manifest(target, script_dir, displays, indevs, frozen_manifest):
+def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manifest):
     update_mphalport(target)
     if target == 'teensy':
         manifest_path = f'lib/micropython/ports/{target}/manifest.py'
@@ -348,7 +352,7 @@ def build_manifest(target, script_dir, displays, indevs, frozen_manifest):
     if not os.path.exists(manifest_path):
         raise RuntimeError(f'Unable to locate manifest file "{manifest_path}"')
 
-    generate_manifest(script_dir, manifest_path, displays, indevs, frozen_manifest)
+    generate_manifest(script_dir, lvgl_api, manifest_path, displays, indevs, frozen_manifest)
 
 
 def parse_args(extra_args, lv_cflags, board):
@@ -369,21 +373,21 @@ submodules_cmd = []
 
 def build_commands(target, extra_args, script_dir, lv_cflags, board):
     if target == 'samd':
-        if lv_cflags is None:
-            lv_cflags = '-DLV_USE_TINY_TTF=0'
-        else:
+        if lv_cflags:
             lv_cflags += ' -DLV_USE_TINY_TTF=0'
+        else:
+            lv_cflags = '-DLV_USE_TINY_TTF=0'
 
     cmd.extend([
         f'lib/micropython/ports/{target}',
         f'LV_PORT={target}',
     ])
 
-    if lv_cflags is not None:
+    if lv_cflags:
         cmd.append(f'LV_CFLAGS="{lv_cflags}"')
 
     if board is not None:
-        if lv_cflags is not None:
+        if lv_cflags:
             cmd.insert(5, f'BOARD={board}')
         else:
             cmd.append(f'BOARD={board}')
