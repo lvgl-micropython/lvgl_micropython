@@ -9,8 +9,8 @@
     #define SDL_MAIN_HANDLED /*To fix SDL's "undefined reference to WinMain" issue*/
 
     #ifdef MP_PORT_UNIX
-        #include <SDL.h>
-        #include <SDL_thread.h>
+        #include "SDL.h"
+        #include "SDL_thread.h"
 
         typedef struct {
             int32_t x;

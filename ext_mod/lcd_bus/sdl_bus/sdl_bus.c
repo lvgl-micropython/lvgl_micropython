@@ -18,8 +18,8 @@
 // mp_printf(&mp_plat_print, "incomming event %d\n", event->type);
 
 #ifdef MP_PORT_UNIX
-    #include <SDL.h>
-    #include <SDL_thread.h>
+    #include "SDL.h"
+    #include "SDL_thread.h"
 
     mp_lcd_sdl_bus_obj_t *instances[10] = { NULL };
 
