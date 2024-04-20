@@ -177,6 +177,20 @@ def compile():  # NOQA
         with open(mpconfigvariant_common_path, 'w') as f:
             f.write(mpconfigvariant_common)
 
+    if '#define MICROPY_SCHEDULER_DEPTH              (128)' not in mpconfigvariant_common:
+        mpconfigvariant_common += '\n\n'
+        mpconfigvariant_common += '#define MICROPY_SCHEDULER_DEPTH              (128)\n'
+
+        with open(mpconfigvariant_common_path, 'w') as f:
+            f.write(mpconfigvariant_common)
+
+    if '#define MICROPY_STACK_CHECK              (0)' not in mpconfigvariant_common:
+        mpconfigvariant_common += '\n'
+        mpconfigvariant_common += '#define MICROPY_STACK_CHECK              (0)\n'
+
+        with open(mpconfigvariant_common_path, 'w') as f:
+            f.write(mpconfigvariant_common)
+
     build_sdl()
 
     return_code, _ = spawn(compile_cmd)

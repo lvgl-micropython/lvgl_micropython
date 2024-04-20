@@ -112,9 +112,11 @@
         LCD_UNUSED(color_size);
 
         mp_lcd_sdl_bus_obj_t *self = MP_OBJ_TO_PTR(obj);
-
+        while (!self->trans_done) {}
+        self->trans_done = false;
         self->panel_io_config.buf_to_flush = color;
         SDL_UnlockMutex(self->panel_io_config.mutex);
+
         if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
             mp_call_function_n_kw(self->callback, 0, 0, NULL);
         }
@@ -227,8 +229,9 @@
                 SDL_RenderClear(self->renderer);
                 SDL_RenderCopy(self->renderer, self->texture, NULL, NULL);
                 SDL_RenderPresent(self->renderer);
-                self->trans_done = true;
             }
+
+            self->trans_done = true;
         }
         return 0;
     }
