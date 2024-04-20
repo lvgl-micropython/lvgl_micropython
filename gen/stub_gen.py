@@ -153,10 +153,9 @@ struct_template = '''
 
 class {cls_name}(object):
     """
-    Non Docstrings Yet
+    No Docstrings Yet
     """
-
-    def __init__(self, args: _{cls_name}_type) -> "{cls_name}":
+    def __init__(self, args: Optional[_{cls_name}_type] = dict(), /) -> "{cls_name}":
         """
         No Docstrings Yet
         """
@@ -290,6 +289,47 @@ variable_output = []
 struct_output = []
 
 
+enum_types = set()
+
+
+def read_enums(objs):
+
+    def _iter_list(lst):
+        for item in lst:
+            if isinstance(item, dict):
+                _iter_dict(item)
+            elif isinstance(item, list):
+                _iter_list(item)
+
+    def _iter_dict(d):
+
+        for key, value in d.items():
+            if isinstance(value, dict):
+                if key.lower() in (
+                    'anim', 'event', 'style', 'long', 'key', 'src', 'layout',
+                    'point_transform_flag', 'anim_image_part', 'log_level',
+                    'font_subpx', 'header', 'pinyin_mode', 'tree_walk',
+                    'class_theme_inheritable', 'subject_type', 'update_mode',
+                    'compress', 'class_group_def', 'symbol', 'scr_load_anim',
+                    'font_fmt_txt', 'coord', 'class_editable', 'part_textarea',
+                    'fs_seek', 'draw_task_state', 'layer_type', 'axis',
+                    'font_fmt_txt_cmap', 'draw_sw_mask_type', 'cell_ctrl',
+                    'cache_reserve_cond', 'root_back_button',
+                ):
+                    continue
+
+                if 'c_type' in value and value['c_type'] == 'enum':
+                    enum_types.add(key.lower() + '_t')
+                elif 'py_type' in value and value['py_type'] == 'class' and 'c_type' in value and value['c_type'].isupper() and 'members' in value:
+                    enum_types.add(key.lower() + '_t')
+
+                _iter_dict(value)
+            elif isinstance(value, list):
+                _iter_list(value)
+
+    _iter_dict(objs)
+
+
 def build_objects(objects):
     for name, obj in objects.items():
         object_output.append(build_class(name, obj))
@@ -322,8 +362,71 @@ def build_structs(structs):
         struct_output.append(build_struct(name, struct))
 
 
+def build_enum_types():
+    res = []
+    for name in enum_types:
+        res.append(f'{name} = int')
+
+    return '\n'.join(res)
+
+
 output_template = '''\
-from typing import Union, ClassVar, Callable, List, Any, TypedDict
+from typing import Union, ClassVar, Callable, List, Any, TypedDict, Optional
+
+
+{enum_types}
+style_prop_t = int
+grad_color_t = int
+event_code_t = int
+style_selector_t = int
+anim_enable_t = int
+event_list_t = int
+ll_node_t = int
+value_precise_t = float
+fs_whence_t = int
+screen_load_anim_t = int
+_mp_int_wrapper = int
+
+event_cb_t = Callable
+group_edge_cb_t = Callable
+group_focus_cb_t = Callable
+indev_read_cb_t = Callable
+anim_exec_xcb_t = Callable
+cache_compare_cb_t = Callable
+rb_compare_t = Callable
+draw_buf_malloc_cb = Callable
+draw_buf_free_cb = Callable
+draw_buf_align_cb = Callable
+draw_buf_invalidate_cache_cb = Callable
+draw_buf_width_to_stride_cb = Callable
+draw_glyph_cb_t = Callable
+timer_handler_resume_cb_t = Callable
+delay_cb_t = Callable
+tick_get_cb_t = Callable
+
+
+class _draw_sw_mask_radius_circle_dsc_t(object):
+   ...
+
+
+class _draw_sw_mask_common_dsc_t(object):
+   ...
+
+
+class mutex_t(object):
+   ...
+
+
+class thread_sync_t(object):
+   ...
+
+
+class thread_t(object):
+   ... 
+   
+
+class mem_pool_t(object):
+    ...
 
 
 {constants}
@@ -347,6 +450,8 @@ def run(json_path):
 
     root = json.loads(data)
 
+    read_enums(root)
+
     build_objects(root['objects'])
     build_functions(root['functions'])
     if 'enums' in root:
@@ -363,7 +468,8 @@ def run(json_path):
             objects='\n'.join(object_output),
             variables='\n'.join(variable_output),
             funcs='\n\n'.join(func_output),
-            structs=''.join(struct_output)
+            structs=''.join(struct_output),
+            enum_types=build_enum_types()
         )
 
     with open(OUPUT_FILE, 'w') as f:
