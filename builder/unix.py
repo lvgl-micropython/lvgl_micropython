@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 from . import spawn
 from . import generate_manifest
 from . import update_mphalport
@@ -44,6 +45,7 @@ def parse_args(extra_args, lv_cflags, board):
 
 
 variant = None
+SCRIPT_PATH = ''
 
 
 def build_commands(_, extra_args, script_dir, lv_cflags, board):
@@ -73,6 +75,10 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
 
 
 def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manifest):
+    global SCRIPT_PATH
+
+    SCRIPT_PATH = script_dir
+
     update_mphalport(target)
 
     manifest_path = 'lib/micropython/ports/unix/variants/manifest.py'
@@ -84,10 +90,6 @@ def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manife
 
 
 def clean():
-    if os.path.exists('lib/SDL/build'):
-        import shutil
-        shutil.rmtree('lib/SDL/build')
-
     spawn(clean_cmd)
 
 
@@ -98,18 +100,32 @@ def _run(c, spinner=False, cmpl=False):
 
 
 def build_sdl():
-    cmd_ = ['cd lib/SDL && mkdir build']
-    _run(cmd_)
+    global variant
 
+    if variant is None:
+        variant = 'build-standard'
+    else:
+        variant = f'build-{variant}'
+
+    dst = f'lib/micropython/ports/unix/{variant}/SDL'
+
+    if not os.path.exists(dst):
+        os.makedirs(dst)
+    elif os.path.exists(os.path.join(dst, 'libSDL2.a')):
+        return
+
+    cwd = os.getcwd()
+    os.chdir(dst)
     cmd_ = [
-        'cd lib/SDL/build &&'
-        f'cmake .. -DCMAKE_BUILD_TYPE=Release &&'
+        f'cmake -DSDL_STATIC=ON -DSDL_SHARED=OFF -DCMAKE_BUILD_TYPE=Release {SCRIPT_PATH}/lib/SDL &&'
         f'cmake --build . --config Release --parallel {os.cpu_count()}'
     ]
 
     res, _ = spawn(cmd_, cmpl=True)
     if res != 0:
         sys.exit(res)
+
+    os.chdir(cwd)
 
 
 def submodules():
@@ -196,27 +212,6 @@ def compile():  # NOQA
     return_code, _ = spawn(compile_cmd)
     if return_code != 0:
         sys.exit(return_code)
-
-    global variant
-
-    if variant is None:
-        variant = 'build-standard'
-    else:
-        variant = f'build-{variant}'
-
-    import shutil
-
-    src = 'lib/SDL/build'
-    dst = f'lib/micropython/ports/unix/{variant}'
-
-    for file_name in os.listdir(src):
-        src_file = os.path.join(src, file_name)
-        dst_file = os.path.join(dst, file_name)
-        if os.path.isfile(src_file):
-            if '.so' in file_name:
-                shutil.copyfile(src_file, dst_file)
-            elif file_name.endswith('.a'):
-                shutil.copyfile(src_file, dst_file)
 
 
 def mpy_cross():
