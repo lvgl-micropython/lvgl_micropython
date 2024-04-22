@@ -113,12 +113,9 @@ class GT911(pointer_framework.PointerDriver):
     def _get_coords(self):
         self._i2c.read_mem(_STATUS_REG, buf=self._mv[:1])
         touch_cnt = self._buf[0] & 0x0F
+        status = self._buf[0] & 0x80
 
-        if self._buf[0] & 0x80 or touch_cnt < 6:
-            self._buf[0] = 0x00
-            self._i2c.write_mem(_STATUS_REG, buf=self._mv[:1])
-
-        if touch_cnt == 1:
+        if status and touch_cnt == 1:
             self._i2c.read_mem(_POINT_1_REG, buf=self._mv)
 
             x = self._buf[0] + (self._buf[1] << 8)
@@ -131,9 +128,20 @@ class GT911(pointer_framework.PointerDriver):
             self.__y = y
             self.__last_state = self.PRESSED
 
+            self._buf[0] = 0x00
+            self._i2c.write_mem(_STATUS_REG, buf=self._mv[:1])
+
             return self.PRESSED, x, y
 
-        elif touch_cnt > 1 and self.__last_state == self.PRESSED:
+        elif status and touch_cnt > 1 and self.__last_state == self.PRESSED:
+            self._buf[0] = 0x00
+            self._i2c.write_mem(_STATUS_REG, buf=self._mv[:1])
+
             return self.PRESSED, self.__x, self.__y
 
         self.__last_state = self.RELEASED
+
+        self._buf[0] = 0x00
+        self._i2c.write_mem(_STATUS_REG, buf=self._mv[:1])
+
+
