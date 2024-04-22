@@ -148,7 +148,25 @@ def parse_args(extra_args, lv_cflags, brd):
 
     board = brd
 
-    esp_argParser = ArgumentParser(prefix_chars='-B')
+    if board is None:
+        board = 'ESP32_GENERIC'
+
+    if board in ('ESP32_GENERIC', 'ESP32_GENERIC_S3'):
+        esp_argParser = ArgumentParser(prefix_chars='B')
+        esp_argParser.add_argument(
+            'BOARD_VARIANT',
+            dest='board_variant',
+            default='',
+            action='store'
+        )
+        esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
+        board_variant = esp_args.board_variant
+    else:
+        for arg in extra_args:
+            if arg.startswith('BOARD_VARIANT'):
+                raise RuntimeError(f'BOARD_VARIANT not supported by "{board}"')
+
+    esp_argParser = ArgumentParser(prefix_chars='-')
 
     esp_argParser.add_argument(
         '--skip-partition-resize',
@@ -156,18 +174,6 @@ def parse_args(extra_args, lv_cflags, brd):
         help='clean the build',
         action='store_true'
     )
-
-    if board in ('ESP32_GENERIC', 'ESP32_GENERIC_S3'):
-        esp_argParser.add_argument(
-            'BOARD_VARIANT',
-            dest='board_variant',
-            default='',
-            action='store'
-        )
-    else:
-        for arg in extra_args:
-            if arg.startswith('BOARD_VARIANT'):
-                raise RuntimeError(f'BOARD_VARIANT not supported by "{board}"')
 
     esp_argParser.add_argument(
         '--partition-size',
@@ -178,14 +184,8 @@ def parse_args(extra_args, lv_cflags, brd):
     )
 
     esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
-
     skip_partition_resize = esp_args.skip_partition_resize
     partition_size = esp_args.partition_size
-
-    if board is None:
-        board = 'ESP32_GENERIC'
-
-    board_variant = esp_args.board_variant
 
     if lv_cflags:
         lv_cflags += ' -DLV_KCONFIG_IGNORE=1'
@@ -218,6 +218,7 @@ def build_commands(_, extra_args, __, lv_cflags, ___):
     submodules_cmd.append(f'BOARD={board}')
 
     esp_cmd.extend([
+        'SECOND_BUILD=0',
         f'LV_CFLAGS="{lv_cflags}"',
         f'LV_PORT=esp32',
         f'BOARD={board}',
@@ -475,6 +476,7 @@ def compile():  # NOQA
         if deploy:
             compile_cmd.append('deploy')
 
+        compile_cmd[4] = 'SECOND_BUILD=1'
         ret_code, output = spawn(compile_cmd, env=env, cmpl=True)
 
         if ret_code != 0:
@@ -528,6 +530,8 @@ def compile():  # NOQA
                 compile_cmd.append('deploy')
 
             if remaining > 4096 or partition_size != -1 or deploy:
+                compile_cmd[4] = 'SECOND_BUILD=1'
+
                 ret_code, output = spawn(compile_cmd, env=env, cmpl=True)
 
                 if ret_code != 0:
@@ -565,7 +569,7 @@ def compile():  # NOQA
 
         build_name = f'build-{board}'
 
-        if board_variant is not None:
+        if board_variant:
             build_name += f'-{board_variant}'
 
         build_bin_file = os.path.abspath(

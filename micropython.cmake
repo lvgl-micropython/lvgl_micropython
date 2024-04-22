@@ -5,6 +5,9 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter)
 separate_arguments(LV_CFLAGS_ENV UNIX_COMMAND $ENV{LV_CFLAGS})
 list(APPEND LV_CFLAGS ${LV_CFLAGS_ENV} -Wno-unused-function)
 
+separate_arguments(SECOND_BUILD_ENV UNIX_COMMAND $ENV{SECOND_BUILD})
+
+
 include(${CMAKE_CURRENT_LIST_DIR}/ext_mod/micropython.cmake)
 
 set(LVGL_HEADER "${CMAKE_CURRENT_LIST_DIR}/build/lvgl_header.h")
@@ -18,20 +21,23 @@ file(GLOB_RECURSE LVGL_HEADERS ${CMAKE_CURRENT_LIST_DIR}/lib/lvgl/src/*.h ${CMAK
 # the compilation to error because the source file doesn't exist. It needs to
 # exist before it gets added to the source list and this is the only way I have
 # found to go about doing it.
-execute_process(
-    COMMAND
-        ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/gen/$ENV{GEN_SCRIPT}_api_gen_mpy.py ${LV_CFLAGS} --output=${CMAKE_BINARY_DIR}/lv_mp.c --include=${CMAKE_CURRENT_LIST_DIR} --include=${CMAKE_CURRENT_LIST_DIR}/include --include=${CMAKE_CURRENT_LIST_DIR}/lvgl --board=$ENV{LV_PORT} --module_name=lvgl --module_prefix=lv --metadata=${CMAKE_BINARY_DIR}/lv_mp.c.json ${LVGL_HEADER}
-    WORKING_DIRECTORY
-        ${CMAKE_CURRENT_LIST_DIR}
 
-    RESULT_VARIABLE mpy_result
-    OUTPUT_VARIABLE mpy_output
-)
+if(${SECOND_BUILD_ENV} EQUAL "0")
+    execute_process(
+        COMMAND
+            ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/gen/$ENV{GEN_SCRIPT}_api_gen_mpy.py ${LV_CFLAGS} --output=${CMAKE_BINARY_DIR}/lv_mp.c --include=${CMAKE_CURRENT_LIST_DIR} --include=${CMAKE_CURRENT_LIST_DIR}/include --include=${CMAKE_CURRENT_LIST_DIR}/lvgl --board=$ENV{LV_PORT} --module_name=lvgl --module_prefix=lv --metadata=${CMAKE_BINARY_DIR}/lv_mp.c.json --header_file=${LVGL_HEADER}
+        WORKING_DIRECTORY
+            ${CMAKE_CURRENT_LIST_DIR}
 
-if(${mpy_result} GREATER "0")
-    message("OUTPUT: ${mpy_output}")
-    message("RESULT: ${mpy_result}")
-    message( FATAL_ERROR "Failed to generate ${CMAKE_BINARY_DIR}/lv_mp.c" )
+        RESULT_VARIABLE mpy_result
+        OUTPUT_VARIABLE mpy_output
+    )
+
+    if(${mpy_result} GREATER "0")
+        message("OUTPUT: ${mpy_output}")
+        message("RESULT: ${mpy_result}")
+        message( FATAL_ERROR "Failed to generate ${CMAKE_BINARY_DIR}/lv_mp.c" )
+    endif()
 endif()
 
 # file(WRITE ${CMAKE_BINARY_DIR}/lv_mp.c ${mpy_output})
