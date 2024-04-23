@@ -18,6 +18,10 @@
     #include "esp_lcd_panel_interface.h"
     #include "esp_lcd_panel_rgb.h"
 
+    #include "freertos/FreeRTOS.h"
+    #include "freertos/task.h"
+    #include "freertos/semphr.h"
+
     // micropython includes
     #include "mphalport.h"
     #include "py/obj.h"
@@ -46,17 +50,8 @@
         uint8_t *fbs[3]; // Frame buffers
     } rgb_panel_t;
 
-    bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel_io, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
-    {
-        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)user_ctx;
 
-        if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
-            cb_isr(self->callback);
-        }
-        self->trans_done = true;
-        return false;
-    }
-
+    static bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *event_data, void *user_data)
     esp_lcd_rgb_panel_event_callbacks_t callbacks = { .on_vsync = rgb_bus_trans_done_cb };
 
     mp_lcd_err_t rgb_del(mp_obj_t obj);
@@ -218,6 +213,11 @@
         self->panel_io_handle.allocate_framebuffer = &rgb_allocate_framebuffer;
         self->panel_io_handle.free_framebuffer = &rgb_free_framebuffer;
         self->panel_io_handle.init = &rgb_init;
+
+        self->sem_vsync_end = xSemaphoreCreateBinary();
+        assert(self->sem_vsync_end);
+        self->sem_gui_ready = xSemaphoreCreateBinary();
+        assert(self->sem_gui_ready);
 
         return MP_OBJ_FROM_PTR(self);
     }
@@ -447,6 +447,11 @@
     {
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
 
+        if (self->panel_io_config.flags.double_fb) {
+            xSemaphoreGive(self->sem_gui_ready);
+            xSemaphoreTake(self->sem_vsync_end, portMAX_DELAY);
+        }
+
         esp_err_t ret = esp_lcd_panel_draw_bitmap(
             self->panel_handle,
             x_start,
@@ -467,17 +472,31 @@
         }
         */
 
-        if (!self->panel_io_config.flags.double_fb) {
-            if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
-                mp_call_function_n_kw(self->callback, 0, 0, NULL);
-            }
-        } else if (self->callback == mp_const_none) {
-            while (!self->trans_done) {}
-            self->trans_done = false;
+        if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
+            mp_call_function_n_kw(self->callback, 0, 0, NULL);
         }
 
         return LCD_OK;
     }
+
+
+    bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *event_data, void *user_data)
+    {
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)user_data;
+
+        LCD_UNUSED(event_data);
+        LCD_UNUSED(panel);
+
+        if (self->panel_io_config.flags.double_fb) {
+            BaseType_t high_task_awoken = pdFALSE;
+            if (xSemaphoreTakeFromISR(self->sem_gui_ready, &high_task_awoken) == pdTRUE) {
+                xSemaphoreGiveFromISR(self->sem_vsync_end, &high_task_awoken);
+            }
+            return high_task_awoken == pdTRUE;
+        }
+        return false;
+    }
+
 
     MP_DEFINE_CONST_OBJ_TYPE(
         mp_lcd_rgb_bus_type,

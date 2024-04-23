@@ -136,10 +136,10 @@
                 #endif
             }
 
-            spi_args[0] = MP_OBJ_NEW_SMALL_INT(args[ARG_host].u_int);
-            spi_args[1] = MP_OBJ_NEW_SMALL_INT(args[ARG_freq].u_int);
+            spi_args[0] = mp_obj_new_int_from_uint(args[ARG_host].u_int);
+            spi_args[1] = mp_obj_new_int_from_uint(args[ARG_freq].u_int);
             spi_args[2] = MP_ROM_QSTR(MP_QSTR_firstbit);
-            spi_args[3] = MP_OBJ_NEW_SMALL_INT(firstbit);
+            spi_args[3] = mp_obj_new_int_from_uint(firstbit);
             spi_args[4] = MP_ROM_QSTR(MP_QSTR_sck);
             spi_args[5] = MP_OBJ_FROM_PTR(mp_hal_get_pin_obj(args[ARG_sclk].u_obj));
             spi_args[6] = MP_ROM_QSTR(MP_QSTR_mosi);
@@ -199,7 +199,8 @@
     mp_lcd_err_t s_spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap)
     {
         LCD_UNUSED(rgb565_byte_swap);
-        mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
+
+        mp_lcd_spi_bus_obj_t *self = MP_OBJ_TO_PTR(obj);
 
         if (self->panel_io_config.lcd_cmd_bits == 16) {
             self->send_cmd = send_cmd_16;
@@ -227,12 +228,11 @@
 
     mp_lcd_err_t s_spi_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
     {
-        mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
+        mp_lcd_spi_bus_obj_t *self = MP_OBJ_TO_PTR(obj);
 
         CS_ON();
 
         self->send_cmd(self, lcd_cmd);
-
         self->panel_io_config.spi_transfer(
             self->bus_handle, param_size, NULL, (uint8_t *) param);
 
@@ -244,7 +244,7 @@
 
     mp_lcd_err_t s_spi_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
     {
-        mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
+        mp_lcd_spi_bus_obj_t *self = MP_OBJ_TO_PTR(obj);
 
         CS_ON();
         self->send_cmd(self, lcd_cmd);
@@ -264,7 +264,8 @@
         LCD_UNUSED(y_start);
         LCD_UNUSED(x_end);
         LCD_UNUSED(y_end);
-        mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
+
+        mp_lcd_spi_bus_obj_t *self = MP_OBJ_TO_PTR(obj);
 
         CS_ON();
         if (lcd_cmd >= 0x00) {
