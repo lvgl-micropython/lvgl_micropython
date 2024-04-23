@@ -115,33 +115,24 @@ class GT911(pointer_framework.PointerDriver):
         touch_cnt = self._buf[0] & 0x0F
         status = self._buf[0] & 0x80
 
-        if status and touch_cnt == 1:
-            self._i2c.read_mem(_POINT_1_REG, buf=self._mv)
+        if status:
+            if touch_cnt == 1:
+                self._i2c.read_mem(_POINT_1_REG, buf=self._mv)
 
-            x = self._buf[0] + (self._buf[1] << 8)
-            y = self._buf[2] + (self._buf[3] << 8)
+                x = self._buf[0] + (self._buf[1] << 8)
+                y = self._buf[2] + (self._buf[3] << 8)
+
+                self._buf[0] = 0x00
+                self._i2c.write_mem(_STATUS_REG, buf=self._mv[:1])
+
+                self.__x = x
+                self.__y = y
+                self.__last_state = self.PRESSED
+
+            elif touch_cnt == 0:
+                self.__last_state = self.RELEASED
 
             self._buf[0] = 0x00
             self._i2c.write_mem(_STATUS_REG, buf=self._mv[:1])
 
-            self.__x = x
-            self.__y = y
-            self.__last_state = self.PRESSED
-
-            self._buf[0] = 0x00
-            self._i2c.write_mem(_STATUS_REG, buf=self._mv[:1])
-
-            return self.PRESSED, x, y
-
-        elif status and touch_cnt > 1 and self.__last_state == self.PRESSED:
-            self._buf[0] = 0x00
-            self._i2c.write_mem(_STATUS_REG, buf=self._mv[:1])
-
-            return self.PRESSED, self.__x, self.__y
-
-        self.__last_state = self.RELEASED
-
-        self._buf[0] = 0x00
-        self._i2c.write_mem(_STATUS_REG, buf=self._mv[:1])
-
-
+        return self.__last_state, self.__x, self.__y
