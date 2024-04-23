@@ -51,7 +51,7 @@
     } rgb_panel_t;
 
 
-    static bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *event_data, void *user_data)
+    static bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *event_data, void *user_data);
     esp_lcd_rgb_panel_event_callbacks_t callbacks = { .on_vsync = rgb_bus_trans_done_cb };
 
     mp_lcd_err_t rgb_del(mp_obj_t obj);
@@ -165,7 +165,6 @@
 
         self->panel_io_config.clk_src = LCD_CLK_SRC_PLL160M;
         self->panel_io_config.timings = self->bus_config;
-        // self->panel_io_config.bounce_buffer_size_px = (size_t)args[ARG_bounce_buffer_size_px].u_int;
         self->panel_io_config.hsync_gpio_num = (int)args[ARG_hsync].u_int;
         self->panel_io_config.vsync_gpio_num = (int)args[ARG_vsync].u_int;
         self->panel_io_config.de_gpio_num = (int)args[ARG_de].u_int;
@@ -187,14 +186,12 @@
         self->panel_io_config.data_gpio_nums[14] = args[ARG_data14].u_int;
         self->panel_io_config.data_gpio_nums[15] = args[ARG_data15].u_int;
         self->panel_io_config.disp_gpio_num = (int)args[ARG_disp].u_int;
-        self->panel_io_config.sram_trans_align = 64;
+        self->panel_io_config.sram_trans_align = 8;
         self->panel_io_config.psram_trans_align = 64;
         self->panel_io_config.flags.disp_active_low = (uint32_t)args[ARG_disp_active_low].u_bool;
         self->panel_io_config.flags.refresh_on_demand = (uint32_t)args[ARG_refresh_on_demand].u_bool;
         self->panel_io_config.flags.fb_in_psram = 0;
         self->panel_io_config.flags.double_fb = 0;
-        // self->panel_io_config.flags.no_fb = true;
-        // self->panel_io_config.flags.bb_invalidate_cache = (uint32_t)args[ARG_bb_invalidate_cache].u_bool;
 
         int i = 0;
         for (; i < 16; i++) {
@@ -215,9 +212,7 @@
         self->panel_io_handle.init = &rgb_init;
 
         self->sem_vsync_end = xSemaphoreCreateBinary();
-        assert(self->sem_vsync_end);
         self->sem_gui_ready = xSemaphoreCreateBinary();
-        assert(self->sem_gui_ready);
 
         return MP_OBJ_FROM_PTR(self);
     }
@@ -465,12 +460,6 @@
             mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_panel_draw_bitmap)"), ret);
             return LCD_OK;
         }
-
-        /*
-        if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
-            mp_call_function_n_kw(self->callback, 0, 0, NULL);
-        }
-        */
 
         if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
             mp_call_function_n_kw(self->callback, 0, 0, NULL);
