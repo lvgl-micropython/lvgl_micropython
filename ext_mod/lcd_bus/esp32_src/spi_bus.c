@@ -3,7 +3,6 @@
 #include "lcd_types.h"
 #include "modlcd_bus.h"
 #include "spi_bus.h"
-#include "spi_panel_bus.h"
 
 // esp-idf includes
 #include "driver/spi_common.h"
@@ -366,7 +365,7 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
             self->panel_io_config.trans_queue_depth++;
         }
     } else {
-        self->panel_io_config.trans_queue_depth = 1;
+        self->panel_io_config.trans_queue_depth = 10;
     }
 
     mp_lcd_err_t ret = spi_bus_initialize(self->host, &self->bus_config, SPI_DMA_CH_AUTO);
@@ -374,7 +373,7 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(spi_bus_initialize)"), ret);
     }
 
-    ret = lcdbus_new_panel_io_spi(self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io, double_buffer);
+    ret = esp_lcd_new_panel_io_spi(self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io);
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_spi)"), ret);
     }
