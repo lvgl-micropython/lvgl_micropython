@@ -7,14 +7,9 @@
         //local_includes
         #include "lcd_types.h"
 
-
         // esp-idf includes
         #include "esp_lcd_panel_io.h"
         #include "esp_lcd_panel_rgb.h"
-
-        #include "freertos/FreeRTOS.h"
-        #include "freertos/task.h"
-        #include "freertos/semphr.h"
 
         // micropython includes
         #include "mphalport.h"
@@ -30,6 +25,7 @@
 
             void *buf1;
             void *buf2;
+            uint32_t buffer_flags;
 
             bool trans_done;
             bool rgb565_byte_swap;
@@ -43,8 +39,6 @@
             uint32_t buffer_size;
             mp_obj_array_t *view1;
             mp_obj_array_t *view2;
-            SemaphoreHandle_t sem_vsync_end;
-            SemaphoreHandle_t sem_gui_ready;
         } mp_lcd_rgb_bus_obj_t;
 
 
