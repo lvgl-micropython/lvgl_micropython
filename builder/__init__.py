@@ -12,6 +12,10 @@ def update_mphalport(target):
         mphalport_path = f'lib/micropython/ports/{target}/pic16bit_mphal.h'
     elif target == 'teensy':
         mphalport_path = f'lib/micropython/ports/{target}/teensy_hal.h'
+    elif target == 'macOS':
+        mphalport_path = f'lib/micropython/ports/unix/mphalport.h'
+    elif target == 'windows':
+        mphalport_path = f'lib/micropython/ports/{target}/windows_mphal.h'
     else:
         mphalport_path = f'lib/micropython/ports/{target}/mphalport.h'
 
