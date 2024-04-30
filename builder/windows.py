@@ -75,11 +75,11 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
         os.environ['VCTargetsPath'] = VCTargetsPath
 
         mpy_cross_cmd.extend([
-            env.visual_c.msbuild_path,
+            f'"{env.visual_c.msbuild_path}"',
             'lib/micropython/mpy-cross/mpy-cross.vcxproj'
         ])
         compile_cmd.extend([
-            env.visual_c.msbuild_path,
+            f'"{env.visual_c.msbuild_path}"',
             'lib/micropython/ports/windows/micropython.vcxproj',
         ])
 
