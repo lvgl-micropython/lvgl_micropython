@@ -13,13 +13,6 @@ jobs:
               addToPath: true
 
           - script: set AZURE_BUILD=1
-            displayName: 'setting eenvironment variables'
-
           - script: python -m pip install --upgrade pip setuptools wheel
-            displayName: 'Install tools'
-
           - script: python -m pip install pyMSVC
-            displayName: 'Install build requirements'
-
           - script: python3 make.py windows submodules clean mpy_cross DISPLAY=sdl_display INDEV=sdl_pointer
-            displayName: 'windows port (SDL)'

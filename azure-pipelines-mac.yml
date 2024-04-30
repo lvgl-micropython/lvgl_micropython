@@ -14,10 +14,5 @@ jobs:
               addToPath: true
 
           - script: export AZURE_BUILD=1
-            displayName: 'setting eenvironment variables'
-
           - script: brew install --force llvm libffi cmake ninja make
-            displayName: 'Install libs'
-
           - script: python3 make.py macOS submodules clean mpy_cross DISPLAY=sdl_display INDEV=sdl_pointer
-            displayName: 'unix port (SDL)'
