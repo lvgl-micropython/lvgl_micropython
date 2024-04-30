@@ -229,12 +229,12 @@ if sys.platform.startswith('win'):
     output_pp = f'/Fi"{pp_file}"'
     include_path_env_key = 'INCLUDE'
 
-elif sys.platform.startswith('darwin'):
-    include_path_env_key = 'C_INCLUDE_PATH'
-    cpp_cmd = [
-        'clang', '-std=c11', '-E', '-DINT32_MIN=0x80000000',
-    ]
-    output_pp = f' >> "{pp_file}"'
+# elif sys.platform.startswith('darwin'):
+#     include_path_env_key = 'C_INCLUDE_PATH'
+#     cpp_cmd = [
+#         'clang', '-std=c11', '-E', '-DINT32_MIN=0x80000000',
+#     ]
+#     output_pp = f' >> "{pp_file}"'
 else:
     include_path_env_key = 'C_INCLUDE_PATH'
     cpp_cmd = [
