@@ -172,32 +172,32 @@ def get_pycparser():
 
 
 def _busy_spinner(evnt):
-    if 'AZURE_BUILD' in os.environ:
-        while not evnt.is_set():
-            sys.stdout.write('.')
-            sys.stdout.flush()
-            evnt.wait(2)
-    else:
-        count = random.randint(1, 25)
-        wait = random.randint(10, 100) * 0.001
-        chars = '\\|/-'
-        char_index = 0
-        sys.stdout.write(chars[char_index] + '\r')
+    while not evnt.is_set():
+        sys.stdout.write('.')
         sys.stdout.flush()
+        evnt.wait(2)
 
-        while not evnt.is_set():
-            evnt.wait(wait)
-            count -= 1
-            char_index += 1
-            if char_index == 4:
-                char_index = 0
-
-            sys.stdout.write(f'{chars[char_index]}\r')
-            sys.stdout.flush()
-
-            if count == 0:
-                count = random.randint(1, 25)
-                wait = random.randint(10, 100) * 0.001
+    # else:
+    #     count = random.randint(1, 25)
+    #     wait = random.randint(10, 100) * 0.001
+    #     chars = '\\|/-'
+    #     char_index = 0
+    #     sys.stdout.write(chars[char_index] + '\r')
+    #     sys.stdout.flush()
+    #
+    #     while not evnt.is_set():
+    #         evnt.wait(wait)
+    #         count -= 1
+    #         char_index += 1
+    #         if char_index == 4:
+    #             char_index = 0
+    #
+    #         sys.stdout.write(f'{chars[char_index]}\r')
+    #         sys.stdout.flush()
+    #
+    #         if count == 0:
+    #             count = random.randint(1, 25)
+    #             wait = random.randint(10, 100) * 0.001
 
 
 def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
