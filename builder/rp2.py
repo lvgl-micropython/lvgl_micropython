@@ -41,7 +41,8 @@ rp2_cmd = [
     '-C',
     'lib/micropython/ports/rp2',
     'LV_PORT=rp2',
-    'USER_C_MODULES=../../../../micropython.cmake'
+    'USER_C_MODULES=../../../../micropython.cmake',
+    'SECOND_BUILD_ENV=0'
 ]
 
 clean_cmd = []
