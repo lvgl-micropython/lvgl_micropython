@@ -14,6 +14,7 @@ jobs:
       matrix:
         port: ['unix', 'esp32', 'stm32', 'rp2']
     steps:
+    - uses: actions/checkout@v4
     - uses: ammaraskar/gcc-problem-matcher@master
     - name: Install Dependencies
       run: |

@@ -14,10 +14,10 @@ jobs:
       matrix:
         port: ['windows', 'esp32', 'stm32', 'rp2']
     steps:
+    - uses: actions/checkout@v4
     - uses: ammaraskar/gcc-problem-matcher@master
     - name: Install Dependencies
       run: python3 -m pip install pyMSVC
-
     # STM32 & RPi Pico port
     - name: arm-none-eabi-gcc
       if: matrix.port == 'stm32' || matrix.port == 'rp2'

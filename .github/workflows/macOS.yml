@@ -14,10 +14,10 @@ jobs:
       matrix:
         port: ['macOS', 'esp32', 'stm32', 'rp2']
     steps:
+    - uses: actions/checkout@v4
     - uses: ammaraskar/gcc-problem-matcher@master
     - name: Install Dependencies
       run: brew install --force llvm libffi cmake ninja make
-
     # STM32 & RPi Pico port
     - name: arm-none-eabi-gcc
       if: matrix.port == 'stm32' || matrix.port == 'rp2'
