@@ -54,6 +54,8 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
 
     unix_cmd.append(f'{script_dir}/lib/micropython/ports/unix')
 
+    f''
+
     if board:
         unix_cmd.append(f'VARIANT={board}')
 
@@ -66,7 +68,7 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
         f'LV_CFLAGS="{lv_cflags}"',
         f'LV_PORT=unix',
         f'USER_C_MODULES="{script_dir}/ext_mod"',
-        'CFLAGS="-Wno-missing-field-initializers -Wno-unused-function"'
+        f'CFLAGS="-Wno-missing-field-initializers -Wno-unused-function -I"{script_dir}/lib/micropython"'
     ])
     unix_cmd.extend(extra_args)
 
