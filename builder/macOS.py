@@ -57,10 +57,16 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
     if board:
         unix_cmd.append(f'VARIANT={board}')
 
+    if lv_cflags:
+        lv_cflags += ' -Wno-missing-field-initializers -Wno-unused-function'
+    else:
+        lv_cflags = '-Wno-missing-field-initializers -Wno-unused-function'
+
     unix_cmd.extend([
         f'LV_CFLAGS="{lv_cflags}"',
         f'LV_PORT=unix',
-        f'USER_C_MODULES="{script_dir}/ext_mod"'
+        f'USER_C_MODULES="{script_dir}/ext_mod"',
+        'CFLAGS="-Wno-missing-field-initializers -Wno-unused-function"'
     ])
     unix_cmd.extend(extra_args)
 

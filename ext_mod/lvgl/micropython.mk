@@ -14,7 +14,7 @@ CFLAGS_USERMOD += -I$(LVGL_BINDING_DIR)
 CFLAGS_USERMOD += -I$(LVGL_DIR)
 CFLAGS_USERMOD += -I$(LVGL_BINDING_DIR)/include
 CFLAGS_USERMOD += -Wno-missing-field-initializers
-CFLAGS_USERMOD += -Wunused-function
+CFLAGS_USERMOD += -Wno-unused-function
 
 ALL_LVGL_SRC = $(shell find $(LVGL_DIR) -type f -name '*.h') $(LVGL_BINDING_DIR)/lib/lv_conf.h
 
