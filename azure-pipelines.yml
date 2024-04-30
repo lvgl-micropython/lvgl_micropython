@@ -1,0 +1,21 @@
+jobs:
+  - template: azure-pipelines-linux.yml
+    parameters:
+      images:
+        - 'ubuntu-22.04'
+      pythonVersions:
+        - '3.10'
+
+  - template: azure-pipelines-windows.yml
+    parameters:
+      images:
+        - 'windows-2022'
+      pythonVersions:
+        - '3.10'
+
+  - template: azure-pipelines-mac.yml
+    parameters:
+      images:
+        - 'macOS-12'
+      pythonVersions:
+        - '3.10'

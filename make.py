@@ -14,7 +14,7 @@ argParser.add_argument(
     help='build target',
     choices=[
         'esp32', 'windows', 'stm32', 'unix', 'rp2',
-        'renesas-ra', 'nrf', 'mimxrt', 'samd'
+        'renesas-ra', 'nrf', 'mimxrt', 'samd', 'macOS'
     ],
     action='store',
     nargs=1
@@ -184,6 +184,8 @@ if __name__ == '__main__':
         from builder import nrf as mod
     elif target.lower() == 'renesas-ra':
         from builder import renesas as mod
+    elif target.lower() == 'macos':
+        from builder import macOS as mod
     else:
         import builder as mod
 
