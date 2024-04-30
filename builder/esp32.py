@@ -317,6 +317,7 @@ def setup_idf_environ():
                 'IDF_TOOLS_INSTALL_CMD'
             ):
                 if item not in temp_env:
+                    print(output)
                     raise RuntimeError(f'"{item}" not found in environment.')
 
                 env[item] = temp_env[item]
