@@ -69,15 +69,12 @@ def clean():
 def submodules():
     stm32lib_path = 'lib/micropython/lib/stm32lib'
     if not os.path.exists(os.path.join(stm32lib_path, 'CMSIS')):
-        ret_code, _ = spawn([
-            'git',
-            'submodule',
-            'update',
-            '--init',
-            '--',
-            stm32lib_path
-        ])
-
+        ret_code, _ = spawn(
+            [
+                ['cd', stm32lib_path],
+                ['git', 'submodule', 'update', '--init']
+            ]
+        )
         if ret_code != 0:
             sys.exit(ret_code)
 
