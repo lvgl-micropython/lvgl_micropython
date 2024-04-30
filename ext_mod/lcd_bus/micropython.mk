@@ -10,6 +10,7 @@ CFLAGS_USERMOD += -I$(MOD_DIR)
 CFLAGS_USERMOD += -I$(MOD_DIR)/common_include
 CFLAGS_USERMOD += -I$(MOD_DIR)/sdl_bus
 CFLAGS_USERMOD += -Wno-missing-field-initializers
+CFLAGS_USERMOD += -Wunused-function
 
 SRC_USERMOD_C += $(MOD_DIR)/modlcd_bus.c
 SRC_USERMOD_C += $(MOD_DIR)/lcd_types.c

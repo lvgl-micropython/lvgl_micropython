@@ -13,6 +13,8 @@ LVGL_HEADER = $(LVGL_BINDING_DIR)/build/lvgl_header.h
 CFLAGS_USERMOD += -I$(LVGL_BINDING_DIR)
 CFLAGS_USERMOD += -I$(LVGL_DIR)
 CFLAGS_USERMOD += -I$(LVGL_BINDING_DIR)/include
+CFLAGS_USERMOD += -Wno-missing-field-initializers
+CFLAGS_USERMOD += -Wunused-function
 
 ALL_LVGL_SRC = $(shell find $(LVGL_DIR) -type f -name '*.h') $(LVGL_BINDING_DIR)/lib/lv_conf.h
 
