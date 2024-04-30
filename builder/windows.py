@@ -75,11 +75,11 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
         os.environ['VCTargetsPath'] = VCTargetsPath
 
         mpy_cross_cmd.extend([
-            'msbuild',
+            env.visual_c.msbuild_path,
             'lib/micropython/mpy-cross/mpy-cross.vcxproj'
         ])
         compile_cmd.extend([
-            'msbuild',
+            env.visual_c.msbuild_path,
             'lib/micropython/ports/windows/micropython.vcxproj',
         ])
 
@@ -103,12 +103,12 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
             f'LV_PORT=windows',
         ])
 
-    if lv_cflags:
-        clean_cmd.append(f'LV_CFLAGS="{lv_cflags}"')
-        compile_cmd.append(f'LV_CFLAGS="{lv_cflags}"')
+    # if lv_cflags:
+    #     clean_cmd.append(f'LV_CFLAGS="{lv_cflags}"')
+    #     compile_cmd.append(f'LV_CFLAGS="{lv_cflags}"')
 
-    clean_cmd.append(f'USER_C_MODULES="{script_dir}/ext_mod"')
-    compile_cmd.append(f'USER_C_MODULES="{script_dir}/ext_mod"')
+    # clean_cmd.append(f'USER_C_MODULES="{script_dir}/ext_mod"')
+    # compile_cmd.append(f'USER_C_MODULES="{script_dir}/ext_mod"')
 
     clean_cmd.extend(extra_args)
     compile_cmd.extend(extra_args)
