@@ -217,8 +217,9 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
         env=env
     )
 
-    os.set_blocking(p.stdout.fileno(), False)
-    os.set_blocking(p.stderr.fileno(), False)
+    if not sys.platform.startswith('win'):
+        os.set_blocking(p.stdout.fileno(), False)
+        os.set_blocking(p.stderr.fileno(), False)
 
     event = threading.Event()
 
