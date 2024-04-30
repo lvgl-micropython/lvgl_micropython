@@ -359,7 +359,6 @@ def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manife
         manifest_path = f'lib/micropython/ports/{target}/manifest.py'
     else:
         manifest_path = f'lib/micropython/ports/{target}/boards/manifest.py'
-
     if not os.path.exists(manifest_path):
         raise RuntimeError(f'Unable to locate manifest file "{manifest_path}"')
 

@@ -186,6 +186,8 @@ if __name__ == '__main__':
         from builder import renesas as mod
     elif target.lower() == 'macos':
         from builder import macOS as mod
+    elif target.lower() == 'windows':
+        from builder import windows as mod
     else:
         import builder as mod
 
