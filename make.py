@@ -170,7 +170,14 @@ def create_lvgl_header():
             f'#include "{SCRIPT_DIR}/ext_mod/lvgl_addons/include/color_addons.h"\n'
         )
 
+
 if __name__ == '__main__':
+
+    if sys.platform.startswith('win'):
+        from builder import setup_windows_build
+
+        setup_windows_build()
+
     if target.lower() == 'esp32':
         from builder import esp32 as mod
     elif target.lower() == 'unix':

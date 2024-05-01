@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 from . import spawn
 from . import generate_manifest
 from . import update_mphalport
+from . import setup_windows_build
 
 
 mpy_cross_cmd = []
@@ -53,26 +54,8 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
         LV_CFLAGS = lv_cflags
 
     if sys.platform.startswith('win'):
-        import pyMSVC
+        env = setup_windows_build()
 
-        env = pyMSVC.setup_environment()
-        print(env)
-
-        for key in os.environ.keys():
-            if 'COMNTOOLS' in key:
-                version = key.replace('COMNTOOLS', '').replace('VS', '')
-                break
-        else:
-            print(os.environ)
-            raise RuntimeError('unable to locate common tools version')
-
-        version = 'v' + version
-
-        msbuild_path = env.visual_c.msbuild_path.lower()
-        msbuild_path = msbuild_path.split('msbuild', 1)[0][:-1]
-
-        VCTargetsPath = os.path.join(msbuild_path, 'Msbuild', 'Microsoft', 'VC', version)
-        os.environ['VCTargetsPath'] = VCTargetsPath + '\\'
         mpy_cross_cmd.extend([
             f'"{env.visual_c.msbuild_path}"',
             'lib/micropython/mpy-cross/mpy-cross.vcxproj'
