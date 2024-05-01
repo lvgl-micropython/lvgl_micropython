@@ -1,4 +1,4 @@
-name: Micropython CI
+name: Windows build
 
 on:
   push:

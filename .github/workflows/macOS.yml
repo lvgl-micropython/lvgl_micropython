@@ -1,5 +1,4 @@
-name: Micropython CI
-
+name: macOS build
 on:
   push:
   pull_request:
