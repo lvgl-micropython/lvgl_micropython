@@ -7,34 +7,23 @@ on:
 jobs:
   build:
     if: ${{ github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name }}
-    name: Build ${{ matrix.port }} port
     runs-on: macos-latest
-    continue-on-error: true
-    strategy:
-      matrix:
-        port: ['macOS', 'esp32', 'stm32', 'rp2']
+
     steps:
     - uses: actions/checkout@v4
     - uses: ammaraskar/gcc-problem-matcher@master
+
     - name: Install Dependencies
       run: brew install --force gcc libffi cmake ninja make
-    # STM32 & RPi Pico port
-    - name: arm-none-eabi-gcc
-      if: matrix.port == 'stm32' || matrix.port == 'rp2'
-      uses: carlosperate/arm-none-eabi-gcc-action@v1.8.1
-      with:
-        release: '9-2019-q4' # The arm-none-eabi-gcc release to use.
-    - name: Build STM32 port
-      if: matrix.port == 'stm32'
-      run: python3 make.py stm32 submodules clean mpy_cross BOARD=STM32F7DISC DISPLAY=rgb_display INDEV=gt911
-    - name: Build Raspberry Pi PICO port
-      if: matrix.port == 'rp2'
-      run: python3 make.py rp2 submodules clean mpy_cross BOARD=RPI_PICO DISPLAY=rgb_display INDEV=gt911
-    - name: Build ESP32 port
-      if: matrix.port == 'esp32'
-      run: python3 make.py esp32 submodules clean mpy_cross BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT DISPLAY=rgb_display INDEV=gt911
-    # macOS port
+
     - name: Build macOS port
-      if: matrix.port == 'macOS'
       run: python3 make.py macOS submodules clean mpy_cross DISPLAY=sdl_display INDEV=sdl_pointer
 
+    - name: Build ESP32 port
+      run: python3 make.py esp32 submodules clean mpy_cross BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT DISPLAY=rgb_display INDEV=gt911
+
+    - name: Build STM32 port
+      run: python3 make.py stm32 submodules clean mpy_cross BOARD=STM32F7DISC DISPLAY=rgb_display INDEV=gt911
+
+    - name: Build Raspberry Pi PICO port
+      run: python3 make.py rp2 submodules clean mpy_cross BOARD=RPI_PICO DISPLAY=rgb_display INDEV=gt911
