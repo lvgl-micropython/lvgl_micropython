@@ -313,8 +313,8 @@ def setup_idf_environ():
             for item in (
                 'PATH',
                 'IDF_PATH',
-                'IDF_TOOLS_EXPORT_CMD',
-                'IDF_TOOLS_INSTALL_CMD'
+                'IDF_TOOLS_INSTALL_CMD',
+                'IDF_DEACTIVATE_FILE_PATH'
             ):
                 if item not in temp_env:
                     print(output)
