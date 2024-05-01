@@ -129,9 +129,6 @@ def build_sdl():
 
 
 def submodules():
-    if not sys.platform.startswith('linux'):
-        raise RuntimeError('Compiling for unix can only be done from Linux')
-
     if not os.path.exists('lib/SDL/include'):
         cmd_ = [
             'git',
