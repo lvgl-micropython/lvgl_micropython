@@ -31,7 +31,6 @@ $(LVGL_MPY): $(ALL_LVGL_SRC) $(LVGL_BINDING_DIR)/gen/$(GEN_SCRIPT)_api_gen_mpy.p
 .PHONY: LVGL_MPY
 LVGL_MPY: $(LVGL_MPY)
 
-CFLAGS_USERMOD += -Wno-unused-function
 SRC_USERMOD_LIB_C += $(shell find $(LVGL_DIR)/src -type f -name "*.c")
 SRC_USERMOD_LIB_C += $(LVGL_ADDON_DIR)/src/color_addons.c
 SRC_USERMOD_C += $(LVGL_MPY)
