@@ -336,12 +336,7 @@ def setup_idf_environ():
                 line.split('=', 1)[0]: line.split('=', 1)[1]
                 for line in output
             }
-            for item in (
-                'PATH',
-                'IDF_PATH',
-                'IDF_TOOLS_EXPORT_CMD',
-                'IDF_TOOLS_INSTALL_CMD'
-            ):
+            for item in ('PATH', 'IDF_PATH'):
                 if item not in temp_env:
                     raise RuntimeError(f'"{item}" not found in environment.')
 
