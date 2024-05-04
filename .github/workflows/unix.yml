@@ -13,8 +13,8 @@ jobs:
     - uses: actions/checkout@v4
     - uses: ammaraskar/gcc-problem-matcher@master
     - uses: carlosperate/arm-none-eabi-gcc-action@v1.8.1
-        with:
-          release: '9-2019-q4' # The arm-none-eabi-gcc release to use.
+      with:
+        release: '9-2019-q4' # The arm-none-eabi-gcc release to use.
 
     - name: Install Deps
       run: sudo apt-get install --force-yes -y build-essential pkg-config cmake ninja-build libffi-dev gnome-desktop-testing libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev fcitx-libs-dev libpipewire-0.3-dev libwayland-dev libdecor-0-dev
