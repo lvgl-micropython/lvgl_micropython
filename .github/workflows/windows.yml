@@ -23,7 +23,6 @@ jobs:
       with:
         esp_idf_version: v5.0.4
         target: esp32s3
-        path: 'lib/esp-idf'
 
     - name: Install Dependencies
       run: |
