@@ -308,7 +308,6 @@ def setup_idf_environ():
                     ]
                 else:
                     env_cmds = [
-                        'echo "C:/Program Files (x86)/Etc" >> $GITHUB_PATH'
                         ['echo', f"{py_path}", '>>', '$GITHUB_PATH'],
                         ['echo', f"{os.path.abspath(idf_path)}", '>>', '$GITHUB_PATH']
                     ]
