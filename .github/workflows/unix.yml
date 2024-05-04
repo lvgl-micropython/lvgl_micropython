@@ -24,6 +24,12 @@ jobs:
       run: sudo apt-get install --force-yes -y build-essential pkg-config cmake ninja-build libffi-dev gnome-desktop-testing libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev fcitx-libs-dev libpipewire-0.3-dev libwayland-dev libdecor-0-dev
 
     - name: Build ESP32 port
+      uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.0.4
+          target: esp32s3
+          path: 'lib/esp-idf'
+
       run: python3 make.py esp32 submodules clean mpy_cross BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT DISPLAY=rgb_display INDEV=gt911
 
     - name: Build STM32 port
