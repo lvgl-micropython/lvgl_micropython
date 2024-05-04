@@ -246,9 +246,9 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
         env = os.environ
 
     if isinstance(cmd_[0], str):
-        cmd_ = ' '.join(cmd_)
-    else:
-        cmd_ = ' && '.join(' '.join(c) for c in cmd_)
+        cmd_ = [cmd_[:]]
+
+    cmd_ = ' && '.join(' '.join(c) for c in cmd_)
 
     p = subprocess.Popen(
         cmd_,

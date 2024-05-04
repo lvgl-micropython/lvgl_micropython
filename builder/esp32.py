@@ -296,9 +296,26 @@ def setup_idf_environ():
             # this removes any IDF environment variable that may exist if the user
             # has the ESP-IDF installed
             env = {k: v for k, v in os.environ.items() if not k.startswith('IDF')}
-            env['IDF_PATH'] = os.path.abspath(idf_path)
-
             py_path = os.path.split(sys.executable)[0]
+
+            if 'GITHUB_RUN_ID' in env:
+                if sys.platform.startswith('win'):
+                    env_cmds = [
+                        ['echo', f"{py_path}", '|', 'Out-File', '-Append',
+                        '-FilePath', '$env:GITHUB_PATH', '-Encoding', 'utf8'],
+                        ['echo', f"{os.path.abspath(idf_path)}", '|', 'Out-File', '-Append',
+                         '-FilePath', '$env:GITHUB_PATH', '-Encoding', 'utf8']
+                    ]
+                else:
+                    env_cmds = [
+                        'echo "C:/Program Files (x86)/Etc" >> $GITHUB_PATH'
+                        ['echo', f"{py_path}", '>>', '$GITHUB_PATH'],
+                        ['echo', f"{os.path.abspath(idf_path)}", '>>', '$GITHUB_PATH']
+                    ]
+
+                spawn(env_cmds, env=env, out_to_screen=False)
+
+            env['IDF_PATH'] = os.path.abspath(idf_path)
 
             if 'PATH' in env:
                 env['PATH'] = py_path + os.pathsep + env['PATH']
