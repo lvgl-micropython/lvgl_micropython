@@ -14,7 +14,7 @@ jobs:
     - uses: ammaraskar/gcc-problem-matcher@master
 
     - name: Install Deps
-      run: sudo apt-get install --force-yes -y build-essential pkg-config cmake ninja-build libffi-dev gnome-desktop-testing libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev fcitx-libs-dev libpipewire-0.3-dev libwayland-dev libdecor-0-dev
+      run: sudo apt-get install --force-yes -y build-essential pkg-config cmake ninja-build libffi-dev gnome-desktop-testing libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev fcitx-libs-dev libpipewire-0.3-dev libwayland-dev libdecor-0-dev gcc-arm-none-eabi
 
     - name: Build Unix port
       run: python3 make.py unix submodules clean mpy_cross DISPLAY=sdl_display INDEV=sdl_pointer

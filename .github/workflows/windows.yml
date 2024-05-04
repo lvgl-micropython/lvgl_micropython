@@ -15,6 +15,7 @@ jobs:
     - name: Install Dependencies
       run: |
         choco install make
+        choco install gcc-arm-embedded
         python3 -m pip install pyMSVC
 
     - name: Build Windows port

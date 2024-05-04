@@ -13,7 +13,9 @@ jobs:
     - uses: ammaraskar/gcc-problem-matcher@master
 
     - name: Install Dependencies
-      run: brew install --force gcc libffi cmake ninja make
+      run: |
+        brew install --force gcc libffi cmake ninja make
+        brew install --force --cask gcc-arm-embedded
 
     - name: Build macOS port
       run: python3 make.py unix submodules clean mpy_cross DISPLAY=sdl_display INDEV=sdl_pointer
