@@ -1,0 +1,62 @@
+name: 'ESP-IDF Project Build'
+author: 'rmshub'
+description: 'GitHub action to install ESP-IDF tools for building esp-idf projects'
+
+branding:
+  icon: 'box'
+  color: 'orange'
+
+inputs:
+  fetch-depth: 
+    description: 'Number of commits to fetch. 0 indicates all history for all branches and tags'
+    required: false
+    default: '1'
+  token:
+    description: 'Personal access token (PAT) used to fetch the repository'
+    required: false
+    default: ${{ github.token }}
+  submodules:
+    description: 'Whether to checkout submodules: true to checkout submodules or recursive'
+    required: false
+    default: true
+  esp_idf_version:
+    description: 'ESP-IDF version'
+    required: false
+    default: 'v4.3'
+  esp_idf_target:
+    description: 'Sets the target (chip) for which the project is built'
+    required: false
+    default: 'esp32'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout the code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: ${{ inputs.fetch-depth }}
+        token: ${{ inputs.token }}
+        submodules: ${{ inputs.submodules }}
+    
+    - name: Cache esp-idf and its tools
+      id: esp-idf-cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/esp/esp-idf
+          ~/.espressif
+        key: ${{ runner.os }}-esp-${{ inputs.esp_idf_version }}
+
+    - run: |
+        if echo ${{ steps.esp-idf-cache.outputs.cache-hit }} | grep -c "true"
+        then 
+          echo "Cache hit - skipping dependency installation"
+        else
+          sh ${{ github.action_path }}/install.sh ${{ inputs.esp_idf_version }}
+        fi
+      shell: bash
+
+    - run: |
+        source ~/esp/esp-idf/export.sh
+        idf.py set-target ${{ inputs.esp_idf_target }}
+      shell: bash

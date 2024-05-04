@@ -19,10 +19,10 @@ jobs:
       with:
         python-version: '3.10'
 
-    - uses: espressif/esp-idf-ci-action@v1
+    - uses: ./.github/actions/esp-idf-action
       with:
         esp_idf_version: v5.0.4
-        target: esp32s3
+        esp_idf_target: esp32s3
 
     - name: Install Dependencies
       run: brew install --force gcc libffi cmake ninja make
