@@ -8,6 +8,34 @@
 #define TWO_PI 6.28318530717958647693f
 #define INV_TWO_PI 0.15915494309189533576876437577476f
 
+#ifdef MP_SOFT_ATAN2
+
+// Approximates atan2(y, x) normalized to the [0,4) range
+// with a maximum error of 0.1620 degrees
+float soft_atan2( float y, float x )
+{
+    static const uint32_t sign_mask = 0x80000000;
+    static const float b = 0.596227f;
+
+    // Extract the sign bits
+    uint32_t ux_s  = sign_mask & (uint32_t &)x;
+    uint32_t uy_s  = sign_mask & (uint32_t &)y;
+
+    // Determine the quadrant offset
+    float q = (float)( ( ~ux_s & uy_s ) >> 29 | ux_s >> 30 );
+
+    // Calculate the arctangent in the first quadrant
+    float bxy_a = fabs( b * x * y );
+    float num = bxy_a + y * y;
+    float atan_1q =  num / ( x * x + bxy_a + num );
+
+    // Translate it to the proper quadrant
+    uint32_t uatan_2q = (ux_s ^ uy_s) | (uint32_t &)atan_1q;
+    return q + (float &)uatan_2q;
+}
+
+#endif /* MP_SOFT_ATAN */
+
 
 float floormod(float x, float y) {
     int32_t res = (int32_t)x;
@@ -49,7 +77,11 @@ void lv_conical_gradient(uint8_t *buf, uint16_t radius, const lv_grad_dsc_t *gra
         run = radius;
 
         for (uint32_t x=0; x < diameter; x++) {
-            t = (float)atan2((float)rise, (float)run) + (float)PI - (float)angle;
+            #ifdef MP_SOFT_ATAN2
+                t = (float)soft_atan2((float)rise, (float)run) + (float)PI - (float)angle;
+            #else
+                t = (float)atan2((float)rise, (float)run) + (float)PI - (float)angle;
+            #endif
 
             if (twist > 0) {
                 t += TWO_PI * sqrtf((float)(rise * rise + run * run) / (float)twist);
