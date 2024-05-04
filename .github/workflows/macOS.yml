@@ -11,11 +11,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: ammaraskar/gcc-problem-matcher@master
-
-    - name: Install arm-none-eabi-gcc
-      uses: carlosperate/arm-none-eabi-gcc-action@v1.8.1
-      with:
-        release: '9-2019-q4' # The arm-none-eabi-gcc release to use.
+    - uses: carlosperate/arm-none-eabi-gcc-action@v1.8.1
+        with:
+          release: '9-2019-q4' # The arm-none-eabi-gcc release to use.
 
     - name: Install Dependencies
       run: brew install --force gcc libffi cmake ninja make
