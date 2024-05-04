@@ -18,7 +18,7 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        winget install ezwinports.make
+        winget install --accept-source-agreements --accept-package-agreements ezwinports.make
         python3 -m pip install pyMSVC
 
     - name: Build ESP32 port
