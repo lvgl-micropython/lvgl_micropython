@@ -37,26 +37,13 @@ runs:
         fetch-depth: ${{ inputs.fetch-depth }}
         token: ${{ inputs.token }}
         submodules: ${{ inputs.submodules }}
-    
-    - name: Cache esp-idf and its tools
-      id: esp-idf-cache
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/esp/esp-idf
-          ~/.espressif
-        key: ${{ runner.os }}-esp-${{ inputs.esp_idf_version }}
 
     - run: |
-        if echo ${{ steps.esp-idf-cache.outputs.cache-hit }} | grep -c "true"
-        then 
-          echo "Cache hit - skipping dependency installation"
-        else
-          sh ${{ github.action_path }}/install.sh ${{ inputs.esp_idf_version }}
-        fi
-      shell: bash
-
-    - run: |
+        cd 
+        
+        git clone --recursive https://github.com/espressif/esp-idf.git
+        
+        sh ${{ github.action_path }}/install.sh ${{ inputs.esp_idf_version }}
         source ~/esp/esp-idf/export.sh
         idf.py set-target ${{ inputs.esp_idf_target }}
       shell: bash

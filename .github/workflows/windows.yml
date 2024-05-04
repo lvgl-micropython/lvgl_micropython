@@ -20,11 +20,6 @@ jobs:
       with:
         python-version: '3.10'
 
-    - uses: ./.github/actions/esp-idf-action
-      with:
-        esp_idf_version: v5.0.4
-        esp_idf_target: esp32s3
-
     - name: Install Dependencies
       run: |
         winget install --accept-source-agreements --accept-package-agreements ezwinports.make

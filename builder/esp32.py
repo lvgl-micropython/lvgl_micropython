@@ -298,6 +298,15 @@ def setup_idf_environ():
             env = {k: v for k, v in os.environ.items() if not k.startswith('IDF')}
             env['IDF_PATH'] = os.path.abspath(idf_path)
 
+            py_path = os.path.split(sys.executable)[0]
+
+            if 'PATH' in os.environ:
+                os.environ['PATH'] = py_path + os.pathsep + os.environ['PATH']
+            elif 'path' in os.environ:
+                os.environ['path'] = py_path + os.pathsep + os.environ['path']
+            else:
+                os.environ['PATH'] = py_path + os.pathsep
+
             result, output = spawn(cmds, env=env, out_to_screen=False)
 
             if result != 0:
@@ -310,6 +319,9 @@ def setup_idf_environ():
                 line.split('=', 1)[0]: line.split('=', 1)[1]
                 for line in output
             }
+
+            print(temp_env)
+
             if 'PATH' in temp_env:
                 env['PATH'] = temp_env['PATH']
             elif 'path' in temp_env:
