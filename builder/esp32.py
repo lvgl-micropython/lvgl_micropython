@@ -310,17 +310,18 @@ def setup_idf_environ():
                 line.split('=', 1)[0]: line.split('=', 1)[1]
                 for line in output
             }
-            for item in (
-                'PATH',
-                'IDF_PATH',
-                'IDF_TOOLS_INSTALL_CMD',
-                'IDF_DEACTIVATE_FILE_PATH'
-            ):
-                if item not in temp_env:
-                    print(output)
-                    raise RuntimeError(f'"{item}" not found in environment.')
+            if 'PATH' in temp_env:
+                env['PATH'] = temp_env['PATH']
+            elif 'path' in temp_env:
+                env['PATH'] = temp_env['path']
 
-                env[item] = temp_env[item]
+            if 'IDF_PATH' in temp_env:
+                env['IDF_PATH'] = temp_env['IDF_PATH']
+            elif 'idf_path' in temp_env:
+                env['IDF_PATH'] = temp_env['idf_path']
+            else:
+                print(output)
+                raise RuntimeError(f'"IDF_PATH" not found in environment.')
 
         else:
             args = sys.argv[:]
