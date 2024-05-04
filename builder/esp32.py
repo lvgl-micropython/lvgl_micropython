@@ -300,12 +300,13 @@ def setup_idf_environ():
 
             py_path = os.path.split(sys.executable)[0]
 
-            if 'PATH' in os.environ:
-                os.environ['PATH'] = py_path + os.pathsep + os.environ['PATH']
-            elif 'path' in os.environ:
-                os.environ['path'] = py_path + os.pathsep + os.environ['path']
+            if 'PATH' in env:
+                env['PATH'] = py_path + os.pathsep + env['PATH']
+            elif 'path' in env:
+                env['PATH'] = py_path + os.pathsep + env['path']
+                del env['path']
             else:
-                os.environ['PATH'] = py_path + os.pathsep
+                env['PATH'] = py_path + os.pathsep
 
             result, output = spawn(cmds, env=env, out_to_screen=False)
 
@@ -320,20 +321,10 @@ def setup_idf_environ():
                 for line in output
             }
 
-            print(temp_env)
-
             if 'PATH' in temp_env:
                 env['PATH'] = temp_env['PATH']
             elif 'path' in temp_env:
                 env['PATH'] = temp_env['path']
-
-            if 'IDF_PATH' in temp_env:
-                env['IDF_PATH'] = temp_env['IDF_PATH']
-            elif 'idf_path' in temp_env:
-                env['IDF_PATH'] = temp_env['idf_path']
-            else:
-                print(output)
-                raise RuntimeError(f'"IDF_PATH" not found in environment.')
 
         else:
             args = sys.argv[:]
