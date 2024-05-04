@@ -19,18 +19,18 @@ jobs:
       with:
         python-version: '3.10'
 
+    - uses: espressif/esp-idf-ci-action@v1
+      with:
+        esp_idf_version: v5.0.4
+        target: esp32s3
+        path: 'lib/esp-idf'
+
     - name: Install Dependencies
       run: |
         winget install --accept-source-agreements --accept-package-agreements ezwinports.make
         python3 -m pip install pyMSVC
 
     - name: Build ESP32 port
-      uses: espressif/esp-idf-ci-action@v1
-        with:
-          esp_idf_version: v5.0.4
-          target: esp32s3
-          path: 'lib/esp-idf'
-
       run: python3 make.py esp32 submodules clean mpy_cross BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT DISPLAY=rgb_display INDEV=gt911
 
     - name: Build STM32 port
