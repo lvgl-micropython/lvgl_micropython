@@ -297,32 +297,30 @@ def setup_idf_environ():
             # has the ESP-IDF installed
             env = {k: v for k, v in os.environ.items() if not k.startswith('IDF')}
             py_path = os.path.split(sys.executable)[0]
+            idf_path = os.path.abspath(idf_path)
+            idf_tools_path = os.path.join(idf_path, 'tools')
+            env['PATH'] = py_path + os.pathsep + idf_path + os.pathsep + idf_tools_path + os.pathsep + env.get('PATH', '')
+            env['IDF_PATH'] = idf_path
 
             if 'GITHUB_RUN_ID' in env:
                 if sys.platform.startswith('win'):
                     env_cmds = [
                         ['echo', f"{py_path}", '|', 'Out-File', '-Append',
                         '-FilePath', '$env:GITHUB_PATH', '-Encoding', 'utf8'],
-                        ['echo', f"{os.path.abspath(idf_path)}", '|', 'Out-File', '-Append',
+                        ['echo', f"{idf_path}", '|', 'Out-File', '-Append',
+                         '-FilePath', '$env:GITHUB_PATH', '-Encoding', 'utf8'],
+                        ['echo', f"{idf_tools_path}", '|', 'Out-File', '-Append',
                          '-FilePath', '$env:GITHUB_PATH', '-Encoding', 'utf8']
                     ]
                 else:
                     env_cmds = [
                         ['echo', f"{py_path}", '>>', '$GITHUB_PATH'],
-                        ['echo', f"{os.path.abspath(idf_path)}", '>>', '$GITHUB_PATH']
+                        ['echo', f"{idf_path}", '>>', '$GITHUB_PATH'],
+                        ['echo', f"{idf_tools_path}", '>>', '$GITHUB_PATH']
+
                     ]
 
                 spawn(env_cmds, env=env, out_to_screen=False)
-
-            env['IDF_PATH'] = os.path.abspath(idf_path)
-
-            if 'PATH' in env:
-                env['PATH'] = py_path + os.pathsep + env['PATH']
-            elif 'path' in env:
-                env['PATH'] = py_path + os.pathsep + env['path']
-                del env['path']
-            else:
-                env['PATH'] = py_path + os.pathsep
 
             result, output = spawn(cmds, env=env, out_to_screen=False)
 
