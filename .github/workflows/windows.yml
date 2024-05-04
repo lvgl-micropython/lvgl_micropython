@@ -11,15 +11,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-
+    - name: Install arm-none-eabi-gcc
+      uses: carlosperate/arm-none-eabi-gcc-action@v1.8.1
+      with:
+        release: '9-2019-q4' # The arm-none-eabi-gcc release to use.
     - name: Install Dependencies
       run: |
-        choco install make
-        choco install gcc-arm-embedded
+        winget install ezwinports.make
         python3 -m pip install pyMSVC
-
-    - name: Build Windows port
-      run: python3 make.py windows submodules clean mpy_cross DISPLAY=sdl_display INDEV=sdl_pointer
 
     - name: Build ESP32 port
       run: python3 make.py esp32 submodules clean mpy_cross BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT DISPLAY=rgb_display INDEV=gt911
@@ -29,5 +28,8 @@ jobs:
 
     - name: Build Raspberry Pi PICO port
       run: python3 make.py rp2 submodules clean mpy_cross BOARD=RPI_PICO DISPLAY=rgb_display INDEV=gt911
+
+    - name: Build Windows port
+        run: python3 make.py windows submodules clean mpy_cross DISPLAY=sdl_display INDEV=sdl_pointer
 
 
