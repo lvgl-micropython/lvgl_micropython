@@ -366,7 +366,17 @@ def submodules():
             get_espidf()
             print()
 
-        cmds = [['cd', idf_path]]
+        cmds = [
+            ['cd', idf_path],
+            ['git', 'submodule', 'update', '--init',
+             'components/bt/host/nimble/nimble',
+             'components/esp_wifi',
+             'components/esptool_py/esptool',
+             'components/lwip/lwip',
+             'components/mbedtls/mbedtls',
+             'components/bt/controller/lib_esp32',
+             'components/bt/controller/lib_esp32c3_family'
+        ]]
 
         if sys.platform.startswith('win'):
             cmds.append(['install', 'all'])
@@ -389,7 +399,17 @@ def submodules():
 
     env = setup_idf_environ()
 
-    return_code, _ = spawn(submodules_cmd, env=env)
+    cmds = [['cd', 'lib/esp-idf']]
+
+    if sys.platform.startswith('win'):
+        cmds.append(['export'])
+    else:
+        cmds.append(['. ./export.sh'])
+    cmds.append(['cd ../..'])
+
+    cmds.append(submodules_cmd)
+
+    return_code, _ = spawn(cmds, env=env)
     if return_code != 0:
         sys.exit(return_code)
 
