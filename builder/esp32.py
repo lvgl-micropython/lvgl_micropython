@@ -238,7 +238,7 @@ def build_commands(_, extra_args, __, lv_cflags, ___):
 
 def get_idf_version():
     if 'ESP_IDF_VERSION' in os.environ:
-        exit_code, data = spawn(['idf.py', '--version'], out_to_screen=False)
+        exit_code, data = spawn(['python3', 'idf.py', '--version'], out_to_screen=False)
         version = data.split('v')[-1].split('-')[0]
         if version:
             return version
@@ -299,7 +299,7 @@ def setup_idf_environ():
             py_path = os.path.split(sys.executable)[0]
             idf_path = os.path.abspath(idf_path)
             idf_tools_path = os.path.join(idf_path, 'tools')
-            env['PATH'] = py_path + os.pathsep + idf_path + os.pathsep + idf_tools_path + os.pathsep + env.get('PATH', '')
+            env['PATH'] = py_path + os.pathsep + os.pathsep + idf_tools_path + os.pathsep + env.get('PATH', '')
             env['IDF_PATH'] = idf_path
 
             if 'GITHUB_RUN_ID' in env:
@@ -317,7 +317,6 @@ def setup_idf_environ():
                         ['echo', f"{py_path}", '>>', '$GITHUB_PATH'],
                         ['echo', f"{idf_path}", '>>', '$GITHUB_PATH'],
                         ['echo', f"{idf_tools_path}", '>>', '$GITHUB_PATH']
-
                     ]
 
                 spawn(env_cmds, env=env, out_to_screen=False)
@@ -461,7 +460,16 @@ def compile():  # NOQA
     else:
         deploy = False
 
-    ret_code, output = spawn(compile_cmd, env=env, cmpl=True)
+    cmds = [['cd', 'lib/esp-idf']]
+
+    if sys.platform.startswith('win'):
+        cmds.append(['export'])
+    else:
+        cmds.append(['. ./export.sh'])
+    cmds.append(['cd ../..'])
+    cmds.append(compile_cmd)
+
+    ret_code, output = spawn(cmds, env=env, cmpl=True)
     if ret_code != 0:
         if (
             'partition is too small ' not in output or
@@ -496,7 +504,7 @@ def compile():  # NOQA
             compile_cmd.append('deploy')
 
         compile_cmd[4] = 'SECOND_BUILD=1'
-        ret_code, output = spawn(compile_cmd, env=env, cmpl=True)
+        ret_code, output = spawn(cmds, env=env, cmpl=True)
 
         if ret_code != 0:
             sys.exit(ret_code)
@@ -551,7 +559,7 @@ def compile():  # NOQA
             if remaining > 4096 or partition_size != -1 or deploy:
                 compile_cmd[4] = 'SECOND_BUILD=1'
 
-                ret_code, output = spawn(compile_cmd, env=env, cmpl=True)
+                ret_code, output = spawn(cmds, env=env, cmpl=True)
 
                 if ret_code != 0:
                     sys.exit(ret_code)
@@ -603,7 +611,16 @@ def compile():  # NOQA
         cmd = cmd.replace('--before default_reset ', '')
         cmd = cmd.replace('--after no_reset ', '')
 
-        result, _ = spawn([cmd])
+        cmds = [['cd', 'lib/esp-idf']]
+
+        if sys.platform.startswith('win'):
+            cmds.append(['export'])
+        else:
+            cmds.append(['. ./export.sh'])
+        cmds.append(['cd ../..'])
+        cmds.append([cmd])
+
+        result, _ = spawn(cmds)
         if result:
             sys.exit(result)
 
