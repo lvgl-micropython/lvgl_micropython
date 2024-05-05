@@ -29,7 +29,7 @@ jobs:
       run: python3 make.py esp32 submodules clean mpy_cross BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT DISPLAY=rgb_display INDEV=gt911
 
     - name: Build STM32 port
-      run: python3 make.py stm32 submodules clean mpy_cross BOARD=STM32F7DISC DISPLAY=rgb_display INDEV=gt911
+      run: python3 make.py stm32 submodules clean mpy_cross BOARD=STM32H7B3I_DK DISPLAY=rgb_display INDEV=gt911
 
     - name: Build Raspberry Pi PICO port
       run: python3 make.py rp2 submodules clean mpy_cross BOARD=RPI_PICO DISPLAY=rgb_display INDEV=gt911
