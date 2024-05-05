@@ -123,17 +123,9 @@
             uint8_t firstbit;
 
             if (args[ARG_lsb_first].u_bool) {
-                #ifdef MICROPY_PY_MACHINE_SPI_LSB
-                    firstbit = MICROPY_PY_MACHINE_SPI_LSB;
-                #else
-                    firstbit = 1;
-                #endif
+                firstbit = 1;
             } else {
-                #ifdef MICROPY_PY_MACHINE_SPI_MSB
-                    firstbit = MICROPY_PY_MACHINE_SPI_MSB;
-                #else
-                    firstbit = 0;
-                #endif
+                firstbit = 0;
             }
 
             spi_args[0] = mp_obj_new_int_from_uint(args[ARG_host].u_int);
