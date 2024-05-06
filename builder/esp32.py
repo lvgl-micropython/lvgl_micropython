@@ -385,8 +385,8 @@ def setup_idf_environ():
 
             cmds = [
                 [f'export "IDF_PATH={os.path.abspath(env["IDF_PATH"])}"'],
-                ['. ./export.sh'],
                 ['cd', idf_path],
+                ['. ./export.sh'],
                 ['printenv']
             ]
 
