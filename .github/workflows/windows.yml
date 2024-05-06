@@ -23,7 +23,7 @@ jobs:
     - name: Install Dependencies
       run: |
         winget install --accept-source-agreements --accept-package-agreements ezwinports.make
-        python3 -m pip install pyMSVC
+        python3 -m pip install pyMSVC requests
 
     - name: Build ESP32 port
       run: python3 make.py esp32 submodules clean mpy_cross BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT DISPLAY=rgb_display INDEV=gt911
