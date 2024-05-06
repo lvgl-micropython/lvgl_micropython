@@ -212,6 +212,15 @@ def compile():  # NOQA
         with open(mpconfigvariant_common_path, 'w') as f:
             f.write(mpconfigvariant_common)
 
+    makefile_path = 'lib/micropython/ports/unix/Makefile'
+    with open(makefile_path, 'rb') as f:
+        data = f.read().decode('utf-8')
+
+    data = data.replace('-Werror', '')
+
+    with open(makefile_path, 'wb') as f:
+        f.write(data.encode('utf-8'))
+
     build_sdl()
 
     return_code, _ = spawn(compile_cmd)
