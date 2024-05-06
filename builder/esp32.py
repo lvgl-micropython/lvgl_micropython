@@ -6,6 +6,56 @@ from . import generate_manifest
 from . import update_mphalport
 
 
+unzip_script = '''\
+@echo off
+setlocal
+cd /d %~dp0
+Call :UnZipFile "C:\\" "esp32_win32_msys2_environment_and_toolchain-20170111.zip"
+exit /b
+
+:UnZipFile <ExtractTo> <newzipfile>
+set vbs="%temp%\_.vbs"
+if exist %vbs% del /f /q %vbs%
+>%vbs%  echo Set fso = CreateObject("Scripting.FileSystemObject")
+>>%vbs% echo If NOT fso.FolderExists(%1) Then
+>>%vbs% echo fso.CreateFolder(%1)
+>>%vbs% echo End If
+>>%vbs% echo set objShell = CreateObject("Shell.Application")
+>>%vbs% echo set FilesInZip=objShell.NameSpace(%2).items
+>>%vbs% echo objShell.NameSpace(%1).CopyHere(FilesInZip)
+>>%vbs% echo Set fso = Nothing
+>>%vbs% echo Set objShell = Nothing
+cscript //nologo %vbs%
+if exist %vbs% del /f /q %vbs%
+'''
+
+
+# def get_idf_build_environment():
+#     import requests
+#
+#     print('downloading environment')
+#
+#     url = 'https://dl.espressif.com/dl/esp32_win32_msys2_environment_and_toolchain-20170111.zip'
+#
+#     response = requests.get(url, stream=True)
+#     with open("build/esp32_win32_msys2_environment_and_toolchain-20170111.zip", mode="wb") as file:
+#         for chunk in response.iter_content(chunk_size=10 * 1024):
+#             file.write(chunk)
+#
+#     with open('build/unzip_script.bat', 'r') as file:
+#         file.write(unzip_script)
+#
+#     cmd_ = [
+#         'build/unzip_script.bat'
+#     ]
+#
+#     spawn(cmd_)
+#
+#
+#     shell = 'C:\msys32\msys2_shell.cmd'
+#     '''export IDF_PATH="C:/path/to/esp-idf"'''
+
+
 def get_partition_file_name(otp):
     if 'Running cmake in directory ' in otp:
         build_path = otp.split('Running cmake in directory ', 1)[-1]
