@@ -323,6 +323,8 @@ def process_output(myproc, out_to_screen, spinner, cmpl, out_queue):
                     sys.stderr.write(err_line + '\n')
                     sys.stderr.flush()
 
+                err_line = b''
+
             out = myproc.stderr.read(1)
 
     if t is not None:
