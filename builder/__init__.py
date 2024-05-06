@@ -358,7 +358,7 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
 
     proc_thread = threading.Thread(
         target=process_output,
-        args=(myprocess, out_to_screen, spinner, cmpl, que)
+        args=(p, out_to_screen, spinner, cmpl, que)
     )
 
     proc_thread.start()
