@@ -119,9 +119,8 @@ def build_sdl():
     elif os.path.exists(os.path.join(dst, 'libSDL2.a')):
         return
 
-    cwd = os.getcwd()
-    os.chdir(dst)
     cmd_ = [
+        f'cd {dst}'
         f'cmake -DSDL_STATIC=ON -DSDL_SHARED=OFF -DCMAKE_BUILD_TYPE=Release {SCRIPT_PATH}/lib/SDL &&'
         f'cmake --build . --config Release --parallel {os.cpu_count()}'
     ]
@@ -129,8 +128,6 @@ def build_sdl():
     res, _ = spawn(cmd_, cmpl=True)
     if res != 0:
         sys.exit(res)
-
-    os.chdir(cwd)
 
 
 def submodules():
@@ -145,7 +142,7 @@ def submodules():
         ]
         _run(cmd_)
 
-    cmd_ = ['cd lib/SDL && git checkout  release-2.30.2']
+    cmd_ = ['cd lib/SDL && git checkout release-2.30.2']
     _run(cmd_)
 
     return_code, _ = spawn(submodules_cmd)
@@ -224,7 +221,6 @@ def compile():  # NOQA
 
     build_sdl()
 
-    os.environ['CC'] = 'gcc'
     return_code, _ = spawn(compile_cmd)
     if return_code != 0:
         sys.exit(return_code)
