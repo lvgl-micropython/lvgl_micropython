@@ -40,7 +40,7 @@
     STATIC mp_obj_t mp_lcd_sdl_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
         enum { ARG_flags };
-        const mp_arg_t make_new_args[] = {{ MP_QSTR_flags, MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED }};
+        const mp_arg_t make_new_args[] = {{ MP_QSTR_flags, MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED, { .u_int = -1 } } };
 
         mp_arg_val_t args[MP_ARRAY_SIZE(make_new_args)];
         mp_arg_parse_all_kw_array(
@@ -314,11 +314,11 @@
     {
         enum { ARG_self, ARG_width, ARG_height, ARG_px_format, ARG_ignore_size_chg};
         static const mp_arg_t allowed_args[] = {
-            { MP_QSTR_self,               MP_ARG_OBJ | MP_ARG_REQUIRED  },
-            { MP_QSTR_width,              MP_ARG_INT | MP_ARG_REQUIRED  },
-            { MP_QSTR_height,             MP_ARG_INT | MP_ARG_REQUIRED  },
-            { MP_QSTR_px_format,          MP_ARG_INT | MP_ARG_REQUIRED  },
-            { MP_QSTR_ignore_size_chg,    MP_ARG_INT | MP_ARG_REQUIRED  }
+            { MP_QSTR_self,               MP_ARG_OBJ | MP_ARG_REQUIRED, { .u_obj = mp_const_none } },
+            { MP_QSTR_width,              MP_ARG_INT | MP_ARG_REQUIRED, { .u_int = -1            } },
+            { MP_QSTR_height,             MP_ARG_INT | MP_ARG_REQUIRED, { .u_int = -1            } },
+            { MP_QSTR_px_format,          MP_ARG_INT | MP_ARG_REQUIRED, { .u_int = -1            } },
+            { MP_QSTR_ignore_size_chg,    MP_ARG_INT | MP_ARG_REQUIRED, { .u_bool = false        } },
         };
         mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
         mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
@@ -356,9 +356,9 @@
     {
         enum { ARG_self, ARG_size, ARG_buf_num };
         static const mp_arg_t allowed_args[] = {
-            { MP_QSTR_self,         MP_ARG_OBJ | MP_ARG_REQUIRED  },
-            { MP_QSTR_size,         MP_ARG_INT | MP_ARG_REQUIRED  },
-            { MP_QSTR_buf_num,      MP_ARG_INT | MP_ARG_REQUIRED  },
+            { MP_QSTR_self,         MP_ARG_OBJ | MP_ARG_REQUIRED, { .u_obj = mp_const_none } },
+            { MP_QSTR_size,         MP_ARG_INT | MP_ARG_REQUIRED, { .u_int = -1            } },
+            { MP_QSTR_buf_num,      MP_ARG_INT | MP_ARG_REQUIRED, { .u_int = -1            } },
         };
 
         mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];

@@ -227,6 +227,10 @@ def compile():  # NOQA
 
     build_sdl()
 
+    print('CC:', os.environ.get('CC', ''))
+    print('CFLAGS:', os.environ.get('CFLAGS', ''))
+
+    os.environ['CC'] = 'gcc'
     return_code, _ = spawn(compile_cmd)
     if return_code != 0:
         sys.exit(return_code)
