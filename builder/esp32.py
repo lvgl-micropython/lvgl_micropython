@@ -721,16 +721,16 @@ def compile():  # NOQA
         cmd = cmd.replace('--before default_reset ', '')
         cmd = cmd.replace('--after no_reset ', '')
 
-        if not sys.platform.startswith('win'):
-            cmds = [
-                # [f'export "IDF_PATH={os.path.abspath(env["IDF_PATH"])}"'],
-                ['cd', 'lib/esp-idf'],
-                ['. ./export.sh'],
-                ['cd ../..'],
-                cmd
-            ]
-        else:
-            cmds = cmd
+        # if not sys.platform.startswith('win'):
+        #     cmds = [
+        #         # [f'export "IDF_PATH={os.path.abspath(env["IDF_PATH"])}"'],
+        #         # ['cd', 'lib/esp-idf'],
+        #         # ['. ./export.sh'],
+        #         # ['cd ../..'],
+        #         cmd
+        #     ]
+        # else:
+        cmds = [cmd]
 
         result, _ = spawn(cmds, env=env)
         if result:
