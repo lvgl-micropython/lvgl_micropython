@@ -22,6 +22,8 @@ heap_size = 4194304
 
 
 def parse_args(extra_args, lv_cflags, board):
+
+    print('macOS: parse_args')
     global heap_size
     unix_argParser = ArgumentParser(prefix_chars='-')
 
@@ -49,6 +51,8 @@ SCRIPT_PATH = ''
 
 
 def build_commands(_, extra_args, script_dir, lv_cflags, board):
+    print('macOS: build_commands')
+
     global variant
     variant = board
 
@@ -83,11 +87,13 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
 
 
 def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manifest):
+    print('macOS: build_manifest')
+
     global SCRIPT_PATH
 
     SCRIPT_PATH = script_dir
 
-    update_mphalport(target)
+    update_mphalport('unix')
 
     manifest_path = 'lib/micropython/ports/unix/variants/manifest.py'
 
@@ -98,16 +104,22 @@ def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manife
 
 
 def clean():
+    print('macOS: clean')
+
     spawn(clean_cmd)
 
 
 def _run(c, spinner=False, cmpl=False):
+    print('macOS - COMMAND:', c)
+
     res, _ = spawn(c, spinner=spinner, cmpl=cmpl)
     if res != 0:
         sys.exit(res)
 
 
 def build_sdl():
+    print('macOS: build_sdl')
+
     global variant
 
     if variant is None:
@@ -137,6 +149,8 @@ def build_sdl():
 
 
 def submodules():
+    print('macOS: submodules')
+
     if not os.path.exists('lib/SDL/include'):
         cmd_ = [
             'git',
@@ -157,6 +171,8 @@ def submodules():
 
 
 def compile():  # NOQA
+    print('macOS: compile')
+
     main_path = 'lib/micropython/ports/unix/main.c'
 
     with open(main_path, 'rb') as f:
