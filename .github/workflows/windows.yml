@@ -25,6 +25,16 @@ jobs:
         winget install --accept-source-agreements --accept-package-agreements ezwinports.make
         python3 -m pip install pyMSVC requests
 
+    - name: Cache libs
+      uses: actions/cache@v4
+      with:
+        path: |
+          lib/micropython
+          lib/esp-idf
+          lib/pycparser
+          lib/SDL
+        key: ${{ runner.os }}-${{ steps.get-date.outputs.date }}-${{ hashFiles('**/lockfiles') }}
+
     - name: Build ESP32 port
       run: python3 make.py esp32 submodules clean mpy_cross BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT DISPLAY=rgb_display INDEV=gt911
 
