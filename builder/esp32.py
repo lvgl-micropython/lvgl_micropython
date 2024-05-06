@@ -47,6 +47,9 @@ def get_idf_build_environment():
 
     if sys.platform.startswith('win'):
 
+        if not os.path.exists('build'):
+            os.mkdir('build')
+
         import requests
 
         print('downloading esp-idf toolkit for windows')
