@@ -49,7 +49,7 @@
 
     float soft_sqrtf(float x)
     {
-        static const float tiny = 1.0e-30;
+        static const float tiny = 1.0e-30f;
 
         float z;
         int32_t sign = (int)0x80000000;
