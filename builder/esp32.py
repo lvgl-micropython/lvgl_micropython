@@ -373,14 +373,6 @@ def setup_idf_environ():
         idf_path = 'lib/esp-idf'
 
         if os.path.exists(os.path.join(idf_path, 'export.sh')):
-            cmds = [['cd', idf_path]]
-
-            if sys.platform.startswith('win'):
-                cmds.append(['export'])
-                cmds.append(['set'])
-            else:
-                cmds.append(['. ./export.sh'])
-                cmds.append(['printenv'])
 
             # this removes any IDF environment variable that may exist if the user
             # has the ESP-IDF installed
@@ -390,6 +382,13 @@ def setup_idf_environ():
             idf_tools_path = os.path.join(idf_path, 'tools')
             env['PATH'] = py_path + os.pathsep + os.pathsep + idf_tools_path + os.pathsep + env.get('PATH', '')
             env['IDF_PATH'] = idf_path
+
+            cmds = [
+                [f'export "IDF_PATH={os.path.abspath(env["IDF_PATH"])}"'],
+                ['. ./export.sh'],
+                ['cd', idf_path],
+                ['printenv']
+            ]
 
             if 'GITHUB_RUN_ID' in env:
                 if sys.platform.startswith('win'):
@@ -458,6 +457,7 @@ def submodules():
                 print()
 
             cmds = [
+                [f'export "IDF_PATH={os.path.abspath(idf_path)}"'],
                 ['cd', idf_path],
                 ['git', 'submodule', 'update', '--init',
                  'components/bt/host/nimble/nimble',
@@ -480,12 +480,13 @@ def submodules():
             if result != 0:
                 sys.exit(result)
 
+        env = setup_idf_environ()
+
         if 'deploy' in submodules_cmd:
             submodules_cmd.remove('deploy')
 
-        env = setup_idf_environ()
-
         cmds = [
+            [f'export "IDF_PATH={os.path.abspath(env["IDF_PATH"])}"'],
             ['cd', 'lib/esp-idf'],
             ['. ./export.sh'],
             ['cd ../..'],
@@ -569,6 +570,7 @@ def compile():  # NOQA
 
     if not sys.platform.startswith('win'):
         cmds = [
+            [f'export "IDF_PATH={os.path.abspath(env["IDF_PATH"])}"'],
             ['cd', 'lib/esp-idf'],
             ['. ./export.sh'],
             ['cd ../..'],
@@ -721,6 +723,7 @@ def compile():  # NOQA
 
         if not sys.platform.startswith('win'):
             cmds = [
+                [f'export "IDF_PATH={os.path.abspath(env["IDF_PATH"])}"'],
                 ['cd', 'lib/esp-idf'],
                 ['. ./export.sh'],
                 ['cd ../..'],
@@ -729,7 +732,7 @@ def compile():  # NOQA
         else:
             cmds = cmd
 
-        result, _ = spawn(cmds)
+        result, _ = spawn(cmds, env=env)
         if result:
             sys.exit(result)
 
