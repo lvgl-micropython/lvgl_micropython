@@ -41,7 +41,8 @@
 
     float soft_fabsf(float x)
     {
-        union {float f; uint32_t i;} u = {x};
+        union {float f; uint32_t i;} u;
+        u.f = x;
         u.i &= 0x7fffffff;
         return u.f;
     }
