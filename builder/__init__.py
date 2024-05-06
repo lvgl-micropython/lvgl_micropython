@@ -3,8 +3,10 @@ import os
 import subprocess
 import threading
 import random
+import queue
 
 _windows_env = None
+
 
 def setup_windows_build():
 
@@ -242,26 +244,25 @@ def _busy_spinner(evnt):
                 wait = random.randint(10, 100) * 0.001
 
 
-def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
-    if env is None:
-        env = os.environ
+def _convert_line(lne):
+    try:
+        lne = lne.decode('utf-8')
+    except UnicodeDecodeError:
+        for char in lne:
+            if 32 <= char <= 125 or char in (b'\r', b'\n'):
+                continue
 
-    if isinstance(cmd_[0], str):
-        cmd_ = [cmd_[:]]
+            lne = lne.replace(char, b'')
+        lne = lne.decode('utf-8')
 
-    cmd_ = ' && '.join(' '.join(c) for c in cmd_)
+    return lne
 
-    p = subprocess.Popen(
-        cmd_,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        shell=True,
-        env=env
-    )
 
-    if not sys.platform.startswith('win'):
-        os.set_blocking(p.stdout.fileno(), False)
-        os.set_blocking(p.stderr.fileno(), False)
+def process_output(myproc, out_to_screen, spinner, cmpl, out_queue): #output-consuming thread
+    line = b''
+    err_line = b''
+
+    last_line_len = -1
 
     event = threading.Event()
 
@@ -272,36 +273,23 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
     else:
         t = None
 
-    output_buffer = []
-    last_line_len = -1
+    while True:
+        if myproc.poll() is not None:
+            break
 
-    def _convert_line(lne):
-        try:
-            lne = lne.decode('utf-8')
-        except UnicodeDecodeError:
-            for char in lne:
-                if 32 <= char <= 125 or char in (b'\r', b'\n'):
-                    continue
-
-                lne = lne.replace(char, b'')
-            lne = lne.decode('utf-8')
-
-        return lne
-
-    try:
-        while p.poll() is None:
-            line = p.stdout.readline()
-            if line is not None and line.strip():
+        # --- extract line using read(1)
+        out = myproc.stdout.read(1)
+        while out:
+            line += out
+            if out == b'\n':
                 line = _convert_line(line.strip())
-                output_buffer.append(line)
+                out_queue.put(line)
 
                 if not spinner and out_to_screen:
-                    if (
-                        cmpl and
-                        (line.startswith('[') or line.startswith('--')) and
-                        last_line_len != -1
-                    ):
-                        sys.stdout.write('\r')
+                    if cmpl and (line.startswith('[') or line.startswith('--')):
+                        if last_line_len != -1:
+                            sys.stdout.write('\r')
+
                         if len(line) < last_line_len:
                             padding = ' ' * (last_line_len - len(line))
                         else:
@@ -315,43 +303,27 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
 
                     sys.stdout.flush()
 
-            line = p.stderr.readline()
-            while line is not None and line.strip():
-                if not spinner and out_to_screen and cmpl and last_line_len != -1:
-                    sys.stdout.write('\n')
-                    sys.stdout.flush()
-                    last_line_len = -1
+                line = b''
 
-                line = _convert_line(line.strip())
-                output_buffer.append(line)
+            out = myproc.stdout.read(1)
 
+        out = myproc.stderr.read(1)
+
+        while out:
+            if not spinner and out_to_screen and cmpl and last_line_len != -1:
+                sys.stdout.write('\n')
+                sys.stdout.flush()
+                last_line_len = -1
+
+            err_line += out
+            if out == b'\n':
+                err_line = _convert_line(err_line.strip())
+                out_queue.put(err_line)
                 if out_to_screen and not spinner:
-                    sys.stderr.write(line + '\n')
+                    sys.stderr.write(err_line + '\n')
                     sys.stderr.flush()
 
-                line = p.stderr.readline()
-
-    except KeyboardInterrupt:
-        if t is not None:
-            event.set()
-            t.join()
-
-        print()
-        print(output_buffer)
-
-        if not p.stdout.closed:
-            p.stdout.close()
-
-        if not p.stderr.closed:
-            p.stderr.close()
-
-        raise
-
-    if not p.stdout.closed:
-        p.stdout.close()
-
-    if not p.stderr.closed:
-        p.stderr.close()
+            out = myproc.stderr.read(1)
 
     if t is not None:
         event.set()
@@ -360,12 +332,72 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
         sys.stdout.write('\n')
         sys.stdout.flush()
 
+    elif out_to_screen and cmpl and last_line_len != -1:
+        sys.stdout.write('\n')
+        sys.stdout.flush()
+
+
+myprocess = subprocess.Popen('myprogram.exe', stdout=subprocess.PIPE) #output-producing process
+
+
+def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
+    if env is None:
+        env = os.environ
+
+    if isinstance(cmd_[0], str):
+        cmd_ = [cmd_[:]]
+
+    cmd_ = ' && '.join(' '.join(c) for c in cmd_)
+
+    que = queue.Queue()
+
+    p = subprocess.Popen(
+        cmd_,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        shell=True,
+        env=env
+    )
+
+    proc_thread = threading.Thread(
+        target=process_output,
+        args=(myprocess, out_to_screen, spinner, cmpl, que)
+    )
+
+    proc_thread.start()
+
+    output_buffer = []
+
+    while proc_thread and proc_thread.is_alive():  # wait for thread to finish
+        try:
+            line = que.get_nowait()  # or q.get(timeout=.1)
+            output_buffer.append(line)
+        except queue.Empty:
+            pass
+
+        try:
+            proc_thread.join(1)
+        except:  # NOQA
+            break
+
+    try:
+        line = que.get_nowait()  # or q.get(timeout=.1)
+        output_buffer.append(line)
+    except queue.Empty:
+        pass
+
+    if not p.stdout.closed:
+        p.stdout.close()
+
+    if not p.stderr.closed:
+        p.stderr.close()
+
     output_buffer = '\n'.join(output_buffer)
 
     if out_to_screen:
         if spinner:
             print(output_buffer)
-        elif cmpl and last_line_len != -1:
+        elif cmpl:
             sys.stdout.write('\n')
             sys.stdout.flush()
 

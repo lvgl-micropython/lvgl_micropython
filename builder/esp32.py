@@ -1,59 +1,90 @@
 import os
 import sys
 from argparse import ArgumentParser
-from . import spawn
+from . import spawn as _spawn
 from . import generate_manifest
 from . import update_mphalport
 
 
-unzip_script = '''\
-@echo off
-setlocal
-cd /d %~dp0
-Call :UnZipFile "C:\\" "esp32_win32_msys2_environment_and_toolchain-20170111.zip"
-exit /b
+spawn = _spawn
 
-:UnZipFile <ExtractTo> <newzipfile>
-set vbs="%temp%\_.vbs"
-if exist %vbs% del /f /q %vbs%
->%vbs%  echo Set fso = CreateObject("Scripting.FileSystemObject")
->>%vbs% echo If NOT fso.FolderExists(%1) Then
->>%vbs% echo fso.CreateFolder(%1)
->>%vbs% echo End If
->>%vbs% echo set objShell = CreateObject("Shell.Application")
->>%vbs% echo set FilesInZip=objShell.NameSpace(%2).items
->>%vbs% echo objShell.NameSpace(%1).CopyHere(FilesInZip)
->>%vbs% echo Set fso = Nothing
->>%vbs% echo Set objShell = Nothing
-cscript //nologo %vbs%
-if exist %vbs% del /f /q %vbs%
+
+install_ps_script = '''\
+build\\esp-idf-tools-setup-offline-5.0.4.exe /VERYSILENT /SUPPRESSMSGBOXES /SP- /NOCANCEL /IDFVERSION=5.0.4 /IDFDIR=C:\\esp-idf
+$InstallerProcess = Get-Process esp-idf-tools-setup
+Wait-Process -Id $InstallerProcess.id
+'''
+
+idf_env_bat_script = '''
+@echo off
+
+set "IDF_PATH=C:\\esp-idf\\frameworks\\esp-idf-v5.0.4"
+set "IDF_TOOLS_PATH=C:\\esp-idf\\frameworks\\esp-idf-v5.0.4\\tools"
+set "PATH=%IDF_TOOLS_PATH%;%PATH%"
+idf-env config get --property python --idf-path %IDF_PATH%\\ > build\\idf-python-path.txt
+set /P "IDF_PYTHON=< build\\idf-python-path.txt"
+idf-env config get --property gitPath > build\\idf-git-path.txt
+set /P "IDF_GIT=< build\\idf-git-path.txt"
+set "PREFIX=%IDF_PYTHON% %IDF_PATH%"
+DOSKEY idf.py=%PREFIX%\\tools\\idf.py $*
+DOSKEY esptool.py=%PREFIX%\\components\\esptool_py\\esptool\\esptool.py $*
+DOSKEY espefuse.py=%PREFIX%\\components\\esptool_py\\esptool\\espefuse.py $*
+DOSKEY espsecure.py=%PREFIX%\\components\\esptool_py\\esptool\\espsecure.py $*
+DOSKEY otatool.py=%PREFIX%\\components\\app_update\\otatool.py $*
+DOSKEY parttool.py=%PREFIX%\\components\\partition_table\\parttool.py $*
+set PYTHONPATH=
+set PYTHONHOME=
+set PYTHONNOUSERSITE=True
+set "IDF_PYTHON_DIR=%IDF_PYTHON%"
+set "IDF_GIT_DIR=%IDF_GIT%"
+set "PATH=%IDF_PYTHON_DIR%;%IDF_GIT_DIR%;%PATH%"'
+%IDF_PATH%\\export.bat'
 '''
 
 
-# def get_idf_build_environment():
-#     import requests
-#
-#     print('downloading environment')
-#
-#     url = 'https://dl.espressif.com/dl/esp32_win32_msys2_environment_and_toolchain-20170111.zip'
-#
-#     response = requests.get(url, stream=True)
-#     with open("build/esp32_win32_msys2_environment_and_toolchain-20170111.zip", mode="wb") as file:
-#         for chunk in response.iter_content(chunk_size=10 * 1024):
-#             file.write(chunk)
-#
-#     with open('build/unzip_script.bat', 'r') as file:
-#         file.write(unzip_script)
-#
-#     cmd_ = [
-#         'build/unzip_script.bat'
-#     ]
-#
-#     spawn(cmd_)
-#
-#
-#     shell = 'C:\msys32\msys2_shell.cmd'
-#     '''export IDF_PATH="C:/path/to/esp-idf"'''
+def get_idf_build_environment():
+    global spawn
+
+    if sys.platform.startswith('win'):
+
+        import requests
+
+        print('downloading esp-idf toolkit for windows')
+
+        url = 'https://dl.espressif.com/dl/idf-installer/esp-idf-tools-setup-offline-5.0.4.exe'
+
+        response = requests.get(url, stream=True)
+        with open("build/esp-idf-tools-setup-offline-5.0.4.exe", mode="wb") as file:
+            for chunk in response.iter_content(chunk_size=10 * 1024):
+                file.write(chunk)
+
+        with open('build/install_esp-idf.ps1', 'w') as file:
+            file.write(install_ps_script)
+
+        with open('build/setup_environment.bat', 'w') as file:
+            file.write(idf_env_bat_script)
+
+
+        cmd_ = ['C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -ExecutionPolicy Bypass -NonInteractive -File "build\\install_esp-idf.ps1"']
+        result, _ = spawn(cmd_)
+        if result != 0:
+            sys.exit(result)
+
+        old_spawn = spawn
+
+        def _new_spawn(cmds, *args, **kwargs):
+            framework_cmds = [
+                ['build\\setup_environment.bat']
+            ]
+
+            if isinstance(cmds[0], str):
+                cmds = [cmds[:]]
+
+            framework_cmds.extend(cmds)
+
+            return old_spawn(framework_cmds, *args, **kwargs)
+
+        spawn = _new_spawn
 
 
 def get_partition_file_name(otp):
@@ -169,19 +200,23 @@ class Partition:
 
 
 def get_espidf():
-    cmd = [
-        'git',
-        'submodule',
-        'update',
-        '--init',
-        '--recursive',
-        '--',
-        'lib/esp-idf'
-    ]
+    if sys.platform.startswith('win'):
+        return
 
-    result, _ = spawn(cmd, spinner=True)
-    if result != 0:
-        sys.exit(result)
+    else:
+        cmd = [
+            'git',
+            'submodule',
+            'update',
+            '--init',
+            '--recursive',
+            '--',
+            'lib/esp-idf'
+        ]
+
+        result, _ = spawn(cmd, spinner=True)
+        if result != 0:
+            sys.exit(result)
 
 
 board_variant = None
@@ -327,9 +362,11 @@ def setup_idf_environ():
     # @cheops put quite a bit of time in to research the best solution
     # and also with the testing of the code.
 
+    if sys.platform.startswith('win'):
+        return None
+
     idf_ver = get_idf_version()
     env = None
-
     if idf_ver is None or idf_ver != '5.0.4':
         idf_path = 'lib/esp-idf'
 
@@ -406,58 +443,56 @@ def setup_idf_environ():
 
 
 def submodules():
-    idf_ver = get_idf_version()
-    if idf_ver is None or idf_ver != '5.0.4':
-        idf_path = 'lib/esp-idf'
-        if not os.path.exists(os.path.join(idf_path, 'export.sh')):
-            print('collecting ESP-IDF v5.0.4')
+    if not sys.platform.startswith('win'):
+        idf_ver = get_idf_version()
+
+        if idf_ver is None or idf_ver != '5.0.4':
+            idf_path = 'lib/esp-idf'
+            if not os.path.exists(os.path.join(idf_path, 'export.sh')):
+                print('collecting ESP-IDF v5.0.4')
+                print('this might take a bit...')
+                print()
+                get_espidf()
+                print()
+
+            cmds = [
+                ['cd', idf_path],
+                ['git', 'submodule', 'update', '--init',
+                 'components/bt/host/nimble/nimble',
+                 'components/esp_wifi',
+                 'components/esptool_py/esptool',
+                 'components/lwip/lwip',
+                 'components/mbedtls/mbedtls',
+                 'components/bt/controller/lib_esp32',
+                 'components/bt/controller/lib_esp32c3_family'
+            ], ['./install.sh', 'all']]
+
+            print('setting up ESP-IDF v5.0.4')
             print('this might take a bit...')
             print()
-            get_espidf()
-            print()
+
+            env = {k: v for k, v in os.environ.items() if not k.startswith('IDF')}
+            env['IDF_PATH'] = os.path.abspath(idf_path)
+
+            result, _ = spawn(cmds, env=env)
+            if result != 0:
+                sys.exit(result)
+
+        if 'deploy' in submodules_cmd:
+            submodules_cmd.remove('deploy')
+
+        env = setup_idf_environ()
 
         cmds = [
-            ['cd', idf_path],
-            ['git', 'submodule', 'update', '--init',
-             'components/bt/host/nimble/nimble',
-             'components/esp_wifi',
-             'components/esptool_py/esptool',
-             'components/lwip/lwip',
-             'components/mbedtls/mbedtls',
-             'components/bt/controller/lib_esp32',
-             'components/bt/controller/lib_esp32c3_family'
-        ]]
-
-        if sys.platform.startswith('win'):
-            cmds.append(['install', 'all'])
-        else:
-            cmds.append(['./install.sh', 'all'])
-
-        print('setting up ESP-IDF v5.0.4')
-        print('this might take a bit...')
-        print()
-
-        env = {k: v for k, v in os.environ.items() if not k.startswith('IDF')}
-        env['IDF_PATH'] = os.path.abspath(idf_path)
-
-        result, _ = spawn(cmds, env=env)
-        if result != 0:
-            sys.exit(result)
-
-    if 'deploy' in submodules_cmd:
-        submodules_cmd.remove('deploy')
-
-    env = setup_idf_environ()
-
-    cmds = [['cd', 'lib/esp-idf']]
-
-    if sys.platform.startswith('win'):
-        cmds.append(['export'])
+            ['cd', 'lib/esp-idf'],
+            ['. ./export.sh'],
+            ['cd ../..'],
+            submodules_cmd
+        ]
     else:
-        cmds.append(['. ./export.sh'])
-    cmds.append(['cd ../..'])
-
-    cmds.append(submodules_cmd)
+        get_idf_build_environment()
+        cmds = submodules_cmd
+        env = None
 
     return_code, _ = spawn(cmds, env=env)
     if return_code != 0:
@@ -530,14 +565,15 @@ def compile():  # NOQA
     else:
         deploy = False
 
-    cmds = [['cd', 'lib/esp-idf']]
-
-    if sys.platform.startswith('win'):
-        cmds.append(['export'])
+    if not sys.platform.startswith('win'):
+        cmds = [
+            ['cd', 'lib/esp-idf'],
+            ['. ./export.sh'],
+            ['cd ../..'],
+            compile_cmd
+        ]
     else:
-        cmds.append(['. ./export.sh'])
-    cmds.append(['cd ../..'])
-    cmds.append(compile_cmd)
+        cmds = compile_cmd
 
     ret_code, output = spawn(cmds, env=env, cmpl=True)
     if ret_code != 0:
@@ -681,14 +717,15 @@ def compile():  # NOQA
         cmd = cmd.replace('--before default_reset ', '')
         cmd = cmd.replace('--after no_reset ', '')
 
-        cmds = [['cd', 'lib/esp-idf']]
-
-        if sys.platform.startswith('win'):
-            cmds.append(['export'])
+        if not sys.platform.startswith('win'):
+            cmds = [
+                ['cd', 'lib/esp-idf'],
+                ['. ./export.sh'],
+                ['cd ../..'],
+                cmd
+            ]
         else:
-            cmds.append(['. ./export.sh'])
-        cmds.append(['cd ../..'])
-        cmds.append([cmd])
+            cmds = cmd
 
         result, _ = spawn(cmds)
         if result:
