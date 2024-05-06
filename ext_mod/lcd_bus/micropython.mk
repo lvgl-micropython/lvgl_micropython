@@ -5,7 +5,6 @@
 MOD_DIR := $(USERMOD_DIR)
 LVGL_BINDING_DIR = $(subst /ext_mod/lcd_bus,,$(MOD_DIR))
 
-CFLAGS_USERMOD += $(LCD_BUS_CFLAGS)
 CFLAGS_USERMOD += -I$(MOD_DIR)
 CFLAGS_USERMOD += -I$(MOD_DIR)/common_include
 CFLAGS_USERMOD += -I$(MOD_DIR)/sdl_bus

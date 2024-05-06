@@ -44,6 +44,7 @@ def setup_windows_build():
 
     return _windows_env
 
+
 def update_mphalport(target):
     if target == 'esp8266':
         mphalport_path = f'lib/micropython/ports/{target}/esp_mphal.h'

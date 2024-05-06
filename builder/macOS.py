@@ -22,8 +22,6 @@ heap_size = 4194304
 
 
 def parse_args(extra_args, lv_cflags, board):
-
-    print('macOS: parse_args')
     global heap_size
     unix_argParser = ArgumentParser(prefix_chars='-')
 
@@ -51,8 +49,6 @@ SCRIPT_PATH = ''
 
 
 def build_commands(_, extra_args, script_dir, lv_cflags, board):
-    print('macOS: build_commands')
-
     global variant
     variant = board
 
@@ -70,9 +66,6 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
         f'LV_CFLAGS="{lv_cflags}"',
         f'LV_PORT=unix',
         f'USER_C_MODULES="{script_dir}/ext_mod"',
-        f'"CFLAGS=-Wno-missing-field-initializers -Wno-unused-function -I{script_dir}/lib/micropython -I{script_dir}/lib/micropython/ports/unix"',
-        f'"LCD_BUS_CFLAGS=-Wno-missing-field-initializers -Wno-unused-function -I{script_dir}/lib/micropython -I{script_dir}/lib/micropython/ports/unix"',
-        f'"CFLAGS_EXTRA=-Wno-missing-field-initializers -Wno-unused-function"'
     ])
     unix_cmd.extend(extra_args)
 
@@ -87,8 +80,6 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
 
 
 def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manifest):
-    print('macOS: build_manifest')
-
     global SCRIPT_PATH
 
     SCRIPT_PATH = script_dir
@@ -104,22 +95,16 @@ def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manife
 
 
 def clean():
-    print('macOS: clean')
-
     spawn(clean_cmd)
 
 
 def _run(c, spinner=False, cmpl=False):
-    print('macOS - COMMAND:', c)
-
     res, _ = spawn(c, spinner=spinner, cmpl=cmpl)
     if res != 0:
         sys.exit(res)
 
 
 def build_sdl():
-    print('macOS: build_sdl')
-
     global variant
 
     if variant is None:
@@ -149,8 +134,6 @@ def build_sdl():
 
 
 def submodules():
-    print('macOS: submodules')
-
     if not os.path.exists('lib/SDL/include'):
         cmd_ = [
             'git',
@@ -171,8 +154,6 @@ def submodules():
 
 
 def compile():  # NOQA
-    print('macOS: compile')
-
     main_path = 'lib/micropython/ports/unix/main.c'
 
     with open(main_path, 'rb') as f:
@@ -228,23 +209,20 @@ def compile():  # NOQA
         with open(mpconfigvariant_common_path, 'w') as f:
             f.write(mpconfigvariant_common)
 
-    for makefile_path in (
-        'lib/micropython/ports/unix/Makefile',
-        'lib/micropython/py/dynruntime.mk'
-    ):
-
-        with open(makefile_path, 'rb') as f:
-            data = f.read().decode('utf-8')
-
-        data = data.replace('-Werror', '')
-
-        with open(makefile_path, 'wb') as f:
-            f.write(data.encode('utf-8'))
+    # for makefile_path in (
+    #     'lib/micropython/ports/unix/Makefile',
+    #     'lib/micropython/py/dynruntime.mk'
+    # ):
+    #
+    #     with open(makefile_path, 'rb') as f:
+    #         data = f.read().decode('utf-8')
+    #
+    #     data = data.replace('-Werror', '')
+    #
+    #     with open(makefile_path, 'wb') as f:
+    #         f.write(data.encode('utf-8'))
 
     build_sdl()
-
-    print('CC:', os.environ.get('CC', ''))
-    print('CFLAGS:', os.environ.get('CFLAGS', ''))
 
     os.environ['CC'] = 'gcc'
     return_code, _ = spawn(compile_cmd)
