@@ -379,11 +379,12 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
         except:  # NOQA
             break
 
-    try:
-        line = que.get_nowait()  # or q.get(timeout=.1)
-        output_buffer.append(line)
-    except queue.Empty:
-        pass
+    while True:
+        try:
+            line = que.get_nowait()  # or q.get(timeout=.1)
+            output_buffer.append(line)
+        except queue.Empty:
+            break
 
     if not p.stdout.closed:
         p.stdout.close()
