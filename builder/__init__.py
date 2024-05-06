@@ -258,7 +258,7 @@ def _convert_line(lne):
     return lne
 
 
-def process_output(myproc, out_to_screen, spinner, cmpl, out_queue): #output-consuming thread
+def process_output(myproc, out_to_screen, spinner, cmpl, out_queue):
     line = b''
     err_line = b''
 
@@ -335,9 +335,6 @@ def process_output(myproc, out_to_screen, spinner, cmpl, out_queue): #output-con
     elif out_to_screen and cmpl and last_line_len != -1:
         sys.stdout.write('\n')
         sys.stdout.flush()
-
-
-myprocess = subprocess.Popen('myprogram.exe', stdout=subprocess.PIPE) #output-producing process
 
 
 def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):

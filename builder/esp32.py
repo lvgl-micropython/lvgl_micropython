@@ -64,7 +64,6 @@ def get_idf_build_environment():
         with open('build/setup_environment.bat', 'w') as file:
             file.write(idf_env_bat_script)
 
-
         cmd_ = ['C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -ExecutionPolicy Bypass -NonInteractive -File "build\\install_esp-idf.ps1"']
         result, _ = spawn(cmd_)
         if result != 0:
