@@ -341,6 +341,7 @@ def process_output(myproc, out_to_screen, spinner, cmpl, out_queue):
 
 
 def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
+
     if env is None:
         env = os.environ
 
@@ -348,6 +349,11 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
         cmd_ = [cmd_[:]]
 
     cmd_ = ' && '.join(' '.join(c) for c in cmd_)
+
+    if 'GITHUB_RUN_ID' in os.environ:
+        print(cmd_)
+        spinner = False
+        out_to_screen = True
 
     que = queue.Queue()
 
