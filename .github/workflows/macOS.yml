@@ -19,14 +19,14 @@ jobs:
       with:
         python-version: '3.10'
 
+    - name: Install Dependencies
+      run: brew install --force libffi ninja make
+
     - name: get version
       run: |
         uname -a
         make --version
         gmake --version
-
-    - name: Install Dependencies
-      run: brew install --force libffi ninja
 
     - name: Build macOS port
       run: python3 make.py macOS submodules clean mpy_cross DISPLAY=sdl_display INDEV=sdl_pointer
