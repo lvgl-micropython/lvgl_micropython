@@ -23,6 +23,7 @@ jobs:
       run: |
         uname -a
         make --version
+        gmake --version
 
     - name: Install Dependencies
       run: brew install --force libffi ninja
