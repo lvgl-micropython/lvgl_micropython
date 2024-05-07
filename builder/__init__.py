@@ -350,6 +350,13 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
 
     cmd_ = ' && '.join(' '.join(c) for c in cmd_)
 
+    if sys.platform.startswith('darwin'):
+        if cmd_.startswith('make '):
+            cmd_ = 'g' + cmd_
+
+        if ' make ' in cmd_:
+            cmd_ = cmd_.replace(' make ', ' gmake ')
+
     if 'GITHUB_RUN_ID' in os.environ:
         print(cmd_)
         spinner = False
