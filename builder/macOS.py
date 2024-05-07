@@ -12,7 +12,7 @@ clean_cmd = []
 unix_cmd = [
     'make',
     '',
-    '--print-data-base',  # f'-j {os.cpu_count()}',
+    f'-j {os.cpu_count()}',
     '-C',
 ]
 
