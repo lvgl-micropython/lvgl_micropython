@@ -207,18 +207,17 @@ def compile():  # NOQA
         with open(mpconfigvariant_common_path, 'w') as f:
             f.write(mpconfigvariant_common)
 
-    # for makefile_path in (
-    #     'lib/micropython/ports/unix/Makefile',
-    #     'lib/micropython/py/dynruntime.mk'
-    # ):
-    #
-    #     with open(makefile_path, 'rb') as f:
-    #         data = f.read().decode('utf-8')
-    #
-    #     data = data.replace('-Werror', '')
-    #
-    #     with open(makefile_path, 'wb') as f:
-    #         f.write(data.encode('utf-8'))
+    for makefile_path in (
+        'lib/micropython/ports/unix/Makefile',
+        'lib/micropython/py/mkrules.mk'
+    ):
+        with open(makefile_path, 'rb') as f:
+            data = f.read().decode('utf-8')
+
+        data = data.replace('QSTR_GEN_CFLAGS := $(CFLAGS)', 'QSTR_GEN_CFLAGS = $(CFLAGS)')
+
+        with open(makefile_path, 'wb') as f:
+            f.write(data.encode('utf-8'))
 
     build_sdl()
 
