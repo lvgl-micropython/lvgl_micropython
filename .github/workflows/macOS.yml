@@ -22,6 +22,9 @@ jobs:
     - name: Install Dependencies
       run: brew install --force gcc libffi cmake ninja make
 
+    - name: Build macOS port
+      run: python3 make.py macOS submodules clean mpy_cross DISPLAY=sdl_display INDEV=sdl_pointer
+
     - name: Build ESP32 port
       run: python3 make.py esp32 submodules clean mpy_cross BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT DISPLAY=rgb_display INDEV=gt911
 
@@ -31,5 +34,4 @@ jobs:
     - name: Build Raspberry Pi PICO port
       run: python3 make.py rp2 submodules clean mpy_cross BOARD=RPI_PICO DISPLAY=rgb_display INDEV=gt911
 
-    - name: Build macOS port
-      run: python3 make.py macOS submodules clean mpy_cross DISPLAY=sdl_display INDEV=sdl_pointer
+

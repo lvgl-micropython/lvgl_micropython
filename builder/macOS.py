@@ -222,6 +222,8 @@ def compile():  # NOQA
 
     build_sdl()
 
+    os.environ['CC'] = 'gcc'
+    os.environ['LD'] = 'ld'
     return_code, _ = spawn(compile_cmd)
     if return_code != 0:
         sys.exit(return_code)
