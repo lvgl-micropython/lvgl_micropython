@@ -66,7 +66,7 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
         f'LV_CFLAGS="{lv_cflags}"',
         f'LV_PORT=unix',
         f'USER_C_MODULES="{script_dir}/ext_mod"',
-        'CFLAGS=-Wno-unused-function'
+        f'"CFLAGS=-Wno-unused-function -I{script_dir}/lib/micropython -I{script_dir}/lib/micropython/ports/unix"'
     ])
     unix_cmd.extend(extra_args)
 
@@ -208,8 +208,7 @@ def compile():  # NOQA
             f.write(mpconfigvariant_common)
 
     for makefile_path in (
-        'lib/micropython/ports/unix/Makefile',
-        'lib/micropython/py/mkrules.mk'
+        'lib/micropython/py/mkrules.mk',
     ):
         with open(makefile_path, 'rb') as f:
             data = f.read().decode('utf-8')
