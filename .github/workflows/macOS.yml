@@ -6,7 +6,7 @@ on:
 jobs:
   build:
     if: ${{ github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name }}
-    runs-on: macos-latest-large
+    runs-on: macos-latest
 
     steps:
     - uses: actions/checkout@v4
@@ -19,8 +19,13 @@ jobs:
       with:
         python-version: '3.10'
 
+    -name: get version
+      run: |
+        uname -a
+        make --version
+
     - name: Install Dependencies
-      run: brew install --force gcc libffi cmake ninja make
+      run: brew install --force libffi ninja
 
     - name: Build macOS port
       run: python3 make.py macOS submodules clean mpy_cross DISPLAY=sdl_display INDEV=sdl_pointer
