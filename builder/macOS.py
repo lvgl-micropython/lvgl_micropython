@@ -65,8 +65,7 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
     unix_cmd.extend([
         f'LV_CFLAGS="{lv_cflags}"',
         f'LV_PORT=unix',
-        f'USER_C_MODULES="{script_dir}/ext_mod"',
-        f'"CFLAGS=-Wno-unused-function -I{script_dir}/lib/micropython -I{script_dir}/lib/micropython/ports/unix"'
+        f'USER_C_MODULES="{script_dir}/ext_mod"'
     ])
     unix_cmd.extend(extra_args)
 
@@ -212,7 +211,7 @@ def compile():  # NOQA
         data = f.read().decode('utf-8')
 
     data = data.replace('QSTR_GEN_CXXFLAGS += $(QSTR_GEN_FLAGS)', 'QSTR_GEN_CXXFLAGS += $(QSTR_GEN_FLAGS)\n$(info $$QSTR_GEN_CFLAGS = $(QSTR_GEN_CFLAGS))')
-    data = data.replace('$(Q)$(PYTHON) $(PY_SRC)/makeqstrdefs.py pp $(CPP) output', '$(info makeqstrdefs.py $$QSTR_GEN_CFLAGS = $(QSTR_GEN_CFLAGS))\n    $(Q)$(PYTHON) $(PY_SRC)/makeqstrdefs.py pp $(CPP) output')
+    data = data.replace('$(Q)$(PYTHON) $(PY_SRC)/makeqstrdefs.py pp $(CPP) output', '$(info $$QSTR_GEN_CFLAGS = $(QSTR_GEN_CFLAGS))\n    $(Q)$(PYTHON) $(PY_SRC)/makeqstrdefs.py pp $(CPP) output')
 
     with open(mkrules_path, 'wb') as f:
         f.write(data.encode('utf-8'))
