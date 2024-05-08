@@ -1,6 +1,7 @@
 import lvgl as lv  # NOQA
 import micropython  # NOQA
 import sys
+import time
 
 try:
     from machine import Timer  # NOQA
@@ -11,10 +12,17 @@ except:
         raise RuntimeError("Missing machine.Timer implementation!")
 
 
+TASK_HANDLER_STARTED = 0x00
+TASK_HANDLER_FINISHED = 0x01
+
 _default_timer_id = 0
 
 if sys.platform in ('pyboard', 'rp2'):
     _default_timer_id = -1
+
+
+class _DefaultUserData(object):
+    pass
 
 
 def _default_exception_hook(e):
@@ -30,7 +38,6 @@ class TaskHandler(object):
         duration=33,
         timer_id=_default_timer_id,
         max_scheduled=2,
-        refresh_cb=None,
         exception_hook=_default_exception_hook
     ):
         if TaskHandler._current_instance is not None:
@@ -41,8 +48,9 @@ class TaskHandler(object):
 
             TaskHandler._current_instance = self
 
+            self._callbacks = []
+
             self.duration = duration
-            self.refresh_cb = refresh_cb
             self.exception_hook = exception_hook
 
             self._timer = Timer(timer_id)
@@ -57,6 +65,27 @@ class TaskHandler(object):
                 callback=self._timer_cb
             )
             self._scheduled = 0
+
+    def add_event_cb(self, callback, event, user_data=_DefaultUserData):
+        for i, (cb, evt, data) in enumerate(self._callbacks):
+            if cb == callback:
+                evt = event
+                if user_data != _DefaultUserData:
+                    data = user_data
+
+                self._callbacks[i] = (cb, evt, data)
+                break
+        else:
+            if user_data == _DefaultUserData:
+                user_data = None
+
+            self._callbacks.append((callback, event, user_data))
+
+    def remove_event_cb(self, callback):
+        for i, obj in self._callbacks:
+            if obj[0] == callback:
+                self._callbacks.remove(obj)
+                break
 
     def deinit(self):
         self._timer.deinit()
@@ -74,13 +103,57 @@ class TaskHandler(object):
 
     def _task_handler(self, _):
         try:
-            if lv._nesting.value == 0:
-                lv.task_handler()
-
-                if self.refresh_cb:
-                    self.refresh_cb()
-
             self._scheduled -= 1
+
+            if lv._nesting.value == 0:
+                start_time = time.ticks_ms()
+
+                run_update = True
+                for cb, evt, data in self._callbacks:
+                    if not evt ^ TASK_HANDLER_STARTED:
+                        continue
+
+                    try:
+                        if cb(TASK_HANDLER_STARTED, data) is False:
+                            run_update = False
+
+                    except Exception as err:  # NOQA
+                        if (
+                            self.exception_hook and
+                            self.exception_hook != _default_exception_hook
+                        ):
+                            self.exception_hook(err)
+                        else:
+                            sys.print_exception(err)
+
+                stop_time = time.ticks_ms()
+
+                ticks_diff = time.ticks_diff(stop_time, start_time)
+                lv.tick_inc(ticks_diff)
+
+                if run_update:
+                    lv.task_handler()
+                    start_time = time.ticks_ms()
+
+                    for cb, evt, data in self._callbacks:
+                        if not evt ^ TASK_HANDLER_FINISHED:
+                            continue
+
+                        try:
+                            cb(TASK_HANDLER_FINISHED, data)
+                        except Exception as err:  # NOQA
+                            if (
+                                self.exception_hook and
+                                self.exception_hook != _default_exception_hook
+                            ):
+                                self.exception_hook(err)
+                            else:
+                                sys.print_exception(err)
+
+                    stop_time = time.ticks_ms()
+                    ticks_diff = time.ticks_diff(stop_time, start_time)
+                    lv.tick_inc(ticks_diff)
+
         except Exception as e:
             if self.exception_hook:
                 self.exception_hook(e)
