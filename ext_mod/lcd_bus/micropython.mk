@@ -13,10 +13,6 @@ ifneq (,$(findstring -Wno-missing-field-initializers, $(CFLAGS_USERMOD)))
     CFLAGS_USERMOD += -Wno-missing-field-initializers
 endif
 
-ifneq (,$(findstring -Wno-unused-function, $(CFLAGS_USERMOD)))
-    CFLAGS_USERMOD += -Wno-unused-function
-endif
-
 SRC_USERMOD_C += $(MOD_DIR)/modlcd_bus.c
 SRC_USERMOD_C += $(MOD_DIR)/lcd_types.c
 SRC_USERMOD_C += $(MOD_DIR)/common_src/i2c_bus.c

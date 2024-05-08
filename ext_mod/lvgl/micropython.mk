@@ -14,24 +14,18 @@ CFLAGS_USERMOD += -I$(LVGL_BINDING_DIR)
 CFLAGS_USERMOD += -I$(LVGL_DIR)
 CFLAGS_USERMOD += -I$(LVGL_BINDING_DIR)/include
 
+ifdef $(LV_CFLAGS)
+    CFLAGS_USERMOD += $(LV_CFLAGS)
+endif
+
 ifneq (,$(findstring -Wno-missing-field-initializers, $(CFLAGS_USERMOD)))
     CFLAGS_USERMOD += -Wno-missing-field-initializers
-endif
-
-ifneq (,$(findstring -Wno-unused-function, $(CFLAGS_USERMOD)))
-    CFLAGS_USERMOD += -Wno-unused-function
-endif
-
-ifneq (,$(findstring "", $(LV_CFLAGS)))
-else
-    CFLAGS_USERMOD += $(LV_CFLAGS)
 endif
 
 ALL_LVGL_SRC = $(shell find $(LVGL_DIR) -type f -name '*.h') $(LVGL_BINDING_DIR)/lib/lv_conf.h
 
 LVGL_MPY = $(BUILD)/lv_mpy.c
 LVGL_MPY_METADATA = $(BUILD)/lv_mpy.json
-
 
 
 SRC_USERMOD_LIB_C += $(shell find $(LVGL_DIR)/src -type f -name "*.c")
