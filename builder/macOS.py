@@ -63,7 +63,7 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
     unix_cmd.extend([
         'LV_PORT=unix',
         f'USER_C_MODULES="{script_dir}/ext_mod"',
-        'CFLAGS_EXTRA=-Wno-unused-function'
+        '"CFLAGS_EXTRA=-Wno-unused-function -Wno-double-promotion"'
     ])
 
     unix_cmd.extend(extra_args)
