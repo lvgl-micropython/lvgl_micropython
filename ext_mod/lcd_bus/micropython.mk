@@ -25,6 +25,12 @@ ifneq (,$(findstring unix, $(LV_PORT)))
     CFLAGS_USERMOD += -DMP_PORT_UNIX=1
     CFLAGS_USERMOD += -I$(BUILD)/SDL/include/SDL2
     CFLAGS_USERMOD += -I$(BUILD)/SDL/include-config-release/SDL2
-    LDFLAGS_USERMOD += -L$(BUILD)/SDL
-    LDFLAGS_USERMOD += -lSDL2
+
+    ifeq ($(UNAME_S),Darwin)
+        CFLAGS_USERMOD += -L$(BUILD)/SDL
+        CFLAGS_USERMOD += -lSDL2
+    else
+        LDFLAGS_USERMOD += -L$(BUILD)/SDL
+        LDFLAGS_USERMOD += -lSDL2
+    endif
 endif
