@@ -206,15 +206,14 @@ def compile():  # NOQA
         with open(mpconfigvariant_common_path, 'w') as f:
             f.write(mpconfigvariant_common)
 
-    mkrules_path = 'lib/micropython/py/mkrules.mk'
-    with open(mkrules_path, 'rb') as f:
-        data = f.read().decode('utf-8')
-
-    data = data.replace('QSTR_GEN_CXXFLAGS += $(QSTR_GEN_FLAGS)', 'QSTR_GEN_CXXFLAGS += $(QSTR_GEN_FLAGS)\n$(info $$QSTR_GEN_CFLAGS = $(QSTR_GEN_CFLAGS))')
-    data = data.replace('$(Q)$(PYTHON) $(PY_SRC)/makeqstrdefs.py pp $(CPP) output', '$(ECHO) "GEN $@ $$QSTR_GEN_CFLAGS = $(QSTR_GEN_CFLAGS)"\n    $(Q)$(PYTHON) $(PY_SRC)/makeqstrdefs.py pp $(CPP) output')
-
-    with open(mkrules_path, 'wb') as f:
-        f.write(data.encode('utf-8'))
+    # mkrules_path = 'lib/micropython/py/mkrules.mk'
+    # with open(mkrules_path, 'rb') as f:
+    #     data = f.read().decode('utf-8')
+    #
+    # data = data.replace('QSTR_GEN_CXXFLAGS += $(QSTR_GEN_FLAGS)', 'QSTR_GEN_CXXFLAGS += $(QSTR_GEN_FLAGS)\n$(info $$QSTR_GEN_CFLAGS = $(QSTR_GEN_CFLAGS))')
+    #
+    # with open(mkrules_path, 'wb') as f:
+    #     f.write(data.encode('utf-8'))
 
     build_sdl()
 
