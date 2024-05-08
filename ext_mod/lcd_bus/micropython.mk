@@ -27,7 +27,7 @@ ifneq (,$(findstring unix, $(LV_PORT)))
     CFLAGS_USERMOD += -I$(BUILD)/SDL/include-config-release/SDL2
 
     ifeq ($(UNAME_S),Darwin)
-        LDFLAGS_USERMOD += $(BUILD)/SDL/liblSDL2.a
+        LDFLAGS_USERMOD += $(BUILD)/SDL/libSDL2.a
     else
         LDFLAGS_USERMOD += -L$(BUILD)/SDL
         LDFLAGS_USERMOD += -lSDL2
