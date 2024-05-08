@@ -211,11 +211,10 @@ def compile():  # NOQA
         data = f.read().decode('utf-8')
 
     data = data.replace('QSTR_GEN_CXXFLAGS += $(QSTR_GEN_FLAGS)', 'QSTR_GEN_CXXFLAGS += $(QSTR_GEN_FLAGS)\n$(info $$QSTR_GEN_CFLAGS = $(QSTR_GEN_CFLAGS))')
-    data = data.replace('$(Q)$(PYTHON) $(PY_SRC)/makeqstrdefs.py pp $(CPP) output', '$(info $$QSTR_GEN_CFLAGS = $(QSTR_GEN_CFLAGS))\n    $(Q)$(PYTHON) $(PY_SRC)/makeqstrdefs.py pp $(CPP) output')
+    data = data.replace('$(Q)$(PYTHON) $(PY_SRC)/makeqstrdefs.py pp $(CPP) output', '$(ECHO) "GEN $@ $$QSTR_GEN_CFLAGS = $(QSTR_GEN_CFLAGS)"\n    $(Q)$(PYTHON) $(PY_SRC)/makeqstrdefs.py pp $(CPP) output')
 
     with open(mkrules_path, 'wb') as f:
         f.write(data.encode('utf-8'))
-
 
     build_sdl()
 
