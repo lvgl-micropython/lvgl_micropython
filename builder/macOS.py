@@ -207,16 +207,16 @@ def compile():  # NOQA
         with open(mpconfigvariant_common_path, 'w') as f:
             f.write(mpconfigvariant_common)
 
-    for makefile_path in (
-        'lib/micropython/py/mkrules.mk',
-    ):
-        with open(makefile_path, 'rb') as f:
-            data = f.read().decode('utf-8')
+    mkrules_path = 'lib/micropython/py/mkrules.mk'
+    with open(mkrules_path, 'rb') as f:
+        data = f.read().decode('utf-8')
 
-        data = data.replace('QSTR_GEN_CFLAGS := $(CFLAGS)', 'QSTR_GEN_CFLAGS = $(CFLAGS)')
+    data = data.replace('QSTR_GEN_CXXFLAGS += $(QSTR_GEN_FLAGS)', 'QSTR_GEN_CXXFLAGS += $(QSTR_GEN_FLAGS)\n$(info $$QSTR_GEN_CFLAGS = $(QSTR_GEN_CFLAGS))')
+    data = data.replace('$(Q)$(PYTHON) $(PY_SRC)/makeqstrdefs.py pp $(CPP) output', '$(info makeqstrdefs.py $$QSTR_GEN_CFLAGS = $(QSTR_GEN_CFLAGS))\n    $(Q)$(PYTHON) $(PY_SRC)/makeqstrdefs.py pp $(CPP) output')
 
-        with open(makefile_path, 'wb') as f:
-            f.write(data.encode('utf-8'))
+    with open(mkrules_path, 'wb') as f:
+        f.write(data.encode('utf-8'))
+
 
     build_sdl()
 
