@@ -107,11 +107,11 @@ def build_sdl():
     global variant
 
     if variant is None:
-        variant = 'build-standard'
+        varnt = 'build-standard'
     else:
-        variant = f'build-{variant}'
+        varnt = f'build-{variant}'
 
-    dst = f'lib/micropython/ports/unix/{variant}/SDL'
+    dst = f'lib/micropython/ports/unix/{varnt}/SDL'
 
     if not os.path.exists(dst):
         os.makedirs(dst)
@@ -215,6 +215,27 @@ def compile():  # NOQA
     #     f.write(data.encode('utf-8'))
 
     build_sdl()
+
+    if variant is None:
+        varnt = 'build-standard'
+    else:
+        varnt = f'build-{variant}'
+
+    path = f'lib/micropython/ports/unix/{varnt}/SDL'
+
+    def _iter_print(p, indent=''):
+        child = os.path.split(p)[-1]
+        print(f'{indent}{child}')
+
+        for f in os.listdir(p):
+            file = os.path.join(p, f)
+            if os.path.isdir(file):
+                _iter_print(file, indent + '    ')
+            else:
+                print(f'{indent}    {f}')
+        print()
+
+    _iter_print(path)
 
     return_code, _ = spawn(compile_cmd)
     if return_code != 0:
