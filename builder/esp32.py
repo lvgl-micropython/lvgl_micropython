@@ -190,7 +190,7 @@ def parse_args(extra_args, lv_cflags, brd):
             esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
             flash_size = esp_args.flash_size
 
-        if board == 'ESP32_GENERIC':
+        elif board == 'ESP32_GENERIC':
             esp_argParser = ArgumentParser(prefix_chars='-')
 
             esp_argParser.add_argument(
@@ -404,6 +404,7 @@ def setup_idf_environ():
             result, output = spawn(cmds, env=env, out_to_screen=False)
 
             if result != 0:
+                print('********* ERROR **********')
                 print(output)
                 sys.exit(result)
 
@@ -509,39 +510,34 @@ def compile():  # NOQA
             'CONFIG_PARTITION_TABLE_CUSTOM=y',
         ]
 
+        if flash_size == 2:
+            base_config.extend([
+                'CONFIG_ESPTOOLPY_FLASHSIZE_2MB=y',
+                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
+                '"partitions-2MiB.csv"'
+            ])
+
         if flash_size == 4:
             base_config.extend([
                 'CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_8MB=n',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_16MB=n',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=n',
                 'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
                 '"partitions-4MiB.csv"'
             ])
         elif flash_size == 8:
             base_config.extend([
-                'CONFIG_ESPTOOLPY_FLASHSIZE_4MB=n',
                 'CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_16MB=n',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=n',
                 'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
                 '"partitions-8MiB.csv"'
             ])
 
         elif flash_size == 16:
             base_config.extend([
-                'CONFIG_ESPTOOLPY_FLASHSIZE_4MB=n',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_8MB=n',
                 'CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=n',
                 'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
                 '"partitions-16MiB.csv"'
             ])
         if flash_size == 32:
             base_config.extend([
-                'CONFIG_ESPTOOLPY_FLASHSIZE_4MB=n',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_8MB=n',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_16MB=n',
                 'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=y',
                 'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
                 '"partitions-32MiB.csv"'
