@@ -142,7 +142,7 @@ board_variant = None
 board = None
 skip_partition_resize = False
 partition_size = None
-flash_size = 8
+flash_size = 0
 oct_flash = False
 
 
@@ -174,27 +174,59 @@ def parse_args(extra_args, lv_cflags, brd):
             if arg.startswith('BOARD_VARIANT'):
                 raise RuntimeError(f'BOARD_VARIANT not supported by "{board}"')
 
-    if board == 'ESP32_GENERIC_S3':
-        esp_argParser = ArgumentParser(prefix_chars='-')
+    if board_variant in ('SPIRAM', 'SPIRAM_OCT'):
+        if board == 'ESP32_GENERIC_S2':
+            esp_argParser = ArgumentParser(prefix_chars='-')
 
-        esp_argParser.add_argument(
-            '--octal-flash',
-            help='octal spi flash',
-            dest='oct_flash',
-            action='store_true'
-        )
+            esp_argParser.add_argument(
+                '--flash-size',
+                dest='flash_size',
+                help='flash size',
+                choices=(2, 4),
+                default=4,
+                type=int,
+                action='store'
+            )
+            esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
+            flash_size = esp_args.flash_size
 
-        esp_argParser.add_argument(
-            '--flash-size',
-            dest='flash_size',
-            help='flash size',
-            default=8,
-            type=int,
-            action='store'
-        )
-        esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
-        flash_size = esp_args.flash_size
-        oct_flash = esp_args.oct_flash
+        if board == 'ESP32_GENERIC':
+            esp_argParser = ArgumentParser(prefix_chars='-')
+
+            esp_argParser.add_argument(
+                '--flash-size',
+                dest='flash_size',
+                help='flash size',
+                choices=(4, 8, 16),
+                default=4,
+                type=int,
+                action='store'
+            )
+            esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
+            flash_size = esp_args.flash_size
+
+        elif board == 'ESP32_GENERIC_S3':
+            esp_argParser = ArgumentParser(prefix_chars='-')
+
+            esp_argParser.add_argument(
+                '--octal-flash',
+                help='octal spi flash',
+                dest='oct_flash',
+                action='store_true'
+            )
+
+            esp_argParser.add_argument(
+                '--flash-size',
+                dest='flash_size',
+                help='flash size',
+                choices=(4, 8, 16, 32),
+                default=8,
+                type=int,
+                action='store'
+            )
+            esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
+            flash_size = esp_args.flash_size
+            oct_flash = esp_args.oct_flash
 
     esp_argParser = ArgumentParser(prefix_chars='-')
 
@@ -466,7 +498,10 @@ def submodules():
 def compile():  # NOQA
     env = setup_idf_environ()
 
-    if board == 'ESP32_GENERIC_S3':
+    if (
+        board in ('ESP32_GENERIC', 'ESP32_GENERIC_S2', 'ESP32_GENERIC_S3') and
+        board_variant in ('SPIRAM', 'SPIRAM_OCT')
+    ):
         base_config = [
             'CONFIG_ESPTOOLPY_FLASHMODE_QIO=y',
             'CONFIG_ESPTOOLPY_FLASHFREQ_80M=y',
@@ -480,7 +515,8 @@ def compile():  # NOQA
                 'CONFIG_ESPTOOLPY_FLASHSIZE_8MB=n',
                 'CONFIG_ESPTOOLPY_FLASHSIZE_16MB=n',
                 'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=n',
-                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions-4MiB.csv"'
+                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
+                '"partitions-4MiB.csv"'
             ])
         elif flash_size == 8:
             base_config.extend([
@@ -488,7 +524,8 @@ def compile():  # NOQA
                 'CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y',
                 'CONFIG_ESPTOOLPY_FLASHSIZE_16MB=n',
                 'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=n',
-                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions-8MiB.csv"'
+                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
+                '"partitions-8MiB.csv"'
             ])
 
         elif flash_size == 16:
@@ -497,7 +534,8 @@ def compile():  # NOQA
                 'CONFIG_ESPTOOLPY_FLASHSIZE_8MB=n',
                 'CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y',
                 'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=n',
-                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions-16MiB.csv"'
+                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
+                '"partitions-16MiB.csv"'
             ])
         if flash_size == 32:
             base_config.extend([
@@ -505,29 +543,61 @@ def compile():  # NOQA
                 'CONFIG_ESPTOOLPY_FLASHSIZE_8MB=n',
                 'CONFIG_ESPTOOLPY_FLASHSIZE_16MB=n',
                 'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=y',
-                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions-32MiB.csv"'
+                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
+                '"partitions-32MiB.csv"'
             ])
         else:
-            base_config = [
-                'CONFIG_ESPTOOLPY_FLASHSIZE_4MB=n',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_16MB=n',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=n',
-                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions-8MiB.csv"'
-            ]
+            raise RuntimeError('unsupported flash size')
 
-        if oct_flash:
-            base_config[0] = 'CONFIG_ESPTOOLPY_FLASHMODE_DOUT=y'
-            base_config.append('CONFIG_ESPTOOLPY_OCT_FLASH=y')
+        if board == 'ESP32_GENERIC_S3':
+            if oct_flash and flash_size in (16, 32):
+                if flash_size == 32:
+                    base_config[0] = 'CONFIG_ESPTOOLPY_FLASHMODE_DOUT=y'
+
+                base_config.append('CONFIG_ESPTOOLPY_OCT_FLASH=y')
 
         base_config = '\n'.join(base_config)
-
-        sdkconfig_board_path = (
-            'lib/micropython/ports/esp32/'
-            'boards/ESP32_GENERIC_S3/sdkconfig.board'
-        )
-        with open(sdkconfig_board_path, 'w') as f:
-            f.write(base_config + '\n')
+        
+        if board in ('ESP32_GENERIC', 'ESP32_GENERIC_S3'):
+            mpconfigboard_cmake_path = (
+                'lib/micropython/ports/esp32/boards/'
+                f'{board}/mpconfigboard.cmake'
+            )
+            
+            with open(mpconfigboard_cmake_path, 'rb') as f:
+                data = f.read().decode('utf-8')
+            
+            if f'boards/{board}/sdkconfig.board' not in data:
+                if board == 'ESP32_GENERIC':
+                    data = data.replace(
+                        'boards/sdkconfig.spiram', 
+                        'boards/sdkconfig.spiram\n    '
+                        'boards/ESP32_GENERIC/sdkconfig.board'
+                    )
+                else:
+                    data = data.replace(
+                        'boards/sdkconfig.spiram_ex',
+                        'boards/sdkconfig.spiram_ex\n    '
+                        'boards/ESP32_GENERIC_S2/sdkconfig.board'
+                    )
+                
+                with open(mpconfigboard_cmake_path, 'wb') as f:
+                    f.write(data.encode('utf-8'))
+                    
+            sdkconfig_spiram_path = (
+                'lib/micropython/ports/esp32/boards/'
+                f'{board}/sdkconfig.board'
+            )
+            with open(sdkconfig_spiram_path, 'w') as f:
+                f.write(base_config)
+                        
+        else:
+            sdkconfig_board_path = (
+                'lib/micropython/ports/esp32/'
+                f'boards/{board}/sdkconfig.board'
+            )
+            with open(sdkconfig_board_path, 'w') as f:
+                f.write(base_config + '\n')
 
     if board in ('ESP32_GENERIC_S2', 'ESP32_GENERIC_S3'):
 
