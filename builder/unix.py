@@ -126,7 +126,7 @@ def build_sdl():
         [
             f'cmake -DSDL_STATIC=ON -DSDL_SHARED=OFF '
             f'-DCMAKE_BUILD_TYPE=Release {SCRIPT_PATH}/lib/SDL'
-        ]
+        ],
         [f'cmake --build . --config Release --parallel {os.cpu_count()}']
     ]
 
