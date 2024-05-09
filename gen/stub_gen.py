@@ -27,6 +27,11 @@ def build_function(name, func):
 
     arg_count = 0
 
+    for i, arg in enumerate(args):
+        if arg['name'] and arg['name'] == 'user_data' and i == 0:
+            args = [args[~i + len(args)] for i in range(len(args))]
+            break
+
     for arg in args:
         arg_name = arg['name']
         if not arg_name:

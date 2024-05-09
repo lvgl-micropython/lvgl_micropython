@@ -250,7 +250,8 @@ mp_obj_t lcd_panel_io_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t
         } else {
             if (self->buf1 == NULL) {
                 self->buf1 = buf;
-            } else if (self->buf2 == NULL) {
+                self->buffer_flags = caps;
+            } else if (self->buf2 == NULL && self->buffer_flags == caps) {
                 self->buf2 = buf;
             } else {
                 #ifdef ESP_IDF_VERSION
@@ -258,7 +259,12 @@ mp_obj_t lcd_panel_io_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t
                 #else
                     m_free(buf);
                 #endif /* ESP_IDF_VERSION */
-                mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("Only 2 buffers can be allocated"));
+
+                if (self->buf2 == NULL) {
+                    mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("allocation flags must be the same for both buffers"));
+                } else {
+                    mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("Only 2 buffers can be allocated"));
+                }
                 return mp_const_none;
             }
 
