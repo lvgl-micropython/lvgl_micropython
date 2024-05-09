@@ -142,7 +142,7 @@ board_variant = None
 board = None
 skip_partition_resize = False
 partition_size = None
-flash_size = 0
+flash_size = '0'
 oct_flash = False
 
 
@@ -182,10 +182,8 @@ def parse_args(extra_args, lv_cflags, brd):
                 '--flash-size',
                 dest='flash_size',
                 help='flash size',
-                choices=(2, 4),
-                default=4,
-                type=int,
-                action='store'
+                choices=('2', '4'),
+                default='4',
             )
             esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
             flash_size = esp_args.flash_size
@@ -197,10 +195,8 @@ def parse_args(extra_args, lv_cflags, brd):
                 '--flash-size',
                 dest='flash_size',
                 help='flash size',
-                choices=(4, 8, 16),
-                default=4,
-                type=int,
-                action='store'
+                choices=('4', '8', '16'),
+                default='4',
             )
             esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
             flash_size = esp_args.flash_size
@@ -219,10 +215,8 @@ def parse_args(extra_args, lv_cflags, brd):
                 '--flash-size',
                 dest='flash_size',
                 help='flash size',
-                choices=(4, 8, 16, 32),
-                default=8,
-                type=int,
-                action='store'
+                choices=('4', '8', '16', '32'),
+                default='8',
             )
             esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
             flash_size = esp_args.flash_size
@@ -510,44 +504,44 @@ def compile():  # NOQA
             'CONFIG_PARTITION_TABLE_CUSTOM=y',
         ]
 
-        if flash_size == 2:
+        if flash_size == '2':
             base_config.extend([
                 'CONFIG_ESPTOOLPY_FLASHSIZE_2MB=y',
                 'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
                 '"partitions-2MiB.csv"'
             ])
 
-        if flash_size == 4:
+        if flash_size == '4':
             base_config.extend([
                 'CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y',
                 'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
                 '"partitions-4MiB.csv"'
             ])
-        elif flash_size == 8:
+        elif flash_size == '8':
             base_config.extend([
                 'CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y',
                 'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
                 '"partitions-8MiB.csv"'
             ])
 
-        elif flash_size == 16:
+        elif flash_size == '16':
             base_config.extend([
                 'CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y',
                 'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
                 '"partitions-16MiB.csv"'
             ])
-        if flash_size == 32:
+        if flash_size == '32':
             base_config.extend([
                 'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=y',
                 'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
                 '"partitions-32MiB.csv"'
             ])
         else:
-            raise RuntimeError('unsupported flash size')
+            raise RuntimeError(f'unsupported flash size {flash_size}')
 
         if board == 'ESP32_GENERIC_S3':
-            if oct_flash and flash_size in (16, 32):
-                if flash_size == 32:
+            if oct_flash and flash_size in ('16', '32'):
+                if flash_size == '32':
                     base_config[0] = 'CONFIG_ESPTOOLPY_FLASHMODE_DOUT=y'
 
                 base_config.append('CONFIG_ESPTOOLPY_OCT_FLASH=y')
