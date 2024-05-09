@@ -6,7 +6,6 @@ import lvgl as lv  # NOQA
 import lcd_bus  # NOQA
 import display_driver_framework
 
-
 _SWRESET = const(0x01)
 _SLPOUT = const(0x11)
 _CSCON = const(0xF0)
@@ -21,6 +20,8 @@ _VCMPCTL = const(0xC5)
 _PGC = const(0xE0)
 _NGC = const(0xE1)
 _DISPON = const(0x29)
+
+_EM = const(0xB7)
 
 STATE_HIGH = display_driver_framework.STATE_HIGH
 STATE_LOW = display_driver_framework.STATE_LOW
@@ -83,9 +84,9 @@ class ST7796(display_driver_framework.DisplayDriver):
 
         color_size = lv.color_format_get_size(self._color_space)
         if color_size == 2:  # NOQA
-            pixel_format = 0x55
+            pixel_format = 0x05
         elif color_size == 3:
-            pixel_format = 0x77
+            pixel_format = 0x07
         else:
             raise RuntimeError(
                 'ST7796 IC only supports '
@@ -94,6 +95,9 @@ class ST7796(display_driver_framework.DisplayDriver):
 
         param_buf[0] = pixel_format
         self.set_params(_COLMOD, param_mv[:1])
+
+        param_buf[0] = 0xC6
+        self.set_params(_EM, param_mv[:1])
 
         param_buf[0] = 0x01
         self.set_params(_DIC, param_mv[:1])
@@ -126,7 +130,7 @@ class ST7796(display_driver_framework.DisplayDriver):
         self.set_params(_PGC, param_mv[:14])
 
         param_buf[:14] = bytearray([
-            0xE0, 0x09, 0x0B, 0x06, 0x04, 0x03, 0x2B,
+            0xF0, 0x09, 0x0B, 0x06, 0x04, 0x03, 0x2D,
             0x43, 0x42, 0x3B, 0x16, 0x14, 0x17, 0x1B
         ])
         self.set_params(_NGC, param_mv[:14])
