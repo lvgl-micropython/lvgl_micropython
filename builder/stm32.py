@@ -54,12 +54,17 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
     submodules_cmd[1] = 'submodules'
 
 
-def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manifest):
+def build_manifest(
+    target, script_dir, lvgl_api, displays, indevs, frozen_manifest
+):
     update_mphalport(target)
     
     manifest_path = 'lib/micropython/ports/stm32/boards/manifest.py'
 
-    generate_manifest(script_dir, lvgl_api, manifest_path, displays, indevs, frozen_manifest)
+    generate_manifest(
+        script_dir, lvgl_api, manifest_path,
+        displays, indevs, frozen_manifest
+    )
 
 
 def clean():
@@ -69,15 +74,12 @@ def clean():
 def submodules():
     stm32lib_path = 'lib/micropython/lib/stm32lib'
     if not os.path.exists(os.path.join(stm32lib_path, 'CMSIS')):
-        ret_code, _ = spawn([
-            'git',
-            'submodule',
-            'update',
-            '--init',
-            '--',
-            stm32lib_path
-        ])
-
+        ret_code, _ = spawn(
+            [
+                ['cd', stm32lib_path],
+                ['git', 'submodule', 'update', '--init']
+            ]
+        )
         if ret_code != 0:
             sys.exit(ret_code)
 

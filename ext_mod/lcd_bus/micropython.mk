@@ -5,11 +5,13 @@
 MOD_DIR := $(USERMOD_DIR)
 LVGL_BINDING_DIR = $(subst /ext_mod/lcd_bus,,$(MOD_DIR))
 
-CFLAGS_USERMOD += $(LCD_BUS_CFLAGS)
 CFLAGS_USERMOD += -I$(MOD_DIR)
 CFLAGS_USERMOD += -I$(MOD_DIR)/common_include
 CFLAGS_USERMOD += -I$(MOD_DIR)/sdl_bus
-CFLAGS_USERMOD += -Wno-missing-field-initializers
+
+ifneq (,$(findstring -Wno-missing-field-initializers, $(CFLAGS_USERMOD)))
+    CFLAGS_USERMOD += -Wno-missing-field-initializers
+endif
 
 SRC_USERMOD_C += $(MOD_DIR)/modlcd_bus.c
 SRC_USERMOD_C += $(MOD_DIR)/lcd_types.c
@@ -24,5 +26,10 @@ ifneq (,$(findstring unix, $(LV_PORT)))
     CFLAGS_USERMOD += -I$(BUILD)/SDL/include/SDL2
     CFLAGS_USERMOD += -I$(BUILD)/SDL/include-config-release/SDL2
     LDFLAGS_USERMOD += -L$(BUILD)/SDL
-    LDFLAGS_USERMOD += -lSDL2
+
+    ifeq ($(UNAME_S),Darwin)
+        LDFLAGS_USERMOD += -lSDL2-2.0
+    else
+        LDFLAGS_USERMOD += -lSDL2
+    endif
 endif

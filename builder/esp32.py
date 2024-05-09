@@ -119,26 +119,30 @@ class Partition:
 
 
 def get_espidf():
-    cmd = [
-        'git',
-        'submodule',
-        'update',
-        '--init',
-        '--recursive',
-        '--',
-        'lib/esp-idf'
-    ]
+    if sys.platform.startswith('win'):
+        return
 
-    result, _ = spawn(cmd, spinner=True)
-    if result != 0:
-        sys.exit(result)
+    else:
+        cmd = [
+            'git',
+            'submodule',
+            'update',
+            '--init',
+            '--recursive',
+            '--',
+            'lib/esp-idf'
+        ]
+
+        result, _ = spawn(cmd, spinner=True)
+        if result != 0:
+            sys.exit(result)
 
 
 board_variant = None
 board = None
 skip_partition_resize = False
 partition_size = None
-flash_size = 8
+flash_size = '0'
 oct_flash = False
 
 
@@ -170,27 +174,53 @@ def parse_args(extra_args, lv_cflags, brd):
             if arg.startswith('BOARD_VARIANT'):
                 raise RuntimeError(f'BOARD_VARIANT not supported by "{board}"')
 
-    if board == 'ESP32_GENERIC_S3':
-        esp_argParser = ArgumentParser(prefix_chars='-')
+    if board_variant in ('SPIRAM', 'SPIRAM_OCT'):
+        if board == 'ESP32_GENERIC_S2':
+            esp_argParser = ArgumentParser(prefix_chars='-')
 
-        esp_argParser.add_argument(
-            '--octal-flash',
-            help='octal spi flash',
-            dest='oct_flash',
-            action='store_true'
-        )
+            esp_argParser.add_argument(
+                '--flash-size',
+                dest='flash_size',
+                help='flash size',
+                choices=('2', '4'),
+                default='4',
+            )
+            esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
+            flash_size = esp_args.flash_size
 
-        esp_argParser.add_argument(
-            '--flash-size',
-            dest='flash_size',
-            help='flash size',
-            default=8,
-            type=int,
-            action='store'
-        )
-        esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
-        flash_size = esp_args.flash_size
-        oct_flash = esp_args.oct_flash
+        elif board == 'ESP32_GENERIC':
+            esp_argParser = ArgumentParser(prefix_chars='-')
+
+            esp_argParser.add_argument(
+                '--flash-size',
+                dest='flash_size',
+                help='flash size',
+                choices=('4', '8', '16'),
+                default='4',
+            )
+            esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
+            flash_size = esp_args.flash_size
+
+        elif board == 'ESP32_GENERIC_S3':
+            esp_argParser = ArgumentParser(prefix_chars='-')
+
+            esp_argParser.add_argument(
+                '--octal-flash',
+                help='octal spi flash',
+                dest='oct_flash',
+                action='store_true'
+            )
+
+            esp_argParser.add_argument(
+                '--flash-size',
+                dest='flash_size',
+                help='flash size',
+                choices=('4', '8', '16', '32'),
+                default='8',
+            )
+            esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
+            flash_size = esp_args.flash_size
+            oct_flash = esp_args.oct_flash
 
     esp_argParser = ArgumentParser(prefix_chars='-')
 
@@ -264,13 +294,18 @@ def build_commands(_, extra_args, __, lv_cflags, ___):
 
 def get_idf_version():
     if 'ESP_IDF_VERSION' in os.environ:
-        exit_code, data = spawn(['idf.py', '--version'], out_to_screen=False)
+        exit_code, data = spawn(
+            ['python3', 'idf.py', '--version'],
+            out_to_screen=False
+        )
         version = data.split('v')[-1].split('-')[0]
         if version:
             return version
 
 
-def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manifest):
+def build_manifest(
+    target, script_dir, lvgl_api, displays, indevs, frozen_manifest
+):
     update_mphalport(target)
 
     with open(f'lib/micropython/ports/esp32/boards/sdkconfig.base', 'r') as f:
@@ -287,7 +322,10 @@ def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manife
 
     manifest_path = 'lib/micropython/ports/esp32/boards/manifest.py'
 
-    generate_manifest(script_dir, lvgl_api, manifest_path, displays, indevs, frozen_manifest)
+    generate_manifest(
+        script_dir, lvgl_api, manifest_path,
+        displays, indevs, frozen_manifest
+    )
 
 
 def clean():
@@ -303,30 +341,64 @@ def setup_idf_environ():
     # @cheops put quite a bit of time in to research the best solution
     # and also with the testing of the code.
 
+    if sys.platform.startswith('win'):
+        return None
+
     idf_ver = get_idf_version()
     env = None
-
     if idf_ver is None or idf_ver != '5.0.4':
         idf_path = 'lib/esp-idf'
 
         if os.path.exists(os.path.join(idf_path, 'export.sh')):
-            cmds = [['cd', idf_path]]
 
-            if sys.platform.startswith('win'):
-                cmds.append(['export'])
-                cmds.append(['set'])
-            else:
-                cmds.append(['. ./export.sh'])
-                cmds.append(['printenv'])
+            # this removes any IDF environment variable that may
+            # exist if the user has the ESP-IDF installed
+            env = {
+                k: v for k, v in os.environ.items() if not k.startswith('IDF')
+            }
+            py_path = os.path.split(sys.executable)[0]
+            idf_path = os.path.abspath(idf_path)
+            idf_tools_path = os.path.join(idf_path, 'tools')
+            env['PATH'] = (
+                py_path + os.pathsep +
+                os.pathsep + idf_tools_path +
+                os.pathsep + env.get('PATH', '')
+            )
+            env['IDF_PATH'] = idf_path
 
-            # this removes any IDF environment variable that may exist if the user
-            # has the ESP-IDF installed
-            env = {k: v for k, v in os.environ.items() if not k.startswith('IDF')}
-            env['IDF_PATH'] = os.path.abspath(idf_path)
+            cmds = [
+                [f'export "IDF_PATH={os.path.abspath(env["IDF_PATH"])}"'],
+                ['cd', idf_path],
+                ['. ./export.sh'],
+                ['printenv']
+            ]
+
+            if 'GITHUB_RUN_ID' in env:
+                if sys.platform.startswith('win'):
+                    env_cmds = [
+                        ['echo', f"{py_path}", '|', 'Out-File',
+                         '-Append', '-FilePath', '$env:GITHUB_PATH',
+                         '-Encoding', 'utf8'],
+                        ['echo', f"{idf_path}", '|', 'Out-File',
+                         '-Append', '-FilePath', '$env:GITHUB_PATH',
+                         '-Encoding', 'utf8'],
+                        ['echo', f"{idf_tools_path}", '|', 'Out-File',
+                         '-Append', '-FilePath', '$env:GITHUB_PATH',
+                         '-Encoding', 'utf8']
+                    ]
+                else:
+                    env_cmds = [
+                        ['echo', f"{py_path}", '>>', '$GITHUB_PATH'],
+                        ['echo', f"{idf_path}", '>>', '$GITHUB_PATH'],
+                        ['echo', f"{idf_tools_path}", '>>', '$GITHUB_PATH']
+                    ]
+
+                spawn(env_cmds, env=env, out_to_screen=False)
 
             result, output = spawn(cmds, env=env, out_to_screen=False)
 
             if result != 0:
+                print('********* ERROR **********')
                 print(output)
                 sys.exit(result)
 
@@ -336,11 +408,11 @@ def setup_idf_environ():
                 line.split('=', 1)[0]: line.split('=', 1)[1]
                 for line in output
             }
-            for item in ('PATH', 'IDF_PATH'):
-                if item not in temp_env:
-                    raise RuntimeError(f'"{item}" not found in environment.')
 
-                env[item] = temp_env[item]
+            if 'PATH' in temp_env:
+                env['PATH'] = temp_env['PATH']
+            elif 'path' in temp_env:
+                env['PATH'] = temp_env['path']
 
         else:
             args = sys.argv[:]
@@ -359,40 +431,61 @@ def setup_idf_environ():
 
 
 def submodules():
-    idf_ver = get_idf_version()
-    if idf_ver is None or idf_ver != '5.0.4':
-        idf_path = 'lib/esp-idf'
-        if not os.path.exists(os.path.join(idf_path, 'export.sh')):
-            print('collecting ESP-IDF v5.0.4')
+    if not sys.platform.startswith('win'):
+        idf_ver = get_idf_version()
+
+        if idf_ver is None or idf_ver != '5.0.4':
+            idf_path = 'lib/esp-idf'
+            if not os.path.exists(os.path.join(idf_path, 'export.sh')):
+                print('collecting ESP-IDF v5.0.4')
+                print('this might take a bit...')
+                print()
+                get_espidf()
+                print()
+
+            cmds = [
+                [f'export "IDF_PATH={os.path.abspath(idf_path)}"'],
+                ['cd', idf_path],
+                [
+                    'git', 'submodule', 'update', '--init',
+                    'components/bt/host/nimble/nimble',
+                    'components/esp_wifi',
+                    'components/esptool_py/esptool',
+                    'components/lwip/lwip',
+                    'components/mbedtls/mbedtls',
+                    'components/bt/controller/lib_esp32',
+                    'components/bt/controller/lib_esp32c3_family'
+                ], ['./install.sh', 'all']]
+
+            print('setting up ESP-IDF v5.0.4')
             print('this might take a bit...')
             print()
-            get_espidf()
-            print()
 
-        cmds = [['cd', idf_path]]
+            env = {
+                k: v for k, v in os.environ.items() if not k.startswith('IDF')
+            }
+            env['IDF_PATH'] = os.path.abspath(idf_path)
 
-        if sys.platform.startswith('win'):
-            cmds.append(['install', 'all'])
-        else:
-            cmds.append(['./install.sh', 'all'])
+            result, _ = spawn(cmds, env=env)
+            if result != 0:
+                sys.exit(result)
 
-        print('setting up ESP-IDF v5.0.4')
-        print('this might take a bit...')
-        print()
+        env = setup_idf_environ()
 
-        env = {k: v for k, v in os.environ.items() if not k.startswith('IDF')}
-        env['IDF_PATH'] = os.path.abspath(idf_path)
+        if 'deploy' in submodules_cmd:
+            submodules_cmd.remove('deploy')
 
-        result, _ = spawn(cmds, env=env)
-        if result != 0:
-            sys.exit(result)
+        cmds = [
+            [f'export "IDF_PATH={os.path.abspath(env["IDF_PATH"])}"'],
+            ['cd', 'lib/esp-idf'],
+            ['. ./export.sh'],
+            ['cd ../..'],
+            submodules_cmd
+        ]
+    else:
+        raise RuntimeError('compiling on windows is not supported at this time')
 
-    if 'deploy' in submodules_cmd:
-        submodules_cmd.remove('deploy')
-
-    env = setup_idf_environ()
-
-    return_code, _ = spawn(submodules_cmd, env=env)
+    return_code, _ = spawn(cmds, env=env)
     if return_code != 0:
         sys.exit(return_code)
 
@@ -400,7 +493,10 @@ def submodules():
 def compile():  # NOQA
     env = setup_idf_environ()
 
-    if board == 'ESP32_GENERIC_S3':
+    if (
+        board in ('ESP32_GENERIC', 'ESP32_GENERIC_S2', 'ESP32_GENERIC_S3') and
+        board_variant in ('SPIRAM', 'SPIRAM_OCT')
+    ):
         base_config = [
             'CONFIG_ESPTOOLPY_FLASHMODE_QIO=y',
             'CONFIG_ESPTOOLPY_FLASHFREQ_80M=y',
@@ -408,56 +504,90 @@ def compile():  # NOQA
             'CONFIG_PARTITION_TABLE_CUSTOM=y',
         ]
 
-        if flash_size == 4:
+        if flash_size == '2':
+            base_config.extend([
+                'CONFIG_ESPTOOLPY_FLASHSIZE_2MB=y',
+                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
+                '"partitions-2MiB.csv"'
+            ])
+
+        elif flash_size == '4':
             base_config.extend([
                 'CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_8MB=n',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_16MB=n',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=n',
-                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions-4MiB.csv"'
+                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
+                '"partitions-4MiB.csv"'
             ])
-        elif flash_size == 8:
+        elif flash_size == '8':
             base_config.extend([
-                'CONFIG_ESPTOOLPY_FLASHSIZE_4MB=n',
                 'CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_16MB=n',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=n',
-                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions-8MiB.csv"'
+                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
+                '"partitions-8MiB.csv"'
             ])
 
-        elif flash_size == 16:
+        elif flash_size == '16':
             base_config.extend([
-                'CONFIG_ESPTOOLPY_FLASHSIZE_4MB=n',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_8MB=n',
                 'CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=n',
-                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions-16MiB.csv"'
+                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
+                '"partitions-16MiB.csv"'
             ])
-        if flash_size == 32:
+        elif flash_size == '32':
             base_config.extend([
-                'CONFIG_ESPTOOLPY_FLASHSIZE_4MB=n',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_8MB=n',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_16MB=n',
                 'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=y',
-                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions-32MiB.csv"'
+                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
+                '"partitions-32MiB.csv"'
             ])
         else:
-            base_config = [
-                'CONFIG_ESPTOOLPY_FLASHSIZE_4MB=n',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_16MB=n',
-                'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=n',
-                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions-8MiB.csv"'
-            ]
+            raise RuntimeError(f'unsupported flash size {flash_size}')
 
-        if oct_flash:
-            base_config[0] = 'CONFIG_ESPTOOLPY_FLASHMODE_DOUT=y'
-            base_config.append('CONFIG_ESPTOOLPY_OCT_FLASH=y')
+        if board == 'ESP32_GENERIC_S3':
+            if oct_flash and flash_size in ('16', '32'):
+                if flash_size == '32':
+                    base_config[0] = 'CONFIG_ESPTOOLPY_FLASHMODE_DOUT=y'
+
+                base_config.append('CONFIG_ESPTOOLPY_OCT_FLASH=y')
 
         base_config = '\n'.join(base_config)
-
-        with open('lib/micropython/ports/esp32/boards/ESP32_GENERIC_S3/sdkconfig.board', 'w') as f:
-            f.write(base_config + '\n')
+        
+        if board in ('ESP32_GENERIC', 'ESP32_GENERIC_S3'):
+            mpconfigboard_cmake_path = (
+                'lib/micropython/ports/esp32/boards/'
+                f'{board}/mpconfigboard.cmake'
+            )
+            
+            with open(mpconfigboard_cmake_path, 'rb') as f:
+                data = f.read().decode('utf-8')
+            
+            if f'boards/{board}/sdkconfig.board' not in data:
+                if board == 'ESP32_GENERIC':
+                    data = data.replace(
+                        'boards/sdkconfig.spiram', 
+                        'boards/sdkconfig.spiram\n    '
+                        'boards/ESP32_GENERIC/sdkconfig.board'
+                    )
+                else:
+                    data = data.replace(
+                        'boards/sdkconfig.spiram_ex',
+                        'boards/sdkconfig.spiram_ex\n    '
+                        'boards/ESP32_GENERIC_S2/sdkconfig.board'
+                    )
+                
+                with open(mpconfigboard_cmake_path, 'wb') as f:
+                    f.write(data.encode('utf-8'))
+                    
+            sdkconfig_spiram_path = (
+                'lib/micropython/ports/esp32/boards/'
+                f'{board}/sdkconfig.board'
+            )
+            with open(sdkconfig_spiram_path, 'w') as f:
+                f.write(base_config)
+                        
+        else:
+            sdkconfig_board_path = (
+                'lib/micropython/ports/esp32/'
+                f'boards/{board}/sdkconfig.board'
+            )
+            with open(sdkconfig_board_path, 'w') as f:
+                f.write(base_config + '\n')
 
     if board in ('ESP32_GENERIC_S2', 'ESP32_GENERIC_S3'):
 
@@ -466,7 +596,10 @@ def compile():  # NOQA
         with open(mphalport_path, 'rb') as f:
             data = f.read().decode('utf-8')
 
-        data = data.replace('#elif CONFIG_USB_OTG_SUPPORTED', '#elif MP_USB_OTG')
+        data = data.replace(
+            '#elif CONFIG_USB_OTG_SUPPORTED',
+            '#elif MP_USB_OTG'
+        )
 
         with open(mphalport_path, 'wb') as f:
             f.write(data.encode('utf-8'))
@@ -484,7 +617,10 @@ def compile():  # NOQA
         with open(main_path, 'wb') as f:
             f.write(data.encode('utf-8'))
 
-        mpconfigboard_path = f'lib/micropython/ports/esp32/boards/{board}/mpconfigboard.h'
+        mpconfigboard_path = (
+            f'lib/micropython/ports/esp32/boards/{board}/mpconfigboard.h'
+        )
+
         with open(mpconfigboard_path, 'rb') as f:
             data = f.read().decode('utf-8')
 
@@ -522,7 +658,18 @@ def compile():  # NOQA
     else:
         deploy = False
 
-    ret_code, output = spawn(compile_cmd, env=env, cmpl=True)
+    if not sys.platform.startswith('win'):
+        cmds = [
+            # [f'export "IDF_PATH={os.path.abspath(env["IDF_PATH"])}"'],
+            ['cd', 'lib/esp-idf'],
+            ['. ./export.sh'],
+            ['cd ../..'],
+            compile_cmd
+        ]
+    else:
+        cmds = compile_cmd
+
+    ret_code, output = spawn(cmds, env=env, cmpl=True)
     if ret_code != 0:
         if (
             'partition is too small ' not in output or
@@ -557,7 +704,7 @@ def compile():  # NOQA
             compile_cmd.append('deploy')
 
         compile_cmd[4] = 'SECOND_BUILD=1'
-        ret_code, output = spawn(compile_cmd, env=env, cmpl=True)
+        ret_code, output = spawn(cmds, env=env, cmpl=True)
 
         if ret_code != 0:
             sys.exit(ret_code)
@@ -612,7 +759,7 @@ def compile():  # NOQA
             if remaining > 4096 or partition_size != -1 or deploy:
                 compile_cmd[4] = 'SECOND_BUILD=1'
 
-                ret_code, output = spawn(compile_cmd, env=env, cmpl=True)
+                ret_code, output = spawn(cmds, env=env, cmpl=True)
 
                 if ret_code != 0:
                     sys.exit(ret_code)
@@ -626,7 +773,10 @@ def compile():  # NOQA
 
         esp_tool_path, output = output.split('esptool.py ', 1)
         esp_tool_path += 'esptool.py'
-        esp_tool_path = esp_tool_path.replace('../../../', os.getcwd() + '/lib/')
+        esp_tool_path = esp_tool_path.replace(
+            '../../../',
+            os.getcwd() + '/lib/'
+        )
 
         out_cmd = []
 
@@ -664,7 +814,18 @@ def compile():  # NOQA
         cmd = cmd.replace('--before default_reset ', '')
         cmd = cmd.replace('--after no_reset ', '')
 
-        result, _ = spawn([cmd])
+        # if not sys.platform.startswith('win'):
+        #     cmds = [
+        #         # [f'export "IDF_PATH={os.path.abspath(env["IDF_PATH"])}"'],
+        #         # ['cd', 'lib/esp-idf'],
+        #         # ['. ./export.sh'],
+        #         # ['cd ../..'],
+        #         cmd
+        #     ]
+        # else:
+        cmds = [cmd]
+
+        result, _ = spawn(cmds, env=env)
         if result:
             sys.exit(result)
 
@@ -677,9 +838,6 @@ def compile():  # NOQA
         print(
             python_path, esp_tool_path, '-p (PORT) -b 460800 erase_flash'
         )
-        # print()
-        # print(python_path, esp_tool_path, out_cmd.replace('-b 460800', '-b 921600'))
-        # print()
 
         cmd = f'{python_path} {esp_tool_path} {out_cmd}'
         cmd = cmd.split('write_flash', 1)[0]

@@ -56,13 +56,20 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
     if board:
         unix_cmd.append(f'VARIANT={board}')
 
+    if lv_cflags:
+        unix_cmd.append(f'LV_CFLAGS="{lv_cflags}"')
+
     unix_cmd.extend([
-        f'LV_CFLAGS="{lv_cflags}"',
-        f'LV_PORT=unix',
-        'CC=gcc',
-        'GCC=gcc',
-        f'USER_C_MODULES="{script_dir}/ext_mod"'
+        'LV_PORT=unix',
+        f'USER_C_MODULES="{script_dir}/ext_mod"',
+        (
+            '"CFLAGS_EXTRA='
+            '-Wno-unused-function '
+            '-Wno-double-promotion '
+            '-Wno-unused-command-line-argument"'
+        )
     ])
+
     unix_cmd.extend(extra_args)
 
     clean_cmd.extend(unix_cmd[:])
@@ -75,14 +82,12 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
     submodules_cmd[1] = 'submodules'
 
 
-def build_manifest(
-    target, script_dir, lvgl_api, displays, indevs, frozen_manifest
-):
+def build_manifest(_, script_dir, lvgl_api, displays, indevs, frozen_manifest):
     global SCRIPT_PATH
 
     SCRIPT_PATH = script_dir
 
-    update_mphalport(target)
+    update_mphalport('unix')
 
     manifest_path = 'lib/micropython/ports/unix/variants/manifest.py'
 
@@ -90,7 +95,7 @@ def build_manifest(
         f'{script_dir}/api_drivers/common_api_drivers/linux/lv_timer.py'
     ]
     generate_manifest(
-        script_dir, lvgl_api, manifest_path, displays,
+        script_dir, lvgl_api, manifest_path,  displays,
         indevs, frozen_manifest, *manifest_files
     )
 
@@ -109,22 +114,21 @@ def build_sdl():
     global variant
 
     if variant is None:
-        variant = 'build-standard'
+        varnt = 'build-standard'
     else:
-        variant = f'build-{variant}'
+        varnt = f'build-{variant}'
 
-    dst = f'lib/micropython/ports/unix/{variant}/SDL'
+    dst = f'lib/micropython/ports/unix/{varnt}/SDL'
 
     if not os.path.exists(dst):
         os.makedirs(dst)
     elif os.path.exists(os.path.join(dst, 'libSDL2.a')):
         return
 
-    cwd = os.getcwd()
-    os.chdir(dst)
     cmd_ = [
+        [f'cd {dst}'],
         [
-            f'cmake -DSDL_STATIC=ON -DSDL_SHARED=OFF '
+            f'cmake -DSDL_STATIC=OFF -DSDL_SHARED=ON '
             f'-DCMAKE_BUILD_TYPE=Release {SCRIPT_PATH}/lib/SDL'
         ],
         [f'cmake --build . --config Release --parallel {os.cpu_count()}']
@@ -133,8 +137,6 @@ def build_sdl():
     res, _ = spawn(cmd_, cmpl=True)
     if res != 0:
         sys.exit(res)
-
-    os.chdir(cwd)
 
 
 def submodules():
@@ -149,7 +151,7 @@ def submodules():
         ]
         _run(cmd_)
 
-    cmd_ = ['cd lib/SDL && git checkout  release-2.30.2']
+    cmd_ = ['cd lib/SDL && git checkout release-2.30.2']
     _run(cmd_)
 
     return_code, _ = spawn(submodules_cmd)
@@ -200,6 +202,7 @@ def compile():  # NOQA
             f.write(mpconfigvariant_common)
 
     macro = '#define MICROPY_SCHEDULER_DEPTH              (128)'
+
     if macro not in mpconfigvariant_common:
         mpconfigvariant_common += '\n\n'
         mpconfigvariant_common += macro + '\n'

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\Mile.Project.Windows.Legacy\Mile.Project.Platform.Win32.props" />
+  <Import Project="..\Mile.Project.Windows.Legacy\Mile.Project.Platform.x64.props" />
+  <Import Project="..\Mile.Project.Windows.Legacy\Mile.Project.Platform.ARM64.props" />
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{AAE3B2DC-AEFC-49B0-89F9-9675CE3A0EAA}</ProjectGuid>
+    <RootNamespace>lvgl_windows</RootNamespace>
+    <MileProjectType>StaticLibrary</MileProjectType>
+    <MileProjectEnableVCLTLSupport>true</MileProjectEnableVCLTLSupport>
+  </PropertyGroup>
+  <Import Project="..\Mile.Project.Windows.Legacy\Mile.Project.Cpp.props" />
+  <ImportGroup Label="PropertySheets">
+    <Import Project="lvgl_windows.props" />
+  </ImportGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Optimization Condition="'$(Configuration)'=='Release'">MinSpace</Optimization>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <Import Project="lvgl_portable.vcxitems" />
+  <ItemGroup>
+{includes}
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="lvgl_windows.props" />
+  </ItemGroup>
+  <Import Project="..\Mile.Project.Windows.Legacy\Mile.Project.Cpp.targets" />
+</Project>

@@ -30,7 +30,62 @@ installed (gcc, clang, msvc) and the necessary support libs.
 
 ### *Requirements*
 _________________
-Linux
+compiling for ESP32
+  * Ubuntu (Linux): you can install all of these using `apt-get install` 
+    * build-essential
+    * cmake
+    * ninja-build
+    * python
+    
+  * macOS
+    * `command xcode-select–install`
+    * `brew install make`
+    * `brew install cmake`
+    * `brew install ninja`
+    * `brew install python`
+
+
+Compiling for RP2
+  * Ubuntu (Linux): you can install all of these using `apt-get install` 
+    * build-essential
+    * cmake
+    * ninja-build
+    * python
+    * gcc-arm-none-eabi 
+    * libnewlib-arm-none-eabi
+  
+  * macOS
+    * `command xcode-select–install`
+    * `brew install make`
+    * `brew install cmake`
+    * `brew install ninja`
+    * `brew install python`
+    * `brew install armmbed/formulae/arm-none-eabi-gcc`
+
+  * Windows
+    * Not yet supported
+
+
+Compiling for STM32:
+  * Ubuntu (Linux): you can install all of these using `apt-get install` 
+    * gcc-arm-none-eabi 
+    * libnewlib-arm-none-eabi
+    * build-essential
+    * ninja-build
+    * python
+  
+  * macOS
+    * `command xcode-select–install`
+    * `brew install make`
+    * `brew install ninja`
+    * `brew install python`
+    * `brew install armmbed/formulae/arm-none-eabi-gcc`
+
+  * Windows
+    * Not yet supported
+
+
+Compiling for Ubuntu (Linux): you can install all of these using `apt-get install` 
 
   * build-essential 
   * libffi-dev 
@@ -65,19 +120,14 @@ Linux
   * libdecor-0-dev
 
 
-Compiling for STM32 unider Linux
-
-  * gcc-arm-none-eabi 
-  * libnewlib-arm-none-eabi
-
-
-OSX 
-
-  * brew install llvm
+Compiling for macOS 
+  * `command xcode-select–install`
+  * `brew install libffi` 
+  * `brew install ninja`
+  * `brew install make`
 
 
-Windows
-
+Compiling for Windows
   * not supported yet
 
 <br>
@@ -94,6 +144,7 @@ The first argument is positional and it must be one of the following.
 
   * esp32
   * windows
+  * macOS
   * stm32
   * unix
   * rp2 
@@ -155,7 +206,20 @@ ____________________
 ____________________________
   * --skip-partition-resize: do not resize the firmware partition
   * --partition-size: set a custom firmware partition size
+  * --octal-flash ¹: This is only available for the 16mb flash and the 32mb flash
+  * --flash-size ² ³: This is how much flash storage is available.
 
+    Allowed Values are:
+
+    * ESP32-S3: 4, 8, 16 and 32 (default is 8)
+    * ESP32-S2: 2 and 4 (default is 4)
+    * ESP32: 4, 8 and 16 (default is 4)
+    , The default is 8.
+  
+
+¹ Available for the ESP32-S3 when `BOARD_VARIANT` is set to `SPIRAM_OCT`<br> 
+² Available for the ESP32, ESP32-S2 and ESP32-S3<br>
+³ Available only when `BOARD_VARIANT` is set to `SPIRAM` or `SPIRAM_OCT`<br>
 
 <br>
 

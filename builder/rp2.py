@@ -41,7 +41,8 @@ rp2_cmd = [
     '-C',
     'lib/micropython/ports/rp2',
     'LV_PORT=rp2',
-    'USER_C_MODULES=../../../../micropython.cmake'
+    'USER_C_MODULES=../../../../micropython.cmake',
+    'SECOND_BUILD=0'
 ]
 
 clean_cmd = []
@@ -75,12 +76,17 @@ def build_commands(_, extra_args, __, lv_cflags, board):
     submodules_cmd[1] = 'submodules'
 
 
-def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manifest):
+def build_manifest(
+    target, script_dir, lvgl_api, displays, indevs, frozen_manifest
+):
     update_mphalport(target)
     
     manifest_path = 'lib/micropython/ports/rp2/boards/manifest.py'
 
-    generate_manifest(script_dir, lvgl_api, manifest_path, displays, indevs, frozen_manifest)
+    generate_manifest(
+        script_dir, lvgl_api, manifest_path,
+        displays, indevs, frozen_manifest
+    )
 
 
 def clean():
@@ -109,7 +115,9 @@ def submodules():
 
 def compile():  # NOQA
     if 'PICO_SDK_PATH' not in os.environ:
-        os.environ['PICO_SDK_PATH'] = f'{os.getcwd()}/lib/micropython/lib/pico-sdk'
+        os.environ['PICO_SDK_PATH'] = (
+            f'{os.getcwd()}/lib/micropython/lib/pico-sdk'
+        )
 
     return_code, _ = spawn(compile_cmd, cmpl=True)
     if return_code != 0:

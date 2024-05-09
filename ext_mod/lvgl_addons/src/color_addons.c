@@ -4,6 +4,11 @@
 #include <stdlib.h>
 #include "../include/color_addons.h"
 
+#ifdef MP_SOFT_MATH
+    #include "../include/soft_math.h"
+#endif
+
+
 #define PI 3.141592653589793f
 #define TWO_PI 6.28318530717958647693f
 #define INV_TWO_PI 0.15915494309189533576876437577476f
@@ -49,10 +54,18 @@ void lv_conical_gradient(uint8_t *buf, uint16_t radius, const lv_grad_dsc_t *gra
         run = radius;
 
         for (uint32_t x=0; x < diameter; x++) {
-            t = (float)atan2((float)rise, (float)run) + (float)PI - (float)angle;
+            #ifdef MP_SOFT_MATH
+                t = (float)soft_atan2((float)rise, (float)run) + (float)PI - (float)angle;
+            #else
+                t = (float)atan2((float)rise, (float)run) + (float)PI - (float)angle;
+            #endif
 
             if (twist > 0) {
-                t += TWO_PI * sqrtf((float)(rise * rise + run * run) / (float)twist);
+                #ifdef MP_SOFT_MATH
+                    t += TWO_PI * soft_sqrtf((float)(rise * rise + run * run) / (float)twist);
+                #else
+                    t += TWO_PI * sqrtf((float)(rise * rise + run * run) / (float)twist);
+                #endif
             }
 
             t = floormod(t, TWO_PI);
@@ -92,7 +105,11 @@ void lv_radial_gradient(uint8_t *buf, uint16_t radius, const lv_grad_dsc_t *grad
 
     for (uint32_t y=0; y < diameter; y++) {
         for (uint32_t x=0; x < diameter; x++) {
-            dist = (uint32_t)abs((int)sqrtf(powf((float)(radius - x), 2.0f) + powf((float)(radius - y), 2.0f)));
+            #ifdef MP_SOFT_MATH
+                dist = (uint32_t)abs((int)soft_sqrtf(soft_powf((float)(radius - x), 2.0f) + soft_powf((float)(radius - y), 2.0f)));
+            #else
+                dist = (uint32_t)abs((int)sqrtf(powf((float)(radius - x), 2.0f) + powf((float)(radius - y), 2.0f)));
+            #endif
             if (dist >= gradient->size){
                 continue;
             }

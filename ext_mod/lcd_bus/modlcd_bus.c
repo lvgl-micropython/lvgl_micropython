@@ -40,12 +40,12 @@ mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
 {
     enum { ARG_self, ARG_width, ARG_height, ARG_bpp, ARG_buffer_size, ARG_rgb565_byte_swap };
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_self,             MP_ARG_OBJ  | MP_ARG_REQUIRED  },
-        { MP_QSTR_width,            MP_ARG_INT  | MP_ARG_REQUIRED  },
-        { MP_QSTR_height,           MP_ARG_INT  | MP_ARG_REQUIRED  },
-        { MP_QSTR_bpp,              MP_ARG_INT  | MP_ARG_REQUIRED  },
-        { MP_QSTR_buffer_size,      MP_ARG_INT  | MP_ARG_REQUIRED  },
-        { MP_QSTR_rgb565_byte_swap, MP_ARG_BOOL | MP_ARG_REQUIRED  },
+        { MP_QSTR_self,             MP_ARG_OBJ  | MP_ARG_REQUIRED, { .u_obj = mp_const_none } },
+        { MP_QSTR_width,            MP_ARG_INT  | MP_ARG_REQUIRED, { .u_int = -1            } },
+        { MP_QSTR_height,           MP_ARG_INT  | MP_ARG_REQUIRED, { .u_int = -1            } },
+        { MP_QSTR_bpp,              MP_ARG_INT  | MP_ARG_REQUIRED, { .u_int = -1            } },
+        { MP_QSTR_buffer_size,      MP_ARG_INT  | MP_ARG_REQUIRED, { .u_int = -1            } },
+        { MP_QSTR_rgb565_byte_swap, MP_ARG_BOOL | MP_ARG_REQUIRED, { .u_bool = false        } },
     };
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
@@ -72,8 +72,8 @@ mp_obj_t mp_lcd_bus_free_framebuffer(size_t n_args, const mp_obj_t *pos_args, mp
 {
     enum { ARG_self, ARG_framebuffer};
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_self,           MP_ARG_OBJ | MP_ARG_REQUIRED  },
-        { MP_QSTR_framebuffer,    MP_ARG_OBJ | MP_ARG_REQUIRED  },
+        { MP_QSTR_self,           MP_ARG_OBJ | MP_ARG_REQUIRED, { .u_obj = mp_const_none } },
+        { MP_QSTR_framebuffer,    MP_ARG_OBJ | MP_ARG_REQUIRED, { .u_obj = mp_const_none } },
     };
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
@@ -93,9 +93,9 @@ mp_obj_t mp_lcd_bus_allocate_framebuffer(size_t n_args, const mp_obj_t *pos_args
 {
     enum { ARG_self, ARG_size, ARG_caps };
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_self,    MP_ARG_OBJ | MP_ARG_REQUIRED  },
-        { MP_QSTR_size,    MP_ARG_INT | MP_ARG_REQUIRED  },
-        { MP_QSTR_caps,    MP_ARG_INT | MP_ARG_REQUIRED  },
+        { MP_QSTR_self,    MP_ARG_OBJ | MP_ARG_REQUIRED, { .u_obj = mp_const_none } },
+        { MP_QSTR_size,    MP_ARG_INT | MP_ARG_REQUIRED, { .u_int = -1            } },
+        { MP_QSTR_caps,    MP_ARG_INT | MP_ARG_REQUIRED, { .u_int = -1            } },
     };
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
@@ -110,8 +110,8 @@ mp_obj_t mp_lcd_bus_tx_param(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
 {
     enum { ARG_self, ARG_cmd, ARG_params };
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_self,    MP_ARG_OBJ | MP_ARG_REQUIRED  },
-        { MP_QSTR_cmd,     MP_ARG_INT | MP_ARG_REQUIRED  },
+        { MP_QSTR_self,    MP_ARG_OBJ | MP_ARG_REQUIRED, { .u_obj = mp_const_none } },
+        { MP_QSTR_cmd,     MP_ARG_INT | MP_ARG_REQUIRED, { .u_int = -1            } },
         { MP_QSTR_params,  MP_ARG_OBJ, {.u_obj = mp_const_none} },
     };
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
@@ -141,13 +141,13 @@ mp_obj_t mp_lcd_bus_tx_color(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
 {
     enum { ARG_self, ARG_cmd, ARG_data, ARG_x_start, ARG_y_start, ARG_x_end, ARG_y_end };
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_self,    MP_ARG_OBJ | MP_ARG_REQUIRED  },
-        { MP_QSTR_cmd,     MP_ARG_INT | MP_ARG_REQUIRED  },
-        { MP_QSTR_data,    MP_ARG_OBJ | MP_ARG_REQUIRED  },
-        { MP_QSTR_x_start, MP_ARG_INT | MP_ARG_REQUIRED  },
-        { MP_QSTR_y_start, MP_ARG_INT | MP_ARG_REQUIRED  },
-        { MP_QSTR_x_end,   MP_ARG_INT | MP_ARG_REQUIRED  },
-        { MP_QSTR_y_end,   MP_ARG_INT | MP_ARG_REQUIRED  },
+        { MP_QSTR_self,    MP_ARG_OBJ | MP_ARG_REQUIRED, { .u_obj = mp_const_none } },
+        { MP_QSTR_cmd,     MP_ARG_INT | MP_ARG_REQUIRED, { .u_int = -1            } },
+        { MP_QSTR_data,    MP_ARG_OBJ | MP_ARG_REQUIRED, { .u_obj = mp_const_none } },
+        { MP_QSTR_x_start, MP_ARG_INT | MP_ARG_REQUIRED, { .u_int = -1            } },
+        { MP_QSTR_y_start, MP_ARG_INT | MP_ARG_REQUIRED, { .u_int = -1            } },
+        { MP_QSTR_x_end,   MP_ARG_INT | MP_ARG_REQUIRED, { .u_int = -1            } },
+        { MP_QSTR_y_end,   MP_ARG_INT | MP_ARG_REQUIRED, { .u_int = -1            } },
     };
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
@@ -200,9 +200,9 @@ mp_obj_t mp_lcd_bus_rx_param(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
 {
     enum { ARG_self, ARG_cmd, ARG_data };
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_self,  MP_ARG_OBJ | MP_ARG_REQUIRED  },
-        { MP_QSTR_cmd,   MP_ARG_INT | MP_ARG_REQUIRED  },
-        { MP_QSTR_data,  MP_ARG_OBJ | MP_ARG_REQUIRED  },
+        { MP_QSTR_self,  MP_ARG_OBJ | MP_ARG_REQUIRED, { .u_obj = mp_const_none } },
+        { MP_QSTR_cmd,   MP_ARG_INT | MP_ARG_REQUIRED, { .u_int = -1            } },
+        { MP_QSTR_data,  MP_ARG_OBJ | MP_ARG_REQUIRED, { .u_obj = mp_const_none } },
     };
 
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
@@ -226,8 +226,8 @@ mp_obj_t mp_lcd_bus_register_callback(size_t n_args, const mp_obj_t *pos_args, m
 {
     enum { ARG_self, ARG_callback };
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_self,         MP_ARG_OBJ | MP_ARG_REQUIRED  },
-        { MP_QSTR_callback,     MP_ARG_OBJ | MP_ARG_REQUIRED  },
+        { MP_QSTR_self,         MP_ARG_OBJ | MP_ARG_REQUIRED, { .u_obj = mp_const_none } },
+        { MP_QSTR_callback,     MP_ARG_OBJ | MP_ARG_REQUIRED, { .u_obj = mp_const_none } },
     };
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
