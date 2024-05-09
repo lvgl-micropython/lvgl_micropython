@@ -1,8 +1,8 @@
-import micropython  # NOQA
+import micropython
 import time
 import gc
-import machine  # NOQA
-from micropython import const  # NOQA
+import machine
+from micropython import const
 
 import lvgl as lv  # NOQA
 import lcd_bus
@@ -620,7 +620,7 @@ class DisplayDriver:
     # gets emptied. Everything is handeled internally in the bus driver if
     # using DMA and double buffer or a single buffer.
 
-    def _flush_ready_cb(self, *_):
+    def _flush_ready_cb(self):
         self._disp_drv.flush_ready()
 
     def _madctl(self, colormode, rotations, rotation=None):

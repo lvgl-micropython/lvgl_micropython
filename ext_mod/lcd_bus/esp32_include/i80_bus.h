@@ -22,7 +22,6 @@
 
             void *buf1;
             void *buf2;
-            uint32_t buffer_flags;
 
             bool trans_done;
             bool rgb565_byte_swap;

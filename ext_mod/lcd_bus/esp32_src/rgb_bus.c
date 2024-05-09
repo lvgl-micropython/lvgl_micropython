@@ -18,6 +18,10 @@
     #include "esp_lcd_panel_interface.h"
     #include "esp_lcd_panel_rgb.h"
 
+    #include "freertos/FreeRTOS.h"
+    #include "freertos/task.h"
+    #include "freertos/semphr.h"
+
     // micropython includes
     #include "mphalport.h"
     #include "py/obj.h"
@@ -46,17 +50,8 @@
         uint8_t *fbs[3]; // Frame buffers
     } rgb_panel_t;
 
-    bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel_io, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
-    {
-        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)user_ctx;
 
-        if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
-            cb_isr(self->callback);
-        }
-        self->trans_done = true;
-        return false;
-    }
-
+    static bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *event_data, void *user_data);
     esp_lcd_rgb_panel_event_callbacks_t callbacks = { .on_vsync = rgb_bus_trans_done_cb };
 
     mp_lcd_err_t rgb_del(mp_obj_t obj);
@@ -216,6 +211,9 @@
         self->panel_io_handle.free_framebuffer = &rgb_free_framebuffer;
         self->panel_io_handle.init = &rgb_init;
 
+        self->sem_vsync_end = xSemaphoreCreateBinary();
+        self->sem_gui_ready = xSemaphoreCreateBinary();
+
         return MP_OBJ_FROM_PTR(self);
     }
 
@@ -273,64 +271,77 @@
     {
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
 
-        void *buf = heap_caps_calloc(1, 1, MALLOC_CAP_INTERNAL);
-        mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE, 1, buf));
-        view->typecode |= 0x80; // used to indicate writable buffer
-
-        if ((caps | MALLOC_CAP_SPIRAM) == caps) {
-            uint32_t available = (uint32_t)heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
-            if (available < size) {
-                heap_caps_free(buf);
-                mp_raise_msg_varg(
-                    &mp_type_MemoryError,
-                    MP_ERROR_TEXT("Not enough memory available in SPIRAM (%d)"),
-                    size
-                );
-                return mp_const_none;
+        if (self->view1 == NULL) {
+            if ((caps | MALLOC_CAP_SPIRAM) == caps) {
+                uint32_t available = (uint32_t)heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
+                if (available < size) {
+                    mp_raise_msg_varg(
+                        &mp_type_MemoryError,
+                        MP_ERROR_TEXT("Not enough memory available in SPIRAM (%d)"),
+                        size
+                    );
+                    return mp_const_none;
+                }
+                self->panel_io_config.flags.fb_in_psram = 1;
+            } else {
+                uint32_t available = (uint32_t)heap_caps_get_largest_free_block(caps);
+                if (available < size) {
+                    mp_raise_msg_varg(
+                        &mp_type_MemoryError,
+                        MP_ERROR_TEXT("Not enough memory available (%d)"),
+                        size
+                    );
+                    return mp_const_none;
+                }
             }
-            self->panel_io_config.flags.fb_in_psram = 1;
+            self->buffer_size = size;
+            void *buf = heap_caps_calloc(1, 1, MALLOC_CAP_INTERNAL);
 
-            if (self->view1 == NULL) {
-                self->buffer_size = size;
-                self->view1 = view;
-            } else if (self->buffer_size != size) {
-                heap_caps_free(buf);
+            mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE, 1, buf));
+            view->typecode |= 0x80; // used to indicate writable buffer
+            self->view1 = view;
+            return MP_OBJ_FROM_PTR(view);
+        } else if (self->view2 == NULL) {
+            if (self->buffer_size != size) {
                 mp_raise_msg_varg(
                     &mp_type_MemoryError,
                     MP_ERROR_TEXT("Frame buffer sizes do not match (%d)"),
                     size
                 );
                 return mp_const_none;
-            } else if (self->view2 == NULL) {
-                self->view2 = view;
-                self->panel_io_config.flags.double_fb = 1;
-            } else {
-                heap_caps_free(buf);
-                mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("There is a maximum of 2 frame buffers allowed"));
-                return mp_const_none;
             }
 
+            if (self->panel_io_config.flags.fb_in_psram == 1) {
+                uint32_t available = (uint32_t)heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
+                if (available < size) {
+                    mp_raise_msg_varg(
+                        &mp_type_MemoryError,
+                        MP_ERROR_TEXT("Not enough memory available in SPIRAM (%d)"),
+                        size
+                    );
+                    return mp_const_none;
+                }
+            } else {
+                uint32_t available = (uint32_t)heap_caps_get_largest_free_block(caps);
+                if (available < size) {
+                    mp_raise_msg_varg(
+                        &mp_type_MemoryError,
+                        MP_ERROR_TEXT("Not enough memory available (%d)"),
+                        size
+                    );
+                    return mp_const_none;
+                }
+            }
+
+            self->panel_io_config.flags.double_fb = 1;
+            void *buf = heap_caps_calloc(1, 1, MALLOC_CAP_INTERNAL);
+            mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE, 1, buf));
+            view->typecode |= 0x80; // used to indicate writable buffer
+            self->view2 = view;
             return MP_OBJ_FROM_PTR(view);
         } else {
-            uint32_t available = (uint32_t)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
-            if (size % 2 != 0) {
-                heap_caps_free(buf);
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("bounce buffer size needs to be divisible by 2"));
-                return mp_const_none;
-            }
-
-            if (available < size) {
-                heap_caps_free(buf);
-                mp_raise_msg_varg(
-                    &mp_type_MemoryError,
-                    MP_ERROR_TEXT("Not enough SRAM DMA memory (%d)"),
-                    size
-                );
-                return mp_const_none;
-            }
-            self->panel_io_config.flags.bb_invalidate_cache = true;
-            self->panel_io_config.bounce_buffer_size_px = size;
-            return MP_OBJ_FROM_PTR(view);
+            mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("There is a maximum of 2 frame buffers allowed"));
+            return mp_const_none;
         }
     }
 
@@ -375,15 +386,6 @@
         self->panel_io_config.timings.h_res = (uint32_t)width;
         self->panel_io_config.timings.v_res = (uint32_t)height;
         self->panel_io_config.bits_per_pixel = (size_t)bpp;
-
-        if (self->panel_io_config.bounce_buffer_size_px) {
-            size_t bb_size = self->panel_io_config.bounce_buffer_size_px;
-            if (buffer_size % bb_size == 0) {
-                self->panel_io_config.bounce_buffer_size_px = bb_size / 2;
-            } else {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("frame buffer size needs to be a multiple of the bounce buffer size"));
-            }
-        }
 
         mp_lcd_err_t ret = esp_lcd_new_rgb_panel(&self->panel_io_config, &self->panel_handle);
         if (ret != 0) {
@@ -436,10 +438,14 @@
         return LCD_OK;
     }
 
-
     mp_lcd_err_t rgb_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end)
     {
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
+
+        if (self->panel_io_config.flags.double_fb) {
+            xSemaphoreGive(self->sem_gui_ready);
+            xSemaphoreTake(self->sem_vsync_end, portMAX_DELAY);
+        }
 
         esp_err_t ret = esp_lcd_panel_draw_bitmap(
             self->panel_handle,
@@ -455,23 +461,31 @@
             return LCD_OK;
         }
 
-        /*
         if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
             mp_call_function_n_kw(self->callback, 0, 0, NULL);
-        }
-        */
-
-        if (!self->panel_io_config.flags.double_fb) {
-            if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
-                mp_call_function_n_kw(self->callback, 0, 0, NULL);
-            }
-        } else if (self->callback == mp_const_none) {
-            while (!self->trans_done) {}
-            self->trans_done = false;
         }
 
         return LCD_OK;
     }
+
+
+    bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *event_data, void *user_data)
+    {
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)user_data;
+
+        LCD_UNUSED(event_data);
+        LCD_UNUSED(panel);
+
+        if (self->panel_io_config.flags.double_fb) {
+            BaseType_t high_task_awoken = pdFALSE;
+            if (xSemaphoreTakeFromISR(self->sem_gui_ready, &high_task_awoken) == pdTRUE) {
+                xSemaphoreGiveFromISR(self->sem_vsync_end, &high_task_awoken);
+            }
+            return high_task_awoken == pdTRUE;
+        }
+        return false;
+    }
+
 
     MP_DEFINE_CONST_OBJ_TYPE(
         mp_lcd_rgb_bus_type,

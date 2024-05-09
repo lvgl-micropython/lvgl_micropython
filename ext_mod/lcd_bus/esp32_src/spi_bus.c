@@ -3,7 +3,6 @@
 #include "lcd_types.h"
 #include "modlcd_bus.h"
 #include "spi_bus.h"
-#include "spi_panel_bus.h"
 
 // esp-idf includes
 #include "driver/spi_common.h"
@@ -13,7 +12,6 @@
 #include "rom/gpio.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_heap_caps.h"
-#include "hal/spi_ll.h"
 
 // micropython includes
 #include "mphalport.h"
@@ -99,182 +97,14 @@ STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
         hd = -1;
     }
 
-    int clk = (int)args[ARG_sclk].u_int;
-    int mosi = (int)args[ARG_mosi].u_int;
-    int miso = (int)args[ARG_miso].u_int;
-    int cs = (int)args[ARG_cs].u_int;
-    int host = (int)args[ARG_host].u_int;
-
-    uint8_t miso_host = 5;
-    switch(miso) {
-        case SPI_IOMUX_PIN_NUM_MISO:
-            miso_host = SPI1_HOST;
-        break;
-
-        case SPI2_IOMUX_PIN_NUM_MISO:
-            miso_host = SPI2_HOST;
-        break;
-
-        #ifdef SPI3_IOMUX_PIN_NUM_MISO
-        case SPI3_IOMUX_PIN_NUM_MISO:
-            miso_host = SPI3_HOST;
-        break;
-        #endif
-
-        default:
-            if (miso == -1) miso_host = 4;
-    }
-
-    uint8_t mosi_host = 5;
-    switch(mosi) {
-        case SPI_IOMUX_PIN_NUM_MOSI:
-            mosi_host = SPI1_HOST;
-        break;
-
-        case SPI2_IOMUX_PIN_NUM_MOSI:
-            mosi_host = SPI2_HOST;
-        break;
-
-        #ifdef SPI3_IOMUX_PIN_NUM_MOSI
-        case SPI3_IOMUX_PIN_NUM_MOSI:
-            mosi_host = SPI3_HOST;
-        break;
-        #endif
-
-        default:
-            if (mosi == -1) mosi_host = 4;
-    }
-
-    uint8_t clk_host = 5;
-    switch(clk) {
-        case SPI_IOMUX_PIN_NUM_CLK:
-            clk_host = SPI1_HOST;
-        break;
-
-        case SPI2_IOMUX_PIN_NUM_CLK:
-            clk_host = SPI2_HOST;
-        break;
-
-        #ifdef SPI3_IOMUX_PIN_NUM_CLK
-        case SPI3_IOMUX_PIN_NUM_CLK:
-            clk_host = SPI3_HOST;
-        break;
-        #endif
-
-        default:
-            if (clk == -1) clk_host = 4;
-    }
-
-    uint8_t cs_host = 5;
-    switch(cs) {
-        case SPI_IOMUX_PIN_NUM_CS:
-            cs_host = SPI1_HOST;
-        break;
-
-        case SPI2_IOMUX_PIN_NUM_CS:
-            cs_host = SPI2_HOST;
-        break;
-
-        #ifdef SPI3_IOMUX_PIN_NUM_CS
-        case SPI3_IOMUX_PIN_NUM_CS:
-            cs_host = SPI3_HOST;
-        break;
-        #endif
-
-        default:
-            if (cs == -1) cs_host = 4;
-    }
-
-    uint8_t hd_host = 5;
-    switch(hd) {
-        case SPI_IOMUX_PIN_NUM_HD:
-            hd_host = SPI1_HOST;
-        break;
-
-        case SPI2_IOMUX_PIN_NUM_HD:
-            hd_host = SPI2_HOST;
-        break;
-
-        #ifdef SPI3_IOMUX_PIN_NUM_HD
-        case SPI3_IOMUX_PIN_NUM_HD:
-            hd_host = SPI3_HOST;
-        break;
-        #endif
-
-        default:
-            if (hd == -1) hd_host = 4;
-    }
-
-    uint8_t wp_host = 5;
-    switch(wp) {
-        case SPI_IOMUX_PIN_NUM_WP:
-            wp_host = SPI1_HOST;
-        break;
-
-        case SPI2_IOMUX_PIN_NUM_WP:
-            wp_host = SPI2_HOST;
-        break;
-
-        #ifdef SPI3_IOMUX_PIN_NUM_WP
-        case SPI3_IOMUX_PIN_NUM_WP:
-            wp_host = SPI3_HOST;
-        break;
-        #endif
-
-        default:
-            if (wp == -1) wp_host = 4;
-    }
-
-    uint32_t hst = (miso_host << 15) | (mosi_host << 12) | (clk_host << 9) | (cs_host << 6) | (hd_host << 3) | wp_host;
-
-    uint32_t io_mux = SPICOMMON_BUSFLAG_IOMUX_PINS;
-    int found_host = -1;
-
-    uint32_t tmp_host;
-    bool h4;
-    bool h5;
-
-    for (int i=0;i<6;i++) {
-        tmp_host = hst >> (i * 3);
-        h4 = (tmp_host & 0x05) == 0x04 ? true : false;
-        h5 = (tmp_host & 0x05) == 0x05 ? true : false;
-        tmp_host = tmp_host & 0x03;
-
-        if (h4) continue;
-
-        if (h5) {
-            found_host = -1;
-            io_mux = SPICOMMON_BUSFLAG_GPIO_PINS;
-            break;
-        }
-
-        if (found_host == -1) {
-            found_host = (int)tmp_host;
-        } else if (found_host != (int)tmp_host) {
-            found_host = -1;
-            io_mux = SPICOMMON_BUSFLAG_GPIO_PINS;
-            break;
-        }
-    }
-
-    if (host == -1 && found_host == -1) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("you must supply 0, 1 or 2 for the bus host"));
-    } else if (host != -1 && found_host != -1 && host != found_host) {
-        mp_printf(&mp_plat_print, "Setting the bus host to %d will give better performance\n", found_host);
-    } else if (host == -1 && found_host != -1) {
-        host = found_host;
-    }
-
-    flags = flags | io_mux;
-
     self->callback = mp_const_none;
 
-    self->host = host;
-    self->bus_handle = (esp_lcd_spi_bus_handle_t)((uint32_t)host);
+    self->host = (int)args[ARG_host].u_int;
+    self->bus_handle = (esp_lcd_spi_bus_handle_t)((uint32_t)self->host);
 
-    self->bus_config.sclk_io_num = clk;
-    self->bus_config.mosi_io_num = mosi;
-    self->bus_config.miso_io_num = miso;
+    self->bus_config.sclk_io_num = (int)args[ARG_sclk].u_int;
+    self->bus_config.mosi_io_num = (int)args[ARG_mosi].u_int;
+    self->bus_config.miso_io_num = (int)args[ARG_miso].u_int;
     self->bus_config.quadwp_io_num = wp;
     self->bus_config.quadhd_io_num = hd;
     self->bus_config.data4_io_num = -1;
@@ -283,10 +113,11 @@ STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     self->bus_config.data7_io_num = -1;
     self->bus_config.flags = flags;
 
-    self->panel_io_config.cs_gpio_num = cs;
+    self->panel_io_config.cs_gpio_num = (int)args[ARG_cs].u_int;
     self->panel_io_config.dc_gpio_num = (int)args[ARG_dc].u_int;
     self->panel_io_config.spi_mode = (int)args[ARG_spi_mode].u_int;
     self->panel_io_config.pclk_hz = (unsigned int)args[ARG_freq].u_int;
+    self->panel_io_config.trans_queue_depth = 10;
     self->panel_io_config.on_color_trans_done = &bus_trans_done_cb;
     self->panel_io_config.user_ctx = self;
     self->panel_io_config.lcd_cmd_bits = (int)args[ARG_cmd_bits].u_int;
@@ -345,36 +176,14 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
         self->rgb565_byte_swap = false;
     }
 
-    size_t max_trans_size;
-    uint8_t double_buffer;
-
-    if ((self->buffer_flags ^ MALLOC_CAP_DMA) && (self->buf2 != NULL)) {
-        max_trans_size = SPI_LL_DMA_MAX_BIT_LEN / 8;
-        double_buffer = 1;
-    } else {
-        max_trans_size = SPI_LL_CPU_MAX_BIT_LEN / 8;
-        double_buffer = 0;
-    }
-
-    if (buffer_size <= max_trans_size) {
-        self->bus_config.max_transfer_sz = buffer_size;
-        self->panel_io_config.trans_queue_depth = 1;
-    } else if (double_buffer) {
-        self->bus_config.max_transfer_sz = max_trans_size;
-        self->panel_io_config.trans_queue_depth = buffer_size / max_trans_size;
-        if ((float)self->panel_io_config.trans_queue_depth != ((float)buffer_size / (float)max_trans_size)) {
-            self->panel_io_config.trans_queue_depth++;
-        }
-    } else {
-        self->panel_io_config.trans_queue_depth = 1;
-    }
+    self->bus_config.max_transfer_sz = (size_t)buffer_size;
 
     mp_lcd_err_t ret = spi_bus_initialize(self->host, &self->bus_config, SPI_DMA_CH_AUTO);
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(spi_bus_initialize)"), ret);
     }
 
-    ret = lcdbus_new_panel_io_spi(self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io, double_buffer);
+    ret = esp_lcd_new_panel_io_spi(self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io);
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_spi)"), ret);
     }

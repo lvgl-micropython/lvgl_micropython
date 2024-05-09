@@ -829,18 +829,11 @@ def get_struct_functions(struct_name):
     #         noncommon_part(simplify_identifier(func.name), simplify_identifier(struct_name))))
 
     reverse_aliases = [alias for alias in struct_aliases if struct_aliases[alias] == struct_name]
-    res = []
 
-    if struct_name in structs or len(reverse_aliases) > 0:
-        for func in funcs:
-            if noncommon_part(simplify_identifier(func.name), simplify_identifier(struct_name)) != simplify_identifier(func.name):
-                if get_first_arg_type(func) == struct_name:
-                    res.append(func)
-
-    if struct_name in struct_aliases:
-        res.extend(get_struct_functions(struct_aliases[struct_name]))
-
-    return res
+    return ([func for func in funcs
+            if noncommon_part(simplify_identifier(func.name), simplify_identifier(struct_name)) != simplify_identifier(func.name)
+            and get_first_arg_type(func) == struct_name] if (struct_name in structs or len(reverse_aliases) > 0) else []) + \
+            (get_struct_functions(struct_aliases[struct_name]) if struct_name in struct_aliases else [])
 
 @memoize
 def is_struct_function(func):
@@ -3002,6 +2995,7 @@ def build_mp_func_arg(arg, index, func, obj_name):
             else:
                 arg_metadata['name'] = None
 
+            func_metadata[func.name]['args'].append(arg_metadata)
             return 'void *{arg_name} = mp_lv_callback(mp_args[{i}], &{callback_name}_callback, MP_QSTR_{callback_name}, {full_user_data}, {containing_struct}, (mp_lv_get_user_data){user_data_getter}, (mp_lv_set_user_data){user_data_setter});'.format(
                 i = index,
                 arg_name = fixed_arg.name,
@@ -3009,7 +3003,7 @@ def build_mp_func_arg(arg, index, func, obj_name):
                 full_user_data = full_user_data,
                 containing_struct = first_arg.name if user_data_getter and user_data_setter else "NULL",
                 user_data_getter = user_data_getter.name if user_data_getter else 'NULL',
-                user_data_setter = user_data_setter.name if user_data_setter else 'NULL'), arg_metadata
+                user_data_setter = user_data_setter.name if user_data_setter else 'NULL')
         except MissingConversionException as exp:
             gen_func_error(arg, exp)
             callback_name = 'NULL'
@@ -3030,12 +3024,13 @@ def build_mp_func_arg(arg, index, func, obj_name):
     else:
         arg_metadata['name'] = None
 
+    func_metadata[func.name]['args'].append(arg_metadata)
     cast = ("(%s)" % gen.visit(fixed_arg.type)) if 'const' in arg.quals else "" # allow conversion from non const to const, sometimes requires cast
     return '{var} = {cast}{convertor}(mp_args[{i}]);'.format(
             var = gen.visit(fixed_arg),
             cast = cast,
             convertor = mp_to_lv[arg_type],
-            i = index), arg_metadata
+            i = index)
 
 def emit_func_obj(func_obj_name, func_name, param_count, func_ptr, is_static):
     print("""
@@ -3058,15 +3053,14 @@ def gen_mp_func(func, obj_name):
         return
     # print("/* gen_mp_func %s */" % func.name)
     generated_funcs[func.name] = False # starting to generate the function
-
-    func_md = {'args': [], 'c_type': func.name}
+    func_metadata[func.name] = {'args': [], 'c_type': func.name}
 
     if obj_name:
-        func_md['py_type'] = 'method'
-        func_md['scope'] = obj_name
+        func_metadata[func.name]['py_type'] = 'method'
+        func_metadata[func.name]['scope'] = obj_name
     else:
-        func_md['py_type'] = 'function'
-        func_md['scope'] = 'global'
+        func_metadata[func.name]['py_type'] = 'function'
+        func_metadata[func.name]['scope'] = 'global'
 
     args = func.type.args.params if func.type.args else []
     enumerated_args = enumerate(args)
@@ -3082,16 +3076,15 @@ def gen_mp_func(func, obj_name):
     prototype_str = gen.visit(function_prototype(func))
     if prototype_str in func_prototypes:
         original_func = func_prototypes[prototype_str]
-        if not original_func.name.endswith('cb_t') and generated_funcs[original_func.name] == True:
+        if generated_funcs[original_func.name] == True:
             print("/* Reusing %s for %s */" % (original_func.name, func.name))
             emit_func_obj(func.name, original_func.name, param_count, func.name, is_static_member(func, base_obj_type))
 
-            func_md['c_rtype'] = func_metadata[original_func.name]['c_rtype']
-            func_md['py_rtype'] = func_metadata[original_func.name]['py_rtype']
+            func_metadata[func.name]['c_rtype'] = func_metadata[original_func.name]['c_rtype']
+            func_metadata[func.name]['py_rtype'] = func_metadata[original_func.name]['py_rtype']
 
-            func_md['args'] = func_metadata[original_func.name]['args']
+            func_metadata[func.name]['args'] = func_metadata[original_func.name]['args']
             generated_funcs[func.name] = True # completed generating the function
-            func_metadata[func.name] = func_md
             return
     func_prototypes[prototype_str] = func
 
@@ -3112,9 +3105,8 @@ def gen_mp_func(func, obj_name):
     if return_type == "void":
         build_result = ""
         build_return_value = "mp_const_none"
-
-        func_md['py_rtype'] = 'None'
-        func_md['c_rtype'] = 'void'
+        func_metadata[func.name]['py_rtype'] = 'None'
+        func_metadata[func.name]['c_rtype'] = 'void'
     else:
         if return_type not in lv_to_mp or not lv_to_mp[return_type]:
             try_generate_type(func.type.type)
@@ -3124,21 +3116,8 @@ def gen_mp_func(func, obj_name):
         build_result = "%s _res = " % qualified_return_type
         cast = '(void*)' if isinstance(func.type.type, c_ast.PtrDecl) else '' # needed when field is const. casting to void overrides it
         build_return_value = "{type}({cast}_res)".format(type = lv_to_mp[return_type], cast = cast)
-
-        func_md['py_rtype'] = get_py_type(return_type)
-        func_md['c_rtype'] = return_type
-
-    build_args = []
-    for i, arg in enumerated_args:
-        if (
-            isinstance(arg, c_ast.EllipsisParam) or
-            not isinstance(arg.type, c_ast.TypeDecl) or
-            not isinstance(arg.type.type, c_ast.IdentifierType) or
-            'void' not in arg.type.type.names
-        ):  # Handle the case of 'void' param which should be ignored
-            ba, arg_metadata = build_mp_func_arg(arg, i, func, obj_name)
-            build_args.append(ba)
-            func_md['args'].append(arg_metadata)
+        func_metadata[func.name]['py_rtype'] = get_py_type(return_type)
+        func_metadata[func.name]['c_rtype'] = return_type
 
     print("""
 /*
@@ -3158,15 +3137,17 @@ STATIC mp_obj_t mp_{func}(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_fu
         func=func.name,
         func_ptr=prototype_str,
         print_func=gen.visit(func),
-        build_args="\n    ".join(build_args),
+        build_args="\n    ".join([build_mp_func_arg(arg, i, func, obj_name) for i,arg in enumerated_args
+            if isinstance(arg, c_ast.EllipsisParam) or
+               (not isinstance(arg.type, c_ast.TypeDecl)) or
+               (not isinstance(arg.type.type, c_ast.IdentifierType)) or
+               'void' not in arg.type.type.names]), # Handle the case of 'void' param which should be ignored
         send_args=", ".join([(arg.name if (hasattr(arg, 'name') and arg.name) else ("arg%d" % i)) for i,arg in enumerate(args)]),
         build_result=build_result,
         build_return_value=build_return_value))
 
     emit_func_obj(func.name, func.name, param_count, func.name, is_static_member(func, base_obj_type))
     generated_funcs[func.name] = True # completed generating the function
-    func_metadata[func.name] = func_md
-
     # print('/* is_struct_function() = %s, is_static_member() = %s, get_first_arg_type()=%s, obj_name = %s */' % (
     #    is_struct_function(func), is_static_member(func, base_obj_type), get_first_arg_type(func), base_obj_type))
 
