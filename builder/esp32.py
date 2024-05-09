@@ -511,7 +511,7 @@ def compile():  # NOQA
                 '"partitions-2MiB.csv"'
             ])
 
-        if flash_size == '4':
+        elif flash_size == '4':
             base_config.extend([
                 'CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y',
                 'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
@@ -530,7 +530,7 @@ def compile():  # NOQA
                 'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
                 '"partitions-16MiB.csv"'
             ])
-        if flash_size == '32':
+        elif flash_size == '32':
             base_config.extend([
                 'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=y',
                 'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
