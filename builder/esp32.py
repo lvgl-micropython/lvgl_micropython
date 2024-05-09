@@ -1,92 +1,9 @@
 import os
 import sys
 from argparse import ArgumentParser
-from . import spawn as _spawn
+from . import spawn
 from . import generate_manifest
 from . import update_mphalport
-
-
-spawn = _spawn
-
-
-install_ps_script = '''\
-build\\esp-idf-tools-setup-offline-5.0.4.exe /VERYSILENT /SUPPRESSMSGBOXES /SP- /NOCANCEL /IDFVERSION=5.0.4 /IDFDIR=C:\\esp-idf
-$InstallerProcess = Get-Process esp-idf-tools-setup
-Wait-Process -Id $InstallerProcess.id
-'''
-
-idf_env_bat_script = '''
-@echo off
-
-set "IDF_PATH=C:\\esp-idf\\frameworks\\esp-idf-v5.0.4"
-set "IDF_TOOLS_PATH=C:\\esp-idf\\frameworks\\esp-idf-v5.0.4\\tools"
-set "PATH=%IDF_TOOLS_PATH%;%PATH%"
-idf-env config get --property python --idf-path %IDF_PATH%\\ > build\\idf-python-path.txt
-set /P "IDF_PYTHON=< build\\idf-python-path.txt"
-idf-env config get --property gitPath > build\\idf-git-path.txt
-set /P "IDF_GIT=< build\\idf-git-path.txt"
-set "PREFIX=%IDF_PYTHON% %IDF_PATH%"
-DOSKEY idf.py=%PREFIX%\\tools\\idf.py $*
-DOSKEY esptool.py=%PREFIX%\\components\\esptool_py\\esptool\\esptool.py $*
-DOSKEY espefuse.py=%PREFIX%\\components\\esptool_py\\esptool\\espefuse.py $*
-DOSKEY espsecure.py=%PREFIX%\\components\\esptool_py\\esptool\\espsecure.py $*
-DOSKEY otatool.py=%PREFIX%\\components\\app_update\\otatool.py $*
-DOSKEY parttool.py=%PREFIX%\\components\\partition_table\\parttool.py $*
-set PYTHONPATH=
-set PYTHONHOME=
-set PYTHONNOUSERSITE=True
-set "IDF_PYTHON_DIR=%IDF_PYTHON%"
-set "IDF_GIT_DIR=%IDF_GIT%"
-set "PATH=%IDF_PYTHON_DIR%;%IDF_GIT_DIR%;%PATH%"'
-%IDF_PATH%\\export.bat'
-'''
-
-
-def get_idf_build_environment():
-    global spawn
-
-    if sys.platform.startswith('win'):
-
-        if not os.path.exists('build'):
-            os.mkdir('build')
-
-        import requests
-
-        print('downloading esp-idf toolkit for windows')
-
-        url = 'https://dl.espressif.com/dl/idf-installer/esp-idf-tools-setup-offline-5.0.4.exe'
-
-        response = requests.get(url, stream=True)
-        with open("build/esp-idf-tools-setup-offline-5.0.4.exe", mode="wb") as file:
-            for chunk in response.iter_content(chunk_size=10 * 1024):
-                file.write(chunk)
-
-        with open('build/install_esp-idf.ps1', 'w') as file:
-            file.write(install_ps_script)
-
-        with open('build/setup_environment.bat', 'w') as file:
-            file.write(idf_env_bat_script)
-
-        cmd_ = ['C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -ExecutionPolicy Bypass -NonInteractive -File "build\\install_esp-idf.ps1"']
-        result, _ = spawn(cmd_)
-        if result != 0:
-            sys.exit(result)
-
-        old_spawn = spawn
-
-        def _new_spawn(cmds, *args, **kwargs):
-            framework_cmds = [
-                ['build\\setup_environment.bat']
-            ]
-
-            if isinstance(cmds[0], str):
-                cmds = [cmds[:]]
-
-            framework_cmds.extend(cmds)
-
-            return old_spawn(framework_cmds, *args, **kwargs)
-
-        spawn = _new_spawn
 
 
 def get_partition_file_name(otp):
@@ -351,13 +268,18 @@ def build_commands(_, extra_args, __, lv_cflags, ___):
 
 def get_idf_version():
     if 'ESP_IDF_VERSION' in os.environ:
-        exit_code, data = spawn(['python3', 'idf.py', '--version'], out_to_screen=False)
+        exit_code, data = spawn(
+            ['python3', 'idf.py', '--version'],
+            out_to_screen=False
+        )
         version = data.split('v')[-1].split('-')[0]
         if version:
             return version
 
 
-def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manifest):
+def build_manifest(
+    target, script_dir, lvgl_api, displays, indevs, frozen_manifest
+):
     update_mphalport(target)
 
     with open(f'lib/micropython/ports/esp32/boards/sdkconfig.base', 'r') as f:
@@ -374,7 +296,10 @@ def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manife
 
     manifest_path = 'lib/micropython/ports/esp32/boards/manifest.py'
 
-    generate_manifest(script_dir, lvgl_api, manifest_path, displays, indevs, frozen_manifest)
+    generate_manifest(
+        script_dir, lvgl_api, manifest_path,
+        displays, indevs, frozen_manifest
+    )
 
 
 def clean():
@@ -400,13 +325,19 @@ def setup_idf_environ():
 
         if os.path.exists(os.path.join(idf_path, 'export.sh')):
 
-            # this removes any IDF environment variable that may exist if the user
-            # has the ESP-IDF installed
-            env = {k: v for k, v in os.environ.items() if not k.startswith('IDF')}
+            # this removes any IDF environment variable that may
+            # exist if the user has the ESP-IDF installed
+            env = {
+                k: v for k, v in os.environ.items() if not k.startswith('IDF')
+            }
             py_path = os.path.split(sys.executable)[0]
             idf_path = os.path.abspath(idf_path)
             idf_tools_path = os.path.join(idf_path, 'tools')
-            env['PATH'] = py_path + os.pathsep + os.pathsep + idf_tools_path + os.pathsep + env.get('PATH', '')
+            env['PATH'] = (
+                py_path + os.pathsep +
+                os.pathsep + idf_tools_path +
+                os.pathsep + env.get('PATH', '')
+            )
             env['IDF_PATH'] = idf_path
 
             cmds = [
@@ -419,12 +350,15 @@ def setup_idf_environ():
             if 'GITHUB_RUN_ID' in env:
                 if sys.platform.startswith('win'):
                     env_cmds = [
-                        ['echo', f"{py_path}", '|', 'Out-File', '-Append',
-                        '-FilePath', '$env:GITHUB_PATH', '-Encoding', 'utf8'],
-                        ['echo', f"{idf_path}", '|', 'Out-File', '-Append',
-                         '-FilePath', '$env:GITHUB_PATH', '-Encoding', 'utf8'],
-                        ['echo', f"{idf_tools_path}", '|', 'Out-File', '-Append',
-                         '-FilePath', '$env:GITHUB_PATH', '-Encoding', 'utf8']
+                        ['echo', f"{py_path}", '|', 'Out-File',
+                         '-Append', '-FilePath', '$env:GITHUB_PATH',
+                         '-Encoding', 'utf8'],
+                        ['echo', f"{idf_path}", '|', 'Out-File',
+                         '-Append', '-FilePath', '$env:GITHUB_PATH',
+                         '-Encoding', 'utf8'],
+                        ['echo', f"{idf_tools_path}", '|', 'Out-File',
+                         '-Append', '-FilePath', '$env:GITHUB_PATH',
+                         '-Encoding', 'utf8']
                     ]
                 else:
                     env_cmds = [
@@ -485,21 +419,24 @@ def submodules():
             cmds = [
                 [f'export "IDF_PATH={os.path.abspath(idf_path)}"'],
                 ['cd', idf_path],
-                ['git', 'submodule', 'update', '--init',
-                 'components/bt/host/nimble/nimble',
-                 'components/esp_wifi',
-                 'components/esptool_py/esptool',
-                 'components/lwip/lwip',
-                 'components/mbedtls/mbedtls',
-                 'components/bt/controller/lib_esp32',
-                 'components/bt/controller/lib_esp32c3_family'
-            ], ['./install.sh', 'all']]
+                [
+                    'git', 'submodule', 'update', '--init',
+                    'components/bt/host/nimble/nimble',
+                    'components/esp_wifi',
+                    'components/esptool_py/esptool',
+                    'components/lwip/lwip',
+                    'components/mbedtls/mbedtls',
+                    'components/bt/controller/lib_esp32',
+                    'components/bt/controller/lib_esp32c3_family'
+                ], ['./install.sh', 'all']]
 
             print('setting up ESP-IDF v5.0.4')
             print('this might take a bit...')
             print()
 
-            env = {k: v for k, v in os.environ.items() if not k.startswith('IDF')}
+            env = {
+                k: v for k, v in os.environ.items() if not k.startswith('IDF')
+            }
             env['IDF_PATH'] = os.path.abspath(idf_path)
 
             result, _ = spawn(cmds, env=env)
@@ -519,9 +456,7 @@ def submodules():
             submodules_cmd
         ]
     else:
-        get_idf_build_environment()
-        cmds = submodules_cmd
-        env = None
+        raise RuntimeError('compiling on windows is not supported at this time')
 
     return_code, _ = spawn(cmds, env=env)
     if return_code != 0:
@@ -587,7 +522,11 @@ def compile():  # NOQA
 
         base_config = '\n'.join(base_config)
 
-        with open('lib/micropython/ports/esp32/boards/ESP32_GENERIC_S3/sdkconfig.board', 'w') as f:
+        sdkconfig_board_path = (
+            'lib/micropython/ports/esp32/'
+            'boards/ESP32_GENERIC_S3/sdkconfig.board'
+        )
+        with open(sdkconfig_board_path, 'w') as f:
             f.write(base_config + '\n')
 
     if board in ('ESP32_GENERIC_S2', 'ESP32_GENERIC_S3'):
@@ -597,7 +536,10 @@ def compile():  # NOQA
         with open(mphalport_path, 'rb') as f:
             data = f.read().decode('utf-8')
 
-        data = data.replace('#elif CONFIG_USB_OTG_SUPPORTED', '#elif MP_USB_OTG')
+        data = data.replace(
+            '#elif CONFIG_USB_OTG_SUPPORTED',
+            '#elif MP_USB_OTG'
+        )
 
         with open(mphalport_path, 'wb') as f:
             f.write(data.encode('utf-8'))
@@ -615,7 +557,10 @@ def compile():  # NOQA
         with open(main_path, 'wb') as f:
             f.write(data.encode('utf-8'))
 
-        mpconfigboard_path = f'lib/micropython/ports/esp32/boards/{board}/mpconfigboard.h'
+        mpconfigboard_path = (
+            f'lib/micropython/ports/esp32/boards/{board}/mpconfigboard.h'
+        )
+
         with open(mpconfigboard_path, 'rb') as f:
             data = f.read().decode('utf-8')
 
@@ -768,7 +713,10 @@ def compile():  # NOQA
 
         esp_tool_path, output = output.split('esptool.py ', 1)
         esp_tool_path += 'esptool.py'
-        esp_tool_path = esp_tool_path.replace('../../../', os.getcwd() + '/lib/')
+        esp_tool_path = esp_tool_path.replace(
+            '../../../',
+            os.getcwd() + '/lib/'
+        )
 
         out_cmd = []
 
@@ -830,9 +778,6 @@ def compile():  # NOQA
         print(
             python_path, esp_tool_path, '-p (PORT) -b 460800 erase_flash'
         )
-        # print()
-        # print(python_path, esp_tool_path, out_cmd.replace('-b 460800', '-b 921600'))
-        # print()
 
         cmd = f'{python_path} {esp_tool_path} {out_cmd}'
         cmd = cmd.split('write_flash', 1)[0]

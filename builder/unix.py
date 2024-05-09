@@ -1,6 +1,5 @@
 import os
 import sys
-import shutil
 from . import spawn
 from . import generate_manifest
 from . import update_mphalport
@@ -76,7 +75,9 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
     submodules_cmd[1] = 'submodules'
 
 
-def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manifest):
+def build_manifest(
+    target, script_dir, lvgl_api, displays, indevs, frozen_manifest
+):
     global SCRIPT_PATH
 
     SCRIPT_PATH = script_dir
@@ -88,7 +89,10 @@ def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manife
     manifest_files = [
         f'{script_dir}/api_drivers/common_api_drivers/linux/lv_timer.py'
     ]
-    generate_manifest(script_dir, lvgl_api, manifest_path, displays, indevs, frozen_manifest, *manifest_files)
+    generate_manifest(
+        script_dir, lvgl_api, manifest_path, displays,
+        indevs, frozen_manifest, *manifest_files
+    )
 
 
 def clean():
@@ -119,8 +123,11 @@ def build_sdl():
     cwd = os.getcwd()
     os.chdir(dst)
     cmd_ = [
-        f'cmake -DSDL_STATIC=ON -DSDL_SHARED=OFF -DCMAKE_BUILD_TYPE=Release {SCRIPT_PATH}/lib/SDL &&'
-        f'cmake --build . --config Release --parallel {os.cpu_count()}'
+        [
+            f'cmake -DSDL_STATIC=ON -DSDL_SHARED=OFF '
+            f'-DCMAKE_BUILD_TYPE=Release {SCRIPT_PATH}/lib/SDL'
+        ]
+        [f'cmake --build . --config Release --parallel {os.cpu_count()}']
     ]
 
     res, _ = spawn(cmd_, cmpl=True)
@@ -192,16 +199,18 @@ def compile():  # NOQA
         with open(mpconfigvariant_common_path, 'w') as f:
             f.write(mpconfigvariant_common)
 
-    if '#define MICROPY_SCHEDULER_DEPTH              (128)' not in mpconfigvariant_common:
+    macro = '#define MICROPY_SCHEDULER_DEPTH              (128)'
+    if macro not in mpconfigvariant_common:
         mpconfigvariant_common += '\n\n'
-        mpconfigvariant_common += '#define MICROPY_SCHEDULER_DEPTH              (128)\n'
+        mpconfigvariant_common += macro + '\n'
 
         with open(mpconfigvariant_common_path, 'w') as f:
             f.write(mpconfigvariant_common)
 
-    if '#define MICROPY_STACK_CHECK              (0)' not in mpconfigvariant_common:
+    macro = '#define MICROPY_STACK_CHECK              (0)'
+    if macro not in mpconfigvariant_common:
         mpconfigvariant_common += '\n'
-        mpconfigvariant_common += '#define MICROPY_STACK_CHECK              (0)\n'
+        mpconfigvariant_common += macro + '\n'
 
         with open(mpconfigvariant_common_path, 'w') as f:
             f.write(mpconfigvariant_common)

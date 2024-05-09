@@ -66,12 +66,20 @@ def update_mphalport(target):
         data = f.read().decode('utf-8')
 
     if '#ifndef _MPHALPORT_H_' not in data:
-        data = f'#ifndef _MPHALPORT_H_\n#define _MPHALPORT_H_\n{data}\n#endif /* _MPHALPORT_H_ */\n'
+        data = (
+            f'#ifndef _MPHALPORT_H_\n'
+            f'#define _MPHALPORT_H_\n'
+            f'{data}\n'
+            f'#endif /* _MPHALPORT_H_ */\n'
+        )
         with open(mphalport_path, 'wb') as f:
             f.write(data.encode('utf-8'))
 
 
-def generate_manifest(script_dir, lvgl_api, manifest_path, displays, indevs, frozen_manifest, *addl_manifest_files):
+def generate_manifest(
+    script_dir, lvgl_api, manifest_path, displays,
+    indevs, frozen_manifest, *addl_manifest_files
+):
     if not os.path.exists('build'):
         os.mkdir('build')
 
@@ -98,8 +106,14 @@ def generate_manifest(script_dir, lvgl_api, manifest_path, displays, indevs, fro
         f'{api_path}/frozen/indev/pointer_framework.py',
         f'{api_path}/fs_driver.py',
         f'{script_dir}/api_drivers/common_api_drivers/frozen/other/i2c.py',
-        f'{script_dir}/api_drivers/common_api_drivers/frozen/other/io_expander_framework.py',
-        f'{script_dir}/api_drivers/common_api_drivers/frozen/other/task_handler.py'
+        (
+            f'{script_dir}/api_drivers/common_api_drivers/'
+            f'frozen/other/io_expander_framework.py'
+        ),
+        (
+            f'{script_dir}/api_drivers/common_api_drivers/'
+            f'frozen/other/task_handler.py'
+        )
     ]
 
     for file in frozen_manifest_files:
@@ -122,7 +136,9 @@ def generate_manifest(script_dir, lvgl_api, manifest_path, displays, indevs, fro
 
     for file in indevs:
         if not os.path.exists(file):
-            tmp_file = f'{script_dir}/api_drivers/common_api_drivers/indev/{file}.py'
+            tmp_file = (
+                f'{script_dir}/api_drivers/common_api_drivers/indev/{file}.py'
+            )
 
             if not os.path.exists(tmp_file):
                 raise RuntimeError(f'File not found "{file}"')
@@ -144,7 +160,9 @@ def generate_manifest(script_dir, lvgl_api, manifest_path, displays, indevs, fro
 
     for file in displays:
         if not os.path.exists(file):
-            tmp_file = f'{script_dir}/api_drivers/common_api_drivers/display/{file}.py'
+            tmp_file = (
+                f'{script_dir}/api_drivers/common_api_drivers/display/{file}.py'
+            )
 
             if not os.path.exists(tmp_file):
                 raise RuntimeError(f'File not found "{file}"')
@@ -440,7 +458,9 @@ def mpy_cross():
         sys.exit(return_code)
 
 
-def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manifest):
+def build_manifest(
+    target, script_dir, lvgl_api, displays, indevs, frozen_manifest
+):
     update_mphalport(target)
     if target == 'teensy':
         manifest_path = f'lib/micropython/ports/{target}/manifest.py'
@@ -449,7 +469,10 @@ def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manife
     if not os.path.exists(manifest_path):
         raise RuntimeError(f'Unable to locate manifest file "{manifest_path}"')
 
-    generate_manifest(script_dir, lvgl_api, manifest_path, displays, indevs, frozen_manifest)
+    generate_manifest(
+        script_dir, lvgl_api, manifest_path,
+        displays, indevs, frozen_manifest
+    )
 
 
 def parse_args(extra_args, lv_cflags, board):

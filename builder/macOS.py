@@ -1,6 +1,5 @@
 import os
 import sys
-import shutil
 from . import spawn
 from . import generate_manifest
 from . import update_mphalport
@@ -83,7 +82,7 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
     submodules_cmd[1] = 'submodules'
 
 
-def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manifest):
+def build_manifest(_, script_dir, lvgl_api, displays, indevs, frozen_manifest):
     global SCRIPT_PATH
 
     SCRIPT_PATH = script_dir
@@ -95,7 +94,10 @@ def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manife
     manifest_files = [
         f'{script_dir}/api_drivers/common_api_drivers/linux/lv_timer.py'
     ]
-    generate_manifest(script_dir, lvgl_api, manifest_path, displays, indevs, frozen_manifest, *manifest_files)
+    generate_manifest(
+        script_dir, lvgl_api, manifest_path,  displays,
+        indevs, frozen_manifest, *manifest_files
+    )
 
 
 def clean():
@@ -125,7 +127,10 @@ def build_sdl():
 
     cmd_ = [
         [f'cd {dst}'],
-        [f'cmake -DSDL_STATIC=OFF -DSDL_SHARED=ON -DCMAKE_BUILD_TYPE=Release {SCRIPT_PATH}/lib/SDL'],
+        [
+            f'cmake -DSDL_STATIC=OFF -DSDL_SHARED=ON '
+            f'-DCMAKE_BUILD_TYPE=Release {SCRIPT_PATH}/lib/SDL'
+        ],
         [f'cmake --build . --config Release --parallel {os.cpu_count()}']
     ]
 
@@ -196,51 +201,24 @@ def compile():  # NOQA
         with open(mpconfigvariant_common_path, 'w') as f:
             f.write(mpconfigvariant_common)
 
-    if '#define MICROPY_SCHEDULER_DEPTH              (128)' not in mpconfigvariant_common:
+    macro = '#define MICROPY_SCHEDULER_DEPTH              (128)'
+
+    if macro not in mpconfigvariant_common:
         mpconfigvariant_common += '\n\n'
-        mpconfigvariant_common += '#define MICROPY_SCHEDULER_DEPTH              (128)\n'
+        mpconfigvariant_common += macro + '\n'
 
         with open(mpconfigvariant_common_path, 'w') as f:
             f.write(mpconfigvariant_common)
 
-    if '#define MICROPY_STACK_CHECK              (0)' not in mpconfigvariant_common:
+    macro = '#define MICROPY_STACK_CHECK              (0)'
+    if macro not in mpconfigvariant_common:
         mpconfigvariant_common += '\n'
-        mpconfigvariant_common += '#define MICROPY_STACK_CHECK              (0)\n'
+        mpconfigvariant_common += macro + '\n'
 
         with open(mpconfigvariant_common_path, 'w') as f:
             f.write(mpconfigvariant_common)
-
-    # mkrules_path = 'lib/micropython/py/mkrules.mk'
-    # with open(mkrules_path, 'rb') as f:
-    #     data = f.read().decode('utf-8')
-    #
-    # data = data.replace('QSTR_GEN_CXXFLAGS += $(QSTR_GEN_FLAGS)', 'QSTR_GEN_CXXFLAGS += $(QSTR_GEN_FLAGS)\n$(info $$QSTR_GEN_CFLAGS = $(QSTR_GEN_CFLAGS))')
-    #
-    # with open(mkrules_path, 'wb') as f:
-    #     f.write(data.encode('utf-8'))
 
     build_sdl()
-
-    if variant is None:
-        varnt = 'build-standard'
-    else:
-        varnt = f'build-{variant}'
-
-    path = f'lib/micropython/ports/unix/{varnt}/SDL'
-
-    def _iter_print(p, indent=''):
-        child = os.path.split(p)[-1]
-        print(f'{indent}{child}')
-
-        for f in os.listdir(p):
-            file = os.path.join(p, f)
-            if os.path.isdir(file):
-                _iter_print(file, indent + '    ')
-            else:
-                print(f'{indent}    {f}')
-        print()
-
-    _iter_print(path)
 
     return_code, _ = spawn(compile_cmd)
     if return_code != 0:
