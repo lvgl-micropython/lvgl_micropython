@@ -104,172 +104,58 @@ STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     int cs = (int)args[ARG_cs].u_int;
     int host = (int)args[ARG_host].u_int;
 
+    int temp_host;
+
     uint8_t miso_host = 5;
-    switch(miso) {
-        case SPI_IOMUX_PIN_NUM_MISO:
-            miso_host = SPI1_HOST;
-        break;
-
-        case SPI2_IOMUX_PIN_NUM_MISO:
-            miso_host = SPI2_HOST;
-        break;
-
-        #ifdef SPI3_IOMUX_PIN_NUM_MISO
-        case SPI3_IOMUX_PIN_NUM_MISO:
-            miso_host = SPI3_HOST;
-        break;
-        #endif
-
-        default:
-            if (miso == -1) miso_host = 4;
+    if (
+        mosi == SPI_IOMUX_PIN_NUM_MOSI &&
+        clk == SPI_IOMUX_PIN_NUM_CLK &&
+        (miso == -1 || miso == SPI_IOMUX_PIN_NUM_MISO) &&
+        (cs == -1 || cs == SPI_IOMUX_PIN_NUM_CS) &&
+        (hd == -1 || hd == SPI_IOMUX_PIN_NUM_HD) &&
+        (wp == -1 || wp == SPI_IOMUX_PIN_NUM_WP)
+    ) {
+        flags |= SPICOMMON_BUSFLAG_IOMUX_PINS;
+        temp_host = SPI1_HOST;
+    } else if (
+        mosi == SPI2_IOMUX_PIN_NUM_MOSI &&
+        clk == SPI2_IOMUX_PIN_NUM_CLK &&
+        (miso == -1 || miso == SPI2_IOMUX_PIN_NUM_MISO) &&
+        (cs == -1 || cs == SPI2_IOMUX_PIN_NUM_CS) &&
+        (hd == -1 || hd == SPI2_IOMUX_PIN_NUM_HD) &&
+        (wp == -1 || wp == SPI2_IOMUX_PIN_NUM_WP)
+    ) {
+        flags |= SPICOMMON_BUSFLAG_IOMUX_PINS;
+        temp_host = SPI2_HOST;
+    }
+    #ifdef SPI3_IOMUX_PIN_NUM_MISO
+    else if (
+        mosi == SPI3_IOMUX_PIN_NUM_MOSI &&
+        clk == SPI3_IOMUX_PIN_NUM_CLK &&
+        (miso == -1 || miso == SPI3_IOMUX_PIN_NUM_MISO) &&
+        (cs == -1 || cs == SPI3_IOMUX_PIN_NUM_CS) &&
+        (hd == -1 || hd == SPI3_IOMUX_PIN_NUM_HD) &&
+        (wp == -1 || wp == SPI3_IOMUX_PIN_NUM_WP)
+    ) {
+        flags |= SPICOMMON_BUSFLAG_IOMUX_PINS;
+        temp_host = SPI3_HOST;
+    }
+    #endif
+    else {
+        flags |= SPICOMMON_BUSFLAG_GPIO_PINS;
+        temp_host = -1;
     }
 
-    uint8_t mosi_host = 5;
-    switch(mosi) {
-        case SPI_IOMUX_PIN_NUM_MOSI:
-            mosi_host = SPI1_HOST;
-        break;
-
-        case SPI2_IOMUX_PIN_NUM_MOSI:
-            mosi_host = SPI2_HOST;
-        break;
-
-        #ifdef SPI3_IOMUX_PIN_NUM_MOSI
-        case SPI3_IOMUX_PIN_NUM_MOSI:
-            mosi_host = SPI3_HOST;
-        break;
-        #endif
-
-        default:
-            if (mosi == -1) mosi_host = 4;
+    if (temp_host == -1 && host == -1) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unable to determine SPI host, please supply a host number"));
+    } else if (host == -1) {
+        host = temp_host;
     }
-
-    uint8_t clk_host = 5;
-    switch(clk) {
-        case SPI_IOMUX_PIN_NUM_CLK:
-            clk_host = SPI1_HOST;
-        break;
-
-        case SPI2_IOMUX_PIN_NUM_CLK:
-            clk_host = SPI2_HOST;
-        break;
-
-        #ifdef SPI3_IOMUX_PIN_NUM_CLK
-        case SPI3_IOMUX_PIN_NUM_CLK:
-            clk_host = SPI3_HOST;
-        break;
-        #endif
-
-        default:
-            if (clk == -1) clk_host = 4;
-    }
-
-    uint8_t cs_host = 5;
-    switch(cs) {
-        case SPI_IOMUX_PIN_NUM_CS:
-            cs_host = SPI1_HOST;
-        break;
-
-        case SPI2_IOMUX_PIN_NUM_CS:
-            cs_host = SPI2_HOST;
-        break;
-
-        #ifdef SPI3_IOMUX_PIN_NUM_CS
-        case SPI3_IOMUX_PIN_NUM_CS:
-            cs_host = SPI3_HOST;
-        break;
-        #endif
-
-        default:
-            if (cs == -1) cs_host = 4;
-    }
-
-    uint8_t hd_host = 5;
-    switch(hd) {
-        case SPI_IOMUX_PIN_NUM_HD:
-            hd_host = SPI1_HOST;
-        break;
-
-        case SPI2_IOMUX_PIN_NUM_HD:
-            hd_host = SPI2_HOST;
-        break;
-
-        #ifdef SPI3_IOMUX_PIN_NUM_HD
-        case SPI3_IOMUX_PIN_NUM_HD:
-            hd_host = SPI3_HOST;
-        break;
-        #endif
-
-        default:
-            if (hd == -1) hd_host = 4;
-    }
-
-    uint8_t wp_host = 5;
-    switch(wp) {
-        case SPI_IOMUX_PIN_NUM_WP:
-            wp_host = SPI1_HOST;
-        break;
-
-        case SPI2_IOMUX_PIN_NUM_WP:
-            wp_host = SPI2_HOST;
-        break;
-
-        #ifdef SPI3_IOMUX_PIN_NUM_WP
-        case SPI3_IOMUX_PIN_NUM_WP:
-            wp_host = SPI3_HOST;
-        break;
-        #endif
-
-        default:
-            if (wp == -1) wp_host = 4;
-    }
-
-    uint32_t hst = (miso_host << 15) | (mosi_host << 12) | (clk_host << 9) | (cs_host << 6) | (hd_host << 3) | wp_host;
-
-    uint32_t io_mux = SPICOMMON_BUSFLAG_IOMUX_PINS;
-    int found_host = -1;
-
-    uint32_t tmp_host;
-    bool h4;
-    bool h5;
-
-    for (int i=0;i<6;i++) {
-        tmp_host = hst >> (i * 3);
-        h4 = (tmp_host & 0x05) == 0x04 ? true : false;
-        h5 = (tmp_host & 0x05) == 0x05 ? true : false;
-        tmp_host = tmp_host & 0x03;
-
-        if (h4) continue;
-
-        if (h5) {
-            found_host = -1;
-            io_mux = SPICOMMON_BUSFLAG_GPIO_PINS;
-            break;
-        }
-
-        if (found_host == -1) {
-            found_host = (int)tmp_host;
-        } else if (found_host != (int)tmp_host) {
-            found_host = -1;
-            io_mux = SPICOMMON_BUSFLAG_GPIO_PINS;
-            break;
-        }
-    }
-
-    if (host == -1 && found_host == -1) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("you must supply 0, 1 or 2 for the bus host"));
-    } else if (host != -1 && found_host != -1 && host != found_host) {
-        mp_printf(&mp_plat_print, "Setting the bus host to %d will give better performance\n", found_host);
-    } else if (host == -1 && found_host != -1) {
-        host = found_host;
-    }
-
-    flags = flags | io_mux;
 
     self->callback = mp_const_none;
 
     self->host = host;
-    self->bus_handle = (esp_lcd_spi_bus_handle_t)((uint32_t)host);
+    self->bus_handle = (esp_lcd_spi_bus_handle_t)host;
 
     self->bus_config.sclk_io_num = clk;
     self->bus_config.mosi_io_num = mosi;
@@ -299,13 +185,6 @@ STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     self->panel_io_handle.del = &spi_del;
     self->panel_io_handle.init = &spi_init;
     self->panel_io_handle.get_lane_count = &spi_get_lane_count;
-
-    mp_printf(
-        &mp_plat_print,
-        "mp_lcd_spi_bus_make_new\nsclk_io_num: %d - %d\nmosi_io_num: %d - %d\nmiso_io_num: %d - %d\ncs_gpio_num: %d - %d\ndc_gpio_num: %d\nhost: %d - %d\n",
-        clk, (int)args[ARG_sclk].u_int, mosi, (int)args[ARG_mosi].u_int, miso, (int)args[ARG_miso].u_int, cs, (int)args[ARG_cs].u_int, (int)args[ARG_dc].u_int, host, (int)args[ARG_host].u_int
-    );
-
 
     return MP_OBJ_FROM_PTR(self);
 }
@@ -375,13 +254,19 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
         self->panel_io_config.trans_queue_depth = 10;
     }
 
-    mp_printf(
-        &mp_plat_print,
-        "spi_init\ntrans_queue_depth: %d\nmax_transfer_sz: %d\n",
-        self->panel_io_config.trans_queue_depth, self->bus_config.max_transfer_sz
-    );
+    int dma_chan = 0;
 
-    mp_lcd_err_t ret = spi_bus_initialize(self->host, &self->bus_config, SPI_DMA_CH_AUTO);
+    #if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C3
+        dma_chan = SPI_DMA_CH_AUTO;
+    #else
+        if (self->host == SPI2_HOST) {
+            dma_chan = 1;
+        } else {
+            dma_chan = 2;
+        }
+    #endif
+
+    mp_lcd_err_t ret = spi_bus_initialize(self->host, &self->bus_config, dma_chan);
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(spi_bus_initialize)"), ret);
     }
