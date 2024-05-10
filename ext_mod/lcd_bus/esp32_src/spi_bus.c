@@ -302,8 +302,7 @@ STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
 
     mp_printf(
         &mp_plat_print,
-        "mp_lcd_spi_bus_make_new\n"
-        "sclk_io_num: %d - %d\nmosi_io_num: %d - %d\nmiso_io_num: %d - %d\ncs_gpio_num: %d - %d\ndc_gpio_num: %d\nhost: %d - %d\n",
+        "mp_lcd_spi_bus_make_new\nsclk_io_num: %d - %d\nmosi_io_num: %d - %d\nmiso_io_num: %d - %d\ncs_gpio_num: %d - %d\ndc_gpio_num: %d\nhost: %d - %d\n",
         clk, (int)args[ARG_sclk].u_int, mosi, (int)args[ARG_mosi].u_int, miso, (int)args[ARG_miso].u_int, cs, (int)args[ARG_cs].u_int, (int)args[ARG_dc].u_int, host, (int)args[ARG_host].u_int
     );
 
