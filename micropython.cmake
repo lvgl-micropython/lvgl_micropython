@@ -25,7 +25,7 @@ file(GLOB_RECURSE LVGL_HEADERS ${CMAKE_CURRENT_LIST_DIR}/lib/lvgl/src/*.h ${CMAK
 if(${SECOND_BUILD_ENV} EQUAL "0")
     execute_process(
         COMMAND
-            ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/gen/$ENV{GEN_SCRIPT}_api_gen_mpy.py ${LV_CFLAGS} --output=${CMAKE_BINARY_DIR}/lv_mp.c --include=${CMAKE_CURRENT_LIST_DIR} --include=${CMAKE_CURRENT_LIST_DIR}/include --include=${CMAKE_CURRENT_LIST_DIR}/lvgl --board=$ENV{LV_PORT} --module_name=lvgl --module_prefix=lv --metadata=${CMAKE_BINARY_DIR}/lv_mp.c.json --header_file=${LVGL_HEADER}
+            ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/gen/$ENV{GEN_SCRIPT}_api_gen_mpy.py ${LV_CFLAGS} --output=${CMAKE_BINARY_DIR}/lv_mp.c --include=${CMAKE_CURRENT_LIST_DIR} --include=${CMAKE_CURRENT_LIST_DIR}/include --include=${CMAKE_CURRENT_LIST_DIR}/lib/lvgl --board=$ENV{LV_PORT} --module_name=lvgl --module_prefix=lv --metadata=${CMAKE_BINARY_DIR}/lv_mp.c.json --header_file=${LVGL_HEADER}
         WORKING_DIRECTORY
             ${CMAKE_CURRENT_LIST_DIR}
 
@@ -54,6 +54,7 @@ set(LVGL_MPY_INCLUDES
     ${CMAKE_CURRENT_LIST_DIR}/lib/micropython
     ${CMAKE_CURRENT_LIST_DIR}
     ${CMAKE_CURRENT_LIST_DIR}/include
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvgl
 )
 
 add_library(usermod_lvgl INTERFACE)

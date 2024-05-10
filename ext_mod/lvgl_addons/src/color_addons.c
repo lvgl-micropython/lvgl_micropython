@@ -33,7 +33,7 @@ void lv_conical_gradient(uint8_t *buf, uint16_t radius, const lv_grad_dsc_t *gra
     dsc.stops_count = grad->stops_count;
 
     lv_grad_t * gradient = lv_gradient_get(&dsc, circumference, 1);
-    uint32_t grad_size = (uint32_t)gradient->size;
+    uint32_t grad_size = (uint32_t)gradient->size * 1000;
 
     int64_t twst = twist * 1000;
 
@@ -66,7 +66,7 @@ void lv_conical_gradient(uint8_t *buf, uint16_t radius, const lv_grad_dsc_t *gra
             t = floormod(t, TWO_PI);
             t *= INV_TWO_PI;
 
-            step = (uint32_t)(t * grad_size) / 1000;
+            step = (uint32_t)((t * grad_size) / 1000);
 
             color = gradient->color_map[step];
             opa = gradient->opa_map[step];
