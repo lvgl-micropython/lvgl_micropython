@@ -254,24 +254,12 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
         self->panel_io_config.trans_queue_depth = 10;
     }
 
-    int dma_chan = 0;
-
-    #if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C3
-        dma_chan = SPI_DMA_CH_AUTO;
-    #else
-        if (self->host == SPI2_HOST) {
-            dma_chan = 1;
-        } else {
-            dma_chan = 2;
-        }
-    #endif
-
-    mp_lcd_err_t ret = spi_bus_initialize(self->host, &self->bus_config, dma_chan);
+    mp_lcd_err_t ret = spi_bus_initialize(self->host, &self->bus_config, SPI_DMA_CH_AUTO);
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(spi_bus_initialize)"), ret);
     }
 
-    ret = esp_lcd_new_panel_io_spi(self->bus_handle, &self->panel_io_config, self->panel_io_handle.panel_io);
+    ret = esp_lcd_new_panel_io_spi(self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io);
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_spi)"), ret);
     }
