@@ -300,6 +300,14 @@ STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     self->panel_io_handle.init = &spi_init;
     self->panel_io_handle.get_lane_count = &spi_get_lane_count;
 
+    mp_printf(
+        &mp_plat_print,
+        "mp_lcd_spi_bus_make_new\n"
+        "sclk_io_num: %d - %d\nmosi_io_num: %d - %d\nmiso_io_num: %d - %d\ncs_gpio_num: %d - %d\ndc_gpio_num: %d\nhost: %d - %d\n",
+        clk, (int)args[ARG_sclk].u_int, mosi, (int)args[ARG_mosi].u_int, miso, (int)args[ARG_miso].u_int, cs, (int)args[ARG_cs].u_int, (int)args[ARG_dc].u_int, host, (int)args[ARG_host].u_int
+    );
+
+
     return MP_OBJ_FROM_PTR(self);
 }
 
@@ -367,6 +375,12 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
     } else {
         self->panel_io_config.trans_queue_depth = 10;
     }
+
+    mp_printf(
+        &mp_plat_print,
+        "spi_init\ntrans_queue_depth: %d\nmax_transfer_sz: %d\n",
+        self->panel_io_config.trans_queue_depth, self->bus_config.max_transfer_sz
+    );
 
     mp_lcd_err_t ret = spi_bus_initialize(self->host, &self->bus_config, SPI_DMA_CH_AUTO);
     if (ret != 0) {
