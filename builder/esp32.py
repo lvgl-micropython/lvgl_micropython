@@ -660,7 +660,6 @@ def compile():  # NOQA
 
     if not sys.platform.startswith('win'):
         cmds = [
-            # [f'export "IDF_PATH={os.path.abspath(env["IDF_PATH"])}"'],
             ['cd', 'lib/esp-idf'],
             ['. ./export.sh'],
             ['cd ../..'],

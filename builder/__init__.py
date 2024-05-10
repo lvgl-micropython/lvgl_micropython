@@ -377,8 +377,6 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
 
     if 'GITHUB_RUN_ID' in os.environ:
         print(cmd_)
-        spinner = False
-        out_to_screen = True
 
     que = queue.Queue()
 
