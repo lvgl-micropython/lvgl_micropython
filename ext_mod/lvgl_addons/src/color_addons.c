@@ -1,32 +1,29 @@
+// ../../../lib/lvgl/
 
-#include "../../../lib/lvgl/lvgl.h"
+#include "lvgl.h"
 #include <math.h>
 #include <stdlib.h>
 #include "../include/color_addons.h"
 
-#ifdef MP_SOFT_MATH
-    #include "../include/soft_math.h"
-#endif
+
+#define PI 3141
+#define TWO_PI 6283
+#define INV_TWO_PI 159
 
 
-#define PI 3.141592653589793f
-#define TWO_PI 6.28318530717958647693f
-#define INV_TWO_PI 0.15915494309189533576876437577476f
-
-
-float floormod(float x, float y) {
-    int32_t res = (int32_t)x;
-    res %= (int32_t)y;
+int64_t floormod(int64_t x, int64_t y) {
+    int64_t res = x;
+    res %= y;
     if (res < 0) {
-        res += (int32_t)y;
+        res += y;
     }
-    return (float)res;
+    return res;
 }
 
 void lv_conical_gradient(uint8_t *buf, uint16_t radius, const lv_grad_dsc_t *grad, uint16_t angle, uint32_t twist)
 {
     uint32_t diameter = radius * 2;
-    int32_t circumference = (int32_t)((float)diameter * PI);
+    int32_t circumference = (int32_t)(((diameter * 1000) * PI) / 1000);
 
     lv_grad_dsc_t dsc = {0};
     for (uint8_t i=0; i < grad->stops_count; i++) {
@@ -36,42 +33,40 @@ void lv_conical_gradient(uint8_t *buf, uint16_t radius, const lv_grad_dsc_t *gra
     dsc.stops_count = grad->stops_count;
 
     lv_grad_t * gradient = lv_gradient_get(&dsc, circumference, 1);
-    float grad_size = (float)gradient->size;
+    uint32_t grad_size = (uint32_t)gradient->size;
+
+    int64_t twst = twist * 1000;
 
     if (twist > 0) {
-        twist = (uint32_t)((float)(diameter * diameter * diameter * diameter) / (255.0f * (float)twist));
+        twst = ((uint64_t)(diameter * diameter * diameter * diameter)) / (255000 * (twist * 1000));
+    } else {
+        twst = (uint64_t)twist * 1000
     }
 
     int32_t rise;
     int32_t run;
-    float t;
+    int64_t t;
     uint32_t step;
+    uint32_t ang = angle * 1000;
+
     lv_color_t color;
     lv_opa_t opa;
 
     for (uint32_t y=0; y < diameter; y++) {
-        rise = radius - y;
-        run = radius;
+        rise = (radius - y) * 1000;
+        run = radius * 1000;
 
         for (uint32_t x=0; x < diameter; x++) {
-            #ifdef MP_SOFT_MATH
-                t = (float)soft_atan2((float)rise, (float)run) + (float)PI - (float)angle;
-            #else
-                t = (float)atan2((float)rise, (float)run) + (float)PI - (float)angle;
-            #endif
+            t = lv_atan2(rise, run) + PI - ang;
 
             if (twist > 0) {
-                #ifdef MP_SOFT_MATH
-                    t += TWO_PI * soft_sqrtf((float)(rise * rise + run * run) / (float)twist);
-                #else
-                    t += TWO_PI * sqrtf((float)(rise * rise + run * run) / (float)twist);
-                #endif
+                t += TWO_PI * lv_sqrt((rise * rise + run * run) / twst);
             }
 
             t = floormod(t, TWO_PI);
             t *= INV_TWO_PI;
 
-            step = (uint32_t)(t * grad_size);
+            step = (uint32_t)(t * grad_size) / 1000;
 
             color = gradient->color_map[step];
             opa = gradient->opa_map[step];
@@ -81,7 +76,7 @@ void lv_conical_gradient(uint8_t *buf, uint16_t radius, const lv_grad_dsc_t *gra
             buf[diameter * y + x + 2] = color.green;
             buf[diameter * y + x + 3] = color.blue;
 
-            run -= 1;
+            run -= 1000;
         }
     }
 }
@@ -105,11 +100,8 @@ void lv_radial_gradient(uint8_t *buf, uint16_t radius, const lv_grad_dsc_t *grad
 
     for (uint32_t y=0; y < diameter; y++) {
         for (uint32_t x=0; x < diameter; x++) {
-            #ifdef MP_SOFT_MATH
-                dist = (uint32_t)abs((int)soft_sqrtf(soft_powf((float)(radius - x), 2.0f) + soft_powf((float)(radius - y), 2.0f)));
-            #else
-                dist = (uint32_t)abs((int)sqrtf(powf((float)(radius - x), 2.0f) + powf((float)(radius - y), 2.0f)));
-            #endif
+            dist = (uint32_t)abs((int)lv_sqrt(pow((radius - x), 2) + pow((radius - y), 2)));
+
             if (dist >= gradient->size){
                 continue;
             }
