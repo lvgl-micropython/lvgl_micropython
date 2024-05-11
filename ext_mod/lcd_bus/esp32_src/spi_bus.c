@@ -106,7 +106,6 @@ STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
 
     int temp_host;
 
-    uint8_t miso_host = 5;
     if (
         mosi == SPI_IOMUX_PIN_NUM_MOSI &&
         clk == SPI_IOMUX_PIN_NUM_CLK &&
@@ -154,8 +153,7 @@ STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
 
     self->callback = mp_const_none;
 
-    self->host = host;
-    self->bus_handle = (esp_lcd_spi_bus_handle_t)host;
+    self->bus_handle = (spi_host_device_t)host;
 
     self->bus_config.sclk_io_num = clk;
     self->bus_config.mosi_io_num = mosi;
@@ -199,7 +197,7 @@ mp_lcd_err_t spi_del(mp_obj_t obj)
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_panel_io_del)"), ret);
     }
 
-    ret = spi_bus_free(self->host);
+    ret = spi_bus_free(self->bus_handle);
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(spi_bus_free)"), ret);
     }
@@ -254,12 +252,12 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
         self->panel_io_config.trans_queue_depth = 10;
     }
 
-    mp_lcd_err_t ret = spi_bus_initialize(self->host, &self->bus_config, SPI_DMA_CH_AUTO);
+    mp_lcd_err_t ret = spi_bus_initialize(self->bus_handle, &self->bus_config, SPI_DMA_CH_AUTO);
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(spi_bus_initialize)"), ret);
     }
 
-    ret = esp_lcd_new_panel_io_spi(self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io);
+    ret = esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io);
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_spi)"), ret);
     }

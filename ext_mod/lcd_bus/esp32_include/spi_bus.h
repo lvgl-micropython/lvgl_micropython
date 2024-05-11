@@ -30,9 +30,7 @@
         lcd_panel_io_t panel_io_handle;
         esp_lcd_panel_io_spi_config_t panel_io_config;
         spi_bus_config_t bus_config;
-        esp_lcd_spi_bus_handle_t bus_handle;
-
-        int host;
+        spi_host_device_t bus_handle;
 
     } mp_lcd_spi_bus_obj_t;
 
