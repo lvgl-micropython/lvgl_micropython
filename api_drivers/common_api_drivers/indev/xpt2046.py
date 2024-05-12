@@ -3,9 +3,10 @@ import machine
 import pointer_framework
 
 
-_CMD_X_READ = const(0x20)
-_CMD_Y_READ = const(0xA0)
-_MAX_RAW_COORD = const((1 << 12) - 1)
+_CMD_X_READ = const(0xD0)
+_CMD_Y_READ = const(0x90)
+_MIN_RAW_COORD = const(10)
+_MAX_RAW_COORD = const(4090)
 
 
 class XPT2046(pointer_framework.PointerDriver):
@@ -21,8 +22,11 @@ class XPT2046(pointer_framework.PointerDriver):
         touch_cal=None
     ):
         super().__init__(touch_cal=touch_cal)
-        self._buf = bytearray(2)
-        self._mv = memoryview(self._buf)
+        self._trans_buf = bytearray(3)
+        self._trans_mv = memoryview(self._trans_buf)
+
+        self._recv_buf = bytearray(3)
+        self._recv_mv = memoryview(self._recv_buf)
 
         self._spi = machine.SPI(
             host + 1,
@@ -36,31 +40,36 @@ class XPT2046(pointer_framework.PointerDriver):
         self.cs.value(1)
 
     def _get_coords(self):
-        buf = self._buf
-        mv = self._mv
-
         x_vals = []
         y_vals = []
-        self.cs.value(0)
-        for i in range(0, 3):
-            xy = []
 
-            for cmd in (_CMD_X_READ, _CMD_Y_READ):
-                buf[0] = 0x01
-                buf[1] = cmd
+        for _ in range(0, 3):
+            self.cs.value(0)
+            self._trans_buf[0] = _CMD_X_READ
+            self._recv_buf[0] = 0x00
+            self._recv_buf[1] = 0x00
+            self._recv_buf[2] = 0x00
 
-                self._spi.write_readinto(mv, mv)
+            self._spi.write_readinto(self._trans_mv, self._recv_mv)
+            x = (self._recv_buf[1] * 256 + self._recv_buf[2]) >> 3
 
-                value = (buf[0] << 4) + (buf[1] >> 4)
+            self._trans_buf[0] = _CMD_Y_READ
+            self._recv_buf[0] = 0x00
+            self._recv_buf[1] = 0x00
+            self._recv_buf[2] = 0x00
 
-                if value == _MAX_RAW_COORD:
-                    value = 0
-                xy.append(value)
+            self._spi.write_readinto(self._trans_mv, self._recv_mv)
+            y = (self._recv_buf[1] * 256 + self._recv_buf[2]) >> 3
 
-            x_vals.append(xy[0])
-            y_vals.append(xy[1])
+            if (
+                (_MIN_RAW_COORD < x < _MAX_RAW_COORD) or
+                (_MIN_RAW_COORD < y < _MAX_RAW_COORD)
+            ):
+                return None
 
-        self.cs.value(1)
+            x_vals.append(x)
+            y_vals.append(y)
+            self.cs.value(1)
 
         if 0 in x_vals or 0 in y_vals:
             return None

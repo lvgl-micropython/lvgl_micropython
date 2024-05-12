@@ -80,6 +80,16 @@ def generate_manifest(
     script_dir, lvgl_api, manifest_path, displays,
     indevs, frozen_manifest, *addl_manifest_files
 ):
+    addl_manifest_files = list(addl_manifest_files)
+
+    for item in addl_manifest_files:
+        if 'touch_cal_data' in item:
+            tcal = item
+            addl_manifest_files.remove(item)
+            break
+    else:
+        tcal = 'touch_cal_data.py'
+
     if not os.path.exists('build'):
         os.mkdir('build')
 
@@ -97,7 +107,7 @@ def generate_manifest(
 
     frozen_manifest_files = [
         f'{api_path}/frozen/display/display_driver_framework.py',
-        f'{api_path}/frozen/indev/touch_calibration/touch_cal_data.py',
+        f'{api_path}/frozen/indev/touch_calibration/{tcal}',
         f'{api_path}/frozen/indev/touch_calibration/touch_calibrate.py',
         f'{api_path}/frozen/indev/_indev_base.py',
         f'{api_path}/frozen/indev/button_framework.py',

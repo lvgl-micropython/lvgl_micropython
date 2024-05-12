@@ -147,6 +147,7 @@ class DisplayDriver:
         self._backup_set_memory_location = None
 
         self._rotation = lv.DISPLAY_ROTATION._0  # NOQA
+        self._invert_colors = False
 
         if data_bus is None:
             self._reset_pin = None
@@ -287,55 +288,71 @@ class DisplayDriver:
             self.set_default()
 
         self._displays.append(self)
+        self._disp_drv.add_event_cb(self._on_size_change, lv.EVENT.RESOLUTION_CHANGED, None)  # NOQA
+
+    def _on_size_change(self, _):
+        rotation = self._disp_drv.get_rotation()
+        self._width = self._disp_drv.get_horizontal_resolution()
+        self._height = self._disp_drv.get_vertical_resolution()
+
+        if rotation == self._rotation:
+            return
+
+        self._rotation = rotation
+
+        if self._initilized:
+            self._param_buf[0] = (
+                self._madctl(self._color_byte_order, _ORIENTATION_TABLE, ~rotation)  # NOQA
+            )
+            self._data_bus.tx_param(_MADCTL, self._param_mv[:1])
 
     @staticmethod
     def get_displays():
         return DisplayDriver._displays
 
     def set_physical_resolution(self, width, height):
-        self._physical_width = width
-        self._physical_height = height
+        self._disp_drv.set_physical_resolution(width, height)
 
     def get_physical_horizontal_resolution(self):
-        return self._physical_width
+        return self._disp_drv.get_physical_horizontal_resolution()
 
     def get_physical_vertical_resolution(self):
-        return self._physical_height
+        return self._disp_drv.get_physical_vertical_resolution()
 
     def set_physical_horizontal_resolution(self, width):
-        self._physical_width = width
+        self._disp_drv.set_physical_horizontal_resolution(width)
 
     def set_physical_vertical_resolution(self, height):
-        self._physical_height = height
+        self._disp_drv.set_physical_vertical_resolution(height)
 
     def get_next(self):
         disp = self._disp_drv.get_next()
         return disp.get_driver_data()
 
     def set_offset(self, x, y):
-        rot90 = lv.DISPLAY_ROTATION._90  # NOQA
-        rot270 = lv.DISPLAY_ROTATION._270  # NOQA
-
-        if self._rotation in (rot90, rot270):
-            x, y = y, x
-
         self._offset_x, self._offset_y = x, y
 
     def get_offset_x(self):
-        rot90 = lv.DISPLAY_ROTATION._90  # NOQA
-        rot270 = lv.DISPLAY_ROTATION._270  # NOQA
+        rotation = self.get_rotation()
 
-        if self._rotation in (rot90, rot270):
+        if rotation == lv.DISPLAY_ROTATION._90:  # NOQA
             return self._offset_y
+        if rotation == lv.DISPLAY_ROTATION._180:  # NOQA
+            return self.get_physical_horizontal_resolution() - self._offset_x
+        if rotation == lv.DISPLAY_ROTATION._270:  # NOQA
+            return self.get_physical_horizontal_resolution() - self._offset_y
 
         return self._offset_x
 
     def get_offset_y(self):
-        rot90 = lv.DISPLAY_ROTATION._90  # NOQA
-        rot270 = lv.DISPLAY_ROTATION._270  # NOQA
+        rotation = self.get_rotation()
 
-        if self._rotation in (rot90, rot270):
+        if rotation == lv.DISPLAY_ROTATION._90:  # NOQA
             return self._offset_x
+        if rotation == lv.DISPLAY_ROTATION._180:  # NOQA
+            return self.get_physical_vertical_resolution() - self._offset_y
+        if rotation == lv.DISPLAY_ROTATION._270:  # NOQA
+            return self.get_physical_vertical_resolution() - self._offset_x
 
         return self._offset_y
 
@@ -415,17 +432,19 @@ class DisplayDriver:
     def delete_refr_timer(self):
         self._disp_drv.delete_refr_timer()
 
-    def invert_colors(self, value):
+    def invert_colors(self):
         # If your white is showing up as black and your black
         # is showing up as white try setting this either True or False
         # and see if it corrects the problem.
+        if None in (self._INVON, self._INVOFF):
+            raise NotImplementedError
 
-        if value:
+        self._invert_colors = not self._invert_colors
+
+        if self._invert_colors:
             self.set_params(self._INVON)
         else:
             self.set_params(self._INVOFF)
-
-    invert_colors = property(None, invert_colors)
 
     def set_default(self):
         self._disp_drv.set_default()
@@ -434,33 +453,7 @@ class DisplayDriver:
         return self._rotation
 
     def set_rotation(self, value):
-        rot0 = lv.DISPLAY_ROTATION._0  # NOQA
-        rot90 = lv.DISPLAY_ROTATION._90  # NOQA
-        rot180 = lv.DISPLAY_ROTATION._180  # NOQA
-        rot270 = lv.DISPLAY_ROTATION._270  # NOQA
-
-        if (
-            (
-                self._rotation in (rot0, rot180) and
-                value in (rot90, rot270)
-            ) or (
-                self._rotation in (rot90, rot270) and
-                value in (rot0, rot180)
-            )
-        ):
-            width = self._disp_drv.get_horizontal_resolution()
-            height = self._disp_drv.get_vertical_resolution()
-            self._disp_drv.set_resolution(height, width)
-
-            self._offset_x, self._offset_y = self._offset_y, self._offset_x
-
-        self._rotation = value
-
-        if self._initilized:
-            self._param_buf[0] = (
-                self._madctl(self._color_byte_order, _ORIENTATION_TABLE, ~value)
-            )
-            self._data_bus.tx_param(_MADCTL, self._param_mv[:1])
+        self._disp_drv.set_rotation(value)
 
     def get_horizontal_resolution(self):
         return self._disp_drv.get_horizontal_resolution()

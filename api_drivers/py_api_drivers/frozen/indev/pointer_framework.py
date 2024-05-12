@@ -21,7 +21,13 @@ class PointerDriver(_indev_base.IndevBase):
 
         self._config = touch_cal
 
-        self._set_type(lv.INDEV_TYPE.POINTER)
+        self._set_type(lv.INDEV_TYPE.POINTER)  # NOQA
+        self._disp_drv.add_event_cb(self._on_size_change, lv.EVENT.RESOLUTION_CHANGED, None)  # NOQA
+
+    def _on_size_change(self, e):
+        self._width = self._disp_drv.get_horizontal_resolution()
+        self._height = self._disp_drv.get_vertical_resolution()
+        self._rotation = self._disp_drv.get_rotation()
 
     def calibrate(self):
         import touch_calibrate
@@ -65,7 +71,7 @@ class PointerDriver(_indev_base.IndevBase):
 
         if None not in (x, y):
             config = self._config
-            orientation = self.get_rotation()
+            rotation = self._rotation
             left = config.left
             right = config.right
             top = config.top
@@ -74,24 +80,24 @@ class PointerDriver(_indev_base.IndevBase):
             if left is None:
                 left = 0
             if right is None:
-                right = self._width
+                right = self._orig_width
             if top is None:
                 top = 0
             if bottom is None:
-                bottom = self._height
+                bottom = self._orig_height
 
-            if orientation == lv.DISPLAY_ROTATION._0:  # NOQA
-                xpos = _remap(x, left, right, 0, self._width)
-                ypos = _remap(y, top, bottom, 0, self._height)
-            elif orientation == lv.DISPLAY_ROTATION._90:  # NOQA
-                xpos = _remap(y, top, bottom, 0, self._width)
-                ypos = _remap(x, right, left, 0, self._height)
-            elif orientation == lv.DISPLAY_ROTATION._270:  # NOQA
-                xpos = _remap(x, right, left, 0, self._width)
-                ypos = _remap(y, bottom, top, 0, self._height)
-            elif orientation == lv.DISPLAY_ROTATION._180:  # NOQA
-                xpos = _remap(y, bottom, top, 0, self._width)
-                ypos = _remap(x, left, right, 0, self._height)
+            if rotation == lv.DISPLAY_ROTATION._0:  # NOQA
+                xpos = _remap(x, left, right, 0, self._orig_width)
+                ypos = _remap(y, top, bottom, 0, self._orig_height)
+            elif rotation == lv.DISPLAY_ROTATION._90:  # NOQA
+                xpos = _remap(y, top, bottom, 0, self._orig_width)
+                ypos = _remap(x, right, left, 0, self._orig_height)
+            elif rotation == lv.DISPLAY_ROTATION._270:  # NOQA
+                xpos = _remap(x, right, left, 0, self._orig_width)
+                ypos = _remap(y, bottom, top, 0, self._orig_height)
+            elif rotation == lv.DISPLAY_ROTATION._180:  # NOQA
+                xpos = _remap(y, bottom, top, 0, self._orig_width)
+                ypos = _remap(x, left, right, 0, self._orig_height)
             else:
                 raise RuntimeError
 

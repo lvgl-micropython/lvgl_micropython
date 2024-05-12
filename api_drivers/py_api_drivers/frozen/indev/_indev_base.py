@@ -36,9 +36,9 @@ class IndevBase:
                 'Display driver needs to initilized before indev driver'
             )
 
-        self._height = self._py_disp_drv.get_physical_horizontal_resolution()
-        self._width = self._py_disp_drv.get_physical_vertical_resolution()
-
+        self._width = self._orig_width = self._disp_drv.get_horizontal_resolution()
+        self._height = self._orig_height = self._disp_drv.get_vertical_resolution()
+        self._rotation = self._disp_drv.get_rotation()
         self._current_state = self.RELEASED
 
         indev_drv = lv.indev_create()
@@ -56,7 +56,7 @@ class IndevBase:
         return self._height
 
     def get_rotation(self):
-        return self._disp_drv.get_rotation()
+        return self._rotation
 
     def _set_type(self, type_):
         self._indev_drv.set_type(type_)

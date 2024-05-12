@@ -324,7 +324,7 @@ def build_manifest(
 
     generate_manifest(
         script_dir, lvgl_api, manifest_path,
-        displays, indevs, frozen_manifest
+        displays, indevs, frozen_manifest, 'esp32/touch_cal_data.py'
     )
 
 
