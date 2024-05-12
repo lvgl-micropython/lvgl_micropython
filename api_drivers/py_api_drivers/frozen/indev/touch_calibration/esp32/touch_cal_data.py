@@ -9,20 +9,20 @@ class TouchCalData(object):
         try:
             self._left = self._config.get_i32('left')
         except OSError:
-            self._left = 0x80000000
+            self._left = -0x80000000
         try:
             self._right = self._config.get_i32('right')
         except OSError:
-            self._right = 0x80000000
+            self._right = -0x80000000
 
         try:
             self._top = self._config.get_i32('top')
         except OSError:
-            self._top = 0x80000000
+            self._top = -0x80000000
         try:
             self._bottom = self._config.get_i32('bottom')
         except OSError:
-            self._bottom = 0x80000000
+            self._bottom = -0x80000000
 
         self._is_dirty = False
 
@@ -32,7 +32,7 @@ class TouchCalData(object):
 
     @property
     def left(self):
-        if self._left == 0x80000000:
+        if self._left == -0x80000000:
             return None
 
         return self._left
@@ -40,7 +40,7 @@ class TouchCalData(object):
     @left.setter
     def left(self, value):
         if value is None:
-            value = 0x80000000
+            value = -0x80000000
 
         self._left = value
         self._config.set_i32('left', value)
@@ -48,7 +48,7 @@ class TouchCalData(object):
 
     @property
     def right(self):
-        if self._right == 0x80000000:
+        if self._right == -0x80000000:
             return None
 
         return self._right
@@ -56,7 +56,7 @@ class TouchCalData(object):
     @right.setter
     def right(self, value):
         if value is None:
-            value = 0x80000000
+            value = -0x80000000
 
         self._right = value
         self._config.set_i32('right', value)
@@ -64,7 +64,7 @@ class TouchCalData(object):
 
     @property
     def top(self):
-        if self._top == 0x80000000:
+        if self._top == -0x80000000:
             return None
 
         return self._top
@@ -72,7 +72,7 @@ class TouchCalData(object):
     @top.setter
     def top(self, value):
         if value is None:
-            value = 0x80000000
+            value = -0x80000000
 
         self._top = value
         self._config.set_i32('top', value)
@@ -80,7 +80,7 @@ class TouchCalData(object):
 
     @property
     def bottom(self):
-        if self._bottom == 0x80000000:
+        if self._bottom == -0x80000000:
             return None
 
         return self._bottom
