@@ -518,4 +518,122 @@ Here is some example code for the unix port
     th = task_handler.TaskHandler(duration=5)
 
 
+
+The touch screen drivers will handle the rotation that you set to the display.
+There is a single caviat to this. You MUST set up and initilize the display then 
+create the touch drivers and after that has been done you can set the rotation.
+The touch driver must exist prior to the display rotation being set.
+
+For the ESP32 SOC's there is NVRAM that is available to store data in. That 
+data is persistant between restarts of the ESP32. This feature is pur to use to 
+store calibration data for the touch screen. In the exmaple below it shows how 
+to properly create a display driver and touch driver and how to set the rotation 
+and also the calibration storage.
+
+
+    import lcd_bus
+    
+    from micropython import const
+    
+    # display settings
+    _WIDTH = const(320)
+    _HEIGHT = const(480)
+    _BL = const(45)
+    _RST = const(4)
+    _DC = const(0)
+    _WR = const(47)
+    _FREQ = const(20000000)
+    _DATA0 = const(9)
+    _DATA1 = const(46)
+    _DATA2 = const(3)
+    _DATA3 = const(8)
+    _DATA4 = const(18)
+    _DATA5 = const(17)
+    _DATA6 = const(16)
+    _DATA7 = const(15)
+    _BUFFER_SIZE = const(30720)
+    
+    _SCL = const(5)
+    _SDA = const(6)
+    _TP_FREQ = const(100000)
+    
+    
+    display_bus = lcd_bus.I80Bus(
+        dc=_DC,
+        wr=_WR,
+        freq=_FREQ,
+        data0=_DATA0,
+        data1=_DATA1,
+        data2=_DATA2,
+        data3=_DATA3,
+        data4=_DATA4,
+        data5=_DATA5,
+        data6=_DATA6,
+        data7=_DATA7
+    )
+    
+    fb1 = display_bus.allocate_framebuffer(_BUFFER_SIZE, lcd_bus.MEMORY_INTERNAL | lcd_bus.MEMORY_DMA)
+    fb2 = display_bus.allocate_framebuffer(_BUFFER_SIZE, lcd_bus.MEMORY_INTERNAL | lcd_bus.MEMORY_DMA)
+    
+    
+    import st7796  # NOQA
+    import lvgl as lv  # NOQA
+    
+    lv.init()
+    
+    display = st7796.ST7796(
+        data_bus=display_bus,
+        frame_buffer1=fb1,
+        frame_buffer2=fb2,
+        display_width=_WIDTH,
+        display_height=_HEIGHT,
+        backlight_pin=_BL,
+        # reset=_RST,
+        # reset_state=st7796.STATE_LOW,
+        color_space=lv.COLOR_FORMAT.RGB565,
+        color_byte_order=st7796.BYTE_ORDER_BGR,
+        rgb565_byte_swap=True,
+    )
+    
+    import i2c  # NOQA
+    import task_handler  # NOQA
+    import ft6x36  # NOQA
+    import time  # NOQA
+
+    display.init()
+
+    i2c_bus = i2c.I2CBus(scl=_SCL, sda=_SDA, freq=_TP_FREQ, use_locks=False)
+    indev = ft6x36.FT6x36(i2c_bus)
+
+    display.invert_colors()
+
+    if not indev.is_calibrated:
+        display.set_backlight(100)
+        indev.calibrate()
+
+    # you want to rotate the display after the calibration has been done in order
+    # to keep the corners oriented properly.
+    display.set_rotation(lv.DISPLAY_ROTATION._90)
+    
+    display.set_backlight(100)
+    
+    th = task_handler.TaskHandler()
+
+    scrn = lv.screen_active()
+    scrn.set_style_bg_color(lv.color_hex(0x000000), 0)
+    
+    slider = lv.slider(scrn)
+    slider.set_size(300, 50)
+    slider.center()
+    
+    label = lv.label(scrn)
+    label.set_text('HELLO WORLD!')
+    label.align(lv.ALIGN.CENTER, 0, -50)
+
+
+You are able to force the calibration at any time by calling `indev.calibrate()` 
+regardless of what `indev.is_calibrate` returns. This makes it possible to redo 
+the calibration by either using a pin that you can check the state of or through
+a button in your UI that you provide to the user.
+
 Thank again and enjoy!!

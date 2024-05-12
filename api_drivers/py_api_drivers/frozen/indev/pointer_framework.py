@@ -19,7 +19,7 @@ class PointerDriver(_indev_base.IndevBase):
 
             touch_cal = TouchCalData(f'{self.__class__.__name__}_{self.id}')
 
-        self._config = touch_cal
+        self._cal = touch_cal
 
         self._set_type(lv.INDEV_TYPE.POINTER)  # NOQA
         self._disp_drv.add_event_cb(self._on_size_change, lv.EVENT.RESOLUTION_CHANGED, None)  # NOQA
@@ -33,14 +33,15 @@ class PointerDriver(_indev_base.IndevBase):
         import touch_calibrate
 
         self._py_disp_drv.set_default()
+        self._cal.reset()
         touch_calibrate.run()
 
     @property
     def is_calibrated(self):
-        left = self._config.left
-        top = self._config.top
-        right = self._config.right
-        bottom = self._config.bottom
+        left = self._cal.left
+        top = self._cal.top
+        right = self._cal.right
+        bottom = self._cal.bottom
 
         return None not in (left, top, right, bottom)
 
@@ -70,12 +71,12 @@ class PointerDriver(_indev_base.IndevBase):
         state, x, y = coords
 
         if None not in (x, y):
-            config = self._config
+            cal = self._cal
             rotation = self._rotation
-            left = config.left
-            right = config.right
-            top = config.top
-            bottom = config.bottom
+            left = cal.left
+            right = cal.right
+            top = cal.top
+            bottom = cal.bottom
 
             if left is None:
                 left = 0
