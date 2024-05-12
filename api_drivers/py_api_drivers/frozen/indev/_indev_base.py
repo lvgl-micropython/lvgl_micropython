@@ -49,6 +49,9 @@ class IndevBase:
 
         self._indevs.append(self)
 
+    def _set_mode_event(self):
+        self._indev_drv.set_mode(lv.INDEV_MODE.EVENT)
+
     def get_width(self):
         return self._width
 
