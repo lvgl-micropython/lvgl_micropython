@@ -28,7 +28,6 @@ _NGC = const(0xE1)
 _DISPON = const(0x29)
 _NORON = const(0x13)
 
-
 STATE_HIGH = display_driver_framework.STATE_HIGH
 STATE_LOW = display_driver_framework.STATE_LOW
 STATE_PWM = display_driver_framework.STATE_PWM
@@ -65,9 +64,9 @@ class ST7789(display_driver_framework.DisplayDriver):
         param_buf[1] = 0x82
         self.set_params(0xB6, param_mv[:2])
 
-        param_buf[0] = 0x00
-        param_buf[1] = 0xE0
-        self.set_params(_IFMODE, param_mv[:2])
+        # param_buf[0] = 0x00
+        # param_buf[1] = 0xE0
+        # self.set_params(_IFMODE, param_mv[:2])
 
         color_size = lv.color_format_get_size(self._color_space)
         if color_size == 2:  # NOQA
@@ -85,8 +84,8 @@ class ST7789(display_driver_framework.DisplayDriver):
 
         time.sleep_ms(10)  # NOQA
 
-        param_buf[0] = 0x0c
-        param_buf[1] = 0x0c
+        param_buf[0] = 0x0C
+        param_buf[1] = 0x0C
         param_buf[2] = 0x00
         param_buf[3] = 0x33
         param_buf[4] = 0x33
@@ -111,43 +110,43 @@ class ST7789(display_driver_framework.DisplayDriver):
         param_buf[0] = 0x20
         self.set_params(_VDVSET, param_mv[:1])
 
-        param_buf[0] = 0x0f
+        param_buf[0] = 0x0F
         self.set_params(_FRCTR2, param_mv[:1])
 
-        param_buf[0] = 0xa4
-        param_buf[1] = 0xa1
+        param_buf[0] = 0xA4
+        param_buf[1] = 0xA1
         self.set_params(_PWCTRL1, param_mv[:2])
 
-        param_buf[0] = 0xd0
+        param_buf[0] = 0xD0
         param_buf[1] = 0x00
         param_buf[2] = 0x02
         param_buf[3] = 0x07
-        param_buf[4] = 0x0a
+        param_buf[4] = 0x0A
         param_buf[5] = 0x28
         param_buf[6] = 0x32
         param_buf[7] = 0x44
         param_buf[8] = 0x42
         param_buf[9] = 0x06
-        param_buf[10] = 0x0e
+        param_buf[10] = 0x0E
         param_buf[11] = 0x12
         param_buf[12] = 0x14
         param_buf[13] = 0x17
         self.set_params(_PGC, param_mv[:14])
 
-        param_buf[0] = 0xd0
+        param_buf[0] = 0xD0
         param_buf[1] = 0x00
         param_buf[2] = 0x02
         param_buf[3] = 0x07
-        param_buf[4] = 0x0a
+        param_buf[4] = 0x0A
         param_buf[5] = 0x28
         param_buf[6] = 0x31
         param_buf[7] = 0x54
         param_buf[8] = 0x47
-        param_buf[9] = 0x0e
-        param_buf[10] = 0x1c
+        param_buf[9] = 0x0E
+        param_buf[10] = 0x1C
         param_buf[11] = 0x17
-        param_buf[12] = 0x1b
-        param_buf[13] = 0x1e
+        param_buf[12] = 0x1B
+        param_buf[13] = 0x1E
         self.set_params(_NGC, param_mv[:14])
 
         self.set_params(_INVON)
@@ -166,4 +165,8 @@ class ST7789(display_driver_framework.DisplayDriver):
 
         self.set_params(_DISPON)
         time.sleep_ms(120)  # NOQA
+
+        self.set_params(_SLPOUT)
+        time.sleep_ms(120)  # NOQA
+
         display_driver_framework.DisplayDriver.init(self)
