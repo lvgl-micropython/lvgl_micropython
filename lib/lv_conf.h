@@ -148,6 +148,8 @@
     #define LV_OS_CUSTOM_INCLUDE <stdint.h>
 #endif
 
+#define traceISR_EXIT_TO_SCHEDULER()
+
 /*=======================
  * FEATURE CONFIGURATION
  *=======================*/
