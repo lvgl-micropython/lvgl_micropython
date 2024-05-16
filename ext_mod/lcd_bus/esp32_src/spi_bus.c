@@ -153,7 +153,8 @@ STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
 
     self->callback = mp_const_none;
 
-    self->bus_handle = (spi_host_device_t)host;
+    self->host = host;
+    self->bus_handle = (esp_lcd_spi_bus_handle_t)((uint32_t)host);
 
     self->bus_config.sclk_io_num = clk;
     self->bus_config.mosi_io_num = mosi;
@@ -229,35 +230,27 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
     }
 
     size_t max_trans_size;
-    uint8_t double_buffer;
 
     if ((self->buffer_flags ^ MALLOC_CAP_DMA) && (self->buf2 != NULL)) {
         max_trans_size = SPI_LL_DMA_MAX_BIT_LEN / 8;
-        double_buffer = 1;
     } else {
         max_trans_size = SPI_LL_CPU_MAX_BIT_LEN / 8;
-        double_buffer = 0;
     }
 
     if (buffer_size <= max_trans_size) {
         self->bus_config.max_transfer_sz = buffer_size;
-        self->panel_io_config.trans_queue_depth = 1;
-    } else if (double_buffer) {
-        self->bus_config.max_transfer_sz = max_trans_size;
-        self->panel_io_config.trans_queue_depth = buffer_size / max_trans_size;
-        if ((float)self->panel_io_config.trans_queue_depth != ((float)buffer_size / (float)max_trans_size)) {
-            self->panel_io_config.trans_queue_depth++;
-        }
     } else {
-        self->panel_io_config.trans_queue_depth = 10;
+        self->bus_config.max_transfer_sz = max_trans_size;
     }
 
-    mp_lcd_err_t ret = spi_bus_initialize(self->bus_handle, &self->bus_config, SPI_DMA_CH_AUTO);
+    self->panel_io_config.trans_queue_depth = 10;
+
+    mp_lcd_err_t ret = spi_bus_initialize(self->host, &self->bus_config, SPI_DMA_CH_AUTO);
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(spi_bus_initialize)"), ret);
     }
 
-    ret = esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io);
+    ret = esp_lcd_new_panel_io_spi(self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io);
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_spi)"), ret);
     }

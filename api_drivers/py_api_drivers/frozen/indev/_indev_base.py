@@ -36,9 +36,8 @@ class IndevBase:
                 'Display driver needs to initilized before indev driver'
             )
 
-        self._width = self._orig_width = self._disp_drv.get_horizontal_resolution()
-        self._height = self._orig_height = self._disp_drv.get_vertical_resolution()
-        self._rotation = self._disp_drv.get_rotation()
+        self._width = self._disp_drv.get_horizontal_resolution()
+        self._height = self._disp_drv.get_vertical_resolution()
         self._current_state = self.RELEASED
 
         indev_drv = lv.indev_create()

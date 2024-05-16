@@ -45,34 +45,6 @@ STATE_PWM = -1
 class DisplayDriver:
     _INVON = 0x21
     _INVOFF = 0x20
-
-    # Default values of "power" and "backlight" are reversed logic! 0 means ON.
-    # You can change this by setting backlight_on and power_on arguments.
-    #
-    # For the ESP32 the allocation of the frame buffers can be done one of 2
-    # ways depending on what is wanted in terms of performance VS memory use
-    # If a single frame buffer is used then using a DMA transfer is pointless
-    # to do. The frame buffer in this casse can be allocated as simple as
-    #
-    # buf = bytearray(buffer_size)
-    #
-    # If the user wants to be able to specify if the frame buffer is to be
-    # created in internal memory (SRAM) or in external memory (PSRAM/SPIRAM)
-    # this can be done using the heap_caps module.
-    #
-    # internal memory:
-    # buf = heap_caps.malloc(buffer_size, heap_caps.CAP_INTERNAL)
-    #
-    # external memory:
-    # buf = heap_caps.malloc(buffer_size, heap_caps.CAP_SPIRAM)
-    #
-    # If wanting to use DMA memory then use the bitwise OR "|" operator to add
-    # the DMA flag to the last parameter of the malloc function
-    #
-    # buf = heap_caps.malloc(
-    #     buffer_size, heap_caps.CAP_INTERNAL | heap_caps.CAP_DMA
-    # )
-
     _displays = []
 
     @staticmethod
@@ -223,10 +195,7 @@ class DisplayDriver:
                         f'Unable to allocate memory for frame buffer ({buf_size})'
                     )
 
-            if frame_buffer2 is None and isinstance(data_bus, lcd_bus.SPIBus):
-                buffer_size = data_bus.SPI_MAXIMUM_BUFFER_SIZE
-
-            elif isinstance(data_bus, lcd_bus.RGBBus):
+            if isinstance(data_bus, lcd_bus.RGBBus):
                 buffer_size = int(
                     display_width *
                     display_height *
@@ -287,8 +256,9 @@ class DisplayDriver:
 
             self.set_default()
 
+            self._disp_drv.add_event_cb(self._on_size_change, lv.EVENT.RESOLUTION_CHANGED, None)  # NOQA
+
         self._displays.append(self)
-        self._disp_drv.add_event_cb(self._on_size_change, lv.EVENT.RESOLUTION_CHANGED, None)  # NOQA
 
     def _on_size_change(self, _):
         rotation = self._disp_drv.get_rotation()

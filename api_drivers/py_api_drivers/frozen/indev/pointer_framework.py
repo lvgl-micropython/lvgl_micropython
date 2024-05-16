@@ -22,6 +22,14 @@ class PointerDriver(_indev_base.IndevBase):
         self._cal = touch_cal
 
         self._set_type(lv.INDEV_TYPE.POINTER)  # NOQA
+
+        self._orig_width = self._disp_drv.get_horizontal_resolution()
+        self._orig_height = self._disp_drv.get_vertical_resolution()
+        self._rotation = self._disp_drv.get_rotation()
+
+        if self._rotation in (lv.DISPLAY_ROTATION._90, lv.DISPLAY_ROTATION._270):  # NOQA
+            self._orig_height, self._orig_width = self._orig_width, self._orig_height  # NOQA
+
         self._disp_drv.add_event_cb(self._on_size_change, lv.EVENT.RESOLUTION_CHANGED, None)  # NOQA
 
     def _on_size_change(self, e):
@@ -57,16 +65,13 @@ class PointerDriver(_indev_base.IndevBase):
         if coords is None:  # ignore no touch & multi touch
             if self._current_state != self.RELEASED:
                 self._current_state = self.RELEASED
-                res = True
-            else:
-                res = False
 
             data.point.x = self._last_x
             data.point.y = self._last_y
             data.state = self._current_state
             # print("raw(x={0}, y={1}) point(x={2} y={3})".format(-1, -1, data.point.x, data.point.y))  # NOQA
             data.continue_reading = False
-            return res
+            return
 
         state, x, y = coords
 
@@ -91,42 +96,23 @@ class PointerDriver(_indev_base.IndevBase):
                 xpos = _remap(x, left, right, 0, self._orig_width)
                 ypos = _remap(y, top, bottom, 0, self._orig_height)
             elif rotation == lv.DISPLAY_ROTATION._90:  # NOQA
-                xpos = _remap(y, top, bottom, 0, self._orig_width)
-                ypos = _remap(x, right, left, 0, self._orig_height)
-            elif rotation == lv.DISPLAY_ROTATION._270:  # NOQA
+                xpos = _remap(y, bottom, top, 0, self._orig_height)
+                ypos = _remap(x, left, right, 0,  self._orig_width)
+            elif rotation == lv.DISPLAY_ROTATION._180:  # NOQA
                 xpos = _remap(x, right, left, 0, self._orig_width)
                 ypos = _remap(y, bottom, top, 0, self._orig_height)
-            elif rotation == lv.DISPLAY_ROTATION._180:  # NOQA
-                xpos = _remap(y, bottom, top, 0, self._orig_width)
-                ypos = _remap(x, left, right, 0, self._orig_height)
+            elif rotation == lv.DISPLAY_ROTATION._270:  # NOQA
+                xpos = _remap(y, top, bottom, 0, self._orig_height)
+                ypos = _remap(x, right, left, 0, self._orig_width)
             else:
                 raise RuntimeError
 
             self._last_x = xpos
             self._last_y = ypos
 
-        if state is not None:
-            if self._current_state == state == self.RELEASED:
-                res = False
-                data.continue_reading = False
-            else:
-                res = True
-                data.continue_reading = True
-
-            self._current_state = state
-
-        elif self._current_state == self.RELEASED:
-            res = False
-            data.continue_reading = False
-        else:
-            data.continue_reading = True
-            res = True
-
         data.state = self._current_state
         data.point.x = self._last_x
         data.point.y = self._last_y
-
-        return res
 
     def get_vect(self, point):
         self._indev_drv.get_vect(point)

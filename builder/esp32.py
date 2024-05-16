@@ -367,7 +367,7 @@ def setup_idf_environ():
             env['IDF_PATH'] = idf_path
 
             cmds = [
-                [f'export "IDF_PATH={os.path.abspath(env["IDF_PATH"])}"'],
+                [f'export "IDF_PATH={idf_path}"'],
                 ['cd', idf_path],
                 ['. ./export.sh'],
                 ['printenv']
@@ -660,6 +660,7 @@ def compile():  # NOQA
 
     if not sys.platform.startswith('win'):
         cmds = [
+            [f'export "IDF_PATH={os.path.abspath(env["IDF_PATH"])}"'],
             ['cd', 'lib/esp-idf'],
             ['. ./export.sh'],
             ['cd ../..'],
