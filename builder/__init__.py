@@ -312,9 +312,6 @@ def process_output(myproc, out_to_screen, spinner, cmpl, out_queue):
             line += out
             if out == b'\n':
                 line = _convert_line(line.strip())
-                if not line:
-                    continue
-
                 out_queue.put(line)
 
                 if not spinner and out_to_screen:

@@ -155,6 +155,7 @@ STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
 
     self->host = host;
     self->bus_handle = (esp_lcd_spi_bus_handle_t)((uint32_t)host);
+    self->panel_io_handle.panel_io = NULL;
 
     self->bus_config.sclk_io_num = clk;
     self->bus_config.mosi_io_num = mosi;
