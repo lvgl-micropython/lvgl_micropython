@@ -199,7 +199,7 @@ mp_lcd_err_t spi_del(mp_obj_t obj)
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_panel_io_del)"), ret);
     }
 
-    ret = spi_bus_free(self->bus_handle);
+    ret = spi_bus_free(self->host);
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(spi_bus_free)"), ret);
     }
