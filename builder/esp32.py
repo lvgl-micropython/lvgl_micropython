@@ -255,7 +255,7 @@ mpy_cross_cmd = ['make', '-C', 'lib/micropython/mpy-cross']
 esp_cmd = [
     'make',
     '',
-    '', # f'-j {os.cpu_count()}',
+    f'-j {os.cpu_count()}',
     '-C',
     f'lib/micropython/ports/esp32'
 ]
