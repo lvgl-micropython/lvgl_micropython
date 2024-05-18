@@ -141,6 +141,4 @@ class XPT2046(pointer_framework.PointerDriver):
         x = int((x / _MAX_RAW_COORD) * self._orig_width)
         y = int((y / _MAX_RAW_COORD) * self._orig_height)
 
-        print(x, y)
-
         return self.PRESSED, x, y

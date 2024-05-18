@@ -110,6 +110,8 @@ class PointerDriver(_indev_base.IndevBase):
             self._last_x = xpos
             self._last_y = ypos
 
+            data.continue_reading = True
+
         data.state = self._current_state
         data.point.x = self._last_x
         data.point.y = self._last_y
