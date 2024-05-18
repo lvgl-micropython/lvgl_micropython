@@ -47,29 +47,14 @@ list(APPEND SOURCES ${LVGL_ADDONS_SRC})
 
 add_library(lvgl_interface INTERFACE)
 
+target_sources(lvgl_interface INTERFACE ${SOURCES})
+target_compile_options(lvgl_interface INTERFACE ${LV_CFLAGS})
+
 set(LVGL_MPY_INCLUDES
     ${CMAKE_CURRENT_LIST_DIR}/lib/micropython
     ${CMAKE_CURRENT_LIST_DIR}
     ${CMAKE_CURRENT_LIST_DIR}/include
 )
-
-if(ESP_PLATFORM)
-    # gets esp_lcd include paths
-    idf_component_get_property(freertos_includes freertos INCLUDE_DIRS)
-    idf_component_get_property(freertos_dir freertos COMPONENT_DIR)
-
-    # sets the include paths into INCLUDES variable
-    if(freertos_includes)
-        list(TRANSFORM freertos_includes PREPEND ${freertos_dir}/)
-        list(APPEND LVGL_MPY_INCLUDES ${esp_lcd_includes})
-    endif()
-
-endif(ESP_PLATFORM)
-
-
-target_sources(lvgl_interface INTERFACE ${SOURCES})
-target_compile_options(lvgl_interface INTERFACE ${LV_CFLAGS})
-target_include_directories(lvgl_interface INTERFACE ${LVGL_MPY_INCLUDES})
 
 add_library(usermod_lvgl INTERFACE)
 target_sources(usermod_lvgl INTERFACE ${CMAKE_BINARY_DIR}/lv_mp.c)
