@@ -216,8 +216,8 @@ class DisplayDriver:
 
             if isinstance(data_bus, lcd_bus.RGBBus):
                 self._disp_drv.set_buffers(
-                    frame_buffer1,
                     frame_buffer2,
+                    frame_buffer1,
                     len(frame_buffer1),
                     lv.DISPLAY_RENDER_MODE.DIRECT
                 )
