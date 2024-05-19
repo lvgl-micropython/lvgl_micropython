@@ -18,19 +18,30 @@ unix_cmd = [
 compile_cmd = []
 submodules_cmd = []
 heap_size = 4194304
+sdl_flags = ''
 
 
 def parse_args(extra_args, lv_cflags, board):
     global heap_size
-    unix_argParser = ArgumentParser(prefix_chars='-')
+    global sdl_flags
+    unix_argParser = ArgumentParser(prefix_chars='-S')
 
     unix_argParser.add_argument(
         '--heap-size',
         dest='heap_size',
-        help="heap size to use in bytes. Default is 4mb (4,194,304 bytes). "
-             "Must be more than 100k (102,104 bytes)",
+        help=(
+            "heap size to use in bytes. Default is 4mb (4,194,304 bytes). "
+            "Must be more than 100k (102,104 bytes)"
+        ),
         default=4194304,
         type=int,
+        action='store'
+    )
+    unix_argParser.add_argument(
+        'SDL_FLAGS',
+        dest='sdl_flags',
+        help='flags to pass to the SDL2 compiler',
+        default='',
         action='store'
     )
     unix_args, extra_args = unix_argParser.parse_known_args(extra_args)
@@ -39,6 +50,7 @@ def parse_args(extra_args, lv_cflags, board):
         raise RuntimeError('heap size is too low, must be >= 102,104 bytes')
 
     heap_size = unix_args.heap_size
+    sdl_flags = unix_args.sdl_flags
 
     return extra_args, lv_cflags, board
 
@@ -129,7 +141,7 @@ def build_sdl():
         [f'cd {dst}'],
         [
             f'cmake -DSDL_STATIC=OFF -DSDL_SHARED=ON '
-            f'-DCMAKE_BUILD_TYPE=Release {SCRIPT_PATH}/lib/SDL'
+            f'-DCMAKE_BUILD_TYPE=Release {sdl_flags} {SCRIPT_PATH}/lib/SDL'
         ],
         [f'cmake --build . --config Release --parallel {os.cpu_count()}']
     ]
