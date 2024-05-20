@@ -13,9 +13,10 @@
 #define NVS_TYPE_FLOAT  (0xFE)
 
 
-STATIC mp_nvs_obj_t *_nvs_new(nvs_handle_t ns) {
+STATIC mp_nvs_obj_t *_nvs_new(nvs_handle_t ns, const char *ns_name) {
     mp_nvs_obj_t *self = mp_obj_malloc(mp_nvs_obj_t, &mp_nvs_type);
     self->ns = ns;
+    self->ns_name = ns_name;
     return self;
 }
 
@@ -31,7 +32,7 @@ STATIC mp_obj_t mp_nvs_make_new(const mp_obj_type_t *type, size_t n_args, size_t
     const char *ns_name = mp_obj_str_get_str(all_args[0]);
     nvs_handle_t ns;
     check_esp_err(nvs_open(ns_name, NVS_READWRITE, &ns));
-    return MP_OBJ_FROM_PTR(_nvs_new(ns));
+    return MP_OBJ_FROM_PTR(_nvs_new(ns, ns_name));
 }
 
 
@@ -103,7 +104,8 @@ STATIC mp_obj_t mp_nvs_set(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw
             } u;
 
             u.f = float_value;
-            err = nvs_set_u32(self->ns, key, u.i);
+            uint64_t temp_val = 0x8000000000000000 | (uint64_t)u.i;
+            err = nvs_set_u64(self->ns, key, temp_val);
             break;
 
         default:
@@ -198,7 +200,10 @@ STATIC mp_obj_t mp_nvs_get(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw
                 float f;
                 uint32_t i;
             } u;
-            err = nvs_get_u32(self->ns, key, &u.i);
+
+            uint64_t tmp_val;
+            err = nvs_get_u64(self->ns, key, &tmp_val);
+            u.i = (uint32_t)(tmp_val & 0xFFFFFFFF);
             value = mp_obj_new_float(u.f);
             break;
         default:
@@ -234,12 +239,84 @@ STATIC mp_obj_t mp_nvs_commit(mp_obj_t self_in) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_nvs_commit_obj, mp_nvs_commit);
 
 
+STATIC mp_obj_t mp_nvs_close(mp_obj_t self_in) {
+    mp_nvs_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    nvs_close(self->ns);
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_nvs_close_obj, mp_nvs_close);
+
+
+
+STATIC mp_obj_t mp_nvs_get_keys(mp_obj_t self_in) {
+    mp_nvs_obj_t *self = MP_OBJ_TO_PTR(self_in);
+
+    size_t used_entries = 0;
+    nvs_get_used_entry_count(self->ns, &used_entries);
+
+    nvs_iterator_t it = NULL;
+    esp_err_t err = nvs_entry_find(NVS_DEFAULT_PART_NAME, self->ns_name, NVS_TYPE_ANY, &it);
+
+    mp_obj_t dict = mp_obj_new_dict(used_entries);
+
+    while(err == ESP_OK) {
+        nvs_entry_info_t info;
+        nvs_entry_info(it, &info); // Can omit error check if parameters are guaranteed to be non-NULL
+
+        if (info.type == NVS_TYPE_I64) {
+            uint64_t tmp_val;
+            nvs_get_u64(self->ns, info.key, &tmp_val);
+            if ((tmp_val >> 63) & 0x1) {
+                info.type = NVS_TYPE_FLOAT;
+                for (uint8_t i=32;i<63;i++) {
+                    if ((tmp_val >> i) & 0x1) {
+                        info.type = NVS_TYPE_I64;
+                        break;
+                    }
+                }
+            }
+        }
+
+        mp_obj_dict_store(
+            dict,
+            mp_obj_new_str(info.key, strlen(info.key)),
+            mp_obj_new_int_from_uint(info.type)
+        );
+
+        err = nvs_entry_next(&it);
+    }
+
+    nvs_release_iterator(it);
+
+    if (err != ESP_ERR_NVS_NOT_FOUND) {
+        check_esp_err(err);
+    }
+
+    return dict;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_nvs_get_keys_obj, mp_nvs_get_keys);
+
+
+STATIC mp_obj_t mp_nvs_reset(mp_obj_t self_in) {
+    mp_nvs_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    check_esp_err(nvs_erase_all(self->ns));
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_nvs_reset_obj, mp_nvs_reset);
+
 
 STATIC const mp_rom_map_elem_t mp_nvs_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_get),    MP_ROM_PTR(&mp_nvs_get_obj)    },
-    { MP_ROM_QSTR(MP_QSTR_set),    MP_ROM_PTR(&mp_nvs_set_obj)    },
-    { MP_ROM_QSTR(MP_QSTR_erase),  MP_ROM_PTR(&mp_nvs_erase_obj)  },
-    { MP_ROM_QSTR(MP_QSTR_commit), MP_ROM_PTR(&mp_nvs_commit_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get),      MP_ROM_PTR(&mp_nvs_get_obj)      },
+    { MP_ROM_QSTR(MP_QSTR_set),      MP_ROM_PTR(&mp_nvs_set_obj)      },
+    { MP_ROM_QSTR(MP_QSTR_erase),    MP_ROM_PTR(&mp_nvs_erase_obj)    },
+    { MP_ROM_QSTR(MP_QSTR_commit),   MP_ROM_PTR(&mp_nvs_commit_obj)   },
+    { MP_ROM_QSTR(MP_QSTR_close),    MP_ROM_PTR(&mp_nvs_close_obj)    },
+    { MP_ROM_QSTR(MP_QSTR___del__),  MP_ROM_PTR(&mp_nvs_close_obj)    },
+    { MP_ROM_QSTR(MP_QSTR_get_keys), MP_ROM_PTR(&mp_nvs_get_keys_obj) },
+    { MP_ROM_QSTR(MP_QSTR_reset),    MP_ROM_PTR(&mp_nvs_reset_obj)    },
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_nvs_locals_dict, mp_nvs_locals_dict_table);

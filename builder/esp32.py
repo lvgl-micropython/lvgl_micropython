@@ -30,92 +30,319 @@ def get_partition_file_name(otp):
 PARTITION_HEADER = '''\
 # Notes: the offset of the partition table itself is set in
 # $IDF_PATH/components/partition_table/Kconfig.projbuild.
-# Name,   Type, SubType, Offset,  Size, Flags
+# Name,   Type, SubType, Offset,  Size, Flags'''
+
+
+OTA_PARTITION_TEMPLATE = f'''\
+{PARTITION_HEADER}
+nvs,      data, nvs,     0x{{:X}},   0x{{:X}},
+otadata,  data, ota,     0x{{:X}},   0x{{:X}},
+phy_init, data, phy,     0x{{:X}},   0x{{:X}},
+ota_0,    app,  ota_0,   0x{{:X}},   0x{{:X}},
+ota_1,    app,  ota_1,   0x{{:X}},   0x{{:X}},
+vfs,      data, fat,     0x{{:X}},   0x{{:X}},
+'''
+
+
+PARTITION_TEMPLATE = f'''\
+{PARTITION_HEADER}
+nvs,      data, nvs,     0x{{:X}},   0x{{:X}},
+phy_init, data, phy,     0x{{:X}},   0x{{:X}},
+factory,  app,  factory, 0x{{:X}},   0x{{:X}},
+vfs,      data, fat,     0x{{:X}},   0x{{:X}},
+'''
+
+
+ARDUINO_NANO_ESP32_PARTITION_TEMPLATE = f'''\
+{PARTITION_HEADER}
+nvs,      data,      nvs, 0x{{:X}}, 0x{{:X}},
+otadata,  data,      ota, 0x{{:X}}, 0x{{:X}},
+app0,      app,    ota_0, 0x{{:X}}, 0x{{:X}},
+app1,      app,    ota_1, 0x{{:X}}, 0x{{:X}},
+ffat,     data,      fat, 0x{{:X}}, 0x{{:X}},
+factory,   app,  factory, 0x{{:X}}, 0x{{:X}},
+coredump, data, coredump, 0x{{:X}}, 0x{{:X}},
 '''
 
 
 class Partition:
+    total_size = 0
+
+    @staticmethod
+    def calc_part_size(value):
+        factor = (value / 4096.0)
+        if int(factor) != factor:
+            factor += 1
+
+        return int(int(factor) * 4096)
+
+    @property
+    def nvs(self):
+        return self._nvs
+
+    @nvs.setter
+    def nvs(self, value):
+        self._nvs = self.calc_part_size(value)
+
+    @property
+    def otadata(self):
+        return self._otadata
+
+    @otadata.setter
+    def otadata(self, value):
+        self._otadata = self.calc_part_size(value)
+
+    @property
+    def phy_init(self):
+        return self._phy_init
+
+    @phy_init.setter
+    def phy_init(self, value):
+        self._phy_init = self.calc_part_size(value)
+
+    @property
+    def factory(self):
+        return self._factory
+
+    @factory.setter
+    def factory(self, value):
+        self._factory = self.calc_part_size(value)
+
+    @property
+    def ota(self):
+        return self._ota
+
+    @ota.setter
+    def ota(self, value):
+        self._ota = self.calc_part_size(value)
+
+    @property
+    def vfs(self):
+        final_offset = self.calculate_offsets()[-1]
+        res = self.total_size - final_offset
+
+        if res < 0:
+            self.factory += res - 4096
+            final_offset = self.calculate_offsets()[-1]
+            res = self.total_size - final_offset
+
+        return res
+
+    def calculate_offsets(self):
+        offsets = [0x9000, 0x9000 + self.nvs]
+        if self.ota:
+            offsets.append(offsets[-1] + self.otadata)
+        offsets.append(offsets[-1] + self.phy_init)
+        if self.ota:
+            offsets.append(offsets[-1] + self.ota)
+            offsets.append(offsets[-1] + self.ota)
+        else:
+            offsets.append(offsets[-1] + self.factory)
+
+        return offsets
+
+    def build(self):
+        if self.ota:
+            templ = OTA_PARTITION_TEMPLATE
+            parts = [
+                self.nvs,
+                self.otadata,
+                self.phy_init,
+                self.ota,
+                self.ota,
+                self.vfs
+            ]
+        else:
+            templ = PARTITION_TEMPLATE
+            parts = [
+                self.nvs,
+                self.phy_init,
+                self.factory,
+                self.vfs
+            ]
+
+        part_data = zip(self.calculate_offsets(), parts)
+        part_data = [item for items in part_data for item in items]
+
+        with open(self.file_path, 'w') as f:
+            f.write(templ.format(*part_data))
 
     def __init__(self, file_path):
+        self._nvs = 0x6000
+        self._ota = 0
+        self._otadata = 0x2000
+        self._phy_init = 0x1000
+        self._factory = 0x180000
+
         self.file_path = file_path
-        self._saved_data = None
-        self.csv_data = self.read_csv()
-        last_partition = self.csv_data[-1]
 
-        self.total_space = last_partition[-2] + last_partition[-3]
 
-    def revert_to_original(self):
-        with open(self.file_path, 'w') as f:
-            f.write(self._saved_data)
+class Partition2MB(Partition):
+    total_size = 0x200000
 
-    def get_app_size(self) -> int:
-        for part in self.csv_data:
-            if part[1] in ('app', 'factory'):
-                return part[4]
 
-    def set_app_size(self, size):
-        next_offset = 0
-        app_size = 0
+class Partition4MB(Partition):
+    total_size = 0x400000
 
-        for i, part in enumerate(self.csv_data):
-            if next_offset == 0:
-                next_offset = part[3]
 
-            if part[3] != next_offset:
-                part[3] = next_offset  # NOQA
+class Partition8MB(Partition):
+    total_size = 0x800000
 
-            if part[1] in ('app', 'factory'):
-                factor = ((part[4] + size) / 4096.0) + 1
-                part[4] = int(int(factor) * 4096)  # NOQA
-                app_size += part[4]
-            elif app_size != 0:
-                part[4] = self.total_space - next_offset  # NOQA
 
-            next_offset += part[4]
+class Partition16MB(Partition):
+    total_size = 0x1000000
 
-        if next_offset > self.total_space:
-            raise RuntimeError(
-                f'Board does not have enough space, overflow of '
-                f'{next_offset - self.total_space} bytes ({self.file_path})\n'
-            )
 
-    def save(self):
-        otp = []
+class Partition32MB(Partition):
+    total_size = 0x2000000
 
-        def convert_to_hex(itm):
-            if isinstance(itm, int):
-                itm = hex(itm)
-            return itm
 
-        for line in self.csv_data:
-            otp.append(','.join(convert_to_hex(item) for item in line))
+PARTITION_SIZE_MAP = {
+    '32': 0x2000000,
+    '16': 0x1000000,
+    '8': 0x800000,
+    '4': 0x400000,
+    '2': 0x200000
+}
 
-        with open(self.file_path, 'w') as f:
-            f.write(PARTITION_HEADER)
-            f.write('\n'.join(otp))
 
-    def read_csv(self):
-        with open(self.file_path, 'r') as f:
-            csv_data = f.read()
+class ARDUINO_NANO_ESP32(Partition16MB):
 
-        self._saved_data = csv_data
+    def calculate_offsets(self):
+        offsets = [0x9000, 0x9000 + self.nvs]  # NOQA
+        offsets.append(offsets[-1] + self.otadata)
+        offsets.append(offsets[-1] + self.ota)
+        offsets.append(offsets[-1] + self.ota)
+        offsets.append(offsets[-1] + self.ffat)
+        offsets.append(offsets[-1] + self.factory)
+        offsets.append(offsets[-1] + self.coredump)
 
-        csv_data = [
-            line.strip()
-            for line in csv_data.split('\n')
-            if line.strip() and not line.startswith('#')
+        return offsets
+
+    def build(self):
+        templ = ARDUINO_NANO_ESP32_PARTITION_TEMPLATE
+        parts = [
+            self.nvs,
+            self.otadata,
+            self.ota,
+            self.ota,
+            self.ffat,
+            self.factory,
+            self.coredump
         ]
 
-        def convert_to_int(elem):
-            if elem.startswith('0'):
-                elem = int(elem, 16)
-            return elem
+        part_data = zip(self.calculate_offsets(), parts)
+        part_data = [item for items in part_data for item in items]
 
-        for j, line in enumerate(csv_data):
-            line = [convert_to_int(item.strip()) for item in line.split(',')]
-            csv_data[j] = line
+        with open(self.file_path, 'w') as f:
+            f.write(templ.format(*part_data))
 
-        return csv_data
+    @property
+    def ffat(self):
+        return self._ffat
+
+    @ffat.setter
+    def ffat(self, value):
+        self._ffat = self.calc_part_size(value)
+
+    @property
+    def coredump(self):
+        return self._coredump
+
+    @coredump.setter
+    def coredump(self, value):
+        self._coredump = self.calc_part_size(value)
+
+    def __init__(self, file_path):
+        Partition16MB.__init__(self, file_path)
+        self._ffat = 0x960000
+        self._coredump = 0x10000
+        self._factory = 0x80000
+        self._ota = 0x300000
+        self._nvs = 0x5000
+
+
+class ESP32_GENERIC(Partition2MB):
+    pass
+
+
+class ESP32_GENERIC_C3(Partition4MB):
+    pass
+
+
+class ESP32_GENERIC_S2(Partition4MB):
+    pass
+
+
+class ESP32_GENERIC_S3(Partition8MB):
+    pass
+
+
+class LILYGO_TTGO_LORA32(Partition4MB):
+    pass
+
+
+class LOLIN_C3_MINI(Partition4MB):
+    pass
+
+
+class LOLIN_S2_MINI(Partition4MB):
+    pass
+
+
+class LOLIN_S2_PICO(Partition4MB):
+    pass
+
+
+class M5STACK_ATOM(Partition4MB):
+    pass
+
+
+class OLIMEX_ESP32_POE(Partition4MB):
+    pass
+
+
+class SIL_WESP32(Partition16MB):
+
+    def __init__(self, file_path):
+        Partition16MB.__init__(self, file_path)
+        self.ota = self.factory
+
+
+class UM_FEATHERS2(Partition16MB):
+    pass
+
+
+class UM_FEATHERS2NEO(Partition4MB):
+    pass
+
+
+class UM_FEATHERS3(Partition16MB):
+    pass
+
+
+class UM_NANOS3(Partition8MB):
+    pass
+
+
+class UM_PROS3(Partition16MB):
+    pass
+
+
+class UM_TINYPICO(Partition4MB):
+    pass
+
+
+class UM_TINYS2(Partition4MB):
+    pass
+
+
+class UM_TINYS3(Partition8MB):
+    pass
+
+
+class UM_TINYWATCHS3(Partition8MB):
+    pass
 
 
 def get_espidf():
@@ -144,6 +371,7 @@ skip_partition_resize = False
 partition_size = None
 flash_size = '0'
 oct_flash = False
+partition: Partition = None
 
 
 def parse_args(extra_args, lv_cflags, brd):
@@ -153,6 +381,7 @@ def parse_args(extra_args, lv_cflags, brd):
     global partition_size
     global flash_size
     global oct_flash
+    global partition
 
     board = brd
 
@@ -174,55 +403,69 @@ def parse_args(extra_args, lv_cflags, brd):
             if arg.startswith('BOARD_VARIANT'):
                 raise RuntimeError(f'BOARD_VARIANT not supported by "{board}"')
 
-    if board_variant in ('SPIRAM', 'SPIRAM_OCT'):
-        if board == 'ESP32_GENERIC_S2':
-            esp_argParser = ArgumentParser(prefix_chars='-')
+    if board not in globals():
+        raise RuntimeError(f'Invalid board {board}')
 
-            esp_argParser.add_argument(
-                '--flash-size',
-                dest='flash_size',
-                help='flash size',
-                choices=('2', '4'),
-                default='4',
-            )
-            esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
-            flash_size = esp_args.flash_size
+    partition = globals()[board](os.path.abspath('build/partition.csv'))
 
-        elif board == 'ESP32_GENERIC':
-            esp_argParser = ArgumentParser(prefix_chars='-')
+    if board in (
+        'ESP32_GENERIC_S2',
+        'ESP32_GENERIC_S3',
+        'ESP32_GENERIC',
+        'ESP32_GENERIC_C3'
+    ):
 
-            esp_argParser.add_argument(
-                '--flash-size',
-                dest='flash_size',
-                help='flash size',
-                choices=('4', '8', '16'),
-                default='4',
-            )
-            esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
-            flash_size = esp_args.flash_size
-
+        if board == 'ESP32_GENERIC':
+            default = '2'
         elif board == 'ESP32_GENERIC_S3':
-            esp_argParser = ArgumentParser(prefix_chars='-')
+            default = '8'
+        else:
+            default = '4'
+        esp_argParser = ArgumentParser(prefix_chars='-')
 
-            esp_argParser.add_argument(
-                '--octal-flash',
-                help='octal spi flash',
-                dest='oct_flash',
-                action='store_true'
-            )
+        esp_argParser.add_argument(
+            '--flash-size',
+            dest='flash_size',
+            help='flash size',
+            choices=('2', '4', '8', '16', '32'),
+            default=default,
+        )
+        esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
+        flash_size = esp_args.flash_size
 
-            esp_argParser.add_argument(
-                '--flash-size',
-                dest='flash_size',
-                help='flash size',
-                choices=('4', '8', '16', '32'),
-                default='8',
-            )
-            esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
-            flash_size = esp_args.flash_size
-            oct_flash = esp_args.oct_flash
+        partition.total_size = PARTITION_SIZE_MAP[flash_size]
+
+    if board == 'ESP32_GENERIC_S3':
+        esp_argParser = ArgumentParser(prefix_chars='-')
+
+        esp_argParser.add_argument(
+            '--octal-flash',
+            help='octal spi flash',
+            dest='oct_flash',
+            action='store_true'
+        )
+
+        esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
+        oct_flash = esp_args.oct_flash
 
     esp_argParser = ArgumentParser(prefix_chars='-')
+
+    esp_argParser.add_argument(
+        '--nvs-size',
+        dest='nvs_size',
+        help='non volitale partition size',
+        default=None,
+        action='store',
+        type=int
+    )
+
+    esp_argParser.add_argument(
+        '--ota',
+        dest='ota',
+        help='add ota partitions',
+        default=False,
+        action='store_true'
+    )
 
     esp_argParser.add_argument(
         '--skip-partition-resize',
@@ -240,13 +483,103 @@ def parse_args(extra_args, lv_cflags, brd):
     )
 
     esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
+
     skip_partition_resize = esp_args.skip_partition_resize
     partition_size = esp_args.partition_size
+    if partition_size == -1:
+        app_size = None
+    else:
+        app_size = partition_size
+
+    nvs_size = esp_args.nvs_size
+    ota = esp_args.ota
+
+    if nvs_size is not None:
+        partition.nvs_size = nvs_size
+
+    if ota:
+        esp_argParser = ArgumentParser(prefix_chars='-')
+
+        esp_argParser.add_argument(
+            '--otadata-size',
+            dest='otadata',
+            help='otadata partition size',
+            default=None,
+            action='store',
+            type=int
+        )
+
+        esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
+        otadata = esp_args.otadata
+
+        if otadata is not None:
+            partition.otadata = otadata
+
+        if app_size is not None:
+            partition.ota = app_size
+
+        if not partition.ota:
+            partition.ota = partition.factory
+    elif board in ('ARDUINO_NANO_ESP32', 'SIL_WESP32'):
+        if app_size is not None:
+            partition.ota = app_size
+    elif app_size is not None:
+        partition.factory = app_size
+
+    if board == 'ARDUINO_NANO_ESP32':
+        esp_argParser = ArgumentParser(prefix_chars='-')
+
+        esp_argParser.add_argument(
+            '--ffat-size',
+            dest='ffat',
+            help='ffat partition size',
+            default=None,
+            action='store',
+            type=int
+        )
+
+        esp_argParser.add_argument(
+            '--factory-size',
+            dest='factory',
+            help='factory partition size',
+            default=None,
+            action='store',
+            type=int
+        )
+
+        esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
+        factory = esp_args.factory
+        if factory is not None:
+            partition.factory = factory
+
+        ffat = esp_args.ffat
+        if ffat is not None:
+            partition.ffat = ffat
+
+    else:
+        esp_argParser = ArgumentParser(prefix_chars='-')
+
+        esp_argParser.add_argument(
+            '--phyinit-size',
+            dest='phy_init',
+            help='phy_init partition size',
+            default=None,
+            action='store',
+            type=int
+        )
+
+        esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
+        phy_init = esp_args.phy_init
+        if phy_init is not None:
+            partition.phy_init = phy_init
 
     if lv_cflags:
         lv_cflags += ' -DLV_KCONFIG_IGNORE=1'
     else:
         lv_cflags = '-DLV_KCONFIG_IGNORE=1'
+
+    if not os.path.exists('build'):
+        os.mkdir('build')
 
     return extra_args, lv_cflags, board
 
@@ -303,9 +636,16 @@ def get_idf_version():
             return version
 
 
+SCRIPT_PATH = ''
+
+
 def build_manifest(
     target, script_dir, lvgl_api, displays, indevs, frozen_manifest
 ):
+    global SCRIPT_PATH
+
+    SCRIPT_PATH = script_dir
+
     update_mphalport(target)
 
     with open(f'lib/micropython/ports/esp32/boards/sdkconfig.base', 'r') as f:
@@ -490,12 +830,12 @@ def submodules():
         sys.exit(return_code)
 
 
-def compile():  # NOQA
-    env = setup_idf_environ()
-
-    if (
-        board in ('ESP32_GENERIC', 'ESP32_GENERIC_S2', 'ESP32_GENERIC_S3') and
-        board_variant in ('SPIRAM', 'SPIRAM_OCT')
+def build_port_config():
+    if board in (
+        'ESP32_GENERIC',
+        'ESP32_GENERIC_C2',
+        'ESP32_GENERIC_S2',
+        'ESP32_GENERIC_S3'
     ):
         base_config = [
             'CONFIG_ESPTOOLPY_FLASHMODE_QIO=y',
@@ -505,37 +845,15 @@ def compile():  # NOQA
         ]
 
         if flash_size == '2':
-            base_config.extend([
-                'CONFIG_ESPTOOLPY_FLASHSIZE_2MB=y',
-                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
-                '"partitions-2MiB.csv"'
-            ])
-
+            base_config.append('CONFIG_ESPTOOLPY_FLASHSIZE_2MB=y')
         elif flash_size == '4':
-            base_config.extend([
-                'CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y',
-                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
-                '"partitions-4MiB.csv"'
-            ])
+            base_config.append('CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y')
         elif flash_size == '8':
-            base_config.extend([
-                'CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y',
-                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
-                '"partitions-8MiB.csv"'
-            ])
-
+            base_config.append('CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y')
         elif flash_size == '16':
-            base_config.extend([
-                'CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y',
-                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
-                '"partitions-16MiB.csv"'
-            ])
+            base_config.append('CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y')
         elif flash_size == '32':
-            base_config.extend([
-                'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=y',
-                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
-                '"partitions-32MiB.csv"'
-            ])
+            base_config.append('CONFIG_ESPTOOLPY_FLASHSIZE_32MB=y')
         else:
             raise RuntimeError(f'unsupported flash size {flash_size}')
 
@@ -547,20 +865,20 @@ def compile():  # NOQA
                 base_config.append('CONFIG_ESPTOOLPY_OCT_FLASH=y')
 
         base_config = '\n'.join(base_config)
-        
+
         if board in ('ESP32_GENERIC', 'ESP32_GENERIC_S3'):
             mpconfigboard_cmake_path = (
                 'lib/micropython/ports/esp32/boards/'
                 f'{board}/mpconfigboard.cmake'
             )
-            
+
             with open(mpconfigboard_cmake_path, 'rb') as f:
                 data = f.read().decode('utf-8')
-            
+
             if f'boards/{board}/sdkconfig.board' not in data:
                 if board == 'ESP32_GENERIC':
                     data = data.replace(
-                        'boards/sdkconfig.spiram', 
+                        'boards/sdkconfig.spiram',
                         'boards/sdkconfig.spiram\n    '
                         'boards/ESP32_GENERIC/sdkconfig.board'
                     )
@@ -570,17 +888,17 @@ def compile():  # NOQA
                         'boards/sdkconfig.spiram_ex\n    '
                         'boards/ESP32_GENERIC_S2/sdkconfig.board'
                     )
-                
+
                 with open(mpconfigboard_cmake_path, 'wb') as f:
                     f.write(data.encode('utf-8'))
-                    
+
             sdkconfig_spiram_path = (
                 'lib/micropython/ports/esp32/boards/'
                 f'{board}/sdkconfig.board'
             )
             with open(sdkconfig_spiram_path, 'w') as f:
                 f.write(base_config)
-                        
+
         else:
             sdkconfig_board_path = (
                 'lib/micropython/ports/esp32/'
@@ -589,8 +907,37 @@ def compile():  # NOQA
             with open(sdkconfig_board_path, 'w') as f:
                 f.write(base_config + '\n')
 
-    if board in ('ESP32_GENERIC_S2', 'ESP32_GENERIC_S3'):
+    sdk_config_path = (
+        'lib/micropython/ports/esp32/'
+        f'boards/{board}/sdkconfig.board'
+    )
 
+    if not os.path.exists(sdk_config_path):
+        sdk_config_path = (
+            'lib/micropython/ports/esp32/'
+            f'boards/sdkconfig.base'
+        )
+
+    with open(sdk_config_path, 'r') as f:
+        data = f.read().split('\n')
+
+    if data[-1].startswith('CONFIG_PARTITION_TABLE_CUSTOM_FILENAME'):
+        data[-1] = (
+            f'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME={SCRIPT_PATH}'
+            f'/build/partition.csv'
+        )
+    else:
+        data.append(
+            f'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME={SCRIPT_PATH}'
+            f'/build/partition.csv'
+        )
+
+    with open(sdk_config_path, 'w') as f:
+        f.write('\n'.join(data))
+
+
+def update_c_files():
+    if board in ('ESP32_GENERIC_S2', 'ESP32_GENERIC_S3'):
         mphalport_path = 'lib/micropython/ports/esp32/mphalport.c'
 
         with open(mphalport_path, 'rb') as f:
@@ -649,6 +996,14 @@ def compile():  # NOQA
         with open(mpconfigport_path, 'wb') as f:
             f.write(data.encode('utf-8'))
 
+
+def compile():  # NOQA
+    env = setup_idf_environ()
+
+    build_port_config()
+    update_c_files()
+    partition.build()
+
     if 'deploy' in compile_cmd:
         if not skip_partition_resize:
             compile_cmd.remove('deploy')
@@ -680,20 +1035,15 @@ def compile():  # NOQA
         sys.stdout.write('\n\033[31;1m***** Resizing Partition *****\033[0m\n')
         sys.stdout.flush()
 
-        partition_file_name = get_partition_file_name(output)
-        partition_file_name = (
-            os.path.join('lib/micropython/ports/esp32', partition_file_name)
-        )
-        partition = Partition(partition_file_name)
+        end = output.split('(overflow ', 1)[-1]
+        overflow_amount = int(end.split(')', 1)[0], 16)
 
-        if partition_size != -1:
-            overflow_amount = partition_size - partition.get_app_size()
+        if partition.ota:
+            partition.ota += overflow_amount
         else:
-            end = output.split('(overflow ', 1)[-1]
-            overflow_amount = int(end.split(')', 1)[0], 16)
+            partition.factory += overflow_amount
 
-        partition.set_app_size(overflow_amount)
-        partition.save()
+        partition.build()
 
         sys.stdout.write(
             '\n\033[31;1m***** Running build again *****\033[0m\n\n'
@@ -711,58 +1061,39 @@ def compile():  # NOQA
 
     elif not skip_partition_resize:
         if 'build complete' in output:
-            partition_file_name = get_partition_file_name(output)
-            partition_file_name = os.path.join(
-                'lib/micropython/ports/esp32',
-                partition_file_name
-            )
-            partition = Partition(partition_file_name)
-
             remaining = output.rsplit('application')[-1]
             remaining = int(
                 remaining.split('(', 1)[-1].split('remaining')[0].strip()
             )
 
-            if remaining > 4096 or partition_size != -1:
+            if remaining > 4096:
                 sys.stdout.write(
                     '\n\033[31;1m***** Resizing Partition *****\033[0m\n'
                 )
                 sys.stdout.flush()
 
-            if partition_size != -1:
-                part_size = partition.get_app_size()
-                resize = abs(part_size - partition_size)
+                if partition.ota:
+                    partition.ota += -remaining
+                else:
+                    partition.factory += -remaining
 
-                if part_size < partition_size:
-                    resize = -resize
-
-                partition.set_app_size(-resize)
-                partition.save()
+                partition.build()
 
                 sys.stdout.write(
                     '\n\033[31;1m***** Running build again *****\033[0m\n\n'
                 )
                 sys.stdout.flush()
 
-            elif remaining > 4096:
-                partition.set_app_size(-remaining)
-                partition.save()
+                if deploy:
+                    compile_cmd.append('deploy')
 
-                sys.stdout.write(
-                    '\n\033[31;1m***** Running build again *****\033[0m\n\n'
-                )
-                sys.stdout.flush()
+                if remaining > 4096 or deploy:
+                    compile_cmd[4] = 'SECOND_BUILD=1'
 
-            if deploy:
-                compile_cmd.append('deploy')
+                    ret_code, output = spawn(cmds, env=env, cmpl=True)
 
-            if remaining > 4096 or partition_size != -1 or deploy:
-                compile_cmd[4] = 'SECOND_BUILD=1'
-
-                ret_code, output = spawn(cmds, env=env, cmpl=True)
-
-                if ret_code != 0:
-                    sys.exit(ret_code)
+                    if ret_code != 0:
+                        sys.exit(ret_code)
 
     if 'To flash, run this command:' in output:
         output = output.split('To flash, run this command:')[-1].strip()
