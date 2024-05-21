@@ -25,7 +25,7 @@ def parse_args(extra_args, lv_cflags, board):
     global heap_size
     global sdl_flags
 
-    unix_argParser = ArgumentParser(prefix_chars='-')
+    unix_argParser = ArgumentParser(prefix_chars='-S')
 
     unix_argParser.add_argument(
         '--heap-size',
