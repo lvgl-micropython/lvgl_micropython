@@ -101,10 +101,9 @@ class ST7789(display_driver_framework.DisplayDriver):
         self.set_params(_LCMCTRL, param_mv[:1])
 
         param_buf[0] = 0x01
-        param_buf[1] = 0xFF
-        self.set_params(_VDVVRHEN, param_mv[:2])
+        self.set_params(_VDVVRHEN, param_mv[:1])
 
-        param_buf[0] = 0x10
+        param_buf[0] = 0x13
         self.set_params(_VRHS, param_mv[:1])
 
         param_buf[0] = 0x20
@@ -153,14 +152,17 @@ class ST7789(display_driver_framework.DisplayDriver):
 
         param_buf[0] = 0x00
         param_buf[1] = 0x00
-        param_buf[2] = 0x00
-        param_buf[3] = 0xEF
+        param_buf[2] = (self.display_width >> 8) & 0xFF
+        param_buf[3] = self.display_width & 0xFF
+
         self.set_params(_CASET, param_mv[:4])
 
+        # Page addresses
         param_buf[0] = 0x00
         param_buf[1] = 0x00
-        param_buf[2] = 0x01
-        param_buf[3] = 0x3F
+        param_buf[2] = (self.display_height >> 8) & 0xFF
+        param_buf[3] = self.display_height & 0xFF
+
         self.set_params(_RASET, param_mv[:4])
 
         self.set_params(_DISPON)

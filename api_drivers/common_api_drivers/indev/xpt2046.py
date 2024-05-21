@@ -2,6 +2,7 @@ from micropython import const
 import micropython
 import machine
 import pointer_framework
+import lcd_bus
 
 
 _INT_ON_PD0_BIT = const(0x01)
@@ -35,10 +36,10 @@ class XPT2046(pointer_framework.PointerDriver):
         clk,
         cs,
         host,
-        freq=5000000,
+        freq=1000000,
         interrupt=-1,
         vref_on=False,
-        press_threshold=10,
+        press_threshold=400,
         touch_cal=None
     ):
         super().__init__(touch_cal=touch_cal)
@@ -78,24 +79,50 @@ class XPT2046(pointer_framework.PointerDriver):
         # self._TEMP0 = const(0x86)
         # self._TEMP1 = const(0xF6)
 
-        self._spi = machine.SPI(
-            host + 1,
-            baudrate=freq,
-            sck=machine.Pin(clk, machine.Pin.OUT),
-            mosi=machine.Pin(mosi, machine.Pin.OUT),
-            miso=machine.Pin(miso, machine.Pin.IN, pull=machine.Pin.PULL_UP)
-        )
+        if (
+            isinstance(self._py_disp_drv._data_bus, lcd_bus.SPIBus) and
+            self._py_disp_drv._data_bus.get_host() == host
+        ):
+            self.__shared_bus = True
+            self._spi = lcd_bus.SPIBus(
+                mosi=mosi,
+                miso=miso,
+                sclk=clk,
+                cs=cs,
+                freq=freq,
+                dc=-1,
+                host=host
+            )
 
-        self.cs = machine.Pin(cs, machine.Pin.OUT)
-        self.cs.value(1)
+            self._spi.init(self._orig_width, self._orig_height, 4, False)
+
+        else:
+            self.__shared_bus = False
+
+            self._spi = machine.SPI(
+                host + 1,
+                baudrate=freq,
+                sck=machine.Pin(clk, machine.Pin.OUT),
+                mosi=machine.Pin(mosi, machine.Pin.OUT),
+                miso=machine.Pin(miso, machine.Pin.IN, pull=machine.Pin.PULL_UP)
+            )
+
+            self.cs = machine.Pin(cs, machine.Pin.OUT)
+            self.cs.value(1)
 
     def _read_reg(self, reg):
-        self.cs.value(0)
-        self._trans_buf[0] = reg
         self._recv_buf[0] = 0x00
         self._recv_buf[1] = 0x00
-        self._spi.write_readinto(self._trans_mv, self._recv_mv)
-        self.cs.value(1)
+
+        if self.__shared_bus:
+            self._spi.rx_param(reg, self._recv_mv)
+        else:
+            self.cs.value(0)
+            self._trans_buf[0] = reg
+            self._recv_buf[0] = 0x00
+            self._recv_buf[1] = 0x00
+            self._spi.write_readinto(self._trans_mv, self._recv_mv)
+            self.cs.value(1)
         
         return (self._recv_buf[0] << 8) | self._recv_buf[1]
 
@@ -120,25 +147,24 @@ class XPT2046(pointer_framework.PointerDriver):
         x_points = []
         y_points = []
 
-        count = 0
-        while count != 3:
+        for _ in range(3):
             x = self._read_reg(self._X_POSITION) >> 3
             y = self._read_reg(self._Y_POSITION) >> 3
 
             if (
-                (_MIN_RAW_COORD < x < _MAX_RAW_COORD) or
-                (_MIN_RAW_COORD < y < _MAX_RAW_COORD)
+                (_MIN_RAW_COORD <= x <= _MAX_RAW_COORD) or
+                (_MIN_RAW_COORD <= y <= _MAX_RAW_COORD)
             ):
-                continue
+                x = int((x / float(_MAX_RAW_COORD)) * self._orig_width)
+                y = int((y / float(_MAX_RAW_COORD)) * self._orig_height)
 
-            x_points.append(x)
-            y_points.append(y)
-            count += 1
+                x_points.append(x)
+                y_points.append(y)
 
-        x = int(sum(x_points) / len(x_points))
-        y = int(sum(y_points) / len(y_points))
+        if x_points and y_points:
+            x = int(sum(x_points) / len(x_points))
+            y = int(sum(y_points) / len(y_points))
 
-        x = int((x / _MAX_RAW_COORD) * self._orig_width)
-        y = int((y / _MAX_RAW_COORD) * self._orig_height)
+            return self.PRESSED, x, y
 
-        return self.PRESSED, x, y
+        return None

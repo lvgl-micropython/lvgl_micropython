@@ -19,6 +19,7 @@
     extern const mp_obj_fun_builtin_var_t mp_lcd_bus_allocate_framebuffer_obj;
 
     extern const mp_obj_dict_t mp_lcd_bus_locals_dict;
+    extern const mp_rom_map_elem_t *mp_lcd_bus_locals_dict_table;
 
 #endif /* _MODLCD_BUS_H_ */
 
