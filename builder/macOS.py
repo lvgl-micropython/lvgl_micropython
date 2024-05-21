@@ -42,7 +42,6 @@ def parse_args(extra_args, lv_cflags, board):
         dest='sdl_flags',
         help='flags to pass to the SDL2 compiler',
         default='',
-        type=str,
         action='store'
     )
     unix_args, extra_args = unix_argParser.parse_known_args(extra_args)

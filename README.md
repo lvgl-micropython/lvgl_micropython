@@ -1,29 +1,5 @@
-
-
 # LVGL binding for Micropython
 ______________________________
-<br>
-
-### ***ATTENTION***
-_____________
-
-**THIS IS NOT THE OFFICIAL LVGL BINDING FOR MICROPYTHON. WHILE IT IS LOOSLEY BASED 
-ON THAT BINDING AND THERE IS CODE FROM THAT BINDING PRESENT THIS LIBRARY IS DIFFERENT!!**
-
-**THIS LIBRARY IS IN ALPHA TESTING, IT IS NOT GOING TO BE STABLE AND 
-IT WILL HAVE BUGS IN IT. I APPRECIATE HELP WITH BUG TESTING AND FIXING ISSUES. 
-PR's ARE ALWAYS WELCOME.**
-
-**IF YOU ARE WANTING TO HELP WITH BUG TESTING IT IS MORE EFFICIENT IF THE CODE I 
-SUPPLY TO RUN WHEN TETSING IS USED UNALTERED. THE REASON FOR THIS IS A LOT OF 
-THE TIME I AM TESTING FOR SPECIFIC OUTPUT AND IF THE CODE GETS CHANGED THAT 
-OUTPUT ENDS UP GETTING CHANGED. I DO TEND TO BREAK THINGS A LOT AND YOU HAVE TO 
-BE WILLING TO WORK WITH ME ON THIS. WHILE I AM NOT A GREENHORN TO PROGRAMMING
-C/CPP IS NOT A LANGUAGE I AM PROFICIENT IN.**
-
-<br>
-
-***NOTE***: **UPDATED ESP BUILD, PLEASE READ TO GET NEW INFORMATION**
 
 
 I have tried to make this as simple as possible for paople to use. 
@@ -54,9 +30,7 @@ installed (gcc, clang, msvc) and the necessary support libs.
 
 ### *Requirements*
 _________________
-
 compiling for ESP32
-
   * Ubuntu (Linux): you can install all of these using `apt-get install` 
     * build-essential
     * cmake
@@ -72,7 +46,6 @@ compiling for ESP32
 
 
 Compiling for RP2
-
   * Ubuntu (Linux): you can install all of these using `apt-get install` 
     * build-essential
     * cmake
@@ -94,7 +67,6 @@ Compiling for RP2
 
 
 Compiling for STM32:
-
   * Ubuntu (Linux): you can install all of these using `apt-get install` 
     * gcc-arm-none-eabi 
     * libnewlib-arm-none-eabi
@@ -149,7 +121,6 @@ Compiling for Ubuntu (Linux): you can install all of these using `apt-get instal
 
 
 Compiling for macOS 
-
   * `command xcode-select–install`
   * `brew install libffi` 
   * `brew install ninja`
@@ -157,7 +128,6 @@ Compiling for macOS
 
 
 Compiling for Windows
-
   * not supported yet
 
 <br>
@@ -234,55 +204,22 @@ ____________________
 
 ### *ESP32 specific options*
 ____________________________
+  * --skip-partition-resize: do not resize the firmware partition
+  * --partition-size: set a custom firmware partition size
+  * --octal-flash ¹: This is only available for the 16mb flash and the 32mb flash
+  * --flash-size ² ³: This is how much flash storage is available.
 
-I have recently reworked the build system to allow for easier modifications to
-to the partitions on the ESP32. Previously I had only given the ability to adjust
-only the application partition size. With the most recent round of changes
-The user is now able to alter ANY of the partition sizes. The command line switches
-will vary vased on what board is being used. For the most part a lot of the 
-boards will use the same switches.
+    Allowed Values are:
 
+    * ESP32-S3: 4, 8, 16 and 32 (default is 8)
+    * ESP32-S2: 2 and 4 (default is 4)
+    * ESP32: 4, 8 and 16 (default is 4)
+    , The default is 8.
+  
 
-All boards have the following switches.
-
-* --nvs-size={size}: This is used with the ESP32's persistant memory. 
-  This is where config values get stored.
-* --ota: just add this switch if you want your board to have the ability to do OTA updates.
-  This will consume more of the flash because there needs to be 2 application partitions 
-  that are large enough to hold the firmware
-* --skip-partition-resize: Supply this switch if you do not want the program to 
-  automatically resize the application partition. This is useful in a production 
-  environment and you want to use OTA updates for the firmware. You would set the
-  application size to be more than what is needed so if a new firmware is released and it happens 
-  to be larger in size you will be able to fit it. If the partition is too small for the new firmware
-  it becomes a real large headache because you will have to connect the ESP via USB to update the 
-  firmware.
-* --partition-size={size}: This is where you set the application partition size should you so choose to.
-  The esp32 is going to automatically adjust the size to match the firmware so in most cases you will not 
-  need to use this unless you are using OTA and decide to set the partition size to be larger.
-
-board specific:
-
-* ESP32_GENERIC*:
-  * --octal-flash: Only available with 16mb and 32mb flash on the S3, you still 
-    need to supply `SPIRAM_OCT` as the board variant
-  * --flash-size: This is how much flash storage is available.
-    Allowed Values are 2, 4, 8, 16 and 32. The default value varries based on the
-    board being used
-* ARDUINO_NANO_ESP32: 
-  * always has ota enabled
-  * --ffat-size={size}: adjusts the size of the ffat partition
-  * --factory-size={size}: adjusts the sie of the factory partition
-* SIL_WESP32: 
-  * always has ota enabled.
-
-
-All boards except when OTA is enabled:
-  * --phyinit-size={size}: adjusts the size of the phy_init partition
-
-All partition sizes should be an even multiple of 4096, if it is not the size 
-will be rounded up to the closest 4096.
-
+¹ Available for the ESP32-S3 when `BOARD_VARIANT` is set to `SPIRAM_OCT`<br> 
+² Available for the ESP32, ESP32-S2 and ESP32-S3<br>
+³ Available only when `BOARD_VARIANT` is set to `SPIRAM` or `SPIRAM_OCT`<br>
 
 <br>
 
@@ -497,6 +434,12 @@ build without submodules or mpy_cross
 
 I always recommend building with the clean command, this will ensure you get a good fresh build.
 
+NOTE:
+There is a bug in the ESP32 build. The first time around it will fail saying that 
+one of the sumbodules is not available. Run the build again with the submodules 
+argument in there and then it will build fine. For the life of me I cam not able to locate
+where the issue is stemming from. I will find it eventually.
+
 <br>
 
 I will provide directions on how to use the driver framework and also the drivers that are included
@@ -517,9 +460,9 @@ Couple of notes:
 
   * I recommend making 2 frame buffers as seen in the code example below. This will give you 
     better performance. 
-  * ***DO NOT*** enable LV_USE_DRAW_SDL, I have not written code to allow for it's use (yet).
+  * **DO NOT** enable LV_USE_DRAW_SDL, I have not written code to allow for it's use (yet).
   * I recommend running `lv.task_handler` once every 5 milliseconds, shorter than that and you 
-    will have a lot of CPU time comsumed. Longer than that and your mouse response is not 
+    will have a lot of CPU time comsumed. Linger than that and your mouse response is not 
     going to be great.
 
 
@@ -657,7 +600,6 @@ and also the calibration storage.
     import ft6x36  # NOQA
     import time  # NOQA
 
-    display.set_power(True)
     display.init()
 
     i2c_bus = i2c.I2CBus(scl=_SCL, sda=_SDA, freq=_TP_FREQ, use_locks=False)
@@ -694,28 +636,4 @@ regardless of what `indev.is_calibrate` returns. This makes it possible to redo
 the calibration by either using a pin that you can check the state of or through
 a button in your UI that you provide to the user.
 
-
-For the ESP32 I have written an NVS connection. One existed in the `esp32` module
-but it was limited in it's scope. It was only able to set `int32_t`'s byte arrays 
-and strings. The module I wrote (`nvs`) include the following data types.
-
-* `int8_t`
-* `uint8_t`
-* `int16_t`
-* `uint16_t`
-* `int32_t`
-* `uint32_t`
-* `int64_t`
-* `uint64_t`
-* `string`
-* `arrays`
-* `float`
-
-It also allows for enumerating all of the keys and datatypes that are currently stored.
-There are 2 functions for dealing with the data that is stored. One is `get` and the 
-other is `set`. YOu need to specify what kind of data you are dealing with. This is done
-using one of the `nvs.TYPE_*` constants. There is a stub file available in the 
-`esp32_stubs` folder. 
-
-
-Have fun!!
+Thank again and enjoy!!
