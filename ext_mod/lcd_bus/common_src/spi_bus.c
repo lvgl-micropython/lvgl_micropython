@@ -149,6 +149,7 @@
             self->callback = mp_const_none;
 
             self->bus_handle = spi;
+            self->host = (int)args[ARG_host].u_int;
 
             if (args[ARG_cs].u_obj != mp_const_none) {
                 self->panel_io_config.cs_gpio_num = (mp_hal_pin_obj_t)mp_hal_get_pin_obj(args[ARG_cs].u_obj);

@@ -32,6 +32,7 @@
 
             void (*send_cmd)(mp_lcd_spi_bus_obj_t *self, int lcd_cmd);
             void (*send_param)(mp_lcd_spi_bus_obj_t *self, void *param, size_t param_size);
+
         };
 
     #else
@@ -87,6 +88,7 @@
             void (*send_cmd)(mp_lcd_spi_bus_obj_t *self, int lcd_cmd);
             void (*send_param)(mp_lcd_spi_bus_obj_t *self, void *param, size_t param_size);
 
+            int host;
         };
 
     #endif
