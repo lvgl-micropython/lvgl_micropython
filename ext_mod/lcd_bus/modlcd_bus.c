@@ -242,7 +242,7 @@ mp_obj_t mp_lcd_bus_register_callback(size_t n_args, const mp_obj_t *pos_args, m
 MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_bus_register_callback_obj, 2, mp_lcd_bus_register_callback);
 
 
-STATIC const mp_rom_map_elem_t mp_lcd_bus_locals_dict_table[10] = {
+STATIC const mp_rom_map_elem_t mp_lcd_bus_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_lane_count),       MP_ROM_PTR(&mp_lcd_bus_get_lane_count_obj)       },
     { MP_ROM_QSTR(MP_QSTR_allocate_framebuffer), MP_ROM_PTR(&mp_lcd_bus_allocate_framebuffer_obj) },
     { MP_ROM_QSTR(MP_QSTR_free_framebuffer),     MP_ROM_PTR(&mp_lcd_bus_free_framebuffer_obj)     },

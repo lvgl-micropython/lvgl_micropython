@@ -10,13 +10,14 @@
         // esp-idf includes
         #include "esp_lcd_panel_io.h"
         #include "esp_lcd_panel_rgb.h"
+        #include "freertos/FreeRTOS.h"
+        #include "freertos/task.h"
 
         // micropython includes
         #include "mphalport.h"
         #include "py/obj.h"
         #include "py/objarray.h"
         #include "soc/soc_caps.h"
-
 
         typedef struct _mp_lcd_rgb_bus_obj_t {
             mp_obj_base_t base;
@@ -39,6 +40,9 @@
             uint32_t buffer_size;
             mp_obj_array_t *view1;
             mp_obj_array_t *view2;
+            TaskHandle_t xTaskToNotify;
+            uint8_t current_buffer_index;
+
         } mp_lcd_rgb_bus_obj_t;
 
 

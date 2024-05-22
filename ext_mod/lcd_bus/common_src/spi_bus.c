@@ -232,7 +232,6 @@
 
         CS_OFF();
         return LCD_OK;
-
     }
 
 

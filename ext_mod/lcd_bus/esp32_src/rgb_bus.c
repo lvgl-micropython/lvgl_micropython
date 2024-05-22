@@ -12,7 +12,8 @@
     #include "esp_pm.h"
     #include "esp_intr_alloc.h"
     #include "esp_heap_caps.h"
-
+    #include "freertos/FreeRTOS.h"
+    #include "freertos/task.h"
     #include "esp_lcd_panel_io.h"
     #include "esp_lcd_panel_ops.h"
     #include "esp_lcd_panel_interface.h"
@@ -44,18 +45,33 @@
         esp_pm_lock_handle_t pm_lock; // Power management lock
         size_t num_dma_nodes;  // Number of DMA descriptors that used to carry the frame buffer
         uint8_t *fbs[3]; // Frame buffers
+        uint8_t cur_fb_index;  // Current frame buffer index
+        uint8_t bb_fb_index;  // Current frame buffer index which used by bounce buffer
     } rgb_panel_t;
 
-    bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel_io, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
-    {
-        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)user_ctx;
 
-        if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
-            cb_isr(self->callback);
-        }
-        self->trans_done = true;
-        return false;
+    IRAM_ATTR static bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
+    {
+        LCD_UNUSED(panel);
+        LCD_UNUSED(edata);
+
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)user_ctx;
+        BaseType_t need_yield = pdFALSE;
+
+        // Notify that the current RGB frame buffer has been transmitted
+        vTaskNotifyGiveIndexedFromISR(self->xTaskToNotify, 7, &need_yield);
+        return (need_yield == pdTRUE);
     }
+
+    mp_obj_t mp_lcd_bus_wait_for_sync(mp_obj_t obj)
+    {
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
+        ulTaskNotifyValueClearIndexed(self->xTaskToNotify, 7, ULONG_MAX);
+        ulTaskNotifyTakeIndexed(7, pdTRUE, portMAX_DELAY);
+        return mp_const_none;
+    }
+
+    MP_DEFINE_CONST_FUN_OBJ_1(mp_lcd_bus_wait_for_sync_obj, mp_lcd_bus_wait_for_sync);
 
     esp_lcd_rgb_panel_event_callbacks_t callbacks = { .on_vsync = rgb_bus_trans_done_cb };
 
@@ -154,6 +170,7 @@
         self->base.type = &mp_lcd_rgb_bus_type;
 
         self->callback = mp_const_none;
+        self->xTaskToNotify = xTaskGetCurrentTaskHandle();
 
         self->bus_config.pclk_hz = (uint32_t)args[ARG_freq].u_int;
         self->bus_config.hsync_pulse_width = (uint32_t)args[ARG_hsync_pulse_width].u_int;
@@ -441,6 +458,12 @@
     {
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
 
+        if (self->view1->items == color) {
+            self->current_buffer_index = 0;
+        } else {
+            self->current_buffer_index = 1;
+        }
+
         esp_err_t ret = esp_lcd_panel_draw_bitmap(
             self->panel_handle,
             x_start,
@@ -455,30 +478,32 @@
             return LCD_OK;
         }
 
-        /*
-        if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
-            mp_call_function_n_kw(self->callback, 0, 0, NULL);
-        }
-        */
-
-        if (!self->panel_io_config.flags.double_fb) {
-            if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
-                mp_call_function_n_kw(self->callback, 0, 0, NULL);
-            }
-        } else if (self->callback == mp_const_none) {
-            while (!self->trans_done) {}
-            self->trans_done = false;
-        }
-
         return LCD_OK;
     }
+
+
+    STATIC const mp_rom_map_elem_t mp_lcd_rgb_bus_locals_dict_table[] = {
+        { MP_ROM_QSTR(MP_QSTR_wait_for_sync),        MP_ROM_PTR(&mp_lcd_bus_wait_for_sync_obj)        },
+        { MP_ROM_QSTR(MP_QSTR_get_lane_count),       MP_ROM_PTR(&mp_lcd_bus_get_lane_count_obj)       },
+        { MP_ROM_QSTR(MP_QSTR_allocate_framebuffer), MP_ROM_PTR(&mp_lcd_bus_allocate_framebuffer_obj) },
+        { MP_ROM_QSTR(MP_QSTR_free_framebuffer),     MP_ROM_PTR(&mp_lcd_bus_free_framebuffer_obj)     },
+        { MP_ROM_QSTR(MP_QSTR_register_callback),    MP_ROM_PTR(&mp_lcd_bus_register_callback_obj)    },
+        { MP_ROM_QSTR(MP_QSTR_tx_param),             MP_ROM_PTR(&mp_lcd_bus_tx_param_obj)             },
+        { MP_ROM_QSTR(MP_QSTR_tx_color),             MP_ROM_PTR(&mp_lcd_bus_tx_color_obj)             },
+        { MP_ROM_QSTR(MP_QSTR_rx_param),             MP_ROM_PTR(&mp_lcd_bus_rx_param_obj)             },
+        { MP_ROM_QSTR(MP_QSTR_init),                 MP_ROM_PTR(&mp_lcd_bus_init_obj)                 },
+        { MP_ROM_QSTR(MP_QSTR_deinit),               MP_ROM_PTR(&mp_lcd_bus_deinit_obj)               },
+        { MP_ROM_QSTR(MP_QSTR___del__),              MP_ROM_PTR(&mp_lcd_bus_deinit_obj)               }
+    };
+
+    MP_DEFINE_CONST_DICT(mp_lcd_rgb_bus_locals_dict, mp_lcd_rgb_bus_locals_dict_table);
 
     MP_DEFINE_CONST_OBJ_TYPE(
         mp_lcd_rgb_bus_type,
         MP_QSTR_RGBBus,
         MP_TYPE_FLAG_NONE,
         make_new, mp_lcd_rgb_bus_make_new,
-        locals_dict, (mp_obj_dict_t *)&mp_lcd_bus_locals_dict
+        locals_dict, (mp_obj_dict_t *)&mp_lcd_rgb_bus_locals_dict
     );
 #else
     #include "../common_src/rgb_bus.c"
