@@ -12,8 +12,9 @@ LVGL_ADDON_DIR = $(LVGL_BINDING_DIR)/ext_mod/lvgl_addons
 LVGL_HEADER = $(LVGL_BINDING_DIR)/build/lvgl_header.h
 
 CURRENT_DIR = $(LVGL_BINDING_DIR)/ext_mod/lvgl
-CFLAGS_USERMOD += -I$(LVGL_BINDING_DIR)
 CFLAGS_USERMOD += -I$(LVGL_DIR)
+CFLAGS_USERMOD += -I$(LIB_DIR)
+
 
 ifdef $(LV_CFLAGS)
     CFLAGS_USERMOD += $(LV_CFLAGS)
@@ -47,7 +48,7 @@ endif
 $(LVGL_MPY): $(ALL_LVGL_SRC) $(LVGL_BINDING_DIR)/gen/$(GEN_SCRIPT)_api_gen_mpy.py
 	$(ECHO) "LVGL-GEN $@"
 	$(Q)mkdir -p $(dir $@)
-	$(Q)$(PYTHON) $(LVGL_BINDING_DIR)/gen/$(GEN_SCRIPT)_api_gen_mpy.py $(LV_CFLAGS) --board=$(LV_PORT) --output=$(LVGL_MPY) --include=$(LVGL_BINDING_DIR) --include=$(LVGL_DIR) --include=$(LVGL_BINDING_DIR)/include --module_name=lvgl --module_prefix=lv --metadata=$(LVGL_MPY_METADATA) --header_file=$(LVGL_HEADER)
+	$(Q)$(PYTHON) $(LVGL_BINDING_DIR)/gen/$(GEN_SCRIPT)_api_gen_mpy.py $(LV_CFLAGS) --board=$(LV_PORT) --output=$(LVGL_MPY)  --include=$(LIB_DIR) --include=$(LVGL_DIR)  --module_name=lvgl --module_prefix=lv --metadata=$(LVGL_MPY_METADATA) --header_file=$(LVGL_HEADER)
 
 .PHONY: LVGL_MPY
 LVGL_MPY: $(LVGL_MPY)
