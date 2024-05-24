@@ -7,7 +7,6 @@
     #include "modlcd_bus.h"
     #include "rgb_bus.h"
 
-    // esp-idf includes
     #include "hal/lcd_hal.h"
     #include "esp_pm.h"
     #include "esp_intr_alloc.h"
@@ -18,6 +17,9 @@
     #include "esp_lcd_panel_ops.h"
     #include "esp_lcd_panel_interface.h"
     #include "esp_lcd_panel_rgb.h"
+    #include "esp_cpu.h"
+    #include "esp_system.h"
+    #include "rom/ets_sys.h"
 
     // micropython includes
     #include "mphalport.h"
@@ -25,6 +27,8 @@
     #include "py/runtime.h"
     #include "py/objarray.h"
     #include "py/binary.h"
+    #include "py/stackctrl.h"
+    #include "py/gc.h"
 
     // stdlib includes
     #include <string.h>
