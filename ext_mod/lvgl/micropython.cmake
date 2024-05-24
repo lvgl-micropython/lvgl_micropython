@@ -2,18 +2,16 @@
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
+get_filename_component(BINDING_DIR ${CMAKE_CURRENT_LIST_DIR}/../.. ABSOLUTE)
+
 separate_arguments(LV_CFLAGS_ENV UNIX_COMMAND $ENV{LV_CFLAGS})
 list(APPEND LV_CFLAGS ${LV_CFLAGS_ENV} -Wno-unused-function)
 
 separate_arguments(SECOND_BUILD_ENV UNIX_COMMAND $ENV{SECOND_BUILD})
 
+set(LVGL_HEADER "${BINDING_DIR}/build/lvgl_header.h")
 
-include(${CMAKE_CURRENT_LIST_DIR}/ext_mod/micropython.cmake)
-
-set(LVGL_HEADER "${CMAKE_CURRENT_LIST_DIR}/build/lvgl_header.h")
-set(LVGL_ADDONS_SRC "${CMAKE_CURRENT_LIST_DIR}/ext_mod/lvgl_addons/src/color_addons.c")
-
-file(GLOB_RECURSE LVGL_HEADERS ${CMAKE_CURRENT_LIST_DIR}/lib/lvgl/src/*.h ${CMAKE_CURRENT_LIST_DIR}/lib/lv_conf.h)
+file(GLOB_RECURSE LVGL_HEADERS ${BINDING_DIR}/lib/lvgl/src/*.h ${BINDING_DIR}/lib/lv_conf.h)
 
 # this MUST be an execute_process because of the order in which cmake does things
 # if add_custom_command is used it errors becasue add_custom_command doesn't
@@ -25,7 +23,7 @@ file(GLOB_RECURSE LVGL_HEADERS ${CMAKE_CURRENT_LIST_DIR}/lib/lvgl/src/*.h ${CMAK
 if(${SECOND_BUILD_ENV} EQUAL "0")
     execute_process(
         COMMAND
-            ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/gen/$ENV{GEN_SCRIPT}_api_gen_mpy.py ${LV_CFLAGS} --output=${CMAKE_BINARY_DIR}/lv_mp.c --include=${CMAKE_CURRENT_LIST_DIR} --include=${CMAKE_CURRENT_LIST_DIR}/include --include=${CMAKE_CURRENT_LIST_DIR}/lvgl --board=$ENV{LV_PORT} --module_name=lvgl --module_prefix=lv --metadata=${CMAKE_BINARY_DIR}/lv_mp.c.json --header_file=${LVGL_HEADER}
+            ${Python3_EXECUTABLE} ${BINDING_DIR}/gen/$ENV{GEN_SCRIPT}_api_gen_mpy.py ${LV_CFLAGS} --output=${CMAKE_BINARY_DIR}/lv_mp.c --include=${BINDING_DIR}/lib --include=${BINDING_DIR}/lib/lvgl --board=$ENV{LV_PORT} --module_name=lvgl --module_prefix=lv --metadata=${CMAKE_BINARY_DIR}/lv_mp.c.json --header_file=${LVGL_HEADER}
         WORKING_DIRECTORY
             ${CMAKE_CURRENT_LIST_DIR}
 
@@ -42,8 +40,11 @@ endif()
 
 # file(WRITE ${CMAKE_BINARY_DIR}/lv_mp.c ${mpy_output})
 
-file(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_LIST_DIR}/lib/lvgl/src/*.c)
-list(APPEND SOURCES ${LVGL_ADDONS_SRC})
+file(GLOB_RECURSE SOURCES ${BINDING_DIR}/lib/lvgl/src/*.c)
+list(APPEND SOURCES
+    ${BINDING_DIR}/ext_mod/lvgl_addons/src/color_addons.c
+    ${BINDING_DIR}/ext_mod/lvgl/mem_core.c
+)
 
 add_library(lvgl_interface INTERFACE)
 
@@ -51,9 +52,9 @@ target_sources(lvgl_interface INTERFACE ${SOURCES})
 target_compile_options(lvgl_interface INTERFACE ${LV_CFLAGS})
 
 set(LVGL_MPY_INCLUDES
-    ${CMAKE_CURRENT_LIST_DIR}/lib/micropython
-    ${CMAKE_CURRENT_LIST_DIR}
-    ${CMAKE_CURRENT_LIST_DIR}/include
+    ${BINDING_DIR}/lib/micropython
+    ${BINDING_DIR}/lib
+    ${BINDING_DIR}/lib/lvgl
 )
 
 add_library(usermod_lvgl INTERFACE)

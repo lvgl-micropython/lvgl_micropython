@@ -44,7 +44,7 @@ class I2CBus:
     def tx_param(self, cmd: int, params: Optional[_BufferType] = None, /) -> None:
         ...
 
-    def tx_color(self, cmd: int, data: _BufferType, /) -> None:
+    def tx_color(self, cmd: int, data: _BufferType, start_x: int, start_y: int, end_x: int, end_y: int, /) -> None:
         ...
 
     def rx_param(self, cmd: int, params: _BufferType, /) -> None:
@@ -95,7 +95,7 @@ class SPIBus:
     def tx_param(self, cmd: int, params: Optional[_BufferType] = None, /) -> None:
         ...
 
-    def tx_color(self, cmd: int, data: _BufferType, /) -> None:
+    def tx_color(self, cmd: int, data: _BufferType, start_x: int, start_y: int, end_x: int, end_y: int, /) -> None:
         ...
 
     def rx_param(self, cmd: int, params: _BufferType, /) -> None:
@@ -202,7 +202,7 @@ class SDLBus:
     ) -> None:
         ...
 
-    def tx_color(self, cmd: int, data: _BufferType, /) -> None:
+    def tx_color(self, cmd: int, data: _BufferType, start_x: int, start_y: int, end_x: int, end_y: int, /) -> None:
         ...
 
     def rx_param(self, cmd: int, params: _BufferType, /) -> None:
@@ -269,7 +269,7 @@ class RGBBus:
     def tx_param(self, cmd: int, params: Optional[_BufferType] = None, /) -> None:
         ...
 
-    def tx_color(self, cmd: int, data: _BufferType, /) -> None:
+    def tx_color(self, cmd: int, data: _BufferType, start_x: int, start_y: int, end_x: int, end_y: int, /) -> None:
         ...
 
     def rx_param(self, cmd: int, params: _BufferType, /) -> None:
@@ -330,7 +330,7 @@ class I80Bus:
     def register_callback(self, callback: Callable[[Any, Any], None], /) -> None:
         ...
 
-    def tx_param(self, cmd: int, params: Optional[_BufferType] = None, /) -> None:
+    def tx_color(self, cmd: int, data: _BufferType, start_x: int, start_y: int, end_x: int, end_y: int, /) -> None:
         ...
 
     def tx_color(self, cmd: int, data: _BufferType, /) -> None:

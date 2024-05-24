@@ -266,10 +266,8 @@ class SDLDisplay(display_driver_framework.DisplayDriver):
         self._offset_x, self._offset_y = x, y
         self._disp_drv.set_offset(x, y)
 
-    def invert_colors(self, value):
+    def invert_colors(self):
         pass
-
-    invert_colors = property(None, invert_colors)
 
     def set_rotation(self, value):
         self._disp_drv.set_rotation(value)

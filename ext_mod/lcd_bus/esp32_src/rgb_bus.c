@@ -49,29 +49,61 @@
         uint8_t bb_fb_index;  // Current frame buffer index which used by bounce buffer
     } rgb_panel_t;
 
+    bool callback_from_isr(mp_obj_t cb, uint8_t buf_num)
+    {
+        volatile uint32_t sp = (uint32_t)esp_cpu_get_sp();
+        bool ret = false;
+
+        // Calling micropython from ISR
+        // See: https://github.com/micropython/micropython/issues/4895
+        void *old_state = mp_thread_get_state();
+
+        mp_state_thread_t ts; // local thread state for the ISR
+        mp_thread_set_state(&ts);
+        mp_stack_set_top((void*)sp); // need to include in root-pointer scan
+        mp_stack_set_limit(CONFIG_FREERTOS_IDLE_TASK_STACKSIZE - 1024); // tune based on ISR thread stack size
+        mp_locals_set(mp_state_ctx.thread.dict_locals); // use main thread's locals
+        mp_globals_set(mp_state_ctx.thread.dict_globals); // use main thread's globals
+
+        mp_sched_lock(); // prevent VM from switching to another MicroPython thread
+        gc_lock(); // prevent memory allocation
+
+        nlr_buf_t nlr;
+        if (nlr_push(&nlr) == 0) {
+            mp_obj_t args[1] = { mp_obj_new_int_from_uint(buf_num) };
+            mp_obj_t ret_val = mp_call_function_n_kw(cb, 1, 0, &args[0]);
+            if ((ret_val != mp_const_none) && mp_obj_is_integer(ret_val) && (mp_obj_get_int_truncated(ret_val) == 1)) {
+                ret = true;
+            }
+            nlr_pop();
+        } else {
+            ets_printf("Uncaught exception in IRQ callback handler!\n");
+            mp_obj_print_exception(&mp_plat_print, MP_OBJ_FROM_PTR(nlr.ret_val));  // changed to &mp_plat_print to fit this context
+        }
+
+        gc_unlock();
+        mp_sched_unlock();
+
+        mp_thread_set_state(old_state);
+        // mp_hal_wake_main_task_from_isr();
+
+        return ret;
+    }
+
 
     IRAM_ATTR static bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
     {
-        LCD_UNUSED(panel);
         LCD_UNUSED(edata);
+        rgb_panel_t *rgb_panel = __containerof(panel, rgb_panel_t, base);
 
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)user_ctx;
-        BaseType_t need_yield = pdFALSE;
+        bool ret = false;
 
-        // Notify that the current RGB frame buffer has been transmitted
-        vTaskNotifyGiveIndexedFromISR(self->xTaskToNotify, 7, &need_yield);
-        return (need_yield == pdTRUE);
+        if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
+            ret = callback_from_isr(self->callback, (uint8_t)rgb_panel->cur_fb_index);
+        }
+        return ret;
     }
-
-    mp_obj_t mp_lcd_bus_wait_for_sync(mp_obj_t obj)
-    {
-        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
-        ulTaskNotifyValueClearIndexed(self->xTaskToNotify, 7, ULONG_MAX);
-        ulTaskNotifyTakeIndexed(7, pdTRUE, portMAX_DELAY);
-        return mp_const_none;
-    }
-
-    MP_DEFINE_CONST_FUN_OBJ_1(mp_lcd_bus_wait_for_sync_obj, mp_lcd_bus_wait_for_sync);
 
     esp_lcd_rgb_panel_event_callbacks_t callbacks = { .on_vsync = rgb_bus_trans_done_cb };
 
@@ -170,7 +202,6 @@
         self->base.type = &mp_lcd_rgb_bus_type;
 
         self->callback = mp_const_none;
-        self->xTaskToNotify = xTaskGetCurrentTaskHandle();
 
         self->bus_config.pclk_hz = (uint32_t)args[ARG_freq].u_int;
         self->bus_config.hsync_pulse_width = (uint32_t)args[ARG_hsync_pulse_width].u_int;
@@ -458,12 +489,6 @@
     {
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
 
-        if (self->view1->items == color) {
-            self->current_buffer_index = 0;
-        } else {
-            self->current_buffer_index = 1;
-        }
-
         esp_err_t ret = esp_lcd_panel_draw_bitmap(
             self->panel_handle,
             x_start,
@@ -482,28 +507,12 @@
     }
 
 
-    STATIC const mp_rom_map_elem_t mp_lcd_rgb_bus_locals_dict_table[] = {
-        { MP_ROM_QSTR(MP_QSTR_wait_for_sync),        MP_ROM_PTR(&mp_lcd_bus_wait_for_sync_obj)        },
-        { MP_ROM_QSTR(MP_QSTR_get_lane_count),       MP_ROM_PTR(&mp_lcd_bus_get_lane_count_obj)       },
-        { MP_ROM_QSTR(MP_QSTR_allocate_framebuffer), MP_ROM_PTR(&mp_lcd_bus_allocate_framebuffer_obj) },
-        { MP_ROM_QSTR(MP_QSTR_free_framebuffer),     MP_ROM_PTR(&mp_lcd_bus_free_framebuffer_obj)     },
-        { MP_ROM_QSTR(MP_QSTR_register_callback),    MP_ROM_PTR(&mp_lcd_bus_register_callback_obj)    },
-        { MP_ROM_QSTR(MP_QSTR_tx_param),             MP_ROM_PTR(&mp_lcd_bus_tx_param_obj)             },
-        { MP_ROM_QSTR(MP_QSTR_tx_color),             MP_ROM_PTR(&mp_lcd_bus_tx_color_obj)             },
-        { MP_ROM_QSTR(MP_QSTR_rx_param),             MP_ROM_PTR(&mp_lcd_bus_rx_param_obj)             },
-        { MP_ROM_QSTR(MP_QSTR_init),                 MP_ROM_PTR(&mp_lcd_bus_init_obj)                 },
-        { MP_ROM_QSTR(MP_QSTR_deinit),               MP_ROM_PTR(&mp_lcd_bus_deinit_obj)               },
-        { MP_ROM_QSTR(MP_QSTR___del__),              MP_ROM_PTR(&mp_lcd_bus_deinit_obj)               }
-    };
-
-    MP_DEFINE_CONST_DICT(mp_lcd_rgb_bus_locals_dict, mp_lcd_rgb_bus_locals_dict_table);
-
     MP_DEFINE_CONST_OBJ_TYPE(
         mp_lcd_rgb_bus_type,
         MP_QSTR_RGBBus,
         MP_TYPE_FLAG_NONE,
         make_new, mp_lcd_rgb_bus_make_new,
-        locals_dict, (mp_obj_dict_t *)&mp_lcd_rgb_bus_locals_dict
+        locals_dict, (mp_obj_dict_t *)&mp_lcd_bus_locals_dict
     );
 #else
     #include "../common_src/rgb_bus.c"

@@ -1,5 +1,5 @@
 
-#include "../../../lib/lvgl/lvgl.h"
+#include "lvgl/lvgl.h"
 #include <math.h>
 #include <stdlib.h>
 #include "../include/color_addons.h"

@@ -44,7 +44,9 @@
  * - LV_STDLIB_MICROPYTHON: MicroPython implementation
  * - LV_STDLIB_CUSTOM:      Implement the functions externally
  */
-#define LV_USE_STDLIB_MALLOC    LV_STDLIB_MICROPYTHON
+ #define LV_STDLIB_MPY 254
+
+#define LV_USE_STDLIB_MALLOC    LV_STDLIB_MPY
 #define LV_USE_STDLIB_STRING    LV_STDLIB_BUILTIN
 #define LV_USE_STDLIB_SPRINTF   LV_STDLIB_BUILTIN
 

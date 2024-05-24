@@ -50,11 +50,18 @@ class RGBDisplay(display_driver_framework.DisplayDriver):
             rgb565_byte_swap=rgb565_byte_swap
         )
 
-        self._disp_drv.set_flush_wait_cb(self.__sync_cb)
+        self.__flushing_fb_index = None
 
-    def __sync_cb(self, *_):
-        self._data_bus.wait_for_sync()
-        self._disp_drv.flush_ready()
+    def _flush_ready_cb(self, buf_num, yield_to_task):
+        if (
+            self.__flushing_fb_index is None or
+            buf_num != self.__flushing_fb_index
+        ):
+            self._disp_drv.flush_ready()
+            self.__flushing_fb_index = buf_num
+            return True
+
+        return False
 
     def _dummy_set_memory_location(self, *_, **__):
         return 0x00
