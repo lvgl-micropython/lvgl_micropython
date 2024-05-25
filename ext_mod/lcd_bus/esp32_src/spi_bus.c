@@ -98,68 +98,18 @@ STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
         hd = -1;
     }
 
-    int clk = (int)args[ARG_sclk].u_int;
-    int mosi = (int)args[ARG_mosi].u_int;
-    int miso = (int)args[ARG_miso].u_int;
-    int cs = (int)args[ARG_cs].u_int;
-    int host = (int)args[ARG_host].u_int;
-
-    int temp_host;
-
-    if (
-        mosi == SPI_IOMUX_PIN_NUM_MOSI &&
-        clk == SPI_IOMUX_PIN_NUM_CLK &&
-        (miso == -1 || miso == SPI_IOMUX_PIN_NUM_MISO) &&
-        (cs == -1 || cs == SPI_IOMUX_PIN_NUM_CS) &&
-        (hd == -1 || hd == SPI_IOMUX_PIN_NUM_HD) &&
-        (wp == -1 || wp == SPI_IOMUX_PIN_NUM_WP)
-    ) {
-        flags |= SPICOMMON_BUSFLAG_IOMUX_PINS;
-        temp_host = SPI1_HOST;
-    } else if (
-        mosi == SPI2_IOMUX_PIN_NUM_MOSI &&
-        clk == SPI2_IOMUX_PIN_NUM_CLK &&
-        (miso == -1 || miso == SPI2_IOMUX_PIN_NUM_MISO) &&
-        (cs == -1 || cs == SPI2_IOMUX_PIN_NUM_CS) &&
-        (hd == -1 || hd == SPI2_IOMUX_PIN_NUM_HD) &&
-        (wp == -1 || wp == SPI2_IOMUX_PIN_NUM_WP)
-    ) {
-        flags |= SPICOMMON_BUSFLAG_IOMUX_PINS;
-        temp_host = SPI2_HOST;
-    }
-    #ifdef SPI3_IOMUX_PIN_NUM_MISO
-    else if (
-        mosi == SPI3_IOMUX_PIN_NUM_MOSI &&
-        clk == SPI3_IOMUX_PIN_NUM_CLK &&
-        (miso == -1 || miso == SPI3_IOMUX_PIN_NUM_MISO) &&
-        (cs == -1 || cs == SPI3_IOMUX_PIN_NUM_CS) &&
-        (hd == -1 || hd == SPI3_IOMUX_PIN_NUM_HD) &&
-        (wp == -1 || wp == SPI3_IOMUX_PIN_NUM_WP)
-    ) {
-        flags |= SPICOMMON_BUSFLAG_IOMUX_PINS;
-        temp_host = SPI3_HOST;
-    }
-    #endif
-    else {
-        flags |= SPICOMMON_BUSFLAG_GPIO_PINS;
-        temp_host = -1;
-    }
-
-    if (temp_host == -1 && host == -1) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unable to determine SPI host, please supply a host number"));
-    } else if (host == -1) {
-        host = temp_host;
-    }
-
     self->callback = mp_const_none;
+
+    int host = (int)args[ARG_host].u_int;
+    if (host == -1) host = 1;
 
     self->host = host;
     self->bus_handle = (esp_lcd_spi_bus_handle_t)((uint32_t)host);
     self->panel_io_handle.panel_io = NULL;
 
-    self->bus_config.sclk_io_num = clk;
-    self->bus_config.mosi_io_num = mosi;
-    self->bus_config.miso_io_num = miso;
+    self->bus_config.sclk_io_num = (int)args[ARG_sclk].u_int;
+    self->bus_config.mosi_io_num = (int)args[ARG_mosi].u_int;
+    self->bus_config.miso_io_num = (int)args[ARG_miso].u_int;
     self->bus_config.quadwp_io_num = wp;
     self->bus_config.quadhd_io_num = hd;
     self->bus_config.data4_io_num = -1;
@@ -168,7 +118,7 @@ STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     self->bus_config.data7_io_num = -1;
     self->bus_config.flags = flags;
 
-    self->panel_io_config.cs_gpio_num = cs;
+    self->panel_io_config.cs_gpio_num = (int)args[ARG_cs].u_int;
     self->panel_io_config.dc_gpio_num = (int)args[ARG_dc].u_int;
     self->panel_io_config.spi_mode = (int)args[ARG_spi_mode].u_int;
     self->panel_io_config.pclk_hz = (unsigned int)args[ARG_freq].u_int;
@@ -203,19 +153,6 @@ mp_lcd_err_t spi_del(mp_obj_t obj)
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(spi_bus_free)"), ret);
     }
-
-    gpio_pad_select_gpio(self->bus_config.miso_io_num);
-    gpio_matrix_out(self->bus_config.miso_io_num, SIG_GPIO_OUT_IDX, false, false);
-    gpio_set_direction(self->bus_config.miso_io_num, GPIO_MODE_INPUT);
-
-    gpio_pad_select_gpio(self->bus_config.mosi_io_num);
-    gpio_matrix_out(self->bus_config.mosi_io_num, SIG_GPIO_OUT_IDX, false, false);
-    gpio_set_direction(self->bus_config.mosi_io_num, GPIO_MODE_INPUT);
-
-    gpio_pad_select_gpio(self->bus_config.sclk_io_num);
-    gpio_matrix_out(self->bus_config.sclk_io_num, SIG_GPIO_OUT_IDX, false, false);
-    gpio_set_direction(self->bus_config.sclk_io_num, GPIO_MODE_INPUT);
-
     return ret;
 }
 
@@ -232,7 +169,7 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
 
     size_t max_trans_size;
 
-    if ((self->buffer_flags ^ MALLOC_CAP_DMA) && (self->buf2 != NULL)) {
+    if ((self->buffer_flags & MALLOC_CAP_DMA) && (self->buf2 != NULL)) {
         max_trans_size = SPI_LL_DMA_MAX_BIT_LEN / 8;
     } else {
         max_trans_size = SPI_LL_CPU_MAX_BIT_LEN / 8;
@@ -246,7 +183,19 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
 
     self->panel_io_config.trans_queue_depth = 10;
 
-    mp_lcd_err_t ret = spi_bus_initialize(self->host, &self->bus_config, SPI_DMA_CH_AUTO);
+#if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C3
+    int dma_chan = SPI_DMA_CH_AUTO;
+#else
+    int dma_chan = 0;
+
+    if (self->host == SPI2_HOST) {
+        dma_chan = 1;
+    } else {
+       dma_chan = 2;
+    }
+#endif
+
+    mp_lcd_err_t ret = spi_bus_initialize(self->host, &self->bus_config, dma_chan);
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(spi_bus_initialize)"), ret);
     }
