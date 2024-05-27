@@ -52,6 +52,7 @@
         } state;
 
     };
+
     typedef struct _esp32_hw_spi_default_pins_t{
         int8_t mosi_io_num;    ///< GPIO pin for Master Out Slave In (=spi_d) signal, or -1 if not used.
         int8_t miso_io_num;    ///< GPIO pin for Master In Slave Out (=spi_q) signal, or -1 if not used.

@@ -36,6 +36,8 @@
 #include "mphalport.h"
 #include "py/gc.h"
 #include "py/stackctrl.h"
+#include "py/objarray.h"
+#include "py/binary.h"
 
 #include "driver/spi_master.h"
 #include "driver/spi_common.h"
@@ -831,7 +833,7 @@ mp_obj_t esp32_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, siz
         data7 = -1;
         
         if (args[ARG_sck].u_obj == MP_OBJ_NULL) {
-            sck = default_pins->sclk_io_num
+            sck = default_pins->sclk_io_num;
         } else if (args[ARG_sck].u_obj == mp_const_none) {
             sck = -1;
         } else {
@@ -1001,7 +1003,7 @@ mp_obj_t esp32_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, siz
     int dma_chan = SPI_DMA_CH_AUTO;
 #endif
 
-    ret = spi_bus_initialize(self->host, &self->buscfg, dma_chan);
+    esp_err_t ret = spi_bus_initialize(self->host, &self->buscfg, dma_chan);
     if (ret != ESP_OK) {
         check_esp_err(ret);
         return mp_const_none;
@@ -1015,7 +1017,7 @@ mp_obj_t esp32_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, siz
 
 STATIC mp_obj_t esp32_hw_spi_bus_deinit(mp_obj_t self_in)
 {
-    esp32_hw_spi_dev_obj_t *self = (esp32_hw_spi_dev_obj_t *)self_in;
+    esp32_hw_spi_bus_obj_t *self = (esp32_hw_spi_bus_obj_t *)self_in;
 
     esp_err_t ret = spi_bus_free(self->host);
     check_esp_err(ret);
