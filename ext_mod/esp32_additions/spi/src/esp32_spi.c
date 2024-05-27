@@ -28,7 +28,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "../include/esp_spi.h"
+#include "../include/esp32_spi.h"
 
 #include "py/runtime.h"
 #include "py/stream.h"
