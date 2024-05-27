@@ -62,7 +62,7 @@
         int8_t data5_io_num;     ///< GPIO pin for spi data5 signal in octal mode, or -1 if not used.
         int8_t data6_io_num;     ///< GPIO pin for spi data6 signal in octal mode, or -1 if not used.
         int8_t data7_io_num;     ///< GPIO pin for spi data7 signal in octal mode, or -1 if not used.
-        int8_t cs_io_num
+        int8_t cs_io_num;
     } esp32_hw_spi_default_pins_t;
 
     extern const mp_obj_type_t esp32_hw_spi_bus_type;

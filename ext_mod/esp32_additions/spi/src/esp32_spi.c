@@ -88,17 +88,6 @@ void _esp_spi_cb_isr(esp32_hw_spi_dev_obj_t *self, mp_obj_t cb, mp_obj_t user_da
 }
 
 
-// called when esp_lcd_panel_draw_bitmap is completed
-bool bus_trans_done_cb(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
-{
-    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)user_ctx;
-
-
-    self->trans_done = true;
-    return false;
-}
-
-
 static void _esp32_pre_cb(spi_transaction_t *trans)
 {
     esp32_hw_spi_dev_obj_t *self = (esp32_hw_spi_dev_obj_t *)trans->user;
@@ -157,7 +146,6 @@ mp_obj_t esp32_hw_spi_dev_make_new(const mp_obj_type_t *type, size_t n_args, siz
     size_t trans_pool_count = (size_t)args[ARG_queue_size].u_int;
     esp32_hw_spi_dev_obj_t *self = NULL;
     self = calloc(1, sizeof(esp32_hw_spi_dev_obj_t) + sizeof(esp32_spi_trans_descriptor_t) * trans_pool_count);
-    assert(self != NULL)
 
     self->base.type = &esp32_hw_spi_dev_type;
 
@@ -166,10 +154,10 @@ mp_obj_t esp32_hw_spi_dev_make_new(const mp_obj_type_t *type, size_t n_args, siz
     self->bits = (uint8_t)args[ARG_bits].u_int;
 
     uint32_t flags = args[ARG_firstbit].u_int == MICROPY_PY_MACHINE_SPI_LSB ? SPI_DEVICE_BIT_LSBFIRST : 0;
-    if (three_wire) flags |= SPI_DEVICE_3WIRE;
-    if (cs_active_pos) flags |= SPI_DEVICE_POSITIVE_CS;
-    if (half_duplex) flags |= SPI_DEVICE_HALFDUPLEX;
-    if (clock_as_cs) flags |= SPI_DEVICE_CLK_AS_CS;
+    if (args[ARG_three_wire].u_bool) flags |= SPI_DEVICE_3WIRE;
+    if (args[ARG_cs_active_pos].u_bool) flags |= SPI_DEVICE_POSITIVE_CS;
+    if (args[ARG_half_duplex].u_bool) flags |= SPI_DEVICE_HALFDUPLEX;
+    if (args[ARG_clock_as_cs].u_bool) flags |= SPI_DEVICE_CLK_AS_CS;
 
     self->devcfg = (spi_device_interface_config_t){
         .clock_speed_hz = spi_get_actual_clock(APB_CLK_FREQ, args[ARG_baudrate].u_int, 0),
@@ -269,14 +257,14 @@ mp_obj_t esp32_hw_spi_dev_read(size_t n_args, const mp_obj_t *pos_args, mp_map_t
     spi_transaction_t *spi_trans = NULL;
     esp32_spi_trans_descriptor_t *lcd_trans = NULL;
 
-    esp_err_t ret = spi_device_acquire_bus(self->spi_dev, portMAX_DELAY);
+    ret = spi_device_acquire_bus(self->spi_dev, portMAX_DELAY);
     check_esp_err(ret);
 
     // Round to nearest whole set of bits
     size_t bits_to_recv = read_bufinfo.len * 8 / self->bits * self->bits;
 
     size_t rx_size = bits_to_recv / 8;
-    const uint8_t * rx_buf = (const uint8_t *)read_bufinfo.buf;
+    uint8_t * rx_buf = (uint8_t *)read_bufinfo.buf;
 
     // to fill the rx buffer we are using a DMA transfer if the supplied buffer was allocated in DMA memory
     // This is looking code in the even the buffer is larger than a single transaction is able to handle.
@@ -306,7 +294,7 @@ mp_obj_t esp32_hw_spi_dev_read(size_t n_args, const mp_obj_t *pos_args, mp_map_t
             lcd_trans->base.flags |= SPI_TRANS_CS_KEEP_ACTIVE;
         } else {
             // mark trans_done only at the last round to avoid premature completion callback
-            lcd_trans->flags.trans_done = true;
+            lcd_trans->trans_done = true;
             lcd_trans->base.flags &= ~SPI_TRANS_CS_KEEP_ACTIVE;
         }
 
@@ -314,7 +302,7 @@ mp_obj_t esp32_hw_spi_dev_read(size_t n_args, const mp_obj_t *pos_args, mp_map_t
 
         lcd_trans->base.length = chunk_size * 8; // transaction length is in bits
         lcd_trans->base.rx_buffer = rx_buf;
-        if (spi_panel_io->flags.octal_mode) {
+        if (self->spi_bus->octal_mode) {
             // use 8 lines for transmitting command, address and data
             lcd_trans->base.flags |= (SPI_TRANS_MULTILINE_CMD | SPI_TRANS_MULTILINE_ADDR | SPI_TRANS_MODE_OCT);
         }
@@ -325,7 +313,7 @@ mp_obj_t esp32_hw_spi_dev_read(size_t n_args, const mp_obj_t *pos_args, mp_map_t
         self->num_trans_inflight++;
 
         // move on to the next chunk
-        rx_buf = (const uint8_t *)rx_buf + chunk_size;
+        rx_buf = (uint8_t *)rx_buf + chunk_size;
         rx_size -= chunk_size;
     } while (rx_size > 0); // continue while we have remaining data to transmit
 
@@ -356,13 +344,13 @@ mp_obj_t esp32_hw_spi_dev_write(size_t n_args, const mp_obj_t *pos_args, mp_map_
     spi_transaction_t *spi_trans = NULL;
     esp32_spi_trans_descriptor_t *lcd_trans = NULL;
 
-    esp_err_t ret = spi_device_acquire_bus(self->spi_dev, portMAX_DELAY);
+    ret = spi_device_acquire_bus(self->spi_dev, portMAX_DELAY);
     check_esp_err(ret);
 
     size_t bits_to_send = write_bufinfo.len * 8 / self->bits * self->bits;
 
     size_t tx_size = bits_to_send / 8;
-    const uint8_t * tx_buf = (const uint8_t *)write_bufinfo.buf;
+    uint8_t * tx_buf = (uint8_t *)write_bufinfo.buf;
 
     // to write the tx buffer we are using a DMA transfer if the supplied buffer was allocated in DMA memory
     // This is looking code in the even the buffer is larger than a single transaction is able to handle.
@@ -393,7 +381,7 @@ mp_obj_t esp32_hw_spi_dev_write(size_t n_args, const mp_obj_t *pos_args, mp_map_
             lcd_trans->base.flags |= SPI_TRANS_CS_KEEP_ACTIVE;
         } else {
             // mark trans_done only at the last round to avoid premature completion callback
-            lcd_trans->flags.trans_done = true;
+            lcd_trans->trans_done = true;
             lcd_trans->base.flags &= ~SPI_TRANS_CS_KEEP_ACTIVE;
         }
 
@@ -401,7 +389,7 @@ mp_obj_t esp32_hw_spi_dev_write(size_t n_args, const mp_obj_t *pos_args, mp_map_
 
         lcd_trans->base.length = chunk_size * 8; // transaction length is in bits
         lcd_trans->base.tx_buffer = tx_buf;
-        if (spi_panel_io->flags.octal_mode) {
+        if (self->spi_bus->octal_mode) {
             // use 8 lines for transmitting command, address and data
             lcd_trans->base.flags |= (SPI_TRANS_MULTILINE_CMD | SPI_TRANS_MULTILINE_ADDR | SPI_TRANS_MODE_OCT);
         }
@@ -412,7 +400,7 @@ mp_obj_t esp32_hw_spi_dev_write(size_t n_args, const mp_obj_t *pos_args, mp_map_
         self->num_trans_inflight++;
 
         // move on to the next chunk
-        tx_buf = (const uint8_t *)tx_buf + chunk_size;
+        tx_buf = (uint8_t *)tx_buf + chunk_size;
         tx_size -= chunk_size;
     } while (tx_size > 0); // continue while we have remaining data to transmit
 
@@ -450,7 +438,7 @@ mp_obj_t esp32_hw_spi_dev_write_read(size_t n_args, const mp_obj_t *pos_args, mp
     spi_transaction_t *spi_trans = NULL;
     esp32_spi_trans_descriptor_t *lcd_trans = NULL;
 
-    esp_err_t ret = spi_device_acquire_bus(self->spi_dev, portMAX_DELAY);
+    ret = spi_device_acquire_bus(self->spi_dev, portMAX_DELAY);
     check_esp_err(ret);
 
     // Round to nearest whole set of bits
@@ -476,7 +464,7 @@ mp_obj_t esp32_hw_spi_dev_write_read(size_t n_args, const mp_obj_t *pos_args, mp
     lcd_trans->base.length = bits_to_send;
     lcd_trans->base.tx_buffer = write_bufinfo.buf;
 
-    lcd_trans->base.flags = SPI_TRANS_USE_TXDATA
+    lcd_trans->base.flags = SPI_TRANS_USE_TXDATA;
 
     if (self->spi_bus->octal_mode) {
         // use 8 lines for transmitting command, address and data
@@ -487,7 +475,7 @@ mp_obj_t esp32_hw_spi_dev_write_read(size_t n_args, const mp_obj_t *pos_args, mp
     check_esp_err(ret);
 
     size_t rx_size = bits_to_recv / 8;
-    const uint8_t * rx_buf = (const uint8_t *)read_bufinfo.buf;
+    uint8_t * rx_buf = (uint8_t *)read_bufinfo.buf;
 
     // to fill the rx buffer we are using a DMA transfer if the supplied buffer was allocated in DMA memory
     // This is looking code in the even the buffer is larger than a single transaction is able to handle.
@@ -517,7 +505,7 @@ mp_obj_t esp32_hw_spi_dev_write_read(size_t n_args, const mp_obj_t *pos_args, mp
             lcd_trans->base.flags |= SPI_TRANS_CS_KEEP_ACTIVE;
         } else {
             // mark trans_done only at the last round to avoid premature completion callback
-            lcd_trans->flags.trans_done = true;
+            lcd_trans->trans_done = true;
             lcd_trans->base.flags &= ~SPI_TRANS_CS_KEEP_ACTIVE;
         }
 
@@ -525,7 +513,7 @@ mp_obj_t esp32_hw_spi_dev_write_read(size_t n_args, const mp_obj_t *pos_args, mp
 
         lcd_trans->base.length = chunk_size * 8; // transaction length is in bits
         lcd_trans->base.rx_buffer = rx_buf;
-        if (spi_panel_io->flags.octal_mode) {
+        if (self->spi_bus->octal_mode) {
             // use 8 lines for transmitting command, address and data
             lcd_trans->base.flags |= (SPI_TRANS_MULTILINE_CMD | SPI_TRANS_MULTILINE_ADDR | SPI_TRANS_MODE_OCT);
         }
@@ -536,7 +524,7 @@ mp_obj_t esp32_hw_spi_dev_write_read(size_t n_args, const mp_obj_t *pos_args, mp
         self->num_trans_inflight++;
 
         // move on to the next chunk
-        rx_buf = (const uint8_t *)rx_buf + chunk_size;
+        rx_buf = (uint8_t *)rx_buf + chunk_size;
         rx_size -= chunk_size;
     } while (rx_size > 0); // continue while we have remaining data to transmit
 
@@ -652,7 +640,7 @@ MP_DEFINE_CONST_OBJ_TYPE(
 
 
 // Static objects mapping to SPI2 (and SPI3 if available) hardware peripherals.
-STATIC esp32_hw_spi_bus_obj_t esp32_hw_spi_bus_obj[MICROPY_HW_SPI_MAX];
+STATIC esp32_hw_spi_bus_obj_t esp32_hw_spi_bus_obj[ESP32_HW_SPI_MAX];
 
 
 mp_obj_t esp32_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
@@ -685,7 +673,7 @@ mp_obj_t esp32_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, siz
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
     
-     mp_lcd_spi_bus_obj_t *self = NULL;
+    esp32_hw_spi_bus_obj_t *self = NULL;
     
     esp32_hw_spi_default_pins_t default_pins_array[ESP32_HW_SPI_MAX] = {
         { 
