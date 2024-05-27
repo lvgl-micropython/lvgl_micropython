@@ -727,7 +727,7 @@ mp_obj_t esp32_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, siz
         self = &esp32_hw_spi_bus_obj[host - 1];
         default_pins = &default_pins_array[host - 1];
         #if SOC_SPI_SUPPORT_OCT
-        default_oct_pins = default_pins_array[host - 1];
+        default_oct_pins = &default_pins_array[host - 1];
         #endif
     } else {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("SPI(%d) doesn't exist"), host);
@@ -991,7 +991,7 @@ mp_obj_t esp32_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, siz
         .data5_io_num = (int)data5,
         .data6_io_num = (int)data6,
         .data7_io_num = (int)data7,
-        .max_transfer_sz = SPI_LL_DMA_MAX_BIT_LEN / 8
+        .max_transfer_sz = SPI_LL_DMA_MAX_BIT_LEN / 8,
         .flags = buscfg_flags
     };
     self->host = (spi_host_device_t)host;
