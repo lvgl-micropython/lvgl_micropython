@@ -637,3 +637,9 @@ the calibration by either using a pin that you can check the state of or through
 a button in your UI that you provide to the user.
 
 Thank again and enjoy!!
+
+***NOTE***: On ESP32-S3, SPI host 0 and SPI host 1 share a common SPI bus. 
+The main Flash and PSRAM are connected to the host 0. It is recommended to use 
+SPI host 2 when connecting an SPI device like a display that is going to utilize
+the PSRAM for the frame buffer.
+

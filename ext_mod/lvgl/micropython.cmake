@@ -40,15 +40,15 @@ endif()
 
 # file(WRITE ${CMAKE_BINARY_DIR}/lv_mp.c ${mpy_output})
 
-file(GLOB_RECURSE SOURCES ${BINDING_DIR}/lib/lvgl/src/*.c)
-list(APPEND SOURCES
+file(GLOB_RECURSE LVGL_SOURCES ${BINDING_DIR}/lib/lvgl/src/*.c)
+list(APPEND LVGL_SOURCES
     ${BINDING_DIR}/ext_mod/lvgl_addons/src/color_addons.c
     ${BINDING_DIR}/ext_mod/lvgl/mem_core.c
 )
 
 add_library(lvgl_interface INTERFACE)
 
-target_sources(lvgl_interface INTERFACE ${SOURCES})
+target_sources(lvgl_interface INTERFACE ${LVGL_SOURCES})
 target_compile_options(lvgl_interface INTERFACE ${LV_CFLAGS})
 
 set(LVGL_MPY_INCLUDES

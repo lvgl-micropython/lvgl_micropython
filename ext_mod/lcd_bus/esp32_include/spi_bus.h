@@ -8,6 +8,7 @@
     #include "esp_lcd_panel_io.h"
     #include "driver/spi_common.h"
     #include "driver/spi_master.h"
+    #include "hal/spi_types.h"
 
     // micropython includes
     #include "py/objarray.h"
@@ -32,7 +33,7 @@
         spi_bus_config_t bus_config;
         esp_lcd_spi_bus_handle_t bus_handle;
 
-        int host;
+        spi_host_device_t host;
 
     } mp_lcd_spi_bus_obj_t;
 

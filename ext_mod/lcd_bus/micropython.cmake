@@ -3,12 +3,12 @@
 add_library(usermod_lcd_bus INTERFACE)
 
 if(ESP_PLATFORM)
-    set(INCLUDES
+    set(LCD_INCLUDES
         ${CMAKE_CURRENT_LIST_DIR}
         ${CMAKE_CURRENT_LIST_DIR}/esp32_include
     )
 
-    set(SOURCES
+    set(LCD_SOURCES
         ${CMAKE_CURRENT_LIST_DIR}/modlcd_bus.c
         ${CMAKE_CURRENT_LIST_DIR}/lcd_types.c
         ${CMAKE_CURRENT_LIST_DIR}/esp32_src/i2c_bus.c
@@ -18,23 +18,23 @@ if(ESP_PLATFORM)
     )
 
     # gets esp_lcd include paths
-    idf_component_get_property(esp_lcd_includes esp_lcd INCLUDE_DIRS)
-    idf_component_get_property(esp_lcd_dir esp_lcd COMPONENT_DIR)
+    idf_component_get_property(ESP_LCD_INCLUDES esp_lcd INCLUDE_DIRS)
+    idf_component_get_property(ESP_LCD_DIR esp_lcd COMPONENT_DIR)
 
     # sets the include paths into INCLUDES variable
-    if(esp_lcd_includes)
-        list(TRANSFORM esp_lcd_includes PREPEND ${esp_lcd_dir}/)
-        list(APPEND INCLUDES ${esp_lcd_includes})
+    if(ESP_LCD_INCLUDES)
+        list(TRANSFORM ESP_LCD_INCLUDES PREPEND ${ESP_LCD_DIR}/)
+        list(APPEND LCD_INCLUDES ${ESP_LCD_INCLUDES})
     endif()
 
 else()
-    set(INCLUDES
+    set(LCD_INCLUDES
         ${CMAKE_CURRENT_LIST_DIR}
         ${CMAKE_CURRENT_LIST_DIR}/common_include
         ${CMAKE_CURRENT_LIST_DIR}/sdl_bus
     )
 
-    set(SOURCES
+    set(LCD_SOURCES
         ${CMAKE_CURRENT_LIST_DIR}/lcd_types.c
         ${CMAKE_CURRENT_LIST_DIR}/modlcd_bus.c
         ${CMAKE_CURRENT_LIST_DIR}/common_src/i2c_bus.c
@@ -49,10 +49,10 @@ endif(ESP_PLATFORM)
 
 
 # Add our source files to the lib
-target_sources(usermod_lcd_bus INTERFACE ${SOURCES})
+target_sources(usermod_lcd_bus INTERFACE ${LCD_SOURCES})
 
 # Add include directories.
-target_include_directories(usermod_lcd_bus INTERFACE ${INCLUDES})
+target_include_directories(usermod_lcd_bus INTERFACE ${LCD_INCLUDES})
 
 # Link our INTERFACE library to the usermod target.
 target_link_libraries(usermod INTERFACE usermod_lcd_bus)

@@ -9,10 +9,12 @@
 #include "driver/spi_master.h"
 #include "soc/gpio_sig_map.h"
 #include "soc/spi_pins.h"
+#include "soc/soc_caps.h"
 #include "rom/gpio.h"
+#include "esp_err.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_heap_caps.h"
-#include "hal/spi_ll.h"
+#include "hal/spi_types.h"
 
 // micropython includes
 #include "mphalport.h"
@@ -100,11 +102,16 @@ STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
 
     self->callback = mp_const_none;
 
-    int host = (int)args[ARG_host].u_int;
-    if (host == -1) host = 1;
+    spi_host_device_t host = (spi_host_device_t)args[ARG_host].u_int;
+#if SOC_SPI_PERIPH_NUM > 2
+    if (host < SPI2_HOST || host > SPI3_HOST) {
+#else
+    if (host != SPI2_HOST) {
+#endif
+        mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("Host %d is not supported by this MCU"), host);
+    }
 
     self->host = host;
-    self->bus_handle = (esp_lcd_spi_bus_handle_t)((uint32_t)host);
     self->panel_io_handle.panel_io = NULL;
 
     self->bus_config.sclk_io_num = (int)args[ARG_sclk].u_int;
@@ -145,12 +152,12 @@ mp_lcd_err_t spi_del(mp_obj_t obj)
     mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
 
     mp_lcd_err_t ret = esp_lcd_panel_io_del(self->panel_io_handle.panel_io);
-    if (ret != 0) {
+    if (ret != ESP_OK) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_panel_io_del)"), ret);
     }
 
     ret = spi_bus_free(self->host);
-    if (ret != 0) {
+    if (ret != ESP_OK) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(spi_bus_free)"), ret);
     }
     return ret;
@@ -167,41 +174,32 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
         self->rgb565_byte_swap = false;
     }
 
-    size_t max_trans_size;
-
-    if ((self->buffer_flags & MALLOC_CAP_DMA) && (self->buf2 != NULL)) {
-        max_trans_size = SPI_LL_DMA_MAX_BIT_LEN / 8;
-    } else {
-        max_trans_size = SPI_LL_CPU_MAX_BIT_LEN / 8;
-    }
-
-    if (buffer_size <= max_trans_size) {
+    if (self->buffer_flags & MALLOC_CAP_DMA) {
         self->bus_config.max_transfer_sz = buffer_size;
     } else {
-        self->bus_config.max_transfer_sz = max_trans_size;
+        self->bus_config.max_transfer_sz = SOC_SPI_MAXIMUM_BUFFER_SIZE;
     }
 
     self->panel_io_config.trans_queue_depth = 10;
 
-#if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C3
-    int dma_chan = SPI_DMA_CH_AUTO;
-#else
-    int dma_chan = 0;
+#if CONFIG_IDF_TARGET_ESP32
+    int dma_chan = SPI_DMA_DISABLED;
 
     if (self->host == SPI2_HOST) {
-        dma_chan = 1;
+        dma_chan = SPI_DMA_CH1;
     } else {
-       dma_chan = 2;
+       dma_chan = SPI_DMA_CH2;
     }
+#else
+    int dma_chan = SPI_DMA_CH_AUTO;
 #endif
-
     mp_lcd_err_t ret = spi_bus_initialize(self->host, &self->bus_config, dma_chan);
-    if (ret != 0) {
+    if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(spi_bus_initialize)"), ret);
     }
 
-    ret = esp_lcd_new_panel_io_spi(self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io);
-    if (ret != 0) {
+    ret = esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)self->host, &self->panel_io_config, &self->panel_io_handle.panel_io);
+    if (ret != ESP_OK) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_spi)"), ret);
     }
 
@@ -229,7 +227,7 @@ mp_lcd_err_t spi_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
 mp_obj_t mp_spi_bus_get_host(mp_obj_t obj)
 {
     mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
-    return mp_obj_new_int(self->host);
+    return mp_obj_new_int((uint8_t)self->host);
 }
 
 MP_DEFINE_CONST_FUN_OBJ_1(mp_spi_bus_get_host_obj, mp_spi_bus_get_host);
