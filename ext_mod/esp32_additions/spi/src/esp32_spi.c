@@ -34,13 +34,21 @@
 #include "py/stream.h"
 #include "py/mphal.h"
 #include "mphalport.h"
+#include "py/gc.h"
+#include "py/stackctrl.h"
 
 #include "driver/spi_master.h"
 #include "driver/spi_common.h"
 #include "soc/spi_pins.h"
+#include "rom/ets_sys.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_system.h"
+#include "esp_cpu.h"
 
-/* SPI DEVICE CLASS
-/*********************************************************************************************************/
+
+// SPI DEVICE CLASS
+//---------------------------------------------------------------------------------------------------
 
 void _esp_spi_cb_isr(esp32_hw_spi_dev_obj_t *self, mp_obj_t cb, mp_obj_t user_data)
 {
@@ -627,7 +635,7 @@ MP_DEFINE_CONST_OBJ_TYPE(
     locals_dict, (mp_obj_dict_t *)&esp32_hw_spi_dev_locals_dict
 );
 
-/*********************************************************************************************************/
+//---------------------------------------------------------------------------------------------------
 
 #if CONFIG_IDF_TARGET_ESP32
     #define ESP32_HW_SPI_MAX  2
