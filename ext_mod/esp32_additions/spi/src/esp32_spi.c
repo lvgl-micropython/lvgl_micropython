@@ -1069,28 +1069,6 @@ MP_DEFINE_CONST_OBJ_TYPE(
 );
 
 
-mp_obj_t esp32_hw_spi_get_dma_buffer(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
-{
-    enum { ARG_size };
-    static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_callback,     MP_ARG_OBJ | MP_ARG_REQUIRED           },
-        { MP_QSTR_user_data,    MP_ARG_OBJ, { .u_obj = mp_const_none } },
-
-    };
-    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
-    mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
-
-    esp32_hw_spi_dev_obj_t *self = (esp32_hw_spi_dev_obj_t *)args[ARG_self].u_obj;
-
-    self->trans_end_cb = args[ARG_callback].u_obj;
-    self->trans_end_user_data = args[ARG_user_data].u_obj;
-
-    return mp_const_none;
-}
-
-MP_DEFINE_CONST_FUN_OBJ_KW(, 2, );
-
-
 STATIC mp_obj_t esp32_hw_spi_get_dma_buffer(mp_obj_t size_in)
 {
     uint16_t size = (uint16_t)mp_obj_get_int_truncated(size_in);
