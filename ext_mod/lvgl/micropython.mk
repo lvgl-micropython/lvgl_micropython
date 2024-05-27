@@ -24,7 +24,6 @@ ifneq (,$(findstring -Wno-missing-field-initializers, $(CFLAGS_USERMOD)))
     CFLAGS_USERMOD += -Wno-missing-field-initializers
 endif
 
-CFLAGS_USERMOD += -Wno-sign-compare
 
 ALL_LVGL_SRC = $(shell find $(LVGL_DIR) -type f -name '*.h') $(LVGL_BINDING_DIR)/lib/lv_conf.h
 

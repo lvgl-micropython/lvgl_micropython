@@ -69,7 +69,11 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
         unix_cmd.append(f'VARIANT={board}')
 
     if lv_cflags:
-        unix_cmd.append(f'LV_CFLAGS="{lv_cflags}"')
+        lv_cflags += ' -Wno-sign-compare'
+    else:
+        lv_cflags = '-Wno-sign-compare'
+
+    unix_cmd.append(f'LV_CFLAGS="{lv_cflags}"')
 
     unix_cmd.extend([
         'LV_PORT=unix',
