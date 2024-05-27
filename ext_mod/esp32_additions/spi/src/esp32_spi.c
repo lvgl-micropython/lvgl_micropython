@@ -45,6 +45,7 @@
 #include "freertos/task.h"
 #include "esp_system.h"
 #include "esp_cpu.h"
+#include "hal/spi_ll.h"
 
 
 // SPI DEVICE CLASS
@@ -727,11 +728,11 @@ mp_obj_t esp32_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, siz
         self = &esp32_hw_spi_bus_obj[host - 1];
         default_pins = &default_pins_array[host - 1];
         #if SOC_SPI_SUPPORT_OCT
-        default_oct_pins = &default_pins_array[host - 1];
+        default_oct_pins = &default_oct_pins_array[host - 1];
         #endif
     } else {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("SPI(%d) doesn't exist"), host);
-        return mp_obj_none;
+        return mp_const_none;
     }
 
     if (self->state == MACHINE_HW_SPI_STATE_INIT) {
@@ -783,9 +784,9 @@ mp_obj_t esp32_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, siz
         data7 = machine_pin_get_id(args[ARG_data7].u_obj);
     }
     
-    if (data2 != -1 && data5 != -1 && data6 != -1 && data7 != -1) {
+    if (data4 != -1 && data5 != -1 && data6 != -1 && data7 != -1) {
         if (args[ARG_sck].u_obj == MP_OBJ_NULL) {
-            sck = default_oct_pins->sck_io_num;
+            sck = default_oct_pins->sclk_io_num;
         } else if (args[ARG_sck].u_obj == mp_const_none) {
             sck = -1;
         } else {
@@ -802,14 +803,6 @@ mp_obj_t esp32_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, siz
     
         if (args[ARG_miso].u_obj == MP_OBJ_NULL) {
             miso = default_oct_pins->miso_io_num;
-        } else if (args[ARG_miso].u_obj == mp_const_none) {
-            miso = -1;
-        } else {
-            miso = machine_pin_get_id(args[ARG_miso].u_obj);
-        }
-        
-        if (args[ARG_cs].u_obj == MP_OBJ_NULL) {
-            miso = default_oct_pins->cs_io_num;
         } else if (args[ARG_miso].u_obj == mp_const_none) {
             miso = -1;
         } else {
@@ -838,7 +831,7 @@ mp_obj_t esp32_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, siz
         data7 = -1;
         
         if (args[ARG_sck].u_obj == MP_OBJ_NULL) {
-            sck = default_pins->sck_io_num;
+            sck = default_pins->sclk_io_num
         } else if (args[ARG_sck].u_obj == mp_const_none) {
             sck = -1;
         } else {
@@ -881,7 +874,7 @@ mp_obj_t esp32_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, siz
     #else
     
     if (args[ARG_sck].u_obj == MP_OBJ_NULL) {
-        sck = default_pins->sck_io_num;
+        sck = default_pins->sclk_io_num;
     } else if (args[ARG_sck].u_obj == mp_const_none) {
         sck = -1;
     } else {
