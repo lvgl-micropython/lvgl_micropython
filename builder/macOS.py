@@ -69,17 +69,14 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
         unix_cmd.append(f'VARIANT={board}')
 
     if lv_cflags:
-        lv_cflags += ' -Wno-sign-compare'
-    else:
-        lv_cflags = '-Wno-sign-compare'
-
-    unix_cmd.append(f'LV_CFLAGS="{lv_cflags}"')
+        unix_cmd.append(f'LV_CFLAGS="{lv_cflags}"')
 
     unix_cmd.extend([
         'LV_PORT=unix',
         f'USER_C_MODULES="{script_dir}/ext_mod"',
         (
             '"CFLAGS_EXTRA='
+            '-Wno-sign-compare '
             '-Wno-unused-function '
             '-Wno-double-promotion '
             '-Wno-unused-command-line-argument"'
