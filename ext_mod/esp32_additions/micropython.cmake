@@ -1,7 +1,3 @@
 
-FILE(GLOB SUBDIRS ABSOLUTE ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CURRENT_LIST_DIR}/*)
-FOREACH(SUBDIR ${SUBDIRS})
-    IF(IS_DIRECTORY ${SUBDIR})
-        include(${SUBDIR}/micropython.cmake)
-    ENDIF()
-ENDFOREACH()
+include(${CMAKE_CURRENT_LIST_DIR}/nvs/micropython.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/spi/micropython.cmake)
