@@ -75,7 +75,7 @@ static void _esp32_pre_cb(spi_transaction_t *trans)
 
 static void _esp32_post_cb(spi_transaction_t *spi_trans)
 {
-    esp32_hw_spi_dev_obj_t *self = (esp32_hw_spi_dev_obj_t *)trans->user;
+    esp32_hw_spi_dev_obj_t *self = (esp32_hw_spi_dev_obj_t *)spi_trans->user;
 
     spi_transaction_ext_t *spi_trans_ext = __containerof(spi_trans, spi_transaction_ext_t, base);
     esp32_spi_trans_descriptor_t *spi_trans_desc = __containerof(spi_trans_ext, esp32_spi_trans_descriptor_t, base);
@@ -257,7 +257,7 @@ mp_obj_t esp32_hw_spi_dev_comm(size_t n_args, const mp_obj_t *pos_args, mp_map_t
     uint8_t addr_bits;
 
     if (args[ARG_addr].u_obj != mp_const_none && args[ARG_addr_bits].u_obj != mp_const_none) {
-        addr = mp_obj_get_int_truncated(args[ARG_param].u_obj);
+        addr = mp_obj_get_int_truncated(args[ARG_addr].u_obj);
         addr_bits = mp_obj_get_int_truncated(args[ARG_addr_bits].u_obj);
     } else {
         addr = 0;
@@ -285,7 +285,7 @@ mp_obj_t esp32_hw_spi_dev_comm(size_t n_args, const mp_obj_t *pos_args, mp_map_t
         tx_buf = (uint8_t *)tx_bufinfo.buf;
     }
 
-    size_t rx_size = 0
+    size_t rx_size = 0;
     uint8_t *rx_buf = NULL;
 
     if (args[ARG_rx_data].u_obj != mp_const_none) {
@@ -379,10 +379,10 @@ mp_obj_t esp32_hw_spi_dev_comm(size_t n_args, const mp_obj_t *pos_args, mp_map_t
             addr_bits = 0;
         }
 
-        spi_trans_desc.callback = args[ARG_callback].u_obj;
+        spi_trans_desc->callback = args[ARG_callback].u_obj;
 
         // data is usually large, using queue+blocking mode
-        ret = spi_device_queue_trans(self->spi_dev, &spi_trans_desc->base, portMAX_DELAY);
+        ret = spi_device_queue_trans(self->spi_dev, &spi_trans_desc->base.base, portMAX_DELAY);
         check_esp_err(ret);
         self->num_trans_inflight++;
 
@@ -402,7 +402,7 @@ mp_obj_t esp32_hw_spi_dev_comm(size_t n_args, const mp_obj_t *pos_args, mp_map_t
     return mp_const_none;
 }
 
-MP_DEFINE_CONST_FUN_OBJ_KW(esp32_hw_spi_dev_comm_obj, 3, esp32_hw_spi_dev_comm);
+MP_DEFINE_CONST_FUN_OBJ_KW(esp32_hw_spi_dev_comm_obj, 1, esp32_hw_spi_dev_comm);
 
 
 STATIC mp_obj_t esp32_hw_spi_dev_del(mp_obj_t self_in)
