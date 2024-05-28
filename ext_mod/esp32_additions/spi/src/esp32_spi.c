@@ -710,7 +710,7 @@ mp_obj_t esp32_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, siz
             .miso_io_num = SPI2_IOMUX_PIN_NUM_MISO_OCT,
             .sclk_io_num = SPI2_IOMUX_PIN_NUM_CLK_OCT, 
             .quadhd_io_num = SPI2_IOMUX_PIN_NUM_HD_OCT,
-            .quadwp_io_num = SPI2_IOMUX_PIN_NUM_WP_OCT
+            .quadwp_io_num = SPI2_IOMUX_PIN_NUM_WP_OCT,
             .data4_io_num = SPI2_IOMUX_PIN_NUM_IO4_OCT,
             .data5_io_num = SPI2_IOMUX_PIN_NUM_IO5_OCT,
             .data6_io_num = SPI2_IOMUX_PIN_NUM_IO6_OCT,
