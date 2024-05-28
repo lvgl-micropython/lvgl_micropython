@@ -191,7 +191,6 @@ mp_obj_t esp32_hw_spi_dev_make_new(const mp_obj_type_t *type, size_t n_args, siz
     return MP_OBJ_FROM_PTR(self);
 }
 
-
 mp_obj_t esp32_hw_spi_dev_trans_start_cb(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
     enum { ARG_self, ARG_callback, ARG_user_data };
@@ -1015,16 +1014,18 @@ mp_obj_t esp32_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, siz
 }
 
 
+STATIC void machine_hw_spi_deinit_internal(machine_hw_spi_obj_t *self) {
+
+
+
 STATIC mp_obj_t esp32_hw_spi_bus_deinit(mp_obj_t self_in)
 {
     esp32_hw_spi_bus_obj_t *self = (esp32_hw_spi_bus_obj_t *)self_in;
 
-    esp_err_t ret = spi_bus_free(self->host);
-    check_esp_err(ret);
-
     if (self->state == MACHINE_HW_SPI_STATE_INIT) {
         self->state = MACHINE_HW_SPI_STATE_DEINIT;
-        machine_hw_spi_deinit_internal(self);
+        esp_err_t ret = spi_bus_free(self->host);
+        check_esp_err(ret);
     }
 
     return mp_const_none;
@@ -1097,10 +1098,10 @@ MP_DEFINE_CONST_FUN_OBJ_1(esp32_hw_spi_free_dma_buffer_obj, esp32_hw_spi_free_dm
 
 STATIC const mp_map_elem_t esp32_module_spi_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),        MP_OBJ_NEW_QSTR(MP_QSTR_spi)                  },
-    { MP_ROM_QSTR(MP_QSTR_Bus)              (mp_obj_t)&esp32_hw_spi_bus_type              },
+    { MP_ROM_QSTR(MP_QSTR_Bus),             (mp_obj_t)&esp32_hw_spi_bus_type              },
     { MP_ROM_QSTR(MP_QSTR_Device),          (mp_obj_t)&esp32_hw_spi_dev_type              },
     { MP_ROM_QSTR(MP_QSTR_get_dma_buffer),  MP_ROM_PTR(&esp32_hw_spi_get_dma_buffer_obj)  },
-    { MP_ROM_QSTR(MP_QSTR_free_dma_buffer), MP_ROM_PTR(&esp32_hw_spi_free_dma_buffer_obj) },
+    { MP_ROM_QSTR(MP_QSTR_free_dma_buffer), MP_ROM_PTR(&esp32_hw_spi_free_dma_buffer_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(esp32_module_spi_globals, esp32_module_spi_globals_table);
