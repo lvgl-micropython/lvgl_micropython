@@ -2,17 +2,11 @@
 add_library(usermod_spi INTERFACE)
 
 set(SPI_INCLUDES)
-set(SPI_SOURCES ${CMAKE_CURRENT_LIST_DIR}/src/esp32_spi.c)
-
-# gets driver include paths
-# idf_component_get_property(DRIVER_INCLUDES driver INCLUDE_DIRS)
-# idf_component_get_property(DRIVER_DIR driver COMPONENT_DIR)
-
-# sets the include paths into INCLUDES variable
-# if(DRIVER_INCLUDES)
-#     list(TRANSFORM DRIVER_INCLUDES PREPEND ${DRIVER_DIR}/)
-#     list(APPEND SPI_INCLUDES ${DRIVER_INCLUDES})
-# endif()
+set(SPI_SOURCES
+    ${CMAKE_CURRENT_LIST_DIR}/src/esp32_spi.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/esp32_spi_bus.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/esp32_spi_device.c
+)
 
 # Add our source files to the lib
 target_sources(usermod_spi INTERFACE ${SPI_SOURCES})

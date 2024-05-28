@@ -1,12 +1,13 @@
-from typing import Optional, Final, Any, Callable
+from typing import Optional, Final, Any, Callable, Union
 
 
 def get_dma_buffer(size_in: int, /) -> memoryview:
     ...
 
-def free_dma_buffer(buf_in: memoryview, /) -> None:
 
+def free_dma_buffer(buf_in: memoryview, /) -> None:
     ...
+
 
 class Bus(object):
 
@@ -26,7 +27,7 @@ class Bus(object):
         data5: Optional[int] = None,
         data6: Optional[int] = None,
         data7: Optional[int] = None,
-        dual: Optional[bool] = False
+        dual: bool = False
     ) -> int:
         ...
 
@@ -56,19 +57,31 @@ class Device(object):
     ):
         ...
 
-    def read(self, read_buf: memoryview, /) -> None:
+    def comm(
+        self,
+        /,
+        tx_data: Optional[memoryview] = None,
+        rx_data: Optional[memoryview] = None,
+        cmd: Optional[int] = None,
+        cmd_bits: Optional[int] = None,
+        addr: Optional[int] = None,
+        addr_bits: Optional[int] = None,
+        callback: Optional[Callable[["Device", Any], None]] = None
+    ) -> None:
         ...
 
-    def write(self, write_buf: memoryview, /) -> None:
+    def register_trans_start_cb(
+        self,
+        callback: Union[Callable[["Device", Any], None], None],
+        user_data: Optional[Any] = None
+    ) -> None:
         ...
 
-    def write_read(self, write_buf: memoryview, read_buf: memoryview, /) -> None:
-        ...
-
-    def register_trans_start_cb(self, callback: Callable, user_data: Optional[Any] = None) -> None:
-        ...
-
-    def register_trans_end_cb(self, callback: Callable, user_data: Optional[Any] = None) -> None:
+    def register_trans_end_cb(
+        self,
+        callback: Union[Callable[["Device", Any], None], None],
+        user_data: Optional[Any] = None
+    ) -> None:
         ...
 
     def get_bus(self) -> Bus:
@@ -79,3 +92,10 @@ class Device(object):
 
     def deinit(self) -> None:
         ...
+
+
+del Callable
+del Union
+del Any
+del Optional
+del Final
