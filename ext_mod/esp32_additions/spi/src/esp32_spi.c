@@ -1,29 +1,3 @@
-/*
- * This file is part of the MicroPython project, http://micropython.org/
- *
- * The MIT License (MIT)
- *
- * Copyright (c) 2017 "Eric Poulsen" <eric@zyxod.com>
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -75,8 +49,6 @@ void _esp_spi_cb_isr(esp32_hw_spi_dev_obj_t *self, mp_obj_t cb, mp_obj_t user_da
     if (nlr_push(&nlr) == 0) {
         mp_obj_t args[2] = { MP_OBJ_FROM_PTR(self), user_data };
         mp_call_function_n_kw(cb, 2, 0, &args[0]);
-
-        mp_call_function_n_kw(cb, 0, 0, NULL);
         nlr_pop();
     } else {
         ets_printf("Uncaught exception in IRQ callback handler!\n");
@@ -191,6 +163,7 @@ mp_obj_t esp32_hw_spi_dev_make_new(const mp_obj_type_t *type, size_t n_args, siz
     return MP_OBJ_FROM_PTR(self);
 }
 
+
 mp_obj_t esp32_hw_spi_dev_trans_start_cb(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
     enum { ARG_self, ARG_callback, ARG_user_data };
@@ -235,7 +208,6 @@ mp_obj_t esp32_hw_spi_dev_trans_end_cb(size_t n_args, const mp_obj_t *pos_args, 
 }
 
 MP_DEFINE_CONST_FUN_OBJ_KW(esp32_hw_spi_dev_trans_end_cb_obj, 2, esp32_hw_spi_dev_trans_end_cb);
-
 
 
 mp_obj_t esp32_hw_spi_dev_read(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
@@ -332,7 +304,6 @@ mp_obj_t esp32_hw_spi_dev_write(size_t n_args, const mp_obj_t *pos_args, mp_map_
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_self,         MP_ARG_OBJ | MP_ARG_REQUIRED           },
         { MP_QSTR_write_buf,    MP_ARG_OBJ | MP_ARG_REQUIRED           },
-
     };
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
@@ -641,7 +612,6 @@ MP_DEFINE_CONST_OBJ_TYPE(
 #endif
 
 
-// Static objects mapping to SPI2 (and SPI3 if available) hardware peripherals.
 STATIC esp32_hw_spi_bus_obj_t esp32_hw_spi_bus_obj[ESP32_HW_SPI_MAX];
 
 
@@ -1014,10 +984,6 @@ mp_obj_t esp32_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, siz
 }
 
 
-STATIC void machine_hw_spi_deinit_internal(machine_hw_spi_obj_t *self) {
-
-
-
 STATIC mp_obj_t esp32_hw_spi_bus_deinit(mp_obj_t self_in)
 {
     esp32_hw_spi_bus_obj_t *self = (esp32_hw_spi_bus_obj_t *)self_in;
@@ -1032,7 +998,6 @@ STATIC mp_obj_t esp32_hw_spi_bus_deinit(mp_obj_t self_in)
 }
 
 MP_DEFINE_CONST_FUN_OBJ_1(esp32_hw_spi_bus_deinit_obj, esp32_hw_spi_bus_deinit);
-
 
 
 STATIC mp_obj_t esp32_hw_spi_bus_get_host(mp_obj_t self_in) {
