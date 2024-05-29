@@ -312,6 +312,10 @@ def process_output(myproc, out_to_screen, spinner, cmpl, out_queue):
             line += out
             if out == b'\n':
                 line = _convert_line(line.strip())
+                if not line:
+                    line = b''
+                    continue
+
                 out_queue.put(line)
 
                 if not spinner and out_to_screen:
@@ -327,8 +331,11 @@ def process_output(myproc, out_to_screen, spinner, cmpl, out_queue):
                         sys.stdout.write(line + padding)
                         last_line_len = len(line)
                     else:
-                        last_line_len = -1
-                        sys.stdout.write(line + '\n')
+                        if last_line_len == -1:
+                            sys.stdout.write(line + '\n')
+                        else:
+                            sys.stdout.write('\n' + line + '\n')
+                            last_line_len = -1
 
                     sys.stdout.flush()
 
@@ -347,6 +354,10 @@ def process_output(myproc, out_to_screen, spinner, cmpl, out_queue):
             err_line += out
             if out == b'\n':
                 err_line = _convert_line(err_line.strip())
+                if not err_line:
+                    err_line = b''
+                    continue
+
                 out_queue.put(err_line)
                 if out_to_screen and not spinner:
                     sys.stderr.write(err_line + '\n')

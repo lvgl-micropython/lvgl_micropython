@@ -113,6 +113,7 @@ STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
 
     self->host = host;
     self->panel_io_handle.panel_io = NULL;
+    self->bus_handle = (esp_lcd_spi_bus_handle_t)host;
 
     self->bus_config.sclk_io_num = (int)args[ARG_sclk].u_int;
     self->bus_config.mosi_io_num = (int)args[ARG_mosi].u_int;
@@ -124,6 +125,13 @@ STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     self->bus_config.data6_io_num = -1;
     self->bus_config.data7_io_num = -1;
     self->bus_config.flags = flags;
+
+    printf("host=%d\n", self->host);
+    printf("sclk_io_num=%d\n", self->bus_config.sclk_io_num);
+    printf("mosi_io_num=%d\n", self->bus_config.mosi_io_num);
+    printf("miso_io_num=%d\n", self->bus_config.miso_io_num);
+    printf("quadwp_io_num=%d\n", self->bus_config.quadwp_io_num);
+    printf("quadhd_io_num=%d\n", self->bus_config.quadhd_io_num);
 
     self->panel_io_config.cs_gpio_num = (int)args[ARG_cs].u_int;
     self->panel_io_config.dc_gpio_num = (int)args[ARG_dc].u_int;
@@ -142,6 +150,17 @@ STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     self->panel_io_handle.del = &spi_del;
     self->panel_io_handle.init = &spi_init;
     self->panel_io_handle.get_lane_count = &spi_get_lane_count;
+
+    printf("cs_gpio_num=%d\n", self->panel_io_config.cs_gpio_num);
+    printf("dc_gpio_num=%d\n", self->panel_io_config.dc_gpio_num);
+    printf("spi_mode=%d\n", self->panel_io_config.spi_mode);
+    printf("pclk_hz=%d\n", self->panel_io_config.pclk_hz);
+    printf("lcd_cmd_bits=%d\n", self->panel_io_config.lcd_cmd_bits);
+    printf("lcd_param_bits=%d\n", self->panel_io_config.lcd_param_bits);
+    printf("dc_low_on_data=%d\n", self->panel_io_config.flags.dc_low_on_data);
+    printf("sio_mode=%d\n", self->panel_io_config.flags.sio_mode);
+    printf("lsb_first=%d\n", self->panel_io_config.flags.lsb_first);
+    printf("cs_high_active=%d\n", self->panel_io_config.flags.cs_high_active);
 
     return MP_OBJ_FROM_PTR(self);
 }
@@ -173,14 +192,19 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
     } else {
         self->rgb565_byte_swap = false;
     }
+    printf("rgb565_byte_swap=%d\n", self->rgb565_byte_swap);
+
 
     if (self->buffer_flags & MALLOC_CAP_DMA) {
         self->bus_config.max_transfer_sz = buffer_size;
     } else {
         self->bus_config.max_transfer_sz = SOC_SPI_MAXIMUM_BUFFER_SIZE;
     }
+    printf("max_transfer_sz=%d\n", self->bus_config.max_transfer_sz);
 
     self->panel_io_config.trans_queue_depth = 10;
+    printf("trans_queue_depth=%d\n", self->panel_io_config.trans_queue_depth);
+
 
 #if CONFIG_IDF_TARGET_ESP32
     int dma_chan = SPI_DMA_DISABLED;
@@ -193,12 +217,15 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
 #else
     int dma_chan = SPI_DMA_CH_AUTO;
 #endif
+
+    printf("dma_chan=%d\n", dma_chan);
+
     mp_lcd_err_t ret = spi_bus_initialize(self->host, &self->bus_config, dma_chan);
     if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(spi_bus_initialize)"), ret);
     }
 
-    ret = esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)self->host, &self->panel_io_config, &self->panel_io_handle.panel_io);
+    ret = esp_lcd_new_panel_io_spi(self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io);
     if (ret != ESP_OK) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_spi)"), ret);
     }

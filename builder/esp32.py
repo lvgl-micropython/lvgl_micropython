@@ -340,6 +340,7 @@ def setup_idf_environ():
     # There were some modifications made with how the environment gets set up
     # @cheops put quite a bit of time in to research the best solution
     # and also with the testing of the code.
+    print('Getting ESP-IDF build Environment')
 
     if sys.platform.startswith('win'):
         return None
@@ -502,6 +503,25 @@ def compile():  # NOQA
             'CONFIG_ESPTOOLPY_FLASHFREQ_80M=y',
             'CONFIG_ESPTOOLPY_AFTER_NORESET=y',
             'CONFIG_PARTITION_TABLE_CUSTOM=y',
+            'BOOTLOADER_LOG_LEVEL_NONE=n',
+            'BOOTLOADER_LOG_LEVEL_ERROR=n',
+            'BOOTLOADER_LOG_LEVEL_WARN=n',
+            'BOOTLOADER_LOG_LEVEL_INFO=n',
+            'BOOTLOADER_LOG_LEVEL_DEBUG=y',
+            'BOOTLOADER_LOG_LEVEL_VERBOSE=n',
+            'CONFIG_LCD_ENABLE_DEBUG_LOG=y',
+            'HAL_LOG_LEVEL_NONE=n',
+            'HAL_LOG_LEVEL_ERROR=n',
+            'HAL_LOG_LEVEL_WARN=n',
+            'HAL_LOG_LEVEL_INFO=n',
+            'HAL_LOG_LEVEL_DEBUG=y',
+            'HAL_LOG_LEVEL_VERBOSE=n',
+            'LOG_DEFAULT_LEVEL_NONE=n',
+            'LOG_DEFAULT_LEVEL_ERROR=n',
+            'LOG_DEFAULT_LEVEL_WARN=n',
+            'LOG_DEFAULT_LEVEL_INFO=n',
+            'LOG_DEFAULT_LEVEL_DEBUG=y',
+            'LOG_DEFAULT_LEVEL_VERBOSE=n'
         ]
 
         if flash_size == '2':
