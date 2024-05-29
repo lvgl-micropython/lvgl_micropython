@@ -365,7 +365,9 @@ def setup_idf_environ():
                 # this removes any IDF environment variable that may
                 # exist if the user has the ESP-IDF installed
                 env = {
-                    k: v for k, v in os.environ.items() if not k.startswith('IDF')
+                    k: v
+                    for k, v in os.environ.items()
+                    if not k.startswith('IDF')
                 }
                 if 'PATH' in env:
                     path = env['PATH'].split(os.pathsep)
