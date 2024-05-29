@@ -262,9 +262,13 @@ esp_cmd = [
 clean_cmd = []
 compile_cmd = []
 submodules_cmd = []
+SCRIPT_DIR = ''
 
 
-def build_commands(_, extra_args, __, lv_cflags, ___):
+def build_commands(_, extra_args, script_path, lv_cflags, ___):
+    global SCRIPT_DIR
+    SCRIPT_DIR = script_path
+
     clean_cmd.extend(esp_cmd[:])
     clean_cmd[1] = 'clean'
     clean_cmd.append(f'BOARD={board}')
@@ -293,7 +297,7 @@ def build_commands(_, extra_args, __, lv_cflags, ___):
 
 
 def get_idf_version():
-    if 'ESP_IDF_VERSION' in os.environ:
+    if 'IDF_PATH' in os.environ:
         exit_code, data = spawn(
             ['python3', 'idf.py', '--version'],
             out_to_screen=False
@@ -329,106 +333,154 @@ def build_manifest(
 
 
 def clean():
-    env = setup_idf_environ()
+    env, cmds = setup_idf_environ()
     if 'deploy' in clean_cmd:
         clean_cmd.remove('deploy')
 
-    spawn(clean_cmd, env=env)
+    cmds.append(clean_cmd)
+    spawn(cmds, env=env)
+
+
+IDF_ENVIRON_SET = False
 
 
 def setup_idf_environ():
+    global IDF_ENVIRON_SET
     # There were some modifications made with how the environment gets set up
     # @cheops put quite a bit of time in to research the best solution
     # and also with the testing of the code.
-    print('Getting ESP-IDF build Environment')
+    if not IDF_ENVIRON_SET:
+        print('Getting ESP-IDF build Environment')
 
-    if sys.platform.startswith('win'):
-        return None
+        if sys.platform.startswith('win'):
+            return None
 
-    idf_ver = get_idf_version()
-    env = None
-    if idf_ver is None or idf_ver != '5.0.4':
-        idf_path = 'lib/esp-idf'
+        idf_ver = get_idf_version()
 
-        if os.path.exists(os.path.join(idf_path, 'export.sh')):
+        if idf_ver is None or idf_ver != '5.0.4':
+            idf_path = 'lib/esp-idf'
 
-            # this removes any IDF environment variable that may
-            # exist if the user has the ESP-IDF installed
-            env = {
-                k: v for k, v in os.environ.items() if not k.startswith('IDF')
-            }
-            py_path = os.path.split(sys.executable)[0]
-            idf_path = os.path.abspath(idf_path)
-            idf_tools_path = os.path.join(idf_path, 'tools')
-            env['PATH'] = (
-                py_path + os.pathsep +
-                os.pathsep + idf_tools_path +
-                os.pathsep + env.get('PATH', '')
-            )
-            env['IDF_PATH'] = idf_path
+            if os.path.exists(os.path.join(idf_path, 'export.sh')):
 
-            cmds = [
-                [f'export "IDF_PATH={idf_path}"'],
-                ['cd', idf_path],
-                ['. ./export.sh'],
-                ['printenv']
-            ]
+                # this removes any IDF environment variable that may
+                # exist if the user has the ESP-IDF installed
+                env = {
+                    k: v for k, v in os.environ.items() if not k.startswith('IDF')
+                }
+                if 'PATH' in env:
+                    path = env['PATH'].split(os.pathsep)
+                    out_path = []
+                    for item in path:
+                        if 'espressif' in item or 'esp-idf' in item:
+                            continue
 
-            if 'GITHUB_RUN_ID' in env:
-                if sys.platform.startswith('win'):
-                    env_cmds = [
-                        ['echo', f"{py_path}", '|', 'Out-File',
-                         '-Append', '-FilePath', '$env:GITHUB_PATH',
-                         '-Encoding', 'utf8'],
-                        ['echo', f"{idf_path}", '|', 'Out-File',
-                         '-Append', '-FilePath', '$env:GITHUB_PATH',
-                         '-Encoding', 'utf8'],
-                        ['echo', f"{idf_tools_path}", '|', 'Out-File',
-                         '-Append', '-FilePath', '$env:GITHUB_PATH',
-                         '-Encoding', 'utf8']
+                        out_path.append(item)
+
+                    env['PATH'] = os.pathsep.join(out_path)
+
+                py_path = os.path.split(sys.executable)[0]
+                idf_path = os.path.abspath(idf_path)
+                idf_tools_path = os.path.join(idf_path, 'tools')
+                env['PATH'] = (
+                    py_path + os.pathsep +
+                    os.pathsep + idf_tools_path +
+                    os.pathsep + env.get('PATH', '')
+                )
+                env['IDF_PATH'] = idf_path
+
+                for key, value in env.items():
+                    os.environ[key] = value
+
+                if 'GITHUB_RUN_ID' in os.environ:
+                    cmds = [
+                        [f'export "IDF_PATH={idf_path}"'],
+                        ['cd', idf_path],
+                        ['. ./export.sh'],
+                        ['printenv']
                     ]
                 else:
-                    env_cmds = [
-                        ['echo', f"{py_path}", '>>', '$GITHUB_PATH'],
-                        ['echo', f"{idf_path}", '>>', '$GITHUB_PATH'],
-                        ['echo', f"{idf_tools_path}", '>>', '$GITHUB_PATH']
+                    cmds = [
+                        [f'cd {idf_path}'],
+                        [f'. export.sh'],
+                        ['printenv']
                     ]
 
-                spawn(env_cmds, env=env, out_to_screen=False)
+                if 'GITHUB_RUN_ID' in os.environ:
+                    if sys.platform.startswith('win'):
+                        env_cmds = [
+                            ['echo', f"{py_path}", '|', 'Out-File',
+                             '-Append', '-FilePath', '$env:GITHUB_PATH',
+                             '-Encoding', 'utf8'],
+                            ['echo', f"{idf_path}", '|', 'Out-File',
+                             '-Append', '-FilePath', '$env:GITHUB_PATH',
+                             '-Encoding', 'utf8'],
+                            ['echo', f"{idf_tools_path}", '|', 'Out-File',
+                             '-Append', '-FilePath', '$env:GITHUB_PATH',
+                             '-Encoding', 'utf8']
+                        ]
+                    else:
+                        env_cmds = [
+                            ['echo', f"{py_path}", '>>', '$GITHUB_PATH'],
+                            ['echo', f"{idf_path}", '>>', '$GITHUB_PATH'],
+                            ['echo', f"{idf_tools_path}", '>>', '$GITHUB_PATH']
+                        ]
 
-            result, output = spawn(cmds, env=env, out_to_screen=False)
+                    spawn(env_cmds, out_to_screen=False)
 
-            if result != 0:
-                print('********* ERROR **********')
-                print(output)
-                sys.exit(result)
+                result, output = spawn(cmds, out_to_screen=False)
 
-            output = [line for line in output.split('\n') if '=' in line]
+                if result != 0:
+                    print('********* ERROR **********')
+                    print(output)
+                    sys.exit(result)
 
-            temp_env = {
-                line.split('=', 1)[0]: line.split('=', 1)[1]
-                for line in output
-            }
+                output = [line for line in output.split('\n') if '=' in line]
 
-            if 'PATH' in temp_env:
-                env['PATH'] = temp_env['PATH']
-            elif 'path' in temp_env:
-                env['PATH'] = temp_env['path']
+                temp_env = {
+                    line.split('=', 1)[0]: line.split('=', 1)[1]
+                    for line in output
+                }
+
+                for key, value in temp_env.items():
+                    os.environ[key] = value
+
+                env = os.environ
+
+            else:
+                args = sys.argv[:]
+
+                if 'submodules' not in args:
+                    args.insert(2, 'submodules')
+
+                args = " ".join(args)
+
+                print('ESP-IDF version 5.0.4 is needed to compile')
+                print('Please rerun the build using the command below...')
+                print(f'"{sys.executable} {args}"')
+                raise RuntimeError
+
+        elif idf_ver is not None and idf_ver == '5.0.4':
+            env = os.environ
 
         else:
-            args = sys.argv[:]
-
-            if 'submodules' not in args:
-                args.insert(2, 'submodules')
-
-            args = " ".join(args)
-
-            print('ESP-IDF version 5.0.4 is needed to compile')
-            print('Please rerun the build using the command below...')
-            print(f'"{sys.executable} {args}"')
             raise RuntimeError
 
-    return env
+        IDF_ENVIRON_SET = True
+    else:
+        env = os.environ
+
+    if 'GITHUB_RUN_ID' in os.environ:
+        idf_path = os.path.abspath(env["IDF_PATH"])
+        cmds = [
+            [f'export "IDF_PATH={idf_path}"'],
+            ['cd', f'{idf_path}'],
+            ['. ./export.sh'],
+            [f'cd {SCRIPT_DIR}']
+        ]
+    else:
+        cmds = []
+
+    return env, cmds
 
 
 def submodules():
@@ -471,18 +523,12 @@ def submodules():
             if result != 0:
                 sys.exit(result)
 
-        env = setup_idf_environ()
+        env, cmds = setup_idf_environ()
 
         if 'deploy' in submodules_cmd:
             submodules_cmd.remove('deploy')
 
-        cmds = [
-            [f'export "IDF_PATH={os.path.abspath(env["IDF_PATH"])}"'],
-            ['cd', 'lib/esp-idf'],
-            ['. ./export.sh'],
-            ['cd ../..'],
-            submodules_cmd
-        ]
+        cmds.append(submodules_cmd)
     else:
         raise RuntimeError('compiling on windows is not supported at this time')
 
@@ -492,7 +538,7 @@ def submodules():
 
 
 def compile():  # NOQA
-    env = setup_idf_environ()
+    env, cmds = setup_idf_environ()
 
     if (
         board in ('ESP32_GENERIC', 'ESP32_GENERIC_S2', 'ESP32_GENERIC_S3') and
@@ -503,111 +549,76 @@ def compile():  # NOQA
             'CONFIG_ESPTOOLPY_FLASHFREQ_80M=y',
             'CONFIG_ESPTOOLPY_AFTER_NORESET=y',
             'CONFIG_PARTITION_TABLE_CUSTOM=y',
-            'BOOTLOADER_LOG_LEVEL_NONE=n',
-            'BOOTLOADER_LOG_LEVEL_ERROR=n',
-            'BOOTLOADER_LOG_LEVEL_WARN=n',
-            'BOOTLOADER_LOG_LEVEL_INFO=n',
-            'BOOTLOADER_LOG_LEVEL_DEBUG=y',
-            'BOOTLOADER_LOG_LEVEL_VERBOSE=n',
+            'CONFIG_ESPTOOLPY_FLASHSIZE_2MB=n',
+            'CONFIG_ESPTOOLPY_FLASHSIZE_4MB=n',
+            'CONFIG_ESPTOOLPY_FLASHSIZE_8MB=n',
+            'CONFIG_ESPTOOLPY_FLASHSIZE_16MB=n',
+            'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=n',
+            'CONFIG_BOOTLOADER_LOG_LEVEL_NONE=n',
+            'CONFIG_BOOTLOADER_LOG_LEVEL_ERROR=n',
+            'CONFIG_BOOTLOADER_LOG_LEVEL_WARN=n',
+            'CONFIG_BOOTLOADER_LOG_LEVEL_INFO=n',
+            'CONFIG_BOOTLOADER_LOG_LEVEL_DEBUG=y',
+            'CONFIG_BOOTLOADER_LOG_LEVEL_VERBOSE=n',
             'CONFIG_LCD_ENABLE_DEBUG_LOG=y',
-            'HAL_LOG_LEVEL_NONE=n',
-            'HAL_LOG_LEVEL_ERROR=n',
-            'HAL_LOG_LEVEL_WARN=n',
-            'HAL_LOG_LEVEL_INFO=n',
-            'HAL_LOG_LEVEL_DEBUG=y',
-            'HAL_LOG_LEVEL_VERBOSE=n',
-            'LOG_DEFAULT_LEVEL_NONE=n',
-            'LOG_DEFAULT_LEVEL_ERROR=n',
-            'LOG_DEFAULT_LEVEL_WARN=n',
-            'LOG_DEFAULT_LEVEL_INFO=n',
-            'LOG_DEFAULT_LEVEL_DEBUG=y',
-            'LOG_DEFAULT_LEVEL_VERBOSE=n'
+            'CONFIG_HAL_LOG_LEVEL_NONE=n',
+            'CONFIG_HAL_LOG_LEVEL_ERROR=n',
+            'CONFIG_HAL_LOG_LEVEL_WARN=n',
+            'CONFIG_HAL_LOG_LEVEL_INFO=n',
+            'CONFIG_HAL_LOG_LEVEL_DEBUG=y',
+            'CONFIG_HAL_LOG_LEVEL_VERBOSE=n',
+            'CONFIG_LOG_MAXIMUM_LEVEL_ERROR=n',
+            'CONFIG_LOG_MAXIMUM_LEVEL_WARN=n',
+            'CONFIG_LOG_MAXIMUM_LEVEL_INFO=n',
+            'CONFIG_LOG_MAXIMUM_LEVEL_DEBUG=y',
+            'CONFIG_LOG_MAXIMUM_LEVEL_VERBOSE=n',
+            'CONFIG_LOG_DEFAULT_LEVEL_NONE=n',
+            'CONFIG_LOG_DEFAULT_LEVEL_ERROR=n',
+            'CONFIG_LOG_DEFAULT_LEVEL_WARN=n',
+            'CONFIG_LOG_DEFAULT_LEVEL_INFO=n',
+            'CONFIG_LOG_DEFAULT_LEVEL_DEBUG=y',
+            'CONFIG_LOG_DEFAULT_LEVEL_VERBOSE=n',
+            f'CONFIG_ESPTOOLPY_FLASHSIZE_{flash_size}MB=y',
+            'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
+            f'"partitions-{flash_size}MiB.csv"',
+            ''
         ]
+        board_config_path = f'build/sdkconfig.board'
+        with open(board_config_path, 'w') as f:
+            f.write('\n'.join(base_config))
 
-        if flash_size == '2':
-            base_config.extend([
-                'CONFIG_ESPTOOLPY_FLASHSIZE_2MB=y',
-                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
-                '"partitions-2MiB.csv"'
-            ])
-
-        elif flash_size == '4':
-            base_config.extend([
-                'CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y',
-                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
-                '"partitions-4MiB.csv"'
-            ])
-        elif flash_size == '8':
-            base_config.extend([
-                'CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y',
-                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
-                '"partitions-8MiB.csv"'
-            ])
-
-        elif flash_size == '16':
-            base_config.extend([
-                'CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y',
-                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
-                '"partitions-16MiB.csv"'
-            ])
-        elif flash_size == '32':
-            base_config.extend([
-                'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=y',
-                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
-                '"partitions-32MiB.csv"'
-            ])
-        else:
-            raise RuntimeError(f'unsupported flash size {flash_size}')
-
+        config_settings = []
         if board == 'ESP32_GENERIC_S3':
             if oct_flash and flash_size in ('16', '32'):
                 if flash_size == '32':
-                    base_config[0] = 'CONFIG_ESPTOOLPY_FLASHMODE_DOUT=y'
+                    config_settings.extend([
+                        'CONFIG_ESPTOOLPY_FLASHMODE_QIO=n',
+                        'CONFIG_ESPTOOLPY_FLASHMODE_DOUT=y'
+                    ])
 
-                base_config.append('CONFIG_ESPTOOLPY_OCT_FLASH=y')
+                config_settings.append('CONFIG_ESPTOOLPY_OCT_FLASH=y')
 
-        base_config = '\n'.join(base_config)
-        
-        if board in ('ESP32_GENERIC', 'ESP32_GENERIC_S3'):
-            mpconfigboard_cmake_path = (
-                'lib/micropython/ports/esp32/boards/'
-                f'{board}/mpconfigboard.cmake'
-            )
-            
-            with open(mpconfigboard_cmake_path, 'rb') as f:
-                data = f.read().decode('utf-8')
-            
-            if f'boards/{board}/sdkconfig.board' not in data:
-                if board == 'ESP32_GENERIC':
-                    data = data.replace(
-                        'boards/sdkconfig.spiram', 
-                        'boards/sdkconfig.spiram\n    '
-                        'boards/ESP32_GENERIC/sdkconfig.board'
-                    )
-                else:
-                    data = data.replace(
-                        'boards/sdkconfig.spiram_ex',
-                        'boards/sdkconfig.spiram_ex\n    '
-                        'boards/ESP32_GENERIC_S2/sdkconfig.board'
-                    )
-                
-                with open(mpconfigboard_cmake_path, 'wb') as f:
-                    f.write(data.encode('utf-8'))
-                    
-            sdkconfig_spiram_path = (
-                'lib/micropython/ports/esp32/boards/'
-                f'{board}/sdkconfig.board'
-            )
-            with open(sdkconfig_spiram_path, 'w') as f:
-                f.write(base_config)
-                        
-        else:
-            sdkconfig_board_path = (
-                'lib/micropython/ports/esp32/'
-                f'boards/{board}/sdkconfig.board'
-            )
-            with open(sdkconfig_board_path, 'w') as f:
-                f.write(base_config + '\n')
+        with open(board_config_path, 'a') as f:
+            f.write('\n'.join(config_settings))
+
+        mpconfigboard_cmake_path = (
+            'lib/micropython/ports/esp32/boards/'
+            f'{board}/mpconfigboard.cmake'
+        )
+
+        with open(mpconfigboard_cmake_path, 'rb') as f:
+            data = f.read().decode('utf-8')
+
+        sdkconfig = (
+            'set(SDKCONFIG_DEFAULTS ${SDKCONFIG_DEFAULTS} '
+            '../../../../build/sdkconfig.board)'
+        )
+
+        if sdkconfig not in data:
+            data += '\n' + sdkconfig + '\n'
+
+            with open(mpconfigboard_cmake_path, 'wb') as f:
+                f.write(data.encode('utf-8'))
 
     if board in ('ESP32_GENERIC_S2', 'ESP32_GENERIC_S3'):
 
@@ -679,13 +690,7 @@ def compile():  # NOQA
         deploy = False
 
     if not sys.platform.startswith('win'):
-        cmds = [
-            [f'export "IDF_PATH={os.path.abspath(env["IDF_PATH"])}"'],
-            ['cd', 'lib/esp-idf'],
-            ['. ./export.sh'],
-            ['cd ../..'],
-            compile_cmd
-        ]
+        cmds.append(compile_cmd)
     else:
         cmds = compile_cmd
 

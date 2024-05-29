@@ -290,8 +290,9 @@ def _convert_line(lne):
 def process_output(myproc, out_to_screen, spinner, cmpl, out_queue):
     line = b''
     err_line = b''
-
     last_line_len = -1
+    line_updated = False
+    err_updated = False
 
     event = threading.Event()
 
@@ -303,23 +304,29 @@ def process_output(myproc, out_to_screen, spinner, cmpl, out_queue):
         t = None
 
     while True:
-        if myproc.poll() is not None:
-            break
-
         # --- extract line using read(1)
         out = myproc.stdout.read(1)
         while out:
+            line_updated = True
             line += out
             if out == b'\n':
                 line = _convert_line(line.strip())
                 if not line:
                     line = b''
-                    continue
+                    break
 
                 out_queue.put(line)
 
                 if not spinner and out_to_screen:
-                    if cmpl and (line.startswith('[') or line.startswith('--')):
+                    if (
+                        cmpl and (
+                            line.startswith('[') or
+                            (
+                                line.startswith('--') and
+                                len(line) <= 80
+                            )
+                        )
+                    ):
                         if last_line_len != -1:
                             sys.stdout.write('\r')
 
@@ -346,6 +353,7 @@ def process_output(myproc, out_to_screen, spinner, cmpl, out_queue):
         out = myproc.stderr.read(1)
 
         while out:
+            err_updated = True
             if not spinner and out_to_screen and cmpl and last_line_len != -1:
                 sys.stdout.write('\n')
                 sys.stdout.flush()
@@ -356,7 +364,7 @@ def process_output(myproc, out_to_screen, spinner, cmpl, out_queue):
                 err_line = _convert_line(err_line.strip())
                 if not err_line:
                     err_line = b''
-                    continue
+                    break
 
                 out_queue.put(err_line)
                 if out_to_screen and not spinner:
@@ -366,6 +374,13 @@ def process_output(myproc, out_to_screen, spinner, cmpl, out_queue):
                 err_line = b''
 
             out = myproc.stderr.read(1)
+
+        if not err_updated and not line_updated:
+            if myproc.poll() is not None:
+                break
+
+        err_updated = False
+        line_updated = False
 
     if t is not None:
         event.set()
@@ -387,27 +402,21 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
     if isinstance(cmd_[0], str):
         cmd_ = [cmd_[:]]
 
-    cmd_ = ' && '.join(' '.join(c) for c in cmd_)
-
-    if sys.platform.startswith('darwin'):
-        if cmd_.startswith('make '):
-            cmd_ = 'g' + cmd_
-
-        if ' make ' in cmd_:
-            cmd_ = cmd_.replace(' make ', ' gmake ')
-
-    if 'GITHUB_RUN_ID' in os.environ:
-        print(cmd_)
+    cmd_ = list(' '.join(c) for c in cmd_)
 
     que = queue.Queue()
 
     p = subprocess.Popen(
-        cmd_,
+        'bash',
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        stdin=subprocess.PIPE,
         shell=True,
         env=env
     )
+
+    os.set_blocking(p.stdout.fileno(), False)
+    os.set_blocking(p.stderr.fileno(), False)
 
     proc_thread = threading.Thread(
         target=process_output,
@@ -415,8 +424,23 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
     )
 
     proc_thread.start()
-
     output_buffer = []
+
+    while cmd_:
+        item = cmd_.pop(0)
+        if sys.platform.startswith('darwin'):
+            if item.startswith('make '):
+                item = 'g' + item
+
+            if ' make ' in item:
+                item = item.replace(' make ', ' gmake ')
+
+        if 'GITHUB_RUN_ID' in os.environ:
+            print(item)
+
+        p.stdin.write(item.encode('utf-8') + b'\n')
+
+    p.stdin.close()
 
     while proc_thread and proc_thread.is_alive():  # wait for thread to finish
         try:
@@ -424,9 +448,8 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
             output_buffer.append(line)
         except queue.Empty:
             pass
-
         try:
-            proc_thread.join(1)
+            proc_thread.join(0.025)
         except:  # NOQA
             break
 
