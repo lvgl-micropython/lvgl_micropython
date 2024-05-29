@@ -332,12 +332,20 @@ def build_manifest(
     )
 
 
-def clean():
+def clean(clean_mpy_cross):
     env, cmds = setup_idf_environ()
+
+    if clean_mpy_cross:
+        cross_clean = mpy_cross_cmd[:]
+        cross_clean.insert(1, 'clean')
+        cross_clean = cmds[:] + [cross_clean]
+        spawn(cross_clean, env=env)
+
     if 'deploy' in clean_cmd:
         clean_cmd.remove('deploy')
 
     cmds.append(clean_cmd)
+
     spawn(cmds, env=env)
 
 

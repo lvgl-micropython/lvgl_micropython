@@ -206,11 +206,11 @@ if __name__ == '__main__':
         get_submodules()
         mod.submodules()
 
+    if clean:
+        mod.clean(mpy_cross)
+
     if mpy_cross:
         mod.mpy_cross()
-
-    if clean:
-        mod.clean()
 
     mod.build_manifest(target, SCRIPT_DIR, lvgl_api, displays, indevs, frozen_manifest)
     create_lvgl_header()

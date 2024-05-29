@@ -478,7 +478,12 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
     return p.returncode, output_buffer
 
 
-def clean():
+def clean(clean_mpy_cross):
+    if clean_mpy_cross:
+        cross_clean = mpy_cross_cmd[:]
+        cross_clean.insert(1, 'clean')
+        spawn(cross_clean)
+
     spawn(clean_cmd)
 
 

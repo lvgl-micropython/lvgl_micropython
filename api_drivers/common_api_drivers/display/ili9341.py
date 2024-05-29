@@ -130,7 +130,7 @@ class ILI9341(display_driver_framework.DisplayDriver):
         param_buf[0] = 0x00
 
         if sequence == 1:
-            param_buf[1] = 0x13
+            param_buf[1] = 0x13  # 0x18 ??
         else:
             param_buf[1] = 0x1A
         self.set_params(_FRMCTR1, param_mv[:2])
