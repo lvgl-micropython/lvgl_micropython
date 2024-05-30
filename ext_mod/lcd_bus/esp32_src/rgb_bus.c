@@ -260,13 +260,13 @@
         self->panel_io_config.data_width = (size_t) i;
 
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("pclk_hz=%d\n", self->bus_config.pclk_hz);
-        printf("hsync_pulse_width=%d\n", self->bus_config.hsync_pulse_width);
-        printf("hsync_back_porch=%d\n", self->bus_config.hsync_back_porch);
-        printf("hsync_front_porch=%d\n", self->bus_config.hsync_front_porch);
-        printf("vsync_pulse_width=%d\n", self->bus_config.vsync_pulse_width);
-        printf("vsync_back_porch=%d\n", self->bus_config.vsync_back_porch);
-        printf("vsync_front_porch=%d\n", self->bus_config.vsync_front_porch);
+        printf("pclk_hz=%lu\n", self->bus_config.pclk_hz);
+        printf("hsync_pulse_width=%lu\n", self->bus_config.hsync_pulse_width);
+        printf("hsync_back_porch=%lu\n", self->bus_config.hsync_back_porch);
+        printf("hsync_front_porch=%lu\n", self->bus_config.hsync_front_porch);
+        printf("vsync_pulse_width=%lu\n", self->bus_config.vsync_pulse_width);
+        printf("vsync_back_porch=%lu\n", self->bus_config.vsync_back_porch);
+        printf("vsync_front_porch=%lu\n", self->bus_config.vsync_front_porch);
         printf("hsync_idle_low=%d\n", self->bus_config.flags.hsync_idle_low);
         printf("vsync_idle_low=%d\n", self->bus_config.flags.vsync_idle_low);
         printf("de_idle_high=%d\n", self->bus_config.flags.de_idle_high);
@@ -390,7 +390,7 @@
     mp_obj_t rgb_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps)
     {
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("rgb_allocate_framebuffer(self, size=%d, caps=%d)\n", size, caps);
+        printf("rgb_allocate_framebuffer(self, size=%lu, caps=%lu)\n", size, caps);
     #endif
 
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
@@ -460,7 +460,7 @@
     {
 
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("rgb_init(self, width=%d, height=%d, bpp=%d, buffer_size=%d, rgb565_byte_swap=%d)\n", width, height, bpp, buffer_size, rgb565_byte_swap);
+        printf("rgb_init(self, width=%i, height=%i, bpp=%d, buffer_size=%lu, rgb565_byte_swap=%d)\n", width, height, bpp, buffer_size, rgb565_byte_swap);
     #endif
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
 
@@ -513,8 +513,8 @@
         }
 
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("h_res=%d\n", self->panel_io_config.timings.h_res);
-        printf("v_res=%d\n", self->panel_io_config.timings.v_res);
+        printf("h_res=%lu\n", self->panel_io_config.timings.h_res);
+        printf("v_res=%lu\n", self->panel_io_config.timings.v_res);
         printf("bits_per_pixel=%d\n", self->panel_io_config.bits_per_pixel);
         printf("bounce_buffer_size_px=%d\n", self->panel_io_config.bounce_buffer_size_px);
         printf("rgb565_byte_swap=%d\n", self->rgb565_byte_swap);

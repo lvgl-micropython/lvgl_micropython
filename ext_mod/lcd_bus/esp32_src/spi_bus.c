@@ -108,14 +108,14 @@ STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     printf("cs_gpio_num=%d\n", self->panel_io_config.cs_gpio_num);
     printf("dc_gpio_num=%d\n", self->panel_io_config.dc_gpio_num);
     printf("spi_mode=%d\n", self->panel_io_config.spi_mode);
-    printf("pclk_hz=%lu\n", self->panel_io_config.pclk_hz);
+    printf("pclk_hz=%i\n", self->panel_io_config.pclk_hz);
     printf("lcd_cmd_bits=%d\n", self->panel_io_config.lcd_cmd_bits);
     printf("lcd_param_bits=%d\n", self->panel_io_config.lcd_param_bits);
-    printf("dc_low_on_data=%lu\n", self->panel_io_config.flags.dc_low_on_data);
-    printf("sio_mode=%lu\n", self->panel_io_config.flags.sio_mode);
-    printf("lsb_first=%lu\n", self->panel_io_config.flags.lsb_first);
-    printf("cs_high_active=%lu\n", self->panel_io_config.flags.cs_high_active);
-    printf("octal_mode=%lu\n", self->panel_io_config.flags.octal_mode);
+    printf("dc_low_on_data=%d\n", self->panel_io_config.flags.dc_low_on_data);
+    printf("sio_mode=%d\n", self->panel_io_config.flags.sio_mode);
+    printf("lsb_first=%d\n", self->panel_io_config.flags.lsb_first);
+    printf("cs_high_active=%d\n", self->panel_io_config.flags.cs_high_active);
+    printf("octal_mode=%d\n", self->panel_io_config.flags.octal_mode);
 
 #endif
 
