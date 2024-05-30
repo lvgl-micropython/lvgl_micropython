@@ -16,8 +16,8 @@ class Bus(object):
 
     def get_host(
         self,
+        *,
         host: int,
-        /,
         mosi: Optional[int] = None,
         miso: Optional[int] = None,
         sck: Optional[int] = None,

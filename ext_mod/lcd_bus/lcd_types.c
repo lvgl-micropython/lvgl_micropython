@@ -256,7 +256,7 @@ mp_obj_t lcd_panel_io_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t
             void *buf = heap_caps_calloc(1, size, caps);
 
         #if CONFIG_LCD_ENABLE_DEBUG_LOG
-            printf("lcd_panel_io_allocate_framebuffer(self, size=%d, caps=%d)\n", size, caps);
+            printf("lcd_panel_io_allocate_framebuffer(self, size=%lu, caps=%lu)\n", size, caps);
         #endif
         #else
             LCD_UNUSED(caps);

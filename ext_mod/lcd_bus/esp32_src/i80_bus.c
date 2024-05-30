@@ -178,7 +178,7 @@
         printf("data_gpio_nums[15]=%d\n", self->bus_config.data_gpio_nums[15]);
         printf("bus_width=%d\n", self->bus_config.bus_width);
         printf("cs_gpio_num=%d\n", self->panel_io_config.cs_gpio_num);
-        printf("pclk_hz=%d\n", self->panel_io_config.pclk_hz);
+        printf("pclk_hz=%lu\n", self->panel_io_config.pclk_hz);
         printf("trans_queue_depth=%d\n", self->panel_io_config.trans_queue_depth);
         printf("lcd_cmd_bits=%d\n", self->panel_io_config.lcd_cmd_bits);
         printf("lcd_param_bits=%d\n", self->panel_io_config.lcd_param_bits);
@@ -204,7 +204,7 @@
     mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap)
     {
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("i80_init(self, width=%d, height=%d, bpp=%d, buffer_size=%d, rgb565_byte_swap=%d)\n", width, height, bpp, buffer_size, rgb565_byte_swap);
+        printf("i80_init(self, width=%i, height=%i, bpp=%i, buffer_size=%lu, rgb565_byte_swap=%i)\n", width, height, bpp, buffer_size, (uint8_t)rgb565_byte_swap);
     #endif
 
         mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)obj;
