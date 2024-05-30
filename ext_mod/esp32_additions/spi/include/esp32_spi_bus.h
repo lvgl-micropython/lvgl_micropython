@@ -17,6 +17,7 @@
         spi_host_device_t host;
         spi_bus_config_t buscfg;
         bool octal_mode;
+        bool dual_mode;
 
         enum {
             MACHINE_HW_SPI_STATE_NONE,

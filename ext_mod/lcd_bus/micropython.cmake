@@ -6,6 +6,7 @@ if(ESP_PLATFORM)
     set(LCD_INCLUDES
         ${CMAKE_CURRENT_LIST_DIR}
         ${CMAKE_CURRENT_LIST_DIR}/esp32_include
+        ${CMAKE_CURRENT_LIST_DIR}/../esp32_additions/spi/include
     )
 
     set(LCD_SOURCES

@@ -1,5 +1,6 @@
 from typing import Any, Callable, Optional, Union
 import array
+import spi as _spi
 
 _BufferType = Union[bytearray, memoryview, bytes, array.array]
 
@@ -62,24 +63,17 @@ class SPIBus:
     def __init__(
         self,
         *,
-        dc: int,
-        host: int,
-        sclk: int,
+        spi_bus: _spi.Bus,
         freq: int,
-        mosi: int,
-        miso: Optional[int] = -1,
+        dc: int,
         cs: Optional[int] = -1,
-        wp: Optional[int] = -1,
-        hd: Optional[int] = -1,
-        quad_spi: Optional[bool] = False,
-        tx_only: Optional[bool] = False,
-        cmd_bits: Optional[int] = 8,
-        param_bits: Optional[int] = 8,
-        dc_low_on_data: Optional[bool] = False,
-        sio_mode: Optional[bool] = False,
-        lsb_first: Optional[bool] = False,
-        cs_high_active: Optional[bool] = False,
-        spi_mode: Optional[int] = 0
+        polarity: int = 0,
+        phase: int = 0,
+        firstbit: int = _spi.Device.MSB,
+        cmd_bits: int = 8,
+        param_bits: int = 8,
+        cs_high_active: bool = False,
+        dc_low_on_data: bool = False,
     ):
         ...
 
@@ -178,6 +172,7 @@ class SDLBus:
         ignore_size_chg: bool,
         /
     ) -> None:
+        ...
 
     def realloc_buffer(
         self,
@@ -333,7 +328,7 @@ class I80Bus:
     def tx_color(self, cmd: int, data: _BufferType, start_x: int, start_y: int, end_x: int, end_y: int, /) -> None:
         ...
 
-    def tx_color(self, cmd: int, data: _BufferType, /) -> None:
+    def tx_param(self, cmd: int, data: _BufferType, /) -> None:
         ...
 
     def rx_param(self, cmd: int, params: _BufferType, /) -> None:

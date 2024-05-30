@@ -41,16 +41,16 @@ class Device(object):
 
     def __init__(
         self,
+        *,
         spi_bus: Bus,
-        baudrate: int,
-        /,
+        freq: int,
         cs: int = -1,
         polarity: int = 0,
         phase: int = 0,
-        bits: int = 8,
         firstbit: int = MSB,
+        bits: int = 8,
         three_wire: bool = False,
-        cs_active_pos: bool = False,
+        cs_high_active: bool = False,
         half_duplex: bool = False,
         clock_as_cs: bool = False,
         queue_size: int = 5
@@ -59,7 +59,7 @@ class Device(object):
 
     def comm(
         self,
-        /,
+        *,
         tx_data: Optional[memoryview] = None,
         rx_data: Optional[memoryview] = None,
         cmd: Optional[int] = None,

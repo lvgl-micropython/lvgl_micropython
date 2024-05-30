@@ -141,7 +141,7 @@
 
         self->panel_io_config.cs_gpio_num = (int)args[ARG_cs].u_int;
         self->panel_io_config.pclk_hz = (uint32_t)args[ARG_freq].u_int;
-        self->panel_io_config.trans_queue_depth = 1;
+        self->panel_io_config.trans_queue_depth = 5;
         self->panel_io_config.on_color_trans_done = &bus_trans_done_cb;
         self->panel_io_config.user_ctx = self;
         self->panel_io_config.lcd_cmd_bits = (int)args[ARG_cmd_bits].u_int;
@@ -156,6 +156,43 @@
         self->panel_io_config.flags.pclk_active_neg = (unsigned int)args[ARG_pclk_active_low].u_bool;
         self->panel_io_config.flags.pclk_idle_low = (unsigned int)args[ARG_pclk_idle_low].u_bool;
 
+    #if CONFIG_LCD_ENABLE_DEBUG_LOG
+        printf("dc_gpio_num=%d\n", self->bus_config.dc_gpio_num);
+        printf("wr_gpio_num=%d\n", self->bus_config.wr_gpio_num);
+        printf("clk_src=%d\n", self->bus_config.clk_src);
+        printf("data_gpio_nums[0]=%d\n", self->bus_config.data_gpio_nums[0]);
+        printf("data_gpio_nums[1]=%d\n", self->bus_config.data_gpio_nums[1]);
+        printf("data_gpio_nums[2]=%d\n", self->bus_config.data_gpio_nums[2]);
+        printf("data_gpio_nums[3]=%d\n", self->bus_config.data_gpio_nums[3]);
+        printf("data_gpio_nums[4]=%d\n", self->bus_config.data_gpio_nums[4]);
+        printf("data_gpio_nums[5]=%d\n", self->bus_config.data_gpio_nums[5]);
+        printf("data_gpio_nums[6]=%d\n", self->bus_config.data_gpio_nums[6]);
+        printf("data_gpio_nums[7]=%d\n", self->bus_config.data_gpio_nums[7]);
+        printf("data_gpio_nums[8]=%d\n", self->bus_config.data_gpio_nums[8]);
+        printf("data_gpio_nums[9]=%d\n", self->bus_config.data_gpio_nums[9]);
+        printf("data_gpio_nums[10]=%d\n", self->bus_config.data_gpio_nums[10]);
+        printf("data_gpio_nums[11]=%d\n", self->bus_config.data_gpio_nums[11]);
+        printf("data_gpio_nums[12]=%d\n", self->bus_config.data_gpio_nums[12]);
+        printf("data_gpio_nums[13]=%d\n", self->bus_config.data_gpio_nums[13]);
+        printf("data_gpio_nums[14]=%d\n", self->bus_config.data_gpio_nums[14]);
+        printf("data_gpio_nums[15]=%d\n", self->bus_config.data_gpio_nums[15]);
+        printf("bus_width=%d\n", self->bus_config.bus_width);
+        printf("cs_gpio_num=%d\n", self->panel_io_config.cs_gpio_num);
+        printf("pclk_hz=%d\n", self->panel_io_config.pclk_hz);
+        printf("trans_queue_depth=%d\n", self->panel_io_config.trans_queue_depth);
+        printf("lcd_cmd_bits=%d\n", self->panel_io_config.lcd_cmd_bits);
+        printf("lcd_param_bits=%d\n", self->panel_io_config.lcd_param_bits);
+        printf("dc_idle_level=%d\n", self->panel_io_config.dc_levels.dc_idle_level);
+        printf("dc_cmd_level=%d\n", self->panel_io_config.dc_levels.dc_cmd_level);
+        printf("dc_dummy_level=%d\n", self->panel_io_config.dc_levels.dc_dummy_level);
+        printf("dc_data_level=%d\n", self->panel_io_config.dc_levels.dc_data_level);
+        printf("cs_active_high=%d\n", self->panel_io_config.flags.cs_active_high);
+        printf("reverse_color_bits=%d\n", self->panel_io_config.flags.reverse_color_bits);
+        printf("swap_color_bytes=%d\n", self->panel_io_config.flags.swap_color_bytes);
+        printf("pclk_active_neg=%d\n", self->panel_io_config.flags.pclk_active_neg);
+        printf("pclk_idle_low=%d\n", self->panel_io_config.flags.pclk_idle_low);
+    #endif
+
         self->panel_io_handle.init = &i80_init;
         self->panel_io_handle.del = &i80_del;
         self->panel_io_handle.get_lane_count = &i80_get_lane_count;
@@ -166,6 +203,10 @@
 
     mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap)
     {
+    #if CONFIG_LCD_ENABLE_DEBUG_LOG
+        printf("i80_init(self, width=%d, height=%d, bpp=%d, buffer_size=%d, rgb565_byte_swap=%d)\n", width, height, bpp, buffer_size, rgb565_byte_swap);
+    #endif
+
         mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)obj;
 
         if (bpp == 16) {
@@ -176,6 +217,9 @@
 
         self->bus_config.max_transfer_bytes = (size_t)buffer_size;
 
+    #if CONFIG_LCD_ENABLE_DEBUG_LOG
+        printf("max_transfer_bytes=%d\n", self->bus_config.max_transfer_bytes);
+    #endif
         esp_err_t ret = esp_lcd_new_i80_bus(&self->bus_config, &self->bus_handle);
 
         if (ret != 0) {
@@ -194,6 +238,10 @@
 
     mp_lcd_err_t i80_del(mp_obj_t obj)
     {
+    #if CONFIG_LCD_ENABLE_DEBUG_LOG
+        printf("i80_del(self)\n");
+    #endif
+
         mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)obj;
 
         mp_lcd_err_t ret = esp_lcd_panel_io_del(self->panel_io_handle.panel_io);
@@ -213,6 +261,11 @@
     {
         mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)obj;
         *lane_count = (uint8_t)self->bus_config.bus_width;
+
+    #if CONFIG_LCD_ENABLE_DEBUG_LOG
+        printf("i80_get_lane_count(self)-> %d\n", (uint8_t)self->bus_config.bus_width);
+    #endif
+
         return LCD_OK;
     }
 

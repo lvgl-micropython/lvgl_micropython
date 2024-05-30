@@ -108,18 +108,18 @@ mp_obj_t esp32_hw_spi_dev_make_new(const mp_obj_type_t *type, size_t n_args, siz
         ARG_queue_size,
     };
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_spi_bus,       MP_ARG_REQUIRED | MP_ARG_OBJ },
-        { MP_QSTR_baudrate,      MP_ARG_REQUIRED | MP_ARG_INT },
-        { MP_QSTR_cs,            MP_ARG_KW_ONLY | MP_ARG_INT,   {.u_int  = -1 }  },
-        { MP_QSTR_polarity,      MP_ARG_KW_ONLY | MP_ARG_INT,   {.u_int  = 0 } },
-        { MP_QSTR_phase,         MP_ARG_KW_ONLY | MP_ARG_INT,   {.u_int  = 0 } },
-        { MP_QSTR_bits,          MP_ARG_KW_ONLY | MP_ARG_INT,   {.u_int  = 8 } },
-        { MP_QSTR_firstbit,      MP_ARG_KW_ONLY | MP_ARG_INT,   {.u_int  = MICROPY_PY_MACHINE_SPI_MSB } },
-        { MP_QSTR_three_wire,    MP_ARG_KW_ONLY | MP_ARG_BOOL,  {.u_bool = false } },
-        { MP_QSTR_cs_active_pos, MP_ARG_KW_ONLY | MP_ARG_BOOL,  {.u_bool = false } },
-        { MP_QSTR_half_duplex,   MP_ARG_KW_ONLY | MP_ARG_BOOL,  {.u_bool = false } },
-        { MP_QSTR_clock_as_cs,   MP_ARG_KW_ONLY | MP_ARG_BOOL,  {.u_bool = false } },
-        { MP_QSTR_queue_size,    MP_ARG_KW_ONLY | MP_ARG_INT,   {.u_int  = 5 } },
+        { MP_QSTR_spi_bus,        MP_ARG_OBJ  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED    },
+        { MP_QSTR_freq,           MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED    },
+        { MP_QSTR_cs,             MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int  = -1    } },
+        { MP_QSTR_polarity,       MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int  =  0    } },
+        { MP_QSTR_phase,          MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int  =  0    } },
+        { MP_QSTR_firstbit,       MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int  = MICROPY_PY_MACHINE_SPI_MSB } },
+        { MP_QSTR_bits,           MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int  =  8    } },
+        { MP_QSTR_three_wire,     MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false } },
+        { MP_QSTR_cs_high_active, MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false } },
+        { MP_QSTR_half_duplex,    MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false } },
+        { MP_QSTR_clock_as_cs,    MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false } },
+        { MP_QSTR_queue_size,     MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int  =  5    } },
     };
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);

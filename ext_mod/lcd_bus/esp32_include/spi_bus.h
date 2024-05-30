@@ -3,6 +3,7 @@
 
     //local_includes
     #include "lcd_types.h"
+    #include "esp_spi_bus.h"
 
     // esp-idf includes
     #include "esp_lcd_panel_io.h"
@@ -30,10 +31,8 @@
 
         lcd_panel_io_t panel_io_handle;
         esp_lcd_panel_io_spi_config_t panel_io_config;
-        spi_bus_config_t bus_config;
+        esp32_hw_spi_bus_obj_t *spi_bus;
         esp_lcd_spi_bus_handle_t bus_handle;
-
-        spi_host_device_t host;
 
     } mp_lcd_spi_bus_obj_t;
 

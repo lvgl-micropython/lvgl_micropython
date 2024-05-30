@@ -105,9 +105,15 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
             if (buf == self->buf1) {
                 heap_caps_free(buf);
                 self->buf1 = NULL;
+            #if CONFIG_LCD_ENABLE_DEBUG_LOG
+                printf("lcd_panel_io_free_framebuffer(self, buf=1)\n");
+            #endif
             } else if (buf == self->buf2) {
                 heap_caps_free(buf);
                 self->buf2 = NULL;
+            #if CONFIG_LCD_ENABLE_DEBUG_LOG
+                printf("lcd_panel_io_free_framebuffer(self, buf=2)\n");
+            #endif
             } else {
                 mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("No matching buffer found"));
             }
@@ -123,6 +129,9 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
 
         if (self->panel_io_handle.rx_param == NULL) {
+            #if CONFIG_LCD_ENABLE_DEBUG_LOG
+                printf("lcd_panel_io_rx_param(self, lcd_cmd=%d, param, param_size=%d)\n", lcd_cmd, param_size);
+            #endif
             return esp_lcd_panel_io_rx_param(self->panel_io_handle.panel_io, lcd_cmd, param, param_size);
         } else {
             return self->panel_io_handle.rx_param(obj, lcd_cmd, param, param_size);
@@ -135,6 +144,9 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
         mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
 
         if (self->panel_io_handle.tx_param == NULL) {
+            #if CONFIG_LCD_ENABLE_DEBUG_LOG
+                printf("lcd_panel_io_tx_param(self, lcd_cmd=%d, param, param_size=%d)\n", lcd_cmd, param_size);
+            #endif
             return esp_lcd_panel_io_tx_param(self->panel_io_handle.panel_io, lcd_cmd, param, param_size);
         } else {
             return self->panel_io_handle.tx_param(obj, lcd_cmd, param, param_size);
@@ -155,6 +167,9 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
             LCD_UNUSED(y_start);
             LCD_UNUSED(x_end);
             LCD_UNUSED(y_end);
+            #if CONFIG_LCD_ENABLE_DEBUG_LOG
+                printf("lcd_panel_io_tx_color(self, lcd_cmd=%d, color, color_size=%d)\n", lcd_cmd, color_size);
+            #endif
             return esp_lcd_panel_io_tx_color(self->panel_io_handle.panel_io, lcd_cmd, color, color_size);
         } else {
             return self->panel_io_handle.tx_color(obj, lcd_cmd, color, color_size, x_start, y_start, x_end, y_end);
@@ -239,6 +254,10 @@ mp_obj_t lcd_panel_io_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t
     if (self->panel_io_handle.allocate_framebuffer == NULL) {
         #ifdef ESP_IDF_VERSION
             void *buf = heap_caps_calloc(1, size, caps);
+
+        #if CONFIG_LCD_ENABLE_DEBUG_LOG
+            printf("lcd_panel_io_allocate_framebuffer(self, size=%d, caps=%d)\n", size, caps);
+        #endif
         #else
             LCD_UNUSED(caps);
             void *buf = m_malloc(size);
@@ -284,6 +303,10 @@ mp_lcd_err_t lcd_panel_io_del(mp_obj_t obj)
     if (self->panel_io_handle.del != NULL) {
         return self->panel_io_handle.del(obj);
     } else {
+    #if CONFIG_LCD_ENABLE_DEBUG_LOG
+        printf("lcd_panel_io_del(self)\n");
+    #endif
+
         return LCD_OK;
     }
 }

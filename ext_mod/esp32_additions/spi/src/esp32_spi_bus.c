@@ -365,10 +365,11 @@ mp_obj_t esp32_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, siz
     } else {
         self->octal_mode = false;
     }
-
+    self->dual_mode = false;
     if ((bool)args[ARG_dual].u_bool) {
         if (mosi != -1 && miso != -1) {
             buscfg_flags |= SPICOMMON_BUSFLAG_DUAL;
+            self->dual_mode = true;
         } else {
             mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("miso and mosi pins are needed to use dual mode"));
             return mp_const_none;
