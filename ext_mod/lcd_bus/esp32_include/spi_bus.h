@@ -3,7 +3,7 @@
 
     //local_includes
     #include "lcd_types.h"
-    #include "esp_spi_bus.h"
+    #include "esp32_spi_bus.h"
 
     // esp-idf includes
     #include "esp_lcd_panel_io.h"

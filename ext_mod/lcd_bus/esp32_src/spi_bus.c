@@ -3,7 +3,7 @@
 #include "lcd_types.h"
 #include "modlcd_bus.h"
 #include "spi_bus.h"
-#include "esp_spi_bus.h"
+#include "esp32_spi_bus.h"
 
 // esp-idf includes
 #include "driver/spi_common.h"

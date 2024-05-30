@@ -60,17 +60,17 @@ mp_obj_t esp32_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, siz
         ARG_dual
     };
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_host,  MP_ARG_REQUIRED | MP_ARG_INT, {.u_int = -1} },
-        { MP_QSTR_mosi,  MP_ARG_KW_ONLY | MP_ARG_OBJ,  {.u_obj  = MP_OBJ_NULL } },
-        { MP_QSTR_miso,  MP_ARG_KW_ONLY | MP_ARG_OBJ,  {.u_obj  = MP_OBJ_NULL } },
-        { MP_QSTR_sck,   MP_ARG_KW_ONLY | MP_ARG_OBJ,  {.u_obj  = MP_OBJ_NULL } },
-        { MP_QSTR_wp,    MP_ARG_KW_ONLY | MP_ARG_OBJ,  {.u_obj  = MP_OBJ_NULL } },
-        { MP_QSTR_hd,    MP_ARG_KW_ONLY | MP_ARG_OBJ,  {.u_obj  = MP_OBJ_NULL } },
-        { MP_QSTR_data4, MP_ARG_KW_ONLY | MP_ARG_OBJ,  {.u_obj  = MP_OBJ_NULL } },
-        { MP_QSTR_data5, MP_ARG_KW_ONLY | MP_ARG_OBJ,  {.u_obj  = MP_OBJ_NULL } },
-        { MP_QSTR_data6, MP_ARG_KW_ONLY | MP_ARG_OBJ,  {.u_obj  = MP_OBJ_NULL } },
-        { MP_QSTR_data7, MP_ARG_KW_ONLY | MP_ARG_OBJ,  {.u_obj  = MP_OBJ_NULL } },
-        { MP_QSTR_dual,  MP_ARG_KW_ONLY | MP_ARG_BOOL, {.u_bool = false       } },
+        { MP_QSTR_host,  MP_ARG_INT | MP_ARG_KW_ONLY | MP_ARG_REQUIRED, {.u_int = -1} },
+        { MP_QSTR_mosi,  MP_ARG_OBJ | MP_ARG_KW_ONLY,  {.u_obj  = MP_OBJ_NULL } },
+        { MP_QSTR_miso,  MP_ARG_OBJ | MP_ARG_KW_ONLY,  {.u_obj  = MP_OBJ_NULL } },
+        { MP_QSTR_sck,   MP_ARG_OBJ | MP_ARG_KW_ONLY,  {.u_obj  = MP_OBJ_NULL } },
+        { MP_QSTR_wp,    MP_ARG_OBJ | MP_ARG_KW_ONLY,  {.u_obj  = MP_OBJ_NULL } },
+        { MP_QSTR_hd,    MP_ARG_OBJ | MP_ARG_KW_ONLY,  {.u_obj  = MP_OBJ_NULL } },
+        { MP_QSTR_data4, MP_ARG_OBJ | MP_ARG_KW_ONLY,  {.u_obj  = MP_OBJ_NULL } },
+        { MP_QSTR_data5, MP_ARG_OBJ | MP_ARG_KW_ONLY,  {.u_obj  = MP_OBJ_NULL } },
+        { MP_QSTR_data6, MP_ARG_OBJ | MP_ARG_KW_ONLY,  {.u_obj  = MP_OBJ_NULL } },
+        { MP_QSTR_data7, MP_ARG_OBJ | MP_ARG_KW_ONLY,  {.u_obj  = MP_OBJ_NULL } },
+        { MP_QSTR_dual,  MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false       } },
     };
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
