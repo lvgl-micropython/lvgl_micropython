@@ -34,7 +34,7 @@ mp_obj_t esp32_hw_spi_get_dma_buffer(mp_obj_t size_in)
     return MP_OBJ_FROM_PTR(view);
 }
 
-MP_DEFINE_CONST_FUN_OBJ_1(esp32_hw_spi_get_dma_buffer_obj, esp32_hw_spi_get_dma_buffer);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(esp32_hw_spi_get_dma_buffer_obj, esp32_hw_spi_get_dma_buffer);
 
 
 mp_obj_t esp32_hw_spi_free_dma_buffer(mp_obj_t buf_in)
@@ -46,7 +46,7 @@ mp_obj_t esp32_hw_spi_free_dma_buffer(mp_obj_t buf_in)
     return mp_const_none;
 }
 
-MP_DEFINE_CONST_FUN_OBJ_1(esp32_hw_spi_free_dma_buffer_obj, esp32_hw_spi_free_dma_buffer);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(esp32_hw_spi_free_dma_buffer_obj, esp32_hw_spi_free_dma_buffer);
 
 
 STATIC const mp_map_elem_t esp32_module_spi_globals_table[] = {
