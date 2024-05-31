@@ -145,6 +145,8 @@ partition_size = None
 flash_size = '0'
 oct_flash = False
 
+DEBUG = False
+
 
 def parse_args(extra_args, lv_cflags, brd):
     global board
@@ -153,6 +155,7 @@ def parse_args(extra_args, lv_cflags, brd):
     global partition_size
     global flash_size
     global oct_flash
+    global DEBUG
 
     board = brd
 
@@ -238,6 +241,12 @@ def parse_args(extra_args, lv_cflags, brd):
         type=int,
         action='store'
     )
+    esp_argParser.add_argument(
+        '--debug',
+        dest='debug',
+        default=False,
+        action='store_true'
+    )
 
     esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
     skip_partition_resize = esp_args.skip_partition_resize
@@ -247,6 +256,8 @@ def parse_args(extra_args, lv_cflags, brd):
         lv_cflags += ' -DLV_KCONFIG_IGNORE=1'
     else:
         lv_cflags = '-DLV_KCONFIG_IGNORE=1'
+
+    DEBUG = esp_args.debug
 
     return extra_args, lv_cflags, board
 
@@ -564,35 +575,41 @@ def compile():  # NOQA
             'CONFIG_ESPTOOLPY_FLASHSIZE_8MB=n',
             'CONFIG_ESPTOOLPY_FLASHSIZE_16MB=n',
             'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=n',
-            'CONFIG_BOOTLOADER_LOG_LEVEL_NONE=n',
-            'CONFIG_BOOTLOADER_LOG_LEVEL_ERROR=n',
-            'CONFIG_BOOTLOADER_LOG_LEVEL_WARN=n',
-            'CONFIG_BOOTLOADER_LOG_LEVEL_INFO=n',
-            'CONFIG_BOOTLOADER_LOG_LEVEL_DEBUG=y',
-            'CONFIG_BOOTLOADER_LOG_LEVEL_VERBOSE=n',
-            'CONFIG_LCD_ENABLE_DEBUG_LOG=y',
-            'CONFIG_HAL_LOG_LEVEL_NONE=n',
-            'CONFIG_HAL_LOG_LEVEL_ERROR=n',
-            'CONFIG_HAL_LOG_LEVEL_WARN=n',
-            'CONFIG_HAL_LOG_LEVEL_INFO=n',
-            'CONFIG_HAL_LOG_LEVEL_DEBUG=y',
-            'CONFIG_HAL_LOG_LEVEL_VERBOSE=n',
-            'CONFIG_LOG_MAXIMUM_LEVEL_ERROR=n',
-            'CONFIG_LOG_MAXIMUM_LEVEL_WARN=n',
-            'CONFIG_LOG_MAXIMUM_LEVEL_INFO=n',
-            'CONFIG_LOG_MAXIMUM_LEVEL_DEBUG=y',
-            'CONFIG_LOG_MAXIMUM_LEVEL_VERBOSE=n',
-            'CONFIG_LOG_DEFAULT_LEVEL_NONE=n',
-            'CONFIG_LOG_DEFAULT_LEVEL_ERROR=n',
-            'CONFIG_LOG_DEFAULT_LEVEL_WARN=n',
-            'CONFIG_LOG_DEFAULT_LEVEL_INFO=n',
-            'CONFIG_LOG_DEFAULT_LEVEL_DEBUG=y',
-            'CONFIG_LOG_DEFAULT_LEVEL_VERBOSE=n',
             f'CONFIG_ESPTOOLPY_FLASHSIZE_{flash_size}MB=y',
             'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
             f'"partitions-{flash_size}MiB.csv"',
-            ''
         ]
+
+        if DEBUG:
+            base_config.extend([
+                'CONFIG_BOOTLOADER_LOG_LEVEL_NONE=n',
+                'CONFIG_BOOTLOADER_LOG_LEVEL_ERROR=n',
+                'CONFIG_BOOTLOADER_LOG_LEVEL_WARN=n',
+                'CONFIG_BOOTLOADER_LOG_LEVEL_INFO=n',
+                'CONFIG_BOOTLOADER_LOG_LEVEL_DEBUG=y',
+                'CONFIG_BOOTLOADER_LOG_LEVEL_VERBOSE=n',
+                'CONFIG_LCD_ENABLE_DEBUG_LOG=y',
+                'CONFIG_HAL_LOG_LEVEL_NONE=n',
+                'CONFIG_HAL_LOG_LEVEL_ERROR=n',
+                'CONFIG_HAL_LOG_LEVEL_WARN=n',
+                'CONFIG_HAL_LOG_LEVEL_INFO=n',
+                'CONFIG_HAL_LOG_LEVEL_DEBUG=y',
+                'CONFIG_HAL_LOG_LEVEL_VERBOSE=n',
+                'CONFIG_LOG_MAXIMUM_LEVEL_ERROR=n',
+                'CONFIG_LOG_MAXIMUM_LEVEL_WARN=n',
+                'CONFIG_LOG_MAXIMUM_LEVEL_INFO=n',
+                'CONFIG_LOG_MAXIMUM_LEVEL_DEBUG=y',
+                'CONFIG_LOG_MAXIMUM_LEVEL_VERBOSE=n',
+                'CONFIG_LOG_DEFAULT_LEVEL_NONE=n',
+                'CONFIG_LOG_DEFAULT_LEVEL_ERROR=n',
+                'CONFIG_LOG_DEFAULT_LEVEL_WARN=n',
+                'CONFIG_LOG_DEFAULT_LEVEL_INFO=n',
+                'CONFIG_LOG_DEFAULT_LEVEL_DEBUG=y',
+                'CONFIG_LOG_DEFAULT_LEVEL_VERBOSE=n',
+            ])
+
+        base_config.append('')
+
         board_config_path = f'build/sdkconfig.board'
         with open(board_config_path, 'w') as f:
             f.write('\n'.join(base_config))
