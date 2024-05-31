@@ -14,7 +14,7 @@
 #include "esp_heap_caps.h"
 
 
-mp_obj_t esp32_hw_spi_get_dma_buffer(mp_obj_t size_in)
+STATIC mp_obj_t esp32_hw_spi_get_dma_buffer(mp_obj_t size_in)
 {
     uint16_t size = (uint16_t)mp_obj_get_int_truncated(size_in);
 
@@ -37,7 +37,7 @@ mp_obj_t esp32_hw_spi_get_dma_buffer(mp_obj_t size_in)
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(esp32_hw_spi_get_dma_buffer_obj, esp32_hw_spi_get_dma_buffer);
 
 
-mp_obj_t esp32_hw_spi_free_dma_buffer(mp_obj_t buf_in)
+STATIC mp_obj_t esp32_hw_spi_free_dma_buffer(mp_obj_t buf_in)
 {
     mp_buffer_info_t bufinfo;
     mp_get_buffer_raise(buf_in, &bufinfo, MP_BUFFER_RW);
@@ -51,8 +51,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(esp32_hw_spi_free_dma_buffer_obj, esp32_hw_spi_
 
 STATIC const mp_map_elem_t esp32_module_spi_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),        MP_OBJ_NEW_QSTR(MP_QSTR_spi)                  },
-    { MP_ROM_QSTR(MP_QSTR_Bus),             (mp_obj_t)&esp32_hw_spi_bus_type              },
-    { MP_ROM_QSTR(MP_QSTR_Device),          (mp_obj_t)&esp32_hw_spi_dev_type              },
+    { MP_ROM_QSTR(MP_QSTR_Bus),             MP_ROM_PTR(&esp32_hw_spi_bus_type)            },
+    { MP_ROM_QSTR(MP_QSTR_Device),          MP_ROM_PTR(&esp32_hw_spi_dev_type)            },
     { MP_ROM_QSTR(MP_QSTR_get_dma_buffer),  MP_ROM_PTR(&esp32_hw_spi_get_dma_buffer_obj)  },
     { MP_ROM_QSTR(MP_QSTR_free_dma_buffer), MP_ROM_PTR(&esp32_hw_spi_free_dma_buffer_obj) },
 };
