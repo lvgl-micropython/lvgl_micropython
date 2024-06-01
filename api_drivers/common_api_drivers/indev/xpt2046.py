@@ -49,14 +49,14 @@ class XPT2046(pointer_framework.PointerDriver):
         self.__read_last = False
         self.__int_running = False
 
-        if interrupt is not None:
+        if interrupt not in (-1, None):
             self._on_schedule_ref = self._on_schedule
             self.__last_coords = array.array('i', [-1, 0, 0])
 
             PD0_BIT = _INT_ON_PD0_BIT
-            interrupt = machine.Pin(interrupt, machine.Pin.IN)
+            self._interrupt = machine.Pin(interrupt, machine.Pin.IN)
 
-            interrupt.irq(
+            self._interrupt.irq(
                 trigger=machine.Pin.IRQ_FALLING,
                 handler=self._on_interrupt
             )
@@ -64,8 +64,7 @@ class XPT2046(pointer_framework.PointerDriver):
             self._set_mode_event()
         else:
             PD0_BIT = _INT_OFF_PD0_BIT
-
-        self._interrupt = interrupt
+            self._interrupt = None
 
         if vref_on:
             PD1_BIT = _VREF_ON_PD1_BIT
@@ -83,7 +82,7 @@ class XPT2046(pointer_framework.PointerDriver):
         # self._TEMP0 = const(0x86)
         # self._TEMP1 = const(0xF6)
         self._spi = spi_bus
-        if cs is not None:
+        if cs not in (-1, None):
             self.__cs = machine.Pin(cs, machine.Pin.OUT)
             self.__cs.value(1)
         else:
