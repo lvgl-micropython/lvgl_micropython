@@ -56,7 +56,7 @@ STATIC mp_obj_t mp_nvs_set(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw
     esp_err_t err;
     switch(type) {
         case NVS_TYPE_U8:
-            uint8_t u8_value = (uint8_t)mp_obj_get_int(args[ARG_value].u_obj);
+            uint8_t u8_value = (uint8_t)mp_obj_get_int_truncated(args[ARG_value].u_obj);
             err = nvs_set_u8(self->ns, key, u8_value);
             break;
         case NVS_TYPE_I8:
@@ -64,7 +64,7 @@ STATIC mp_obj_t mp_nvs_set(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw
             err = nvs_set_i8(self->ns, key, i8_value);
             break;
         case NVS_TYPE_U16:
-            uint16_t u16_value = (uint16_t)mp_obj_get_int(args[ARG_value].u_obj);
+            uint16_t u16_value = (uint16_t)mp_obj_get_int_truncated(args[ARG_value].u_obj);
             err = nvs_set_u16(self->ns, key, u16_value);
             break;
         case NVS_TYPE_I16:
@@ -72,7 +72,7 @@ STATIC mp_obj_t mp_nvs_set(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw
             err = nvs_set_i16(self->ns, key, i16_value);
             break;
         case NVS_TYPE_U32:
-            uint32_t u32_value = (uint32_t)mp_obj_get_int(args[ARG_value].u_obj);
+            uint32_t u32_value = (uint32_t)mp_obj_get_int_truncated(args[ARG_value].u_obj);
             err = nvs_set_u32(self->ns, key, u32_value);
             break;
         case NVS_TYPE_I32:
@@ -80,7 +80,7 @@ STATIC mp_obj_t mp_nvs_set(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw
             err = nvs_set_i32(self->ns, key, i32_value);
             break;
         case NVS_TYPE_U64:
-            uint64_t u64_value = (uint64_t)mp_obj_get_int(args[ARG_value].u_obj);
+            uint64_t u64_value = (uint64_t)mp_obj_get_int_truncated(args[ARG_value].u_obj);
             err = nvs_set_u64(self->ns, key, u64_value);
             break;
         case NVS_TYPE_I64:
@@ -123,7 +123,7 @@ MP_DEFINE_CONST_FUN_OBJ_KW(mp_nvs_set_obj, 4, mp_nvs_set);
 
 STATIC mp_obj_t mp_nvs_get(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
 
-    enum { ARG_self, ARG_type, ARG_key};
+    enum { ARG_self, ARG_type, ARG_key };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_self,  MP_ARG_OBJ | MP_ARG_REQUIRED, { .u_obj = mp_const_none } },
         { MP_QSTR_type,  MP_ARG_INT | MP_ARG_REQUIRED, { .u_int = 0             } },

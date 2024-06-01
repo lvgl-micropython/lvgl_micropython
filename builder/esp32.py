@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 from argparse import ArgumentParser
 from . import spawn
@@ -692,6 +693,10 @@ def compile():  # NOQA
 
             with open(mpconfigboard_path, 'wb') as f:
                 f.write(data.encode('utf-8'))
+
+    machine_hw_spi_src = 'micropy_updates/esp32/machine_hw_spi.c'
+    machine_hw_spi_dst = 'lib/micropython/ports/esp32/machine_hw_spi.c'
+    shutil.copyfile(machine_hw_spi_src, machine_hw_spi_dst)
 
     mpconfigport_path = 'lib/micropython/ports/esp32/mpconfigport.h'
 
