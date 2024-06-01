@@ -106,7 +106,7 @@ typedef struct _machine_hw_spi_bus_obj_t {
     int8_t sck;
     int8_t mosi;
     int8_t miso;
-    int16_t active_devices;
+    int8_t active_devices;
     enum {
         MACHINE_HW_SPI_STATE_NONE,
         MACHINE_HW_SPI_STATE_INIT,
