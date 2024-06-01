@@ -106,7 +106,7 @@ typedef struct _machine_hw_spi_bus_obj_t {
     int8_t sck;
     int8_t mosi;
     int8_t miso;
-    uint8_t active_devices;
+    int16_t active_devices;
     enum {
         MACHINE_HW_SPI_STATE_NONE,
         MACHINE_HW_SPI_STATE_INIT,
@@ -299,7 +299,7 @@ STATIC void machine_hw_spi_init(mp_obj_base_t *self_in, size_t n_args, const mp_
 
 mp_obj_t machine_hw_spi_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
 
-    enum { ARG_id, ARG_baudrate, ARG_polarity, ARG_phase, ARG_bits, ARG_firstbit, ARG_sck, ARG_mosi, ARG_miso ARG_cs};
+    enum { ARG_id, ARG_baudrate, ARG_polarity, ARG_phase, ARG_bits, ARG_firstbit, ARG_sck, ARG_mosi, ARG_miso, ARG_cs};
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_id,       MP_ARG_REQUIRED | MP_ARG_INT, {.u_int = -1} },
         { MP_QSTR_baudrate, MP_ARG_INT, {.u_int = 500000} },
@@ -327,6 +327,7 @@ mp_obj_t machine_hw_spi_make_new(const mp_obj_type_t *type, size_t n_args, size_
         default_pins = &machine_hw_spi_default_pins[spi_id - 1];
     } else {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("SPI(%d) doesn't exist"), spi_id);
+        return mp_const_none;
     }
 
     self->base.type = &machine_spi_type;
@@ -366,15 +367,18 @@ mp_obj_t machine_hw_spi_make_new(const mp_obj_type_t *type, size_t n_args, size_
         cs = machine_pin_get_id(args[ARG_cs].u_obj);
     }
 
+    esp_err_t ret;
+
     if (self->spi_bus->state == MACHINE_HW_SPI_STATE_INIT) {
         if (self->spi_bus->sck != sck || self->spi_bus->miso != miso || self->spi_bus->mosi != mosi) {
             mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("bus already initilized using different pins"));
+            return mp_const_none;
         }
     } else {
-        self->spi_bus->host = args[ARG_id].u_int
-        self->spi_bus->miso = miso
-        self->spi_bus->mosi = mosi
-        self->spi_bus->sck = sck
+        self->spi_bus->host = args[ARG_id].u_int;
+        self->spi_bus->miso = miso;
+        self->spi_bus->mosi = mosi;
+        self->spi_bus->sck = sck;
 
         spi_bus_config_t buscfg = {
             .miso_io_num = miso,
@@ -400,7 +404,7 @@ mp_obj_t machine_hw_spi_make_new(const mp_obj_type_t *type, size_t n_args, size_
         switch (ret) {
             case ESP_ERR_INVALID_ARG:
                 mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("invalid configuration"));
-                return;
+                return mp_const_none;
 
             case ESP_ERR_INVALID_STATE:
                 break;
@@ -429,15 +433,15 @@ mp_obj_t machine_hw_spi_make_new(const mp_obj_type_t *type, size_t n_args, size_
     switch (ret) {
         case ESP_ERR_INVALID_ARG:
             mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("invalid configuration"));
-            return;
+            return mp_const_none;
 
         case ESP_ERR_NO_MEM:
             mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("out of memory"));
-            return;
+            return mp_const_none;
 
         case ESP_ERR_NOT_FOUND:
             mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("no free slots"));
-            return;
+            return mp_const_none;
     }
 
     self->spi_bus->active_devices++;
