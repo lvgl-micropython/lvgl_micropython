@@ -116,7 +116,6 @@ STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     printf("lsb_first=%d\n", self->panel_io_config.flags.lsb_first);
     printf("cs_high_active=%d\n", self->panel_io_config.flags.cs_high_active);
     printf("octal_mode=%d\n", self->panel_io_config.flags.octal_mode);
-
 #endif
 
     return MP_OBJ_FROM_PTR(self);
