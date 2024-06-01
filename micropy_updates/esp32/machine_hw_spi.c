@@ -36,6 +36,7 @@
 #include "driver/spi_master.h"
 #include "soc/gpio_sig_map.h"
 #include "soc/spi_pins.h"
+#include "hal/spi_ll.h"
 
 // SPI mappings by device, naming used by IDF old/new
 // upython   | ESP32     | ESP32S2   | ESP32S3 | ESP32C3
@@ -385,7 +386,8 @@ mp_obj_t machine_hw_spi_make_new(const mp_obj_type_t *type, size_t n_args, size_
             .mosi_io_num = mosi,
             .sclk_io_num = sck,
             .quadwp_io_num = -1,
-            .quadhd_io_num = -1
+            .quadhd_io_num = -1,
+            .max_transfer_sz = SPI_LL_DMA_MAX_BIT_LEN / 8
         };
 
         int dma_chan = 0;
