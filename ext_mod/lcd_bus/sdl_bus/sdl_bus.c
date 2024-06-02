@@ -335,7 +335,7 @@
         self->texture = SDL_CreateTexture(
             self->renderer,
             (SDL_PixelFormatEnum)args[ARG_px_format].u_int,
-            SDL_TEXTUREACCESS_static,
+            SDL_TEXTUREACCESS_STATIC,
             self->panel_io_config.width,
             self->panel_io_config.height
         );
