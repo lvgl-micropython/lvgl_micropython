@@ -395,7 +395,6 @@ mp_obj_t machine_hw_spi_make_new(const mp_obj_type_t *type, size_t n_args, size_
         #else
         if (self->spi_bus->host == SPI2_HOST) {
             ret = spi_bus_initialize(self->spi_bus->host, &buscfg, 1);
-            dma_chan = 1;
         } else {
             ret = spi_bus_initialize(self->spi_bus->host, &buscfg, 2);
         }
