@@ -11,7 +11,7 @@
 #include <string.h>
 
 
-STATIC mp_obj_t mp_lcd_i2c_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
+static mp_obj_t mp_lcd_i2c_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
 {
     LCD_UNUSED(type);
     LCD_UNUSED(n_args);

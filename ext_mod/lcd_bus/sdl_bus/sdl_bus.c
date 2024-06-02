@@ -37,7 +37,7 @@
     int flush_thread(void *self_in);
     int process_event(mp_lcd_sdl_bus_obj_t *self, SDL_Event *event);
 
-    STATIC mp_obj_t mp_lcd_sdl_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
+    static mp_obj_t mp_lcd_sdl_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
         enum { ARG_flags };
         const mp_arg_t make_new_args[] = {{ MP_QSTR_flags, MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED, { .u_int = -1 } } };
@@ -236,7 +236,7 @@
         return 0;
     }
 
-    STATIC mp_obj_t mp_lcd_sdl_poll_events(mp_obj_t self_in)
+    static mp_obj_t mp_lcd_sdl_poll_events(mp_obj_t self_in)
     {
         LCD_UNUSED(self_in);
         //mp_printf(&mp_plat_print, "mp_lcd_sdl_poll_events\n");
@@ -270,7 +270,7 @@
 
     MP_DEFINE_CONST_FUN_OBJ_1(mp_lcd_sdl_poll_events_obj, mp_lcd_sdl_poll_events);
 
-    STATIC mp_obj_t mp_lcd_sdl_register_quit_callback(mp_obj_t self_in, mp_obj_t callback)
+    static mp_obj_t mp_lcd_sdl_register_quit_callback(mp_obj_t self_in, mp_obj_t callback)
     {
         mp_lcd_sdl_bus_obj_t *self = MP_OBJ_TO_PTR(self_in);
         self->quit_callback = callback;
@@ -280,7 +280,7 @@
     MP_DEFINE_CONST_FUN_OBJ_2(mp_lcd_sdl_register_quit_callback_obj, mp_lcd_sdl_register_quit_callback);
 
 
-    STATIC mp_obj_t mp_lcd_sdl_register_mouse_callback(mp_obj_t self_in, mp_obj_t callback)
+    static mp_obj_t mp_lcd_sdl_register_mouse_callback(mp_obj_t self_in, mp_obj_t callback)
     {
         mp_lcd_sdl_bus_obj_t *self = MP_OBJ_TO_PTR(self_in);
         self->mouse_callback = callback;
@@ -290,7 +290,7 @@
     MP_DEFINE_CONST_FUN_OBJ_2(mp_lcd_sdl_register_mouse_callback_obj, mp_lcd_sdl_register_mouse_callback);
 
 
-    STATIC mp_obj_t mp_lcd_sdl_register_keypad_callback(mp_obj_t self_in, mp_obj_t callback)
+    static mp_obj_t mp_lcd_sdl_register_keypad_callback(mp_obj_t self_in, mp_obj_t callback)
     {
         mp_lcd_sdl_bus_obj_t *self = MP_OBJ_TO_PTR(self_in);
         self->keypad_callback = callback;
@@ -300,7 +300,7 @@
     MP_DEFINE_CONST_FUN_OBJ_2(mp_lcd_sdl_register_keypad_callback_obj, mp_lcd_sdl_register_keypad_callback);
 
 
-    STATIC mp_obj_t mp_lcd_sdl_register_window_callback(mp_obj_t self_in, mp_obj_t callback)
+    static mp_obj_t mp_lcd_sdl_register_window_callback(mp_obj_t self_in, mp_obj_t callback)
     {
         mp_lcd_sdl_bus_obj_t *self = MP_OBJ_TO_PTR(self_in);
         self->window_callback = callback;
@@ -310,7 +310,7 @@
     MP_DEFINE_CONST_FUN_OBJ_2(mp_lcd_sdl_register_window_callback_obj, mp_lcd_sdl_register_window_callback);
 
 
-    STATIC mp_obj_t mp_lcd_sdl_set_window_size(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
+    static mp_obj_t mp_lcd_sdl_set_window_size(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
     {
         enum { ARG_self, ARG_width, ARG_height, ARG_px_format, ARG_ignore_size_chg};
         static const mp_arg_t allowed_args[] = {
@@ -335,7 +335,7 @@
         self->texture = SDL_CreateTexture(
             self->renderer,
             (SDL_PixelFormatEnum)args[ARG_px_format].u_int,
-            SDL_TEXTUREACCESS_STATIC,
+            SDL_TEXTUREACCESS_static,
             self->panel_io_config.width,
             self->panel_io_config.height
         );
@@ -352,7 +352,7 @@
     MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_sdl_set_window_size_obj, 5, mp_lcd_sdl_set_window_size);
 
 
-    STATIC mp_obj_t mp_lcd_sdl_realloc_buffer(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
+    static mp_obj_t mp_lcd_sdl_realloc_buffer(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
     {
         enum { ARG_self, ARG_size, ARG_buf_num };
         static const mp_arg_t allowed_args[] = {
@@ -638,7 +638,7 @@
         return 0;
     }
 
-    STATIC const mp_rom_map_elem_t mp_lcd_sdl_bus_locals_dict_table[] = {
+    static const mp_rom_map_elem_t mp_lcd_sdl_bus_locals_dict_table[] = {
         { MP_ROM_QSTR(MP_QSTR_get_lane_count),       MP_ROM_PTR(&mp_lcd_bus_get_lane_count_obj)       },
         { MP_ROM_QSTR(MP_QSTR_register_callback),    MP_ROM_PTR(&mp_lcd_bus_register_callback_obj)    },
         { MP_ROM_QSTR(MP_QSTR_tx_color),             MP_ROM_PTR(&mp_lcd_bus_tx_color_obj)             },
@@ -670,7 +670,7 @@
     };
 
 
-    STATIC MP_DEFINE_CONST_DICT(mp_lcd_sdl_bus_locals_dict, mp_lcd_sdl_bus_locals_dict_table);
+    static MP_DEFINE_CONST_DICT(mp_lcd_sdl_bus_locals_dict, mp_lcd_sdl_bus_locals_dict_table);
 
     MP_DEFINE_CONST_OBJ_TYPE(
         mp_lcd_sdl_bus_type,

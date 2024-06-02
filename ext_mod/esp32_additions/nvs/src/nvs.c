@@ -13,7 +13,7 @@
 #define NVS_TYPE_FLOAT  (0xFE)
 
 
-STATIC mp_nvs_obj_t *_nvs_new(nvs_handle_t ns, const char *ns_name) {
+static mp_nvs_obj_t *_nvs_new(nvs_handle_t ns, const char *ns_name) {
     mp_nvs_obj_t *self = mp_obj_malloc(mp_nvs_obj_t, &mp_nvs_type);
     self->ns = ns;
     self->ns_name = ns_name;
@@ -21,12 +21,12 @@ STATIC mp_nvs_obj_t *_nvs_new(nvs_handle_t ns, const char *ns_name) {
 }
 
 
-STATIC void mp_nvs_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
+static void mp_nvs_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
     mp_printf(print, "<NVS namespace>");
 }
 
 
-STATIC mp_obj_t mp_nvs_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
+static mp_obj_t mp_nvs_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
     mp_arg_check_num(n_args, n_kw, 1, 1, false);
 
     const char *ns_name = mp_obj_str_get_str(all_args[0]);
@@ -36,7 +36,7 @@ STATIC mp_obj_t mp_nvs_make_new(const mp_obj_type_t *type, size_t n_args, size_t
 }
 
 
-STATIC mp_obj_t mp_nvs_set(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t mp_nvs_set(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
 
     enum { ARG_self, ARG_type, ARG_key, ARG_value };
     static const mp_arg_t allowed_args[] = {
@@ -121,7 +121,7 @@ STATIC mp_obj_t mp_nvs_set(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw
 MP_DEFINE_CONST_FUN_OBJ_KW(mp_nvs_set_obj, 4, mp_nvs_set);
 
 
-STATIC mp_obj_t mp_nvs_get(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t mp_nvs_get(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
 
     enum { ARG_self, ARG_type, ARG_key };
     static const mp_arg_t allowed_args[] = {
@@ -220,37 +220,37 @@ STATIC mp_obj_t mp_nvs_get(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw
 MP_DEFINE_CONST_FUN_OBJ_KW(mp_nvs_get_obj, 3, mp_nvs_get);
 
 
-STATIC mp_obj_t mp_nvs_erase(mp_obj_t self_in, mp_obj_t key_in) {
+static mp_obj_t mp_nvs_erase(mp_obj_t self_in, mp_obj_t key_in) {
     mp_nvs_obj_t *self = MP_OBJ_TO_PTR(self_in);
     const char *key = mp_obj_str_get_str(key_in);
     check_esp_err(nvs_erase_key(self->ns, key));
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(mp_nvs_erase_obj, mp_nvs_erase);
+static MP_DEFINE_CONST_FUN_OBJ_2(mp_nvs_erase_obj, mp_nvs_erase);
 
 
-STATIC mp_obj_t mp_nvs_commit(mp_obj_t self_in) {
+static mp_obj_t mp_nvs_commit(mp_obj_t self_in) {
     mp_nvs_obj_t *self = MP_OBJ_TO_PTR(self_in);
     check_esp_err(nvs_commit(self->ns));
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_nvs_commit_obj, mp_nvs_commit);
+static MP_DEFINE_CONST_FUN_OBJ_1(mp_nvs_commit_obj, mp_nvs_commit);
 
 
 
-STATIC mp_obj_t mp_nvs_close(mp_obj_t self_in) {
+static mp_obj_t mp_nvs_close(mp_obj_t self_in) {
     mp_nvs_obj_t *self = MP_OBJ_TO_PTR(self_in);
     nvs_close(self->ns);
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_nvs_close_obj, mp_nvs_close);
+static MP_DEFINE_CONST_FUN_OBJ_1(mp_nvs_close_obj, mp_nvs_close);
 
 
 
-STATIC mp_obj_t mp_nvs_get_keys(mp_obj_t self_in) {
+static mp_obj_t mp_nvs_get_keys(mp_obj_t self_in) {
     mp_nvs_obj_t *self = MP_OBJ_TO_PTR(self_in);
 
     size_t used_entries = 0;
@@ -297,19 +297,19 @@ STATIC mp_obj_t mp_nvs_get_keys(mp_obj_t self_in) {
     return dict;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_nvs_get_keys_obj, mp_nvs_get_keys);
+static MP_DEFINE_CONST_FUN_OBJ_1(mp_nvs_get_keys_obj, mp_nvs_get_keys);
 
 
-STATIC mp_obj_t mp_nvs_reset(mp_obj_t self_in) {
+static mp_obj_t mp_nvs_reset(mp_obj_t self_in) {
     mp_nvs_obj_t *self = MP_OBJ_TO_PTR(self_in);
     check_esp_err(nvs_erase_all(self->ns));
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_nvs_reset_obj, mp_nvs_reset);
+static MP_DEFINE_CONST_FUN_OBJ_1(mp_nvs_reset_obj, mp_nvs_reset);
 
 
-STATIC const mp_rom_map_elem_t mp_nvs_locals_dict_table[] = {
+static const mp_rom_map_elem_t mp_nvs_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get),      MP_ROM_PTR(&mp_nvs_get_obj)      },
     { MP_ROM_QSTR(MP_QSTR_set),      MP_ROM_PTR(&mp_nvs_set_obj)      },
     { MP_ROM_QSTR(MP_QSTR_erase),    MP_ROM_PTR(&mp_nvs_erase_obj)    },
@@ -320,7 +320,7 @@ STATIC const mp_rom_map_elem_t mp_nvs_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_reset),    MP_ROM_PTR(&mp_nvs_reset_obj)    },
 };
 
-STATIC MP_DEFINE_CONST_DICT(mp_nvs_locals_dict, mp_nvs_locals_dict_table);
+static MP_DEFINE_CONST_DICT(mp_nvs_locals_dict, mp_nvs_locals_dict_table);
 
 
 MP_DEFINE_CONST_OBJ_TYPE(
@@ -333,7 +333,7 @@ MP_DEFINE_CONST_OBJ_TYPE(
 );
 
 
-STATIC const mp_rom_map_elem_t mp_nvs_module_globals_table[] = {
+static const mp_rom_map_elem_t mp_nvs_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),   MP_OBJ_NEW_QSTR(MP_QSTR_nvs) },
     { MP_ROM_QSTR(MP_QSTR_NVS),        (mp_obj_t)&mp_nvs_type       },
     { MP_ROM_QSTR(MP_QSTR_TYPE_U8),    MP_ROM_INT(NVS_TYPE_U8)      },
@@ -349,7 +349,7 @@ STATIC const mp_rom_map_elem_t mp_nvs_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_TYPE_FLOAT), MP_ROM_INT(NVS_TYPE_FLOAT)   },
 };
 
-STATIC MP_DEFINE_CONST_DICT(mp_nvs_module_globals, mp_nvs_module_globals_table);
+static MP_DEFINE_CONST_DICT(mp_nvs_module_globals, mp_nvs_module_globals_table);
 
 
 const mp_obj_module_t mp_module_nvs = {

@@ -17,7 +17,7 @@
 
 
 #ifdef MP_PORT_UNIX
-    STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
+    static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
         LCD_UNUSED(type);
         LCD_UNUSED(n_args);
@@ -56,7 +56,7 @@
 
 
     /* function definitions */
-    STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
+    static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
         enum {
             ARG_dc,
@@ -348,7 +348,7 @@
 
 #endif
 
-STATIC const mp_rom_map_elem_t mp_lcd_spi_bus_locals_dict_table[] = {
+static const mp_rom_map_elem_t mp_lcd_spi_bus_locals_dict_table[] = {
 #ifndef MP_PORT_UNIX
     { MP_ROM_QSTR(MP_QSTR_get_host),             MP_ROM_PTR(&s_spi_bus_get_host_obj)             },
 #endif
@@ -364,7 +364,7 @@ STATIC const mp_rom_map_elem_t mp_lcd_spi_bus_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___del__),              MP_ROM_PTR(&mp_lcd_bus_deinit_obj)               },
 };
 
-STATIC MP_DEFINE_CONST_DICT(mp_lcd_spi_bus_locals_dict, mp_lcd_spi_bus_locals_dict_table);
+static MP_DEFINE_CONST_DICT(mp_lcd_spi_bus_locals_dict, mp_lcd_spi_bus_locals_dict_table);
 
 /* create micropython class */
 /* create micropython class */

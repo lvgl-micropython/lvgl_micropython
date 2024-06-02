@@ -223,7 +223,7 @@ def get_micropython():
     if result != 0:
         sys.exit(result)
 
-    cmd_ = ['cd lib/micropython && git checkout v1.22.2']
+    cmd_ = ['cd lib/micropython && git checkout v1.23.0']
 
     spawn(cmd_, out_to_screen=False)
 

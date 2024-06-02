@@ -23,7 +23,7 @@ mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
 mp_lcd_err_t i2c_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
 
 
-STATIC mp_obj_t mp_lcd_i2c_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
+static mp_obj_t mp_lcd_i2c_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
 {
     enum {
         ARG_sda,

@@ -30,7 +30,7 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
 mp_lcd_err_t spi_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
 
 
-STATIC mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
+static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
 {
      enum {
         ARG_dc,
@@ -276,7 +276,7 @@ mp_obj_t mp_spi_bus_get_host(mp_obj_t obj)
 MP_DEFINE_CONST_FUN_OBJ_1(mp_spi_bus_get_host_obj, mp_spi_bus_get_host);
 
 
-STATIC const mp_rom_map_elem_t mp_lcd_spi_bus_locals_dict_table[] = {
+static const mp_rom_map_elem_t mp_lcd_spi_bus_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_host),             MP_ROM_PTR(&mp_spi_bus_get_host_obj)             },
     { MP_ROM_QSTR(MP_QSTR_get_lane_count),       MP_ROM_PTR(&mp_lcd_bus_get_lane_count_obj)       },
     { MP_ROM_QSTR(MP_QSTR_allocate_framebuffer), MP_ROM_PTR(&mp_lcd_bus_allocate_framebuffer_obj) },
@@ -290,7 +290,7 @@ STATIC const mp_rom_map_elem_t mp_lcd_spi_bus_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___del__),              MP_ROM_PTR(&mp_lcd_bus_deinit_obj)               },
 };
 
-STATIC MP_DEFINE_CONST_DICT(mp_lcd_spi_bus_locals_dict, mp_lcd_spi_bus_locals_dict_table);
+static MP_DEFINE_CONST_DICT(mp_lcd_spi_bus_locals_dict, mp_lcd_spi_bus_locals_dict_table);
 
 
 MP_DEFINE_CONST_OBJ_TYPE(

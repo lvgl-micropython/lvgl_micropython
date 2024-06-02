@@ -131,7 +131,7 @@ typedef struct _machine_hw_spi_obj_t {
 
 
 // Default pin mappings for the hardware SPI instances
-STATIC const machine_hw_spi_default_pins_t machine_hw_spi_default_pins[MICROPY_HW_SPI_MAX] = {
+static const machine_hw_spi_default_pins_t machine_hw_spi_default_pins[MICROPY_HW_SPI_MAX] = {
     { .sck = MICROPY_HW_SPI1_SCK, .mosi = MICROPY_HW_SPI1_MOSI, .miso = MICROPY_HW_SPI1_MISO, .cs = MICROPY_HW_SPI1_CS},
     #ifdef MICROPY_HW_SPI2_SCK
     { .sck = MICROPY_HW_SPI2_SCK, .mosi = MICROPY_HW_SPI2_MOSI, .miso = MICROPY_HW_SPI2_MISO, .cs = MICROPY_HW_SPI2_CS },
@@ -139,9 +139,9 @@ STATIC const machine_hw_spi_default_pins_t machine_hw_spi_default_pins[MICROPY_H
 };
 
 // Static objects mapping to SPI2 (and SPI3 if available) hardware peripherals.
-STATIC machine_hw_spi_bus_obj_t machine_hw_spi_obj[MICROPY_HW_SPI_MAX];
+static machine_hw_spi_bus_obj_t machine_hw_spi_obj[MICROPY_HW_SPI_MAX];
 
-STATIC void machine_hw_spi_deinit_internal(machine_hw_spi_obj_t *self) {
+static void machine_hw_spi_deinit_internal(machine_hw_spi_obj_t *self) {
     switch (spi_bus_remove_device(self->spi_device)) {
         case ESP_ERR_INVALID_ARG:
             mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("invalid configuration"));
@@ -190,12 +190,12 @@ STATIC void machine_hw_spi_deinit_internal(machine_hw_spi_obj_t *self) {
 }
 
 
-STATIC void machine_hw_spi_deinit(mp_obj_base_t *self_in) {
+static void machine_hw_spi_deinit(mp_obj_base_t *self_in) {
     machine_hw_spi_obj_t *self = (machine_hw_spi_obj_t *)self_in;
     machine_hw_spi_deinit_internal(self);
 }
 
-STATIC mp_uint_t gcd(mp_uint_t x, mp_uint_t y) {
+static mp_uint_t gcd(mp_uint_t x, mp_uint_t y) {
     while (x != y) {
         if (x > y) {
             x -= y;
@@ -206,7 +206,7 @@ STATIC mp_uint_t gcd(mp_uint_t x, mp_uint_t y) {
     return x;
 }
 
-STATIC void machine_hw_spi_transfer(mp_obj_base_t *self_in, size_t len, const uint8_t *src, uint8_t *dest) {
+static void machine_hw_spi_transfer(mp_obj_base_t *self_in, size_t len, const uint8_t *src, uint8_t *dest) {
     machine_hw_spi_obj_t *self = MP_OBJ_TO_PTR(self_in);
 
     if (self->spi_bus->state == MACHINE_HW_SPI_STATE_DEINIT) {
@@ -284,7 +284,7 @@ STATIC void machine_hw_spi_transfer(mp_obj_base_t *self_in, size_t len, const ui
 /******************************************************************************/
 // MicroPython bindings for hw_spi
 
-STATIC void machine_hw_spi_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
+static void machine_hw_spi_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
     machine_hw_spi_obj_t *self = MP_OBJ_TO_PTR(self_in);
     mp_printf(print, "SPI(id=%u, baudrate=%u, polarity=%u, phase=%u, bits=%u, firstbit=%u, sck=%d, mosi=%d, miso=%d, cs=%d)",
         self->spi_bus->host, self->baudrate, self->polarity,
@@ -293,7 +293,7 @@ STATIC void machine_hw_spi_print(const mp_print_t *print, mp_obj_t self_in, mp_p
 }
 
 
-STATIC void machine_hw_spi_init(mp_obj_base_t *self_in, size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static void machine_hw_spi_init(mp_obj_base_t *self_in, size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
 
 }
 
@@ -457,7 +457,7 @@ spi_host_device_t machine_hw_spi_get_host(mp_obj_t in) {
     return self->spi_bus->host;
 }
 
-STATIC const mp_machine_spi_p_t machine_hw_spi_p = {
+static const mp_machine_spi_p_t machine_hw_spi_p = {
     .init = machine_hw_spi_init,
     .deinit = machine_hw_spi_deinit,
     .transfer = machine_hw_spi_transfer,
