@@ -390,18 +390,16 @@ mp_obj_t machine_hw_spi_make_new(const mp_obj_type_t *type, size_t n_args, size_
             .max_transfer_sz = SPI_LL_DMA_MAX_BIT_LEN / 8
         };
 
-        int dma_chan = 0;
         #if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C3
-        dma_chan = SPI_DMA_CH_AUTO;
+        ret = spi_bus_initialize(self->spi_bus->host, &buscfg, SPI_DMA_CH_AUTO);
         #else
-        if (self->host == SPI2_HOST) {
+        if (self->spi_bus->host == SPI2_HOST) {
+            ret = spi_bus_initialize(self->spi_bus->host, &buscfg, 1);
             dma_chan = 1;
         } else {
-            dma_chan = 2;
+            ret = spi_bus_initialize(self->spi_bus->host, &buscfg, 2);
         }
         #endif
-
-        ret = spi_bus_initialize(self->spi_bus->host, &buscfg, dma_chan);
 
         switch (ret) {
             case ESP_ERR_INVALID_ARG:

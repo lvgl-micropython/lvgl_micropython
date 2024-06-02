@@ -150,7 +150,9 @@ if lv_cflags is not None:
 
 
 def get_submodules():
-    if not os.path.exists(os.path.join(SCRIPT_DIR, 'lib/micropython/mpy-cross')):
+    if not os.path.exists(
+        os.path.join(SCRIPT_DIR, 'lib/micropython/mpy-cross')
+    ):
         builder.get_micropython()
     if not os.path.exists(os.path.join(SCRIPT_DIR, 'lib/lvgl/lvgl.h')):
         builder.get_lvgl()
@@ -169,7 +171,8 @@ def create_lvgl_header():
             f'#include "{SCRIPT_DIR}/lib/lvgl/src/lvgl_private.h"\n'
         )
         f.write(
-            f'#include "{SCRIPT_DIR}/ext_mod/lvgl_addons/include/color_addons.h"\n'
+            f'#include "{SCRIPT_DIR}/ext_mod/lvgl_addons'
+            f'/include/color_addons.h"\n'
         )
 
 
@@ -203,16 +206,23 @@ if __name__ == '__main__':
     mod.build_commands(target, extra_args, SCRIPT_DIR, lv_cflags, board)
 
     if submodules:
+        print('Collecting build requirements....')
         get_submodules()
         mod.submodules()
 
     if clean:
+        print('Cleaning build....')
         mod.clean(mpy_cross)
 
     if mpy_cross:
+        print('Compiling mpy-cross....')
         mod.mpy_cross()
 
-    mod.build_manifest(target, SCRIPT_DIR, lvgl_api, displays, indevs, frozen_manifest)
+    print('Generating build files....')
+    mod.build_manifest(
+        target, SCRIPT_DIR, lvgl_api, displays, indevs, frozen_manifest
+    )
     create_lvgl_header()
-    mod.compile()
 
+    print('Compiling....')
+    mod.compile()
