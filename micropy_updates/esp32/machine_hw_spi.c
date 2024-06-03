@@ -213,6 +213,7 @@ static void machine_hw_spi_transfer(mp_obj_base_t *self_in, size_t len, const ui
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("transfer on deinitialized SPI"));
         return;
     }
+    spi_device_acquire_bus(self->spi_device, portMAX_DELAY);
 
     // Round to nearest whole set of bits
     int bits_to_send = len * 8 / self->bits * self->bits;
@@ -239,24 +240,29 @@ static void machine_hw_spi_transfer(mp_obj_base_t *self_in, size_t len, const ui
         int offset = 0;
         int bits_remaining = bits_to_send;
         int optimum_word_size = 8 * self->bits / gcd(8, self->bits);
-        int max_transaction_bits = MP_HW_SPI_MAX_XFER_BITS / optimum_word_size * optimum_word_size;
+        int max_transaction_bits = SPI_LL_DMA_MAX_BIT_LEN / optimum_word_size * optimum_word_size;
         spi_transaction_t *transaction, *result, transactions[2];
         int i = 0;
 
-        spi_device_acquire_bus(self->spi_device, portMAX_DELAY);
 
         while (bits_remaining) {
             transaction = transactions + i++ % 2;
             memset(transaction, 0, sizeof(spi_transaction_t));
 
-            transaction->length =
-                bits_remaining > max_transaction_bits ? max_transaction_bits : bits_remaining;
+            if (bits_remaining > max_transaction_bits) {:
+                transaction->length = max_transaction_bits;
+                transaction->flags |= SPI_TRANS_CS_KEEP_ACTIVE;
+            } else {
+                transaction->length = bits_remaining;
+            }
 
             if (src != NULL) {
                 transaction->tx_buffer = src + offset;
+                transaction->flags |= SPI_TRANS_USE_TXDATA;
             }
             if (dest != NULL) {
                 transaction->rx_buffer = dest + offset;
+                transaction->flags |= SPI_TRANS_USE_RXDATA;
             }
 
             spi_device_queue_trans(self->spi_device, transaction, portMAX_DELAY);
