@@ -20,7 +20,6 @@ class XPT2046(pointer_framework.PointerDriver):
     def __init__(
         self,
         spi_bus,
-        cs=None,
         touch_cal=None
     ):
         super().__init__(touch_cal=touch_cal)
@@ -38,26 +37,15 @@ class XPT2046(pointer_framework.PointerDriver):
 
         self._spi = spi_bus
 
-        if cs in (-1, None):
-            self.__cs = None
-        else:
-            self.__cs = machine.Pin(cs, machine.Pin.OUT)
-            self.__cs.value(1)
-
     def _read_reg(self, reg):
         self._trans_buf[0] = reg
         self._recv_buf[0] = 0x00
         self._recv_buf[1] = 0x00
-
-        if self.__cs is not None:
-            self.__cs.value(0)
+        self._recv_buf[2] = 0x00
 
         self._spi.write_readinto(self._trans_mv, self._recv_mv)
 
-        if self.__cs is not None:
-            self.__cs.value(1)
-
-        return ((self._recv_buf[0] << 8) | self._recv_buf[1]) >> 3
+        return ((self._recv_buf[1] << 8) | self._recv_buf[2]) >> 3
 
     def _get_coords(self):
         points = self.__points
