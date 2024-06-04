@@ -138,6 +138,9 @@ def get_espidf():
         if result != 0:
             sys.exit(result)
 
+        # cmd_ = ['cd lib/esp-idf && git checkout v5.2.1']
+        # spawn(cmd_, out_to_screen=False)
+
 
 board_variant = None
 board = None
@@ -147,6 +150,10 @@ flash_size = '0'
 oct_flash = False
 
 DEBUG = False
+deploy = False
+PORT = None
+BAUD = 460800
+ccache = False
 
 
 def parse_args(extra_args, lv_cflags, brd):
@@ -157,11 +164,41 @@ def parse_args(extra_args, lv_cflags, brd):
     global flash_size
     global oct_flash
     global DEBUG
+    global PORT
+    global BAUD
+    global deploy
+    global ccache
 
     board = brd
 
     if board is None:
         board = 'ESP32_GENERIC'
+
+    esp_argParser = ArgumentParser(prefix_chars='BPd')
+    esp_argParser.add_argument(
+        'BAUD',
+        dest='baud',
+        default=460800,
+        type=int,
+        action='store'
+    )
+    esp_argParser.add_argument(
+        'PORT',
+        dest='port',
+        default=None,
+        action='store'
+    )
+    esp_argParser.add_argument(
+        'deploy',
+        dest='deploy',
+        default=False,
+        action='store_true'
+    )
+    esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
+
+    BAUD = esp_args.baud
+    PORT = esp_args.port
+    deploy = esp_args.deploy
 
     if board in ('ESP32_GENERIC', 'ESP32_GENERIC_S3'):
         esp_argParser = ArgumentParser(prefix_chars='B')
@@ -248,17 +285,24 @@ def parse_args(extra_args, lv_cflags, brd):
         default=False,
         action='store_true'
     )
+    esp_argParser.add_argument(
+        '--ccache',
+        dest='ccache',
+        default=False,
+        action='store_true'
+    )
 
     esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
     skip_partition_resize = esp_args.skip_partition_resize
     partition_size = esp_args.partition_size
+    ccache = esp_args.ccache
+    DEBUG = esp_args.debug
 
     if lv_cflags:
         lv_cflags += ' -DLV_KCONFIG_IGNORE=1'
     else:
         lv_cflags = '-DLV_KCONFIG_IGNORE=1'
 
-    DEBUG = esp_args.debug
 
     return extra_args, lv_cflags, board
 
@@ -352,9 +396,6 @@ def clean(clean_mpy_cross):
         cross_clean.insert(1, 'clean')
         cross_clean = cmds[:] + [cross_clean]
         spawn(cross_clean, env=env)
-
-    if 'deploy' in clean_cmd:
-        clean_cmd.remove('deploy')
 
     cmds.append(clean_cmd)
 
@@ -547,9 +588,6 @@ def submodules():
 
         env, cmds = setup_idf_environ()
 
-        if 'deploy' in submodules_cmd:
-            submodules_cmd.remove('deploy')
-
         cmds.append(submodules_cmd)
     else:
         raise RuntimeError('compiling on windows is not supported at this time')
@@ -560,7 +598,12 @@ def submodules():
 
 
 def compile():  # NOQA
+    global PORT
+
     env, cmds = setup_idf_environ()
+
+    if ccache:
+        env['IDF_CCACHE_ENABLE'] = '1'
 
     if (
         board in ('ESP32_GENERIC', 'ESP32_GENERIC_S2', 'ESP32_GENERIC_S3') and
@@ -712,15 +755,6 @@ def compile():  # NOQA
         with open(mpconfigport_path, 'wb') as f:
             f.write(data.encode('utf-8'))
 
-    if 'deploy' in compile_cmd:
-        if not skip_partition_resize:
-            compile_cmd.remove('deploy')
-            deploy = True
-        else:
-            deploy = False
-    else:
-        deploy = False
-
     if not sys.platform.startswith('win'):
         cmds.append(compile_cmd)
     else:
@@ -756,9 +790,6 @@ def compile():  # NOQA
             '\n\033[31;1m***** Running build again *****\033[0m\n\n'
         )
         sys.stdout.flush()
-
-        if deploy:
-            compile_cmd.append('deploy')
 
         compile_cmd[4] = 'SECOND_BUILD=1'
         ret_code, output = spawn(cmds, env=env, cmpl=True)
@@ -810,10 +841,7 @@ def compile():  # NOQA
                 )
                 sys.stdout.flush()
 
-            if deploy:
-                compile_cmd.append('deploy')
-
-            if remaining > 4096 or partition_size != -1 or deploy:
+            if remaining > 4096 or partition_size != -1:
                 compile_cmd[4] = 'SECOND_BUILD=1'
 
                 ret_code, output = spawn(cmds, env=env, cmpl=True)
@@ -886,23 +914,101 @@ def compile():  # NOQA
         if result:
             sys.exit(result)
 
-        print()
-        print()
-        print('To flash firmware:')
-        print('Replace "(PORT)" with the serial port for your esp32')
-        print('and run the commands.')
-        print()
-        print(
-            python_path, esp_tool_path, '-p (PORT) -b 460800 erase_flash'
-        )
-
         cmd = f'{python_path} {esp_tool_path} {out_cmd}'
         cmd = cmd.split('write_flash', 1)[0]
         cmd += f'write_flash 0x0 {build_bin_file}'
 
-        print()
-        print(cmd.replace('-b 460800', '-b 921600'))
-        print()
+        if deploy:
+            python_env_path = os.path.split(os.path.split(python_path)[0])[0]
+            python_version = os.path.split(python_env_path)[-1].split('_')[1][2:]
+            site_packages = os.path.join(
+                python_env_path,
+                f'lib/python{python_version}/site-packages'
+            )
+            sys.path.insert(0, site_packages)
+
+            from esptool.targets import CHIP_DEFS
+            from esptool.util import FatalError
+            from serial.tools import list_ports
+
+            cmd = cmd.replace('-b 460800', f'-b {BAUD}')
+
+            def get_port_list():
+                pts = sorted(ports.device for ports in list_ports.comports())
+                if sys.platform.startswith('linux'):
+                    serial_path = '/dev/serial/by_id'
+                    if os.path.exists(serial_path):
+                        pts_alt = [
+                            os.path.join(serial_path, fle)
+                            for fle in os.listdir(serial_path)
+                        ]
+                        pts = pts_alt + pts
+
+                return pts
+
+            def find_esp32(chip):
+                found_ports = []
+                for port in get_port_list():
+                    chip_class = CHIP_DEFS[chip]
+                    try:
+                        _esp = chip_class(port, 115200, False)
+                    except (FatalError, OSError):
+                        continue
+
+                    try:
+                        _esp.connect('no_reset', 2)
+                    except (FatalError, OSError):
+                        pass
+                    else:
+                        found_ports.append(port)
+
+                    if _esp and _esp._port:
+                        _esp._port.close()
+
+                return found_ports
+
+            if PORT is None:
+
+                ports = find_esp32(cmd.split('--chip ', 1)[-1].split(' ', 1)[0])
+                if len(ports) > 1:
+                    query = []
+                    for i, port in enumerate(ports):
+                        query.append(str(i + 1) + ': ' + port)
+                    query.append('')
+                    query.append('Which ESP32? :')
+
+                    res = input('\n'.join(query))
+                    res = int(res) - 1
+                else:
+                    res = 0
+
+                PORT = ports[res]
+
+            cmd = cmd.replace('-p (PORT)', f'-p "{PORT}"')
+
+            erase_flash = f'"{python_path}" "{esp_tool_path}" -p "{PORT}" -b 460800 erase_flash'
+
+            result, _ = spawn(erase_flash)
+            if result != 0:
+                sys.exit(result)
+
+            result, _ = spawn(cmd)
+
+        else:
+            print()
+            print()
+            print('To flash firmware:')
+            print('Replace "(PORT)" with the serial port for your esp32')
+            print('and run the commands.')
+            print()
+
+            print(
+                python_path, esp_tool_path, '-p (PORT) -b 460800 erase_flash'
+            )
+
+            print()
+            print(cmd.replace('-b 460800', '-b 921600'))
+            print()
 
 
 def mpy_cross():
