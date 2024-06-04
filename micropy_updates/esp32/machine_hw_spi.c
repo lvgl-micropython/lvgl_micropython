@@ -249,7 +249,7 @@ static void machine_hw_spi_transfer(mp_obj_base_t *self_in, size_t len, const ui
             transaction = transactions + i++ % 2;
             memset(transaction, 0, sizeof(spi_transaction_t));
 
-            if (bits_remaining > max_transaction_bits) {:
+            if (bits_remaining > max_transaction_bits) {
                 transaction->length = max_transaction_bits;
                 transaction->flags |= SPI_TRANS_CS_KEEP_ACTIVE;
             } else {
@@ -285,6 +285,9 @@ static void machine_hw_spi_transfer(mp_obj_base_t *self_in, size_t len, const ui
         MP_THREAD_GIL_ENTER();
         spi_device_release_bus(self->spi_device);
     }
+
+    spi_device_release_bus(self->spi_device);
+
 }
 
 /******************************************************************************/
