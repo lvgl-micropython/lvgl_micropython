@@ -47,7 +47,7 @@ static mp_obj_t mp_lcd_utils_remap(size_t n_args, const mp_obj_t *pos_args, mp_m
     ret_val = (((value - old_min) * (new_max - new_min)) / (old_max - old_min)) + new_min;
 
     if (is_float) return mp_obj_new_float_from_f(ret_val);
-    else return mp_obj_new_int((int)f_ret);
+    else return mp_obj_new_int((int)ret_val);
 }
 
 MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_utils_remap_obj, 5, mp_lcd_utils_remap);
