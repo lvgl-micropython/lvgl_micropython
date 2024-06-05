@@ -5,8 +5,11 @@ import pointer_framework
 import time
 
 
-_CMD_X_READ = const(0xD0)  # 12 bit resolution
-_CMD_Y_READ = const(0x90)  # 12 bit resolution
+_CMD_X_READ = const(0xD1)  # 12 bit resolution
+_CMD_Y_READ = const(0x91)  # 12 bit resolution
+_CMD_Z1_READ = const(0xB1)  # 12 bit resolution
+_CMD_Z2_READ = const(0xC1)  # 12 bit resolution
+
 
 _MIN_RAW_COORD = const(10)
 _MAX_RAW_COORD = const(4090)
@@ -15,7 +18,7 @@ _MAX_RAW_COORD = const(4090)
 class XPT2046(pointer_framework.PointerDriver):
 
     confidence = 5
-    margin = 50
+    z_thresh = 400
 
     def __init__(
         self,
@@ -23,17 +26,14 @@ class XPT2046(pointer_framework.PointerDriver):
         touch_cal=None
     ):
         super().__init__(touch_cal=touch_cal)
-        self._trans_buf = bytearray(3)
+        self._trans_buf = bytearray(2)
         self._trans_mv = memoryview(self._trans_buf)
 
-        self._recv_buf = bytearray(3)
+        self._recv_buf = bytearray(2)
         self._recv_mv = memoryview(self._recv_buf)
 
         self.__confidence = max(min(self.confidence, 25), 3)
         self.__points = [[0, 0] for _ in range(self.__confidence)]
-
-        margin = max(min(self.margin, 100), 1)
-        self.__margin = margin * margin
 
         self._spi = spi_bus
 
@@ -41,38 +41,33 @@ class XPT2046(pointer_framework.PointerDriver):
         self._trans_buf[0] = reg
         self._recv_buf[0] = 0x00
         self._recv_buf[1] = 0x00
-        self._recv_buf[2] = 0x00
 
         self._spi.write_readinto(self._trans_mv, self._recv_mv)
 
-        return ((self._recv_buf[1] << 8) | self._recv_buf[2]) >> 3
+        return ((self._recv_buf[0] << 8) | self._recv_buf[1]) >> 3
 
     def _get_coords(self):
         points = self.__points
         count = 0
-        timeout = 5000000
-        start_time = time.ticks_ns()
-        while timeout > 0:
-            if count == self.__confidence:
-                break
 
-            sample = self._get_raw()  # get a touch
-            if sample is not None:
-                points[count][0], points[count][1] = sample  # put in buff
-                count += 1
+        z1 = self._read_reg(_CMD_Z1_READ)
+        z2 = self._read_reg(_CMD_Z2_READ)
 
-            end_time = time.ticks_ns()
-            timeout -= time.ticks_diff(end_time, start_time)
-            start_time = end_time
+        z = z1 + (_MAX_RAW_COORD - z2)
+        if z >= self.z_thresh:
+            self._read_reg(_CMD_X_READ)
 
-        if count:
+            while count < self.__confidence:
+                sample = self._get_raw()  # get a touch
+                if sample is not None:
+                    points[count][0], points[count][1] = sample  # put in buff
+                    count += 1
+
             meanx = sum([points[i][0] for i in range(count)]) // count
             meany = sum([points[i][1] for i in range(count)]) // count
-            dev = sum([(points[i][0] - meanx) ** 2 + (points[i][1] - meany) ** 2 for i in range(count)]) / count
 
-            if dev <= self.__margin:
-                x, y = self._normalize(meanx, meany)
-                return self.PRESSED, x, y
+            x, y = self._normalize(meanx, meany)
+            return self.PRESSED, x, y
 
         return None
 
@@ -85,7 +80,7 @@ class XPT2046(pointer_framework.PointerDriver):
     def _get_raw(self):
         x = self._read_reg(_CMD_X_READ)
         y = self._read_reg(_CMD_Y_READ)
-        if x > _MIN_RAW_COORD and y < _MAX_RAW_COORD:  # touch pressed?
+        if _MAX_RAW_COORD >= x >= _MIN_RAW_COORD and _MAX_RAW_COORD >= y >= _MIN_RAW_COORD:
             return x, y
         else:
             return None

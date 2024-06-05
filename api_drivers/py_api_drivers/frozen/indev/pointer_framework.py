@@ -1,9 +1,17 @@
 import lvgl as lv  # NOQA
 import _indev_base
+import micropython  # NOQA
 
 
-def _remap(value, old_min, old_max, new_min, new_max):
-    return int((((value - old_min) * (new_max - new_min)) / (old_max - old_min)) + new_min)
+@micropython.viper
+def _remap(value: int, old_min: int, old_max: int, new_min: int, new_max: int) -> int:
+    newrange: int = new_max - new_min
+    oldrange: int = old_max - old_min
+    step1: int = value - old_min
+    step2: int = step1 * newrange
+    step3: int = int(step2 / oldrange)
+
+    return step3 + new_min
 
 
 class PointerDriver(_indev_base.IndevBase):
@@ -59,62 +67,58 @@ class PointerDriver(_indev_base.IndevBase):
         # of (state, x, y) or None if no touch even has occured
         raise NotImplementedError
 
+    def _calc_coords(self, x, y):
+        cal = self._cal
+        rotation = self._rotation
+        left = cal.left
+        right = cal.right
+        top = cal.top
+        bottom = cal.bottom
+
+        if left is None:
+            left = 0
+        if right is None:
+            right = self._orig_width
+        if top is None:
+            top = 0
+        if bottom is None:
+            bottom = self._orig_height
+
+        if rotation == lv.DISPLAY_ROTATION._90:  # NOQA
+            left, right, top, bottom = bottom, top, left, right
+            x, y = y, x
+        elif rotation == lv.DISPLAY_ROTATION._180:  # NOQA
+            left, right, top, bottom = right, left, bottom, top
+        elif rotation == lv.DISPLAY_ROTATION._270:  # NOQA
+            left, right, top, bottom = top, bottom, right, left
+            x, y = y, x
+
+        xpos = _remap(x, left, right, 0, self._width)
+        ypos = _remap(y, top, bottom, 0, self._height)
+        return xpos, ypos
+
     def _read(self, drv, data):  # NOQA
         coords = self._get_coords()
 
-        if coords is None:  # ignore no touch & multi touch
-            if self._current_state != self.RELEASED:
-                self._current_state = self.RELEASED
-
-            data.point.x = self._last_x
-            data.point.y = self._last_y
-            data.state = self._current_state
-            # print("raw(x={0}, y={1}) point(x={2} y={3})".format(-1, -1, data.point.x, data.point.y))  # NOQA
-            data.continue_reading = False
-            return
-
-        state, x, y = coords
+        if coords is None:
+            state = self.RELEASED
+            x, y = self._last_x, self._last_y
+        else:
+            state, x, y = coords
 
         if None not in (x, y):
-            cal = self._cal
-            rotation = self._rotation
-            left = cal.left
-            right = cal.right
-            top = cal.top
-            bottom = cal.bottom
-
-            if left is None:
-                left = 0
-            if right is None:
-                right = self._orig_width
-            if top is None:
-                top = 0
-            if bottom is None:
-                bottom = self._orig_height
-
-            if rotation == lv.DISPLAY_ROTATION._0:  # NOQA
-                xpos = _remap(x, left, right, 0, self._orig_width)
-                ypos = _remap(y, top, bottom, 0, self._orig_height)
-            elif rotation == lv.DISPLAY_ROTATION._90:  # NOQA
-                xpos = _remap(y, bottom, top, 0, self._orig_height)
-                ypos = _remap(x, left, right, 0,  self._orig_width)
-            elif rotation == lv.DISPLAY_ROTATION._180:  # NOQA
-                xpos = _remap(x, right, left, 0, self._orig_width)
-                ypos = _remap(y, bottom, top, 0, self._orig_height)
-            elif rotation == lv.DISPLAY_ROTATION._270:  # NOQA
-                xpos = _remap(y, top, bottom, 0, self._orig_height)
-                ypos = _remap(x, right, left, 0, self._orig_width)
+            self._last_x, self._last_y = x, y
+            if coords is None:
+                data.continue_reading = False
             else:
-                raise RuntimeError
+                data.continue_reading = True
+        else:
+            data.continue_reading = False
 
-            self._last_x = xpos
-            self._last_y = ypos
-
-            data.continue_reading = True
-
-        data.state = self._current_state
-        data.point.x = self._last_x
-        data.point.y = self._last_y
+        data.point.x, data.point.y = (
+            self._calc_coords(self._last_x, self._last_y)
+        )
+        data.state = state
 
     def get_vect(self, point):
         self._indev_drv.get_vect(point)
