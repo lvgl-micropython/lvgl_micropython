@@ -8,9 +8,10 @@ remap = _remap
 
 class PointerDriver(_indev_base.IndevBase):
 
-    def __init__(self, touch_cal=None):  # NOQA
+    def __init__(self, touch_cal=None, debug=False):  # NOQA
         self._last_x = -1
         self._last_y = -1
+        self.__debug = debug
 
         super().__init__()
 
@@ -111,6 +112,16 @@ class PointerDriver(_indev_base.IndevBase):
             self._calc_coords(self._last_x, self._last_y)
         )
         data.state = state
+
+        if self.__debug:
+            print(
+                f'{self.__class__.__name__}('
+                f'raw_x={self._last_x}, '
+                f'raw_y={self._last_y}, '
+                f'x={data.point.x}, '
+                f'y={data.point.y}, '
+                f'state={"PRESSED" if data.state else "RELEASED"})'
+            )
 
     def get_vect(self, point):
         self._indev_drv.get_vect(point)

@@ -7,22 +7,25 @@ import time
 
 _CMD_X_READ = const(0xD0)  # 12 bit resolution
 _CMD_Y_READ = const(0x90)  # 12 bit resolution
-
+_CMD_Z1_READ = const(0xB0)
+_CMD_Z2_READ = const(0xC0)
 _MIN_RAW_COORD = const(10)
 _MAX_RAW_COORD = const(4090)
 
 
 class XPT2046(pointer_framework.PointerDriver):
 
+    touch_threshold = 400
     confidence = 5
     margin = 50
 
     def __init__(
         self,
         spi_bus,
-        touch_cal=None
+        touch_cal=None,
+        debug=False
     ):
-        super().__init__(touch_cal=touch_cal)
+        self._debug = debug
         self._trans_buf = bytearray(3)
         self._trans_mv = memoryview(self._trans_buf)
 
@@ -36,6 +39,7 @@ class XPT2046(pointer_framework.PointerDriver):
         self.__margin = margin * margin
 
         self._spi = spi_bus
+        super().__init__(touch_cal=touch_cal, debug=debug)
 
     def _read_reg(self, reg):
         self._trans_buf[0] = reg
@@ -48,6 +52,13 @@ class XPT2046(pointer_framework.PointerDriver):
         return ((self._recv_buf[1] << 8) | self._recv_buf[2]) >> 3
 
     def _get_coords(self):
+        z1 = self._read_reg(_CMD_Z1_READ)
+        z2 = self._read_reg(_CMD_Z2_READ)
+        z = z1 + ((_MAX_RAW_COORD + 6) - z2)
+
+        if z < self.touch_threshold:
+            return None
+
         points = self.__points
         count = 0
         timeout = 5000
@@ -72,6 +83,13 @@ class XPT2046(pointer_framework.PointerDriver):
 
             if dev <= self.__margin:
                 x, y = self._normalize(meanx, meany)
+                if self._debug:
+                    print(
+                        f'{self.__class__.__name__}_TP_DATA('
+                        f'x={meanx}, '
+                        f'y={meany}, '
+                        f'z={z})'
+                    )
                 return self.PRESSED, x, y
 
         return None
