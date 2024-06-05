@@ -114,7 +114,7 @@ class PointerDriver(_indev_base.IndevBase):
         data.state = state
 
         if self.__debug:
-            print(f'{self.__class__.__name__}(raw_x={self._last_x}, raw_y={self._last_y}, x={data.point.x}, y={data.point.y}, state={data.state})')
+            print(f'{self.__class__.__name__}(raw_x={self._last_x}, raw_y={self._last_y}, x={data.point.x}, y={data.point.y}, state={"PRESSED" if data.state else "RELEASED"})')
 
     def get_vect(self, point):
         self._indev_drv.get_vect(point)
