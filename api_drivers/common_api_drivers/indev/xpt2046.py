@@ -2,7 +2,6 @@ from micropython import const  # NOQA
 import micropython  # NOQA
 import machine  # NOQA
 import pointer_framework
-import time
 
 
 _CMD_X_READ = const(0xD1)  # 12 bit resolution
@@ -63,8 +62,8 @@ class XPT2046(pointer_framework.PointerDriver):
                     points[count][0], points[count][1] = sample  # put in buff
                     count += 1
 
-            meanx = sum([points[i][0] for i in range(count)]) // count
-            meany = sum([points[i][1] for i in range(count)]) // count
+            meanx = int(sum(points[i][0] for i in range(count)) // count)
+            meany = int(sum(points[i][1] for i in range(count)) // count)
 
             x, y = self._normalize(meanx, meany)
             return self.PRESSED, x, y
@@ -72,15 +71,22 @@ class XPT2046(pointer_framework.PointerDriver):
         return None
 
     def _normalize(self, x, y):
-        x = pointer_framework._remap(x, _MIN_RAW_COORD, _MAX_RAW_COORD, 0, self._orig_width)
-        y = pointer_framework._remap(y, _MIN_RAW_COORD, _MAX_RAW_COORD, 0, self._orig_height)
+        x = pointer_framework.remap(
+            x, _MIN_RAW_COORD, _MAX_RAW_COORD, 0, self._orig_width
+        )
+        y = pointer_framework.remap(
+            y, _MIN_RAW_COORD, _MAX_RAW_COORD, 0, self._orig_height
+        )
 
         return x, y
 
     def _get_raw(self):
         x = self._read_reg(_CMD_X_READ)
         y = self._read_reg(_CMD_Y_READ)
-        if _MAX_RAW_COORD >= x >= _MIN_RAW_COORD and _MAX_RAW_COORD >= y >= _MIN_RAW_COORD:
+        if (
+            _MAX_RAW_COORD >= x >= _MIN_RAW_COORD and
+            _MAX_RAW_COORD >= y >= _MIN_RAW_COORD
+        ):
             return x, y
         else:
             return None

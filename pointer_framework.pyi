@@ -1,5 +1,6 @@
 from typing import Optional, Tuple, TYPE_CHECKING
 import _indev_base
+import lcd_utils as _lcd_utils
 
 
 if TYPE_CHECKING:
@@ -8,25 +9,15 @@ if TYPE_CHECKING:
     import lvgl as _lv  # NOQA
 
 
-def _remap(value: int, old_min: int, old_max: int, new_min: int, new_max: int) -> int:
-    """
-    Internal use
+remap = _lcd_utils.remap
+_remap = _lcd_utils.remap
 
-    handles the rotation of a display touch panel to convert the x, y
-    coordinates into the proper values based on the rotation of the touch panel
-
-    :param value: value to map into the new range
-    :param old_min: minimum value for the old range
-    :param old_max: maximum value for the old range
-    :param new_min: minimum value for the new range
-    :param new_max: maximum value for the new range
-    :return: new value that is mapped into the new range
-    """
-    ...
 
 class PointerDriver(_indev_base.IndevBase):
     _last_x: int = ...
     _last_y: int = ...
+    _orig_width: int = ...
+    _orig_height: int = ...
     _config: _touch_cal_data.TouchCalData = ...
 
     def __init__(self, touch_cal: Optional[_touch_cal_data.TouchCalData] = None):

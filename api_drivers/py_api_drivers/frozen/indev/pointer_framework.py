@@ -1,17 +1,9 @@
 import lvgl as lv  # NOQA
 import _indev_base
 import micropython  # NOQA
+from lcd_utils import remap as _remap  # NOQA
 
-
-@micropython.viper
-def _remap(value: int, old_min: int, old_max: int, new_min: int, new_max: int) -> int:
-    newrange: int = new_max - new_min
-    oldrange: int = old_max - old_min
-    step1: int = value - old_min
-    step2: int = step1 * newrange
-    step3: int = int(step2 / oldrange)
-
-    return step3 + new_min
+remap = _remap
 
 
 class PointerDriver(_indev_base.IndevBase):
