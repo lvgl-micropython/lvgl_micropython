@@ -29,19 +29,19 @@ static mp_obj_t mp_lcd_utils_remap(size_t n_args, const mp_obj_t *pos_args, mp_m
         mp_obj_is_float(args[ARG_new_min].u_obj) || mp_obj_is_float(args[ARG_new_max].u_obj)
     ) ? true: false;
 
-    if (mp_obj_is_float(args[ARG_value].u_obj)) value = mp_obj_get_float(args[ARG_value].u_obj);
+    if (mp_obj_is_float(args[ARG_value].u_obj)) value = mp_obj_get_float_to_f(args[ARG_value].u_obj);
     else value = mp_obj_get_int(args[ARG_value].u_obj) * 1.0f;
 
-    if (mp_obj_is_float(args[ARG_old_min].u_obj)) old_min = mp_obj_get_float(args[ARG_old_min].u_obj);
+    if (mp_obj_is_float(args[ARG_old_min].u_obj)) old_min = mp_obj_get_float_to_f(args[ARG_old_min].u_obj);
     else old_min = mp_obj_get_int(args[ARG_old_min].u_obj) * 1.0f;
 
-    if (mp_obj_is_float(args[ARG_old_max].u_obj)) old_max = mp_obj_get_float(args[ARG_old_max].u_obj);
+    if (mp_obj_is_float(args[ARG_old_max].u_obj)) old_max = mp_obj_get_float_to_f(args[ARG_old_max].u_obj);
     else old_max = mp_obj_get_int(args[ARG_old_max].u_obj) * 1.0f;
 
-    if (mp_obj_is_float(args[ARG_new_min].u_obj)) new_min = mp_obj_get_float(args[ARG_new_min].u_obj);
+    if (mp_obj_is_float(args[ARG_new_min].u_obj)) new_min = mp_obj_get_float_to_f(args[ARG_new_min].u_obj);
     else new_min = mp_obj_get_int(args[ARG_new_min].u_obj) * 1.0f;
 
-    if (mp_obj_is_float(args[ARG_new_max].u_obj)) new_max = mp_obj_get_float(args[ARG_new_max].u_obj);
+    if (mp_obj_is_float(args[ARG_new_max].u_obj)) new_max = mp_obj_get_float_to_f(args[ARG_new_max].u_obj);
     else new_max = mp_obj_get_int(args[ARG_new_max].u_obj) * 1.0f;
 
     ret_val = (((value - old_min) * (new_max - new_min)) / (old_max - old_min)) + new_min;
