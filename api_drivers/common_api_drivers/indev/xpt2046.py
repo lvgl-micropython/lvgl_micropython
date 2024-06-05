@@ -84,12 +84,7 @@ class XPT2046(pointer_framework.PointerDriver):
             if dev <= self.__margin:
                 x, y = self._normalize(meanx, meany)
                 if self._debug:
-                    print(
-                        f'{self.__class__.__name__}_TP_DATA('
-                        f'x={meanx}, '
-                        f'y={meany}, '
-                        f'z={z})'
-                    )
+                    print(f'{self.__class__.__name__}_TP_DATA(x={meanx}, y={meany}, z={z})')
                 return self.PRESSED, x, y
 
         return None
