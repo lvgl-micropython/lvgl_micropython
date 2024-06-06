@@ -5,8 +5,8 @@ import micropython  # NOQA
 
 
 class SDLPointer(pointer_framework.PointerDriver):
-    def __init__(self):
-        super().__init__(None)
+    def __init__(self, debug=False):
+        super().__init__(touch_cal=None, debug=debug)
 
         self.__current_state = self.RELEASED
         self.__x = -1

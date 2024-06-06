@@ -32,7 +32,7 @@ _ADDR2 = const(0x14)
 
 class GT911(pointer_framework.PointerDriver):
 
-    def __init__(self, i2c_bus, reset_pin=None, interrupt_pin=None, touch_cal=None):
+    def __init__(self, i2c_bus, reset_pin=None, interrupt_pin=None, touch_cal=None, debug=False):
         self._buf = bytearray(6)
         self._mv = memoryview(self._buf)
         self._i2c_bus = i2c_bus
@@ -52,7 +52,7 @@ class GT911(pointer_framework.PointerDriver):
         self._interrupt_pin = interrupt_pin
 
         self.hw_reset()
-        super().__init__(touch_cal=touch_cal)
+        super().__init__(touch_cal=touch_cal, debug=debug)
 
     def hw_reset(self):
         if self._interrupt_pin and self._reset_pin:

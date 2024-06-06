@@ -13,7 +13,7 @@ class PointerDriver(_indev_base.IndevBase):
         self._last_y = -1
         self.__debug = debug
 
-        super().__init__()
+        super().__init__(debug=debug)
 
         if touch_cal is None:
             from touch_cal_data import TouchCalData
@@ -21,22 +21,9 @@ class PointerDriver(_indev_base.IndevBase):
             touch_cal = TouchCalData(f'{self.__class__.__name__}_{self.id}')
 
         self._cal = touch_cal
-
+        self._orig_width = self._width
+        self._orig_height = self._height
         self._set_type(lv.INDEV_TYPE.POINTER)  # NOQA
-
-        self._orig_width = self._disp_drv.get_horizontal_resolution()
-        self._orig_height = self._disp_drv.get_vertical_resolution()
-        self._rotation = self._disp_drv.get_rotation()
-
-        if self._rotation in (lv.DISPLAY_ROTATION._90, lv.DISPLAY_ROTATION._270):  # NOQA
-            self._orig_height, self._orig_width = self._orig_width, self._orig_height  # NOQA
-
-        self._disp_drv.add_event_cb(self._on_size_change, lv.EVENT.RESOLUTION_CHANGED, None)  # NOQA
-
-    def _on_size_change(self, e):
-        self._width = self._disp_drv.get_horizontal_resolution()
-        self._height = self._disp_drv.get_vertical_resolution()
-        self._rotation = self._disp_drv.get_rotation()
 
     def calibrate(self):
         import touch_calibrate
@@ -62,7 +49,6 @@ class PointerDriver(_indev_base.IndevBase):
 
     def _calc_coords(self, x, y):
         cal = self._cal
-        rotation = self._rotation
         left = cal.left
         right = cal.right
         top = cal.top
@@ -77,17 +63,8 @@ class PointerDriver(_indev_base.IndevBase):
         if bottom is None:
             bottom = self._orig_height
 
-        if rotation == lv.DISPLAY_ROTATION._90:  # NOQA
-            left, right, top, bottom = bottom, top, left, right
-            x, y = y, x
-        elif rotation == lv.DISPLAY_ROTATION._180:  # NOQA
-            left, right, top, bottom = right, left, bottom, top
-        elif rotation == lv.DISPLAY_ROTATION._270:  # NOQA
-            left, right, top, bottom = top, bottom, right, left
-            x, y = y, x
-
-        xpos = _remap(x, left, right, 0, self._width)
-        ypos = _remap(y, top, bottom, 0, self._height)
+        xpos = _remap(x, left, right, 0, self._orig_width)
+        ypos = _remap(y, top, bottom, 0, self._orig_height)
         return xpos, ypos
 
     def _read(self, drv, data):  # NOQA

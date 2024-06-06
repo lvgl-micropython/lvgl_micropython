@@ -47,7 +47,7 @@ _TSC_FRACTION_Z_REG = const(0x56)
 
 class STMPE610(pointer_framework.PointerDriver):
 
-    def __init__(self, i2c_bus, touch_cal=None):
+    def __init__(self, i2c_bus, touch_cal=None, debug=False):
         self._buf = bytearray(4)
         self._mv = memoryview(self._buf)
         self._i2c_bus = i2c_bus
@@ -96,7 +96,7 @@ class STMPE610(pointer_framework.PointerDriver):
         self._buf[0] = _INT_CTRL_DISABLE
         self._i2c.write_mem(_INT_CTRL_REG, buf=self._mv[:1])
 
-        super().__init__(touch_cal=touch_cal)
+        super().__init__(touch_cal=touch_cal, debug=debug)
 
     def _get_coords(self):
         self._i2c.read_mem(_FIFO_SIZE_REG, self._mv[:1])

@@ -50,107 +50,113 @@ class STMPE610(pointer_framework.PointerDriver):
 
     def __init__(
         self,
-        miso,
-        mosi,
-        clk,
-        cs,
-        host,
-        freq=5000000,
-        touch_cal=None
+        spi_bus,
+        touch_cal=None,
+        debug=False
     ):
+        # freq needs to be set to 5000000
 
-        self._spi = machine.SPI(
-            host + 1,
-            baudrate=freq,
-            sck=machine.Pin(clk, machine.Pin.OUT),
-            mosi=machine.Pin(mosi, machine.Pin.OUT),
-            miso=machine.Pin(miso, machine.Pin.IN, pull=machine.Pin.PULL_UP)
-        )
+        self._spi = spi_bus
 
-        self.cs = machine.Pin(cs, machine.Pin.OUT)
-        self.cs.value(1)
+        self._tx_buf = tx_buf = bytearray(4)
+        self._tx_mv = tx_mv = memoryview(self._tx_buf)
 
-        self._buf = bytearray(4)
-        self._mv = memoryview(self._buf)
+        self._rx_buf = bytearray(4)
+        self._rx_mv = memoryview(self._rx_buf)
 
-        self._buf[0] = _SYS_CTRL1_REG
-        self._buf[1] = _SYS_CTRL1_RESET
-        self._spi.write(self._mv[:2])
+        tx_buf[0] = _SYS_CTRL1_REG
+        tx_buf[1] = _SYS_CTRL1_RESET
+        self._spi.write(tx_mv[:2])
 
         time.sleep(0.001)
 
-        self._buf[0] = _SYS_CTRL2_REG
-        self._buf[1] = 0x00
-        self._spi.write(self._mv[:2])
+        tx_buf[0] = _SYS_CTRL2_REG
+        tx_buf[1] = 0x00
+        self._spi.write(tx_mv[:2])
 
-        self._buf[0] = _TSC_CTRL_REG
-        self._buf[1] = _TSC_CTRL_XYZ | _TSC_CTRL_EN
-        self._spi.write(self._mv[:2])
+        tx_buf[0] = _TSC_CTRL_REG
+        tx_buf[1] = _TSC_CTRL_XYZ | _TSC_CTRL_EN
+        self._spi.write(tx_mv[:2])
 
-        self._buf[0] = _INT_EN_REG
-        self._buf[1] = _INT_EN_TOUCHDET
-        self._spi.write(self._mv[:2])
+        tx_buf[0] = _INT_EN_REG
+        tx_buf[1] = _INT_EN_TOUCHDET
+        self._spi.write(tx_mv[:2])
 
-        self._buf[0] = _ADC_CTRL1_REG
-        self._buf[1] = _ADC_CTRL1_10BIT | (0x06 << 4)
-        self._spi.write(self._mv[:2])
+        tx_buf[0] = _ADC_CTRL1_REG
+        tx_buf[1] = _ADC_CTRL1_10BIT | (0x06 << 4)
+        self._spi.write(tx_mv[:2])
 
-        self._buf[0] = _ADC_CTRL2_REG
-        self._buf[1] = _ADC_CTRL2_6_5MHZ
-        self._spi.write(self._mv[:2])
+        tx_buf[0] = _ADC_CTRL2_REG
+        tx_buf[1] = _ADC_CTRL2_6_5MHZ
+        self._spi.write(tx_mv[:2])
 
-        self._buf[0] = _TSC_CFG_REG
-        self._buf[1] = _TSC_CFG_4SAMPLE | _TSC_CFG_DELAY_1MS | _TSC_CFG_SETTLE_5MS
-        self._spi.write(self._mv[:2])
+        tx_buf[0] = _TSC_CFG_REG
+        tx_buf[1] = _TSC_CFG_4SAMPLE | _TSC_CFG_DELAY_1MS | _TSC_CFG_SETTLE_5MS
+        self._spi.write(tx_mv[:2])
 
-        self._buf[0] = _TSC_FRACTION_Z_REG
-        self._buf[1] = 0x06
-        self._spi.write(self._mv[:2])
+        tx_buf[0] = _TSC_FRACTION_Z_REG
+        tx_buf[1] = 0x06
+        self._spi.write(tx_mv[:2])
 
-        self._buf[0] = _FIFO_TH_REG
-        self._buf[1] = 0x01
-        self._spi.write(self._mv[:2])
+        tx_buf[0] = _FIFO_TH_REG
+        tx_buf[1] = 0x01
+        self._spi.write(tx_mv[:2])
 
-        self._buf[0] = _FIFO_STA_REG
-        self._buf[1] = _FIFO_STA_RESET
-        self._spi.write(self._mv[:2])
+        tx_buf[0] = _FIFO_STA_REG
+        tx_buf[1] = _FIFO_STA_RESET
+        self._spi.write(tx_mv[:2])
 
-        self._buf[0] = _FIFO_STA_REG
-        self._buf[1] = 0x00
-        self._spi.write(self._mv[:2])
+        tx_buf[0] = _FIFO_STA_REG
+        tx_buf[1] = 0x00
+        self._spi.write(tx_mv[:2])
 
-        self._buf[0] = _TSC_I_DRIVE_REG
-        self._buf[1] = _TSC_I_DRIVE_50MA
-        self._spi.write(self._mv[:2])
+        tx_buf[0] = _TSC_I_DRIVE_REG
+        tx_buf[1] = _TSC_I_DRIVE_50MA
+        self._spi.write(tx_mv[:2])
 
-        self._buf[0] = _INT_STA_REG
-        self._buf[1] = 0xFF
-        self._spi.write(self._mv[:2])
+        tx_buf[0] = _INT_STA_REG
+        tx_buf[1] = 0xFF
+        self._spi.write(tx_mv[:2])
 
-        self._buf[0] = _INT_CTRL_REG
-        self._buf[1] = _INT_CTRL_DISABLE
-        self._spi.write(self._mv[:2])
+        tx_buf[0] = _INT_CTRL_REG
+        tx_buf[1] = _INT_CTRL_DISABLE
+        self._spi.write(tx_mv[:2])
 
-        super().__init__(touch_cal=touch_cal)
+        super().__init__(touch_cal=touch_cal, debug=debug)
 
     def _get_coords(self):
-        self._buf[0] = _FIFO_SIZE_REG
-        self._spi.write_readinto(self._mv[:1], self._mv[:1])
-        touch_count = self._buf[0]
+        tx_buf = self._tx_buf
+        tx_buf[0] = _FIFO_SIZE_REG
+        tx_buf[1] = 0x0
+
+        rx_buf = self._rx_buf
+        rx_buf[0] = 0x0
+        rx_buf[1] = 0x0
+        rx_buf[2] = 0x0
+        rx_buf[3] = 0x0
+
+        self._spi.write_readinto(self._tx_mv[:1], self._rx_mv[:1])
+        touch_count = tx_buf[0]
 
         if not touch_count:
             return None
 
         while touch_count:
-            self._buf[0] = 0xD7
-            self._spi.write_readinto(self._mv[:1], self._mv)
+            tx_buf[0] = 0xD7
+
+            rx_buf[0] = 0x0
+            rx_buf[1] = 0x0
+            rx_buf[2] = 0x0
+            rx_buf[3] = 0x0
+
+            self._spi.write_readinto(self._tx_mv, self._rx_mv)
             touch_count -= 1
 
-        x = self._buf[0] << 4 | self._buf[1] >> 4
-        y = (self._buf[1] & 0xF) << 8 | self._buf[2]
+        x = rx_buf[0] << 4 | rx_buf[1] >> 4
+        y = (rx_buf[1] & 0xF) << 8 | rx_buf[2]
 
-        self._buf[0] = _INT_STA_REG
-        self._buf[1] = 0xFF
-        self._spi.write(self._mv[:2])
+        tx_buf[0] = _INT_STA_REG
+        tx_buf[1] = 0xFF
+        self._spi.write(self._tx_mv[:2])
 
         return self.PRESSED, x, y

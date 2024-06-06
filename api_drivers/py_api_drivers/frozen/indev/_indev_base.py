@@ -9,7 +9,7 @@ class IndevBase:
     PRESSED = lv.INDEV_STATE.PRESSED
     RELEASED = lv.INDEV_STATE.RELEASED
 
-    def __init__(self):  # NOQA
+    def __init__(self, debug=False):  # NOQA
         self.__class__._instance_counter += 1
         self.id = self.__class__._instance_counter
 
@@ -48,6 +48,12 @@ class IndevBase:
 
         self._indevs.append(self)
 
+        self._disp_drv.add_event_cb(self._on_size_change, lv.EVENT.RESOLUTION_CHANGED, None)  # NOQA
+
+    def _on_size_change(self, _):
+        self._width = self._disp_drv.get_horizontal_resolution()
+        self._height = self._disp_drv.get_vertical_resolution()
+
     def _set_mode_event(self):
         self._indev_drv.set_mode(lv.INDEV_MODE.EVENT)
 
@@ -58,7 +64,7 @@ class IndevBase:
         return self._height
 
     def get_rotation(self):
-        return self._rotation
+        return self._disp_drv.get_rotation()
 
     def _set_type(self, type_):
         self._indev_drv.set_type(type_)

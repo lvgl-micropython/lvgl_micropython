@@ -10,7 +10,7 @@ _VERSION_INFO = const(0xA7)
 
 class CST816S(pointer_framework.PointerDriver):
 
-    def __init__(self, i2c_bus, touch_cal=None):
+    def __init__(self, i2c_bus, touch_cal=None, debug=False):
         self._buf = bytearray(8)
         self._mv = memoryview(self._buf)
         self._i2c_bus = i2c_bus
@@ -22,7 +22,7 @@ class CST816S(pointer_framework.PointerDriver):
         self._i2c.read_mem(_VERSION_INFO, buf=self._mv[:3])
         print('Touch version info:', self._buf[:3])
 
-        super().__init__(touch_cal=touch_cal)
+        super().__init__(touch_cal=touch_cal, debug=debug)
 
     def _get_coords(self):
         self._i2c.read_mem(_READ_REG, buf=self._mv)

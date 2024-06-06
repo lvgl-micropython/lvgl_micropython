@@ -45,7 +45,7 @@ class FT6x06(pointer_framework.PointerDriver):
         self._buf[0] = data
         self._i2c.write_mem(register_addr, self._mv[:1])
 
-    def __init__(self, i2c_bus, touch_cal=None):  # NOQA
+    def __init__(self, i2c_bus, touch_cal=None, debug=False):  # NOQA
         self._buf = bytearray(5)
         self._mv = memoryview(self._buf)
 
@@ -75,7 +75,7 @@ class FT6x06(pointer_framework.PointerDriver):
         self._i2c_write8(_DEV_MODE_REG, _DEV_MODE_WORKING)
         self._i2c_write8(_PERIOD_ACTIVE_REG, 0x0E)
         self._i2c_write8(_G_MODE, 0x00)
-        super().__init__(touch_cal)
+        super().__init__(touch_cal=touch_cal, debug=debug)
 
     def _get_coords(self):
         buf = self._buf
