@@ -154,6 +154,7 @@ deploy = False
 PORT = None
 BAUD = 460800
 ccache = False
+disable_OTG = True
 
 
 def parse_args(extra_args, lv_cflags, brd):
@@ -168,11 +169,24 @@ def parse_args(extra_args, lv_cflags, brd):
     global BAUD
     global deploy
     global ccache
+    global disable_OTG
 
     board = brd
 
     if board is None:
         board = 'ESP32_GENERIC'
+
+    if board in ('ESP32_GENERIC_S2', 'ESP32_GENERIC_S3'):
+        esp_argParser = ArgumentParser(prefix_chars='-')
+        esp_argParser.add_argument(
+            '--USB-OTG',
+            dest='usb_otg',
+            default=False,
+            action='store_true'
+        )
+        esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
+
+        disable_OTG = not esp_args.usb_otg
 
     esp_argParser = ArgumentParser(prefix_chars='BPd')
     esp_argParser.add_argument(
@@ -691,7 +705,7 @@ def compile():  # NOQA
             with open(mpconfigboard_cmake_path, 'wb') as f:
                 f.write(data.encode('utf-8'))
 
-    if board in ('ESP32_GENERIC_S2', 'ESP32_GENERIC_S3'):
+    if board in ('ESP32_GENERIC_S2', 'ESP32_GENERIC_S3') and disable_OTG:
 
         mphalport_path = 'lib/micropython/ports/esp32/mphalport.c'
 
