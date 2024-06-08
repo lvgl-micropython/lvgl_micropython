@@ -45,7 +45,6 @@ class IndevBase:
         indev_drv.set_display(disp)
         indev_drv.enable(True)
         self._indev_drv = indev_drv
-
         self._indevs.append(self)
 
         self._disp_drv.add_event_cb(self._on_size_change, lv.EVENT.RESOLUTION_CHANGED, None)  # NOQA

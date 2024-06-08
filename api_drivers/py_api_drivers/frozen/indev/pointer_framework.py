@@ -24,22 +24,49 @@ class PointerDriver(_indev_base.IndevBase):
         self._orig_width = self._width
         self._orig_height = self._height
         self._set_type(lv.INDEV_TYPE.POINTER)  # NOQA
+        self.__cal_running = None
 
-    def calibrate(self):
+    def __cal_callback(self, alphaX, betaX, deltaX, alphaY, betaY, deltaY):
+        self._cal.alphaX = alphaX
+        self._cal.betaX = betaX
+        self._cal.deltaX = deltaX
+        self._cal.alphaY = alphaY
+        self._cal.betaY = betaY
+        self._cal.deltaY = deltaY
+        self._cal.save()
+        self.__cal_running = None
+
+    def calibrate(self, update_handler=None):
+        if self.__cal_running:
+            return
+
+        import time
         import touch_calibrate
+        self.__cal_running = touch_calibrate.TPCal(self, self.__cal_callback)
+        while self.__cal_running:
+            if update_handler is not None:
+                delay = update_handler()
+                time.sleep_ms(delay)
+            else:
+                time.sleep_ms(33)
 
-        self._py_disp_drv.set_default()
-        self._cal.reset()
-        touch_calibrate.run()
+        self._indev_drv.set_read_cb(self._read)
 
     @property
     def is_calibrated(self):
-        left = self._cal.left
-        top = self._cal.top
-        right = self._cal.right
-        bottom = self._cal.bottom
+        if self.__cal_running:
+            return False
 
-        return None not in (left, top, right, bottom)
+        cal = self._cal
+
+        return None not in (
+            cal.alphaX,
+            cal.betaX,
+            cal.deltaX,
+            cal.alphaY,
+            cal.betaY,
+            cal.deltaY
+        )
 
     def _get_coords(self):
         # this method needs to be overridden.
@@ -48,24 +75,13 @@ class PointerDriver(_indev_base.IndevBase):
         raise NotImplementedError
 
     def _calc_coords(self, x, y):
-        cal = self._cal
-        left = cal.left
-        right = cal.right
-        top = cal.top
-        bottom = cal.bottom
+        if self.is_calibrated:
+            cal = self._cal
+            xpos = int(round(x * cal.alphaX + y * cal.betaX + cal.deltaX))
+            ypos = int(round(x * cal.alphaY + y * cal.betaY + cal.deltaY))
+            return xpos, ypos
 
-        if left is None:
-            left = 0
-        if right is None:
-            right = self._orig_width
-        if top is None:
-            top = 0
-        if bottom is None:
-            bottom = self._orig_height
-
-        xpos = _remap(x, left, right, 0, self._orig_width)
-        ypos = _remap(y, top, bottom, 0, self._orig_height)
-        return xpos, ypos
+        return x, y
 
     def _read(self, drv, data):  # NOQA
         coords = self._get_coords()

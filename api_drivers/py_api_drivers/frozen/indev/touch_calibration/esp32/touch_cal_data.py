@@ -7,97 +7,124 @@ class TouchCalData(object):
         self._config = nvs.NVS(name)
 
         try:
-            self._left = self._config.get(nvs.TYPE_I32, 'left')
+            self._alphaX = self._config.get(nvs.TYPE_FLOAT, 'alphaX')
         except OSError:
-            self._left = -0x80000000
+            self._alphaX = None
         try:
-            self._right = self._config.get(nvs.TYPE_I32, 'right')
+            self._betaX = self._config.get(nvs.TYPE_FLOAT, 'betaX')
         except OSError:
-            self._right = -0x80000000
+            self._betaX = None
 
         try:
-            self._top = self._config.get(nvs.TYPE_I32, 'top')
+            self._deltaX = self._config.get(nvs.TYPE_FLOAT, 'deltaX')
         except OSError:
-            self._top = -0x80000000
+            self._deltaX = None
         try:
-            self._bottom = self._config.get(nvs.TYPE_I32, 'bottom')
+            self._alphaY = self._config.get(nvs.TYPE_FLOAT, 'alphaY')
         except OSError:
-            self._bottom = -0x80000000
+            self._alphaY = None
+
+        try:
+            self._betaY = self._config.get(nvs.TYPE_FLOAT, 'betaY')
+        except OSError:
+            self._betaY = None
+
+        try:
+            self._deltaY = self._config.get(nvs.TYPE_FLOAT, 'deltaY')
+        except OSError:
+            self._deltaY = None
 
         self._is_dirty = False
 
     def save(self):
         if self._is_dirty:
+            if self._alphaX is None:
+                self._config.erase('alphaX')
+            if self._betaX is None:
+                self._config.erase('betaX')
+            if self._deltaX is None:
+                self._config.erase('deltaX')
+            if self._alphaY is None:
+                self._config.erase('alphaY')
+            if self._betaY is None:
+                self._config.erase('betaY')
+            if self._deltaY is None:
+                self._config.erase('deltaY')
+
             self._config.commit()
 
     @property
-    def left(self):
-        if self._left == -0x80000000:
-            return None
+    def alphaX(self):
+        return self._alphaX
 
-        return self._left
-
-    @left.setter
-    def left(self, value):
-        if value is None:
-            value = -0x80000000
-
-        self._left = value
-        self._config.set(nvs.TYPE_I32, 'left', value)
-        self._is_dirty = True
+    @alphaX.setter
+    def alphaX(self, value):
+        self._alphaX = value
+        if value is not None:
+            self._config.set(nvs.TYPE_FLOAT, 'alphaX', value)
+            self._is_dirty = True
 
     @property
-    def right(self):
-        if self._right == -0x80000000:
-            return None
+    def betaX(self):
+        return self._betaX
 
-        return self._right
-
-    @right.setter
-    def right(self, value):
-        if value is None:
-            value = -0x80000000
-
-        self._right = value
-        self._config.set(nvs.TYPE_I32, 'right', value)
-        self._is_dirty = True
+    @betaX.setter
+    def betaX(self, value):
+        self._betaX = value
+        if value is not None:
+            self._config.set(nvs.TYPE_FLOAT, 'betaX', value)
+            self._is_dirty = True
 
     @property
-    def top(self):
-        if self._top == -0x80000000:
-            return None
+    def deltaX(self):
+        return self._deltaX
 
-        return self._top
-
-    @top.setter
-    def top(self, value):
-        if value is None:
-            value = -0x80000000
-
-        self._top = value
-        self._config.set(nvs.TYPE_I32, 'top', value)
-        self._is_dirty = True
+    @deltaX.setter
+    def deltaX(self, value):
+        self._deltaX = value
+        if value is not None:
+            self._config.set(nvs.TYPE_FLOAT, 'deltaX', value)
+            self._is_dirty = True
 
     @property
-    def bottom(self):
-        if self._bottom == -0x80000000:
-            return None
+    def alphaY(self):
+        return self._alphaY
 
-        return self._bottom
+    @alphaY.setter
+    def alphaY(self, value):
+        self._alphaY = value
+        if value is not None:
+            self._config.set(nvs.TYPE_FLOAT, 'alphaY', value)
+            self._is_dirty = True
 
-    @bottom.setter
-    def bottom(self, value):
-        if value is None:
-            value = -0x80000000
+    @property
+    def betaY(self):
+        return self._betaY
 
-        self._bottom = value
-        self._config.set(nvs.TYPE_I32, 'bottom', value)
-        self._is_dirty = True
+    @betaY.setter
+    def betaY(self, value):
+        self._betaY = value
+        if value is not None:
+            self._config.set(nvs.TYPE_FLOAT, 'betaY', value)
+            self._is_dirty = True
+
+    @property
+    def deltaY(self):
+        return self._deltaY
+
+    @deltaY.setter
+    def deltaY(self, value):
+        self._deltaY = value
+        if value is not None:
+            self._config.set(nvs.TYPE_FLOAT, 'deltaY', value)
+            self._is_dirty = True
 
     def reset(self):
-        self.top = None
-        self.bottom = None
-        self.left = None
-        self.right = None
+        self.alphaX = None
+        self.betaX = None
+        self.deltaX = None
+        self.alphaY = None
+        self.betaY = None
+        self.deltaY = None
         self.save()
 

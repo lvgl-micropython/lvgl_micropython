@@ -10,49 +10,70 @@ class TouchCalData(object):
 
     def __init__(self, name):
         self.name = name
-        self._left = None
-        self._right = None
-        self._top = None
-        self._bottom = None
+        self._alphaX = None
+        self._betaX = None
+        self._deltaX = None
+        self._alphaY = None
+        self._betaY = None
+        self._deltaY = None
+
         self._is_dirty = False
 
     def save(self):
         self._is_dirty = False
 
     @property
-    def left(self):
-        return self._left
+    def alphaX(self):
+        return self._alphaX
 
-    @left.setter
-    def left(self, value):
-        self._left = value
+    @alphaX.setter
+    def alphaX(self, value):
+        self._alphaX = value
         self._is_dirty = True
 
     @property
-    def right(self):
-        return self._right
+    def betaX(self):
+        return self._betaX
 
-    @right.setter
-    def right(self, value):
-        self._right = value
+    @betaX.setter
+    def betaX(self, value):
+        self._betaX = value
         self._is_dirty = True
 
     @property
-    def top(self):
-        return self._top
+    def deltaX(self):
+        return self._deltaX
 
-    @top.setter
-    def top(self, value):
-        self._top = value
+    @deltaX.setter
+    def deltaX(self, value):
+        self._deltaX = value
         self._is_dirty = True
 
     @property
-    def bottom(self):
-        return self._bottom
+    def alphaY(self):
+        return self._alphaY
 
-    @bottom.setter
-    def bottom(self, value):
-        self._bottom = value
+    @alphaY.setter
+    def alphaY(self, value):
+        self._alphaY = value
+        self._is_dirty = True
+
+    @property
+    def betaY(self):
+        return self._betaY
+
+    @betaY.setter
+    def betaY(self, value):
+        self._betaY = value
+        self._is_dirty = True
+
+    @property
+    def deltaY(self):
+        return self._deltaY
+
+    @deltaY.setter
+    def deltaY(self, value):
+        self._deltaY = value
         self._is_dirty = True
 
     def reset(self):
