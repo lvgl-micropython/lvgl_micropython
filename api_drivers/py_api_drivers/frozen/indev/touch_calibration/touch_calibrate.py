@@ -112,7 +112,7 @@ def build_crosshair(scrn):
     ):
         canvas.set_px(x, y, lv.color_hex(0xD82424), 186)
 
-    for x1, y1, x2, y2 in (
+    for (x1, y1), (x2, y2) in (
         ((34, 34), (37, 37)),
         ((54, 34), (51, 37)),
         ((34, 54), (37, 51)),
@@ -165,7 +165,7 @@ def build_crosshair(scrn):
 
         lv.draw_line(layer, desc)
 
-    for x1, y1, x2, y2 in (
+    for (x1, y1), (x2, y2) in (
         ((24, 70), (18, 64)),
         ((27, 65), (23, 61)),
         ((32, 62), (26, 56)),
