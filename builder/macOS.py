@@ -81,6 +81,8 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
             '-Wno-double-promotion '
             '-Wno-unused-command-line-argument '
             '-Wno-missing-field-initializers"'
+            # 'export LDFLAGS="-L/opt/homebrew/opt/libffi/lib"
+            # 'export CPPFLAGS="-I/opt/homebrew/opt/libffi/include"'
         )
     ])
 
