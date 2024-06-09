@@ -428,12 +428,12 @@ def spawn(cmd_, out_to_screen=True, spinner=False, env=None, cmpl=False):
 
     while cmd_:
         item = cmd_.pop(0)
-        if sys.platform.startswith('darwin'):
-            if item.startswith('make '):
-                item = 'g' + item
-
-            if ' make ' in item:
-                item = item.replace(' make ', ' gmake ')
+        # if sys.platform.startswith('darwin'):
+        #     if item.startswith('make '):
+        #         item = 'g' + item
+        #
+        #     if ' make ' in item:
+        #         item = item.replace(' make ', ' gmake ')
 
         if 'GITHUB_RUN_ID' in os.environ:
             print(item)
