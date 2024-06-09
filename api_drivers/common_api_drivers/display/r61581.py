@@ -88,7 +88,7 @@ class R61581(display_driver_framework.DisplayDriver):
         param_buf[0] = (
             self._madctl(
                 self._color_byte_order,
-                display_driver_framework._ORIENTATION_TABLE  # NOQA
+                self._ORIENTATION_TABLE  # NOQA
             )
         )
         self.set_params(_MADCTL, param_mv[:1])
@@ -120,3 +120,5 @@ class R61581(display_driver_framework.DisplayDriver):
         time.sleep_ms(120)  # NOQA
         self.set_params(_DISPON)
         time.sleep_ms(25)  # NOQA
+
+        display_driver_framework.DisplayDriver.init(self)

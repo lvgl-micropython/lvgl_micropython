@@ -25,17 +25,12 @@ _MADCTL = const(0x36)
 _MADCTL_MY = const(0x80)  # 0=Top to Bottom, 1=Bottom to Top
 _MADCTL_MX = const(0x40)  # 0=Left to Right, 1=Right to Left
 _MADCTL_MV = const(0x20)  # 0=Normal, 1=Row/column exchange
+
+
 _MADCTL_ML = const(0x10)  # Refresh 0=Top to Bottom, 1=Bottom to Top
 _MADCTL_BGR = const(0x08)  # BGR color order
 _MADCTL_MH = const(0x04)  # Refresh 0=Left to Right, 1=Right to Left
 
-# MADCTL values for each of the orientation constants for non-st7789 displays.
-_ORIENTATION_TABLE = (
-    _MADCTL_MX,
-    _MADCTL_MV,
-    _MADCTL_MY,
-    _MADCTL_MY | _MADCTL_MX | _MADCTL_MV
-)
 
 STATE_HIGH = 1
 STATE_LOW = 0
@@ -45,6 +40,13 @@ STATE_PWM = -1
 class DisplayDriver:
     _INVON = 0x21
     _INVOFF = 0x20
+    _ORIENTATION_TABLE = (
+        _MADCTL_MX,
+        _MADCTL_MV,
+        _MADCTL_MY,
+        _MADCTL_MY | _MADCTL_MX | _MADCTL_MV
+    )
+
     _displays = []
 
     @staticmethod
@@ -77,8 +79,6 @@ class DisplayDriver:
         rgb565_byte_swap=False
     ):
 
-        print('DisplayDriver: __init__')
-
         if power_on_state not in (STATE_HIGH, STATE_LOW):
             raise RuntimeError(
                 'power on state must be either STATE_HIGH or STATE_LOW'
@@ -95,9 +95,7 @@ class DisplayDriver:
                 'STATE_HIGH, STATE_LOW or STATE_PWM'
             )
 
-        print('DisplayDriver: if not lv.is_initialized()')
         if not lv.is_initialized():
-            print('DisplayDriver: if not lv.init()')
             lv.init()
 
         self.display_width = display_width
@@ -126,7 +124,6 @@ class DisplayDriver:
         self._invert_colors = False
 
         if data_bus is None:
-            print('DisplayDriver: data_bus is None')
             self._reset_pin = None
             self._power_pin = None
             self._backlight_pin = None
@@ -135,13 +132,11 @@ class DisplayDriver:
             self._frame_buffer1 = frame_buffer1
             self._frame_buffer2 = frame_buffer2
         else:
-            print('DisplayDriver: data_bus is not None')
             if reset_pin is None:
                 self._reset_pin = None
             elif not isinstance(reset_pin, int):
                 self._reset_pin = reset_pin
             else:
-                print('DisplayDriver: self._reset_pin = machine.Pin(reset_pin, machine.Pin.OUT)')
                 self._reset_pin = machine.Pin(reset_pin, machine.Pin.OUT)
                 self._reset_pin.value(not reset_state)
 
@@ -150,7 +145,6 @@ class DisplayDriver:
             elif not isinstance(power_pin, int):
                 self._power_pin = power_pin
             else:
-                print('DisplayDriver: self._power_pin = machine.Pin(power_pin, machine.Pin.OUT)')
                 self._power_pin = machine.Pin(power_pin, machine.Pin.OUT)
                 self._power_pin.value(not power_on_state)
 
@@ -160,24 +154,15 @@ class DisplayDriver:
                 pin = machine.Pin(backlight_pin, machine.Pin.OUT)
                 self._backlight_pin = machine.PWM(pin, freq=38000)
             else:
-                print('DisplayDriver: self._backlight_pin = machine.Pin(backlight_pin, machine.Pin.OUT)')
                 self._backlight_pin = machine.Pin(backlight_pin, machine.Pin.OUT)
                 self._backlight_pin.value(not backlight_on_state)
 
             self._data_bus = data_bus
-
-            print('DisplayDriver: self._disp_drv = lv.display_create(display_width, display_height)')
             self._disp_drv = lv.display_create(display_width, display_height)
-
-            print('DisplayDriver: self._disp_drv.set_color_format(color_space)')
             self._disp_drv.set_color_format(color_space)
-
-            print('DisplayDriver: self._disp_drv.set_driver_data(self)')
             self._disp_drv.set_driver_data(self)
 
             if frame_buffer1 is None:
-                print('DisplayDriver: frame_buffer1 is None')
-
                 buf_size = int(
                     display_width *
                     display_height *
@@ -195,17 +180,14 @@ class DisplayDriver:
                     lcd_bus.MEMORY_SPIRAM
                 ):
                     try:
-                        print('DisplayDriver: frame_buffer1 = data_bus.allocate_framebuffer(buf_size, flags)')
                         frame_buffer1 = data_bus.allocate_framebuffer(buf_size, flags)
 
                         if (flags | lcd_bus.MEMORY_DMA) == flags:
-                            print('DisplayDriver: frame_buffer2 = data_bus.allocate_framebuffer(buf_size, flags)')
                             frame_buffer2 = data_bus.allocate_framebuffer(buf_size, flags)
 
                         break
 
                     except MemoryError:
-                        print('DisplayDriver: frame_buffer1 = data_bus.free_framebuffer(frame_buffer1)')
                         frame_buffer1 = data_bus.free_framebuffer(frame_buffer1)
 
                 if frame_buffer1 is None:
@@ -222,7 +204,6 @@ class DisplayDriver:
             else:
                 buffer_size = len(frame_buffer1)
 
-            print('DisplayDriver: data_bus.init()')
             data_bus.init(
                 display_width,
                 display_height,
@@ -231,10 +212,8 @@ class DisplayDriver:
                 rgb565_byte_swap
             )
 
-            print('DisplayDriver: self._disp_drv.set_flush_cb(self._flush_cb)')
             self._disp_drv.set_flush_cb(self._flush_cb)
 
-            print('DisplayDriver: self._disp_drv.set_buffers()')
             if isinstance(data_bus, lcd_bus.RGBBus):
                 self._disp_drv.set_buffers(
                     frame_buffer2,
@@ -270,16 +249,13 @@ class DisplayDriver:
                     render_mode
                 )
 
-            print('DisplayDriver: data_bus.register_callback(self._flush_ready_cb)')
             data_bus.register_callback(self._flush_ready_cb)
 
             self._frame_buffer1 = frame_buffer1
             self._frame_buffer2 = frame_buffer2
 
-            print('DisplayDriver: self.set_default()')
             self.set_default()
 
-            print('DisplayDriver: self._disp_drv.add_event_cb(self._on_size_change, lv.EVENT.RESOLUTION_CHANGED, None)')
             self._disp_drv.add_event_cb(self._on_size_change, lv.EVENT.RESOLUTION_CHANGED, None)  # NOQA
 
         self._displays.append(self)
@@ -296,7 +272,7 @@ class DisplayDriver:
 
         if self._initilized:
             self._param_buf[0] = (
-                self._madctl(self._color_byte_order, _ORIENTATION_TABLE, ~rotation)  # NOQA
+                self._madctl(self._color_byte_order, self._ORIENTATION_TABLE, ~rotation)  # NOQA
             )
             self._data_bus.tx_param(_MADCTL, self._param_mv[:1])
 

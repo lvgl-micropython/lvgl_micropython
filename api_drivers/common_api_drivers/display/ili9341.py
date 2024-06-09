@@ -156,7 +156,7 @@ class ILI9341(display_driver_framework.DisplayDriver):
         param_buf[0] = (
             self._madctl(
                 self._color_byte_order,
-                display_driver_framework._ORIENTATION_TABLE  # NOQA
+                self._ORIENTATION_TABLE  # NOQA
             )
         )
         self.set_params(_MADCTL, param_mv[:1])

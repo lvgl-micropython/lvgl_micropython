@@ -32,7 +32,6 @@ BYTE_ORDER_BGR = display_driver_framework.BYTE_ORDER_BGR
 
 
 class ST7796(display_driver_framework.DisplayDriver):
-
     # The st7795 display controller has an internal framebuffer
     # arranged in 320 x 480
     # configuration. Physical displays with pixel sizes less than
@@ -54,7 +53,12 @@ class ST7796(display_driver_framework.DisplayDriver):
     # ignores the lowest 2 bits in the byte to make it a 6 bit color channel
     # We just have to tell lvgl that we want to use
 
-    display_name = 'ST7796'
+    _ORIENTATION_TABLE = (
+        0x0,
+        display_driver_framework.MADCTL_MX | display_driver_framework.MADCTL_MV,
+        display_driver_framework.MADCTL_MY | display_driver_framework.MADCTL_MX,
+        display_driver_framework.MADCTL_MY | display_driver_framework.MADCTL_MV
+    )
 
     def init(self):
         param_buf = bytearray(14)
@@ -77,7 +81,7 @@ class ST7796(display_driver_framework.DisplayDriver):
         param_buf[0] = (
             self._madctl(
                 self._color_byte_order,
-                display_driver_framework._ORIENTATION_TABLE  # NOQA
+                self._ORIENTATION_TABLE  # NOQA
             )
         )
         self.set_params(_MADCTL, param_mv[:1])

@@ -91,40 +91,27 @@ class ILI9225(display_driver_framework.DisplayDriver):
 
         return _RAMWR
 
-    def set_rotation(self, value):
-        rot0 = lv.DISPLAY_ROTATION._0
-        rot90 = lv.DISPLAY_ROTATION._90
-        rot180 = lv.DISPLAY_ROTATION._180
-        rot270 = lv.DISPLAY_ROTATION._270
+    def _on_size_change(self, _):
+        rotation = self._disp_drv.get_rotation()
+        self._width = self._disp_drv.get_horizontal_resolution()
+        self._height = self._disp_drv.get_vertical_resolution()
 
-        if (
-            (
-                self._rotation in (rot0, rot180) and
-                value in (rot90, rot270)
-            ) or (
-                self._rotation in (rot90, rot270) and
-                value in (rot0, rot180)
-            )
-        ):
-            width = self._disp_drv.get_horizontal_resolution()
-            height = self._disp_drv.get_vertical_resolution()
-            self._disp_drv.set_resolution(height, width)
+        if rotation == self._rotation:
+            return
 
-            self._offset_x, self._offset_y = self._offset_y, self._offset_x
-
-        self._rotation = value
+        self._rotation = rotation
 
         if self._initilized:
-            if value <= 1:
-                value = int(not value)
+            if rotation <= 1:
+                value = int(not rotation)
 
-            self._param_buf[0] = value
+            self._param_buf[0] = rotation
             self._param_buf[1] = 0x1C
             self.set_params(_DRVROUTCTRL, self._param_mv[:2])
 
             self._param_buf[0] = self._color_byte_order
 
-            if value in (1, 2):
+            if rotation in (1, 2):
                 self._param_buf[1] = 0x30
             else:
                 self._param_buf[1] = 0x38

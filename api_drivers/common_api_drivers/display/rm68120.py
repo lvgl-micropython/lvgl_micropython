@@ -311,36 +311,21 @@ class RM68120(display_driver_framework.DisplayDriver):
         self.set_params(0x3A00, bytearray([0x00, 0x55]))
         self.set_params(_MADCTL, bytearray([0x00, self._color_byte_order]))
 
-    def set_rotation(self, value):
-        rot0 = lv.DISPLAY_ROTATION._0  # NOQA
-        rot90 = lv.DISPLAY_ROTATION._90  # NOQA
-        rot180 = lv.DISPLAY_ROTATION._180  # NOQA
-        rot270 = lv.DISPLAY_ROTATION._270  # NOQA
+        display_driver_framework.DisplayDriver.init(self)
 
-        if (
-            (
-                self._rotation in (rot0, rot180) and
-                value in (rot90, rot270)
-            ) or (
-                self._rotation in (rot90, rot270) and
-                value in (rot0, rot180)
-            )
-        ):
-            width = self._disp_drv.get_horizontal_resolution()
-            height = self._disp_drv.get_vertical_resolution()
-            self._disp_drv.set_resolution(height, width)
+    def _on_size_change(self, _):
+        rotation = self._disp_drv.get_rotation()
+        self._width = self._disp_drv.get_horizontal_resolution()
+        self._height = self._disp_drv.get_vertical_resolution()
 
-            self._offset_x, self._offset_y = self._offset_y, self._offset_x
+        if rotation == self._rotation:
+            return
 
-        self._rotation = value
+        self._rotation = rotation
 
         if self._initilized:
             param_buf = bytearray([
                 0x00,
-                self._madctl(
-                    self._color_byte_order,
-                    ~value,
-                    display_driver_framework._ORIENTATION_TABLE  # NOQA
-                )
+                self._madctl(self._color_byte_order, ~rotation, self._ORIENTATION_TABLE)  # NOQA
             ])
             self._data_bus.tx_param(_MADCTL, param_buf)
