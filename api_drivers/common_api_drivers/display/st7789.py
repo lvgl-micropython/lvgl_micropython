@@ -41,9 +41,9 @@ BYTE_ORDER_BGR = display_driver_framework.BYTE_ORDER_BGR
 class ST7789(display_driver_framework.DisplayDriver):
     _ORIENTATION_TABLE = (
         0x0,
-        display_driver_framework.MADCTL_MX | display_driver_framework.MADCTL_MV,
-        display_driver_framework.MADCTL_MY | display_driver_framework.MADCTL_MX,
-        display_driver_framework.MADCTL_MY | display_driver_framework.MADCTL_MV
+        display_driver_framework._MADCTL_MX | display_driver_framework._MADCTL_MV,
+        display_driver_framework._MADCTL_MY | display_driver_framework._MADCTL_MX,
+        display_driver_framework._MADCTL_MY | display_driver_framework._MADCTL_MV
     )
 
     def init(self):
