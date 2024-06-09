@@ -1,4 +1,4 @@
-import lvgl as lv
+import lvgl as lv  # NOQA
 import math
 
 style = lv.style_t()
@@ -245,17 +245,17 @@ class TPCal(object):
         disp = indev.get_disp()
         disp.set_default()
 
-        horRes = self.width = disp.get_physical_horizontal_resolution()
-        verRes = self.height =disp.get_physical_vertical_resolution()
+        width = self.width = disp.get_physical_horizontal_resolution()
+        height = self.height = disp.get_physical_vertical_resolution()
 
-        marginH = horRes * 0.15
-        marginV = verRes * 0.15
-        margin = marginH if marginH < marginV else marginV
+        hor_margin = width * 0.15
+        ver_margin = height * 0.15
+        margin = hor_margin if hor_margin < ver_margin else ver_margin
 
         self.points = [
-            Tpcal_point(x=int(margin), y=int(verRes * 0.3)),
-            Tpcal_point(x=int(horRes * 0.4), y=int(verRes - margin)),
-            Tpcal_point(x=int(horRes - margin), y=int(margin))
+            Tpcal_point(x=int(margin), y=int(height * 0.3)),
+            Tpcal_point(x=int(width * 0.4), y=int(height - margin)),
+            Tpcal_point(x=int(width - margin), y=int(margin))
         ]
 
         self.curr_point = self.points[0]
@@ -263,57 +263,70 @@ class TPCal(object):
 
         self.scr = lv.obj(None)
         self.scr.add_style(style, 0)
-        self.scr.set_size(horRes, verRes)
+        self.scr.set_size(width, height)
 
         lv.screen_load(self.scr)
 
         self.indev = indev
         self.disp = disp
+        
+        self.run_again_timer = None
 
-        self.cross_hair = build_crosshair(self.scr)
+        self.crosshair = build_crosshair(self.scr)
 
-        crosshair_size = int(math.sqrt((horRes * verRes) >> 5))
+        crosshair_size = int(math.sqrt((width * height) >> 5))
         crosshair_scale = int(crosshair_size / 89.0 * 256.0)
-        self.cross_hair.set_scale(crosshair_scale)
-        self.cross_hair.set_size(crosshair_size, crosshair_size)
+        self.crosshair.set_scale(crosshair_scale)
+        self.crosshair.set_size(crosshair_size, crosshair_size)
         self.cross_offset = int(crosshair_size / 2)
 
-        self.cross_hair.set_pos(
+        self.crosshair.set_pos(
             self.curr_point.x - self.cross_offset,
             self.curr_point.y - self.cross_offset
         )
 
-        self.recal_button = lv.button(self.scr)
-        self.recal_button.add_flag(lv.obj.FLAG.HIDDEN)
-        self.recal_button.remove_flag(lv.obj.FLAG.CLICKABLE)
+        self.run_again_button = lv.button(self.scr)
+        self.run_again_button.add_flag(lv.obj.FLAG.HIDDEN)
+        self.run_again_button.remove_flag(lv.obj.FLAG.CLICKABLE)
 
-        self.cal_ok_button = lv.button(self.scr)
-        self.cal_ok_button.add_flag(lv.obj.FLAG.HIDDEN)
-        self.cal_ok_button.remove_flag(lv.obj.FLAG.CLICKABLE)
+        self.ok_button = lv.button(self.scr)
+        self.ok_button.add_flag(lv.obj.FLAG.HIDDEN)
+        self.ok_button.remove_flag(lv.obj.FLAG.CLICKABLE)
 
-        recal_label = lv.text(self.recal_button)
-        recal_label.set_text("Recalibrate")
-        cal_ok_label = lv.text(self.cal_ok_button)
-        cal_ok_label.set_text("Calibration Good")
+        run_again_label = self.run_again_label = lv.label(self.run_again_button)
+        run_again_label.set_text("Run Again (30)")
+        ok_label = lv.label(self.ok_button)
+        ok_label.set_text("OK")
 
-        recal_label.center()
-        cal_ok_label.center()
+        self.ok_button.set_size(50, lv.SIZE_CONTENT)
+        self.run_again_button.set_size(50, lv.SIZE_CONTENT)
 
-        self.cal_ok_button.update_layout()
-        self.recal_button.update_layout()
+        run_again_label.center()
+        ok_label.center()
+        
+        self.ok_button.update_layout()
+        self.run_again_button.update_layout()
 
-        but_height = self.cal_ok_button.get_height()
-        recal_but_width = self.recal_button.get_width()
+        but_height = self.ok_button.get_height()
+        recal_but_width = self.run_again_button.get_width()
 
-        center_x = int(horRes / 2)
-        center_y = int(verRes / 2)
+        center_x = int(width / 2)
+        center_y = int(height / 2)
 
         but_y = center_y - int(but_height / 2)
         recal_but_x = center_x - 7 - recal_but_width
         ok_but_x = center_x + 7
-        self.recal_button.set_pos(recal_but_x, but_y)
-        self.cal_ok_button.set_pos(ok_but_x, but_y)
+        self.run_again_button.set_pos(recal_but_x, but_y)
+        self.ok_button.set_pos(ok_but_x, but_y)
 
+        self.info_text = lv.label(self.scr)
+        self.info_text.set_text('Touch Screen Calibration')
+        self.info_text.update_layout()
+        
+        info_height = self.info_text.get_height()
+        self.info_text.align(lv.ALIGN.CENTER, 0, -info_height - 10)
+        self.info_text.remove_flag(lv.obj.FLAG.CLICKABLE)
+        
         self.alphaX = None
         self.betaX = None
         self.deltaX = None
@@ -321,13 +334,16 @@ class TPCal(object):
         self.betaY = None
         self.deltaY = None
 
-        indev._indev_drv.set_read_cb(self.on_touch)
+        indev._indev_drv.set_read_cb(self.on_touch)  # NOQA
 
     def on_ok(self, _):
+        self.run_again_timer.delete()
+        self.run_again_timer = None
+        
         lv.screen_load(self.curr_scrn)
-        self.cross_hair.delete()
-        self.cal_ok_button.delete()
-        self.recal_button.delete()
+        self.crosshair.delete()
+        self.ok_button.delete()
+        self.run_again_button.delete()
         self.scr.delete()
 
         self.callback(
@@ -339,8 +355,8 @@ class TPCal(object):
             self.deltaY
         )
 
-    def on_touch(self, drv, data):
-        coords = self.indev._get_coords()
+    def on_touch(self, _, data):
+        coords = self.indev._get_coords()  # NOQA
 
         if coords is None:
             state = self.indev.RELEASED
@@ -378,6 +394,9 @@ class TPCal(object):
         return new_x, new_y
 
     def on_recalibrate(self, _):
+        self.run_again_timer.delete()
+        self.run_again_timer = None
+        
         self.alphaX = None
         self.betaX = None
         self.deltaX = None
@@ -385,115 +404,97 @@ class TPCal(object):
         self.betaY = None
         self.deltaY = None
 
-        self.recal_button.add_flag(lv.obj.FLAG.HIDDEN)
-        self.recal_button.remove_flag(lv.obj.FLAG.CLICKABLE)
+        self.run_again_button.add_flag(lv.obj.FLAG.HIDDEN)
+        self.run_again_button.remove_flag(lv.obj.FLAG.CLICKABLE)
 
-        self.cal_ok_button.add_flag(lv.obj.FLAG.HIDDEN)
-        self.cal_ok_button.remove_flag(lv.obj.FLAG.CLICKABLE)
+        self.ok_button.add_flag(lv.obj.FLAG.HIDDEN)
+        self.ok_button.remove_flag(lv.obj.FLAG.CLICKABLE)
 
         for point in self.points:
             point.x = 0
             point.y = 0
 
         self.curr_point = self.points[0]
-        self.cross_hair.set_pos(
+        self.crosshair.set_pos(
             self.curr_point.x - self.cross_offset,
             self.curr_point.y - self.cross_offset
         )
-        self.cross_hair.add_flag(lv.obj.FLAG.CLICKABLE)
+        self.crosshair.add_flag(lv.obj.FLAG.CLICKABLE)
 
         self.scr.remove_event_cb(self.on_scr_click)
+    
+    def on_run_again_timer(self, _):
+        remaining_runs = 30 - self.run_again_timer.run_cnt
 
+        self.run_again_label.set_text(
+            f"Run Again ({str(remaining_runs).zfill(2)})"
+        )
+        
+        if remaining_runs == 0:
+            self.on_recalibrate(None)
+            
     def on_click(self):
         self.indev.get_point(self.curr_point.touched_point)
         index = self.points.index(self.curr_point) + 1
         if index == len(self.points):
-            self.cross_hair.remove_flag(lv.obj.FLAG.CLICKABLE)
+            self.crosshair.remove_flag(lv.obj.FLAG.CLICKABLE)
 
-            self.recal_button.add_flag(lv.obj.FLAG.CLICKABLE)
-            self.recal_button.remove_flag(lv.obj.FLAG.HIDDEN)
+            self.run_again_label.set_text("Run Again (30)")
+            
+            self.run_again_button.add_flag(lv.obj.FLAG.CLICKABLE)
+            self.run_again_button.remove_flag(lv.obj.FLAG.HIDDEN)
 
-            self.cal_ok_button.add_flag(lv.obj.FLAG.CLICKABLE)
-            self.cal_ok_button.remove_flag(lv.obj.FLAG.HIDDEN)
-
-            tpoint1, tpoint2, tpoint3 = [
-                point.touched_point for point in self.points
-            ]
-            spoint1, spoint2, spoint3 = self.points
+            self.ok_button.add_flag(lv.obj.FLAG.CLICKABLE)
+            self.ok_button.remove_flag(lv.obj.FLAG.HIDDEN)
+            
+            self.run_again_timer = lv.timer_create(
+                self.on_run_again_timer, 
+                1000, None)
+            
+            self.run_again_timer.set_repeat_count(30)
+            for i, point in enumerate(self.points):
+                print(f'{i + 1}: {str(point)}')
+            
+            tp1, tp2, tp3 = [point.touched_point for point in self.points]
+            sp1, sp2, sp3 = self.points
 
             divisor = float(
-                tpoint1.x *
-                (tpoint3.y - tpoint2.y) -
-                tpoint2.x *
-                tpoint3.y +
-                tpoint2.y *
-                tpoint3.x +
-                tpoint1.y *
-                (tpoint2.x - tpoint3.x)
+                tp1.x * (tp3.y - tp2.y) - tp2.x * tp3.y +
+                tp2.y * tp3.x + tp1.y * (tp2.x - tp3.x)
             )
 
             self.alphaX = float(
-                spoint1.x *
-                (tpoint3.y - tpoint2.y) -
-                spoint2.x *
-                tpoint3.y +
-                spoint3.x *
-                tpoint2.y +
-                (spoint2.x - spoint3.x) *
-                tpoint1.y
+                sp1.x * (tp3.y - tp2.y) - sp2.x * tp3.y +
+                sp3.x * tp2.y + (sp2.x - sp3.x) * tp1.y
             ) / divisor
             self.betaX = -float(
-                spoint1.x *
-                (tpoint3.x - tpoint2.x) -
-                spoint2.x *
-                tpoint3.x +
-                spoint3.x *
-                tpoint2.x +
-                (spoint2.x - spoint3.x) *
-                tpoint1.x
+                sp1.x * (tp3.x - tp2.x) - sp2.x * tp3.x +
+                sp3.x * tp2.x + (sp2.x - sp3.x) * tp1.x
             ) / divisor
             self.deltaX = float(
-                spoint1.x *
-                (tpoint2.y * tpoint3.x - tpoint2.x * tpoint3.y) +
-                tpoint1.x *
-                (spoint2.x * tpoint3.y - spoint3.x * tpoint2.y) +
-                tpoint1.y *
-                (spoint3.x * tpoint2.x - spoint2.x * tpoint3.x)
+                sp1.x * (tp2.y * tp3.x - tp2.x * tp3.y) +
+                tp1.x * (sp2.x * tp3.y - sp3.x * tp2.y) +
+                tp1.y * (sp3.x * tp2.x - sp2.x * tp3.x)
             ) / divisor
             self.alphaY = float(
-                spoint1.y *
-                (tpoint3.y - tpoint2.y) -
-                spoint2.y *
-                tpoint3.y +
-                spoint3.y *
-                tpoint2.y +
-                (spoint2.y - spoint3.y) *
-                tpoint1.y
+                sp1.y * (tp3.y - tp2.y) - sp2.y * tp3.y +
+                sp3.y * tp2.y + (sp2.y - sp3.y) * tp1.y
             ) / divisor
             self.betaY = -float(
-                spoint1.y *
-                (tpoint3.x - tpoint2.x) -
-                spoint2.y *
-                tpoint3.x +
-                spoint3.y *
-                tpoint2.x +
-                (spoint2.y - spoint3.y) *
-                tpoint1.x
+                sp1.y * (tp3.x - tp2.x) - sp2.y * tp3.x +
+                sp3.y * tp2.x + (sp2.y - sp3.y) * tp1.x
             ) / divisor
             self.deltaY = float(
-                spoint1.y *
-                (tpoint2.y * tpoint3.x - tpoint2.x * tpoint3.y) +
-                tpoint1.x *
-                (spoint2.y * tpoint3.y - spoint3.y * tpoint2.y) +
-                tpoint1.y *
-                (spoint3.y * tpoint2.x - spoint2.y * tpoint3.x)
+                sp1.y * (tp2.y * tp3.x - tp2.x * tp3.y) +
+                tp1.x * (sp2.y * tp3.y - sp3.y * tp2.y) +
+                tp1.y * (sp3.y * tp2.x - sp2.y * tp3.x)
             ) / divisor
 
             self.scr.add_event_cb(self.on_scr_click, lv.EVENT.CLICK, None)
 
         else:
             self.curr_point = self.points[index]
-            self.cross_hair.set_pos(
+            self.crosshair.set_pos(
                 self.curr_point.x - self.cross_offset,
                 self.curr_point.y - self.cross_offset
             )
@@ -502,7 +503,7 @@ class TPCal(object):
         point = lv.point_t()
         self.indev.get_point(point)
 
-        self.cross_hair.set_pos(
+        self.crosshair.set_pos(
             point.x - self.cross_offset,
             point.y - self.cross_offset
         )
