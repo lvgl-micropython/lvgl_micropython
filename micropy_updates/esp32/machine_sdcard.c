@@ -147,7 +147,7 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
         ARG_cs,
         ARG_freq,
     };
-    static const mp_arg_t allowed_args[] = {
+    static const mp_arg_t make_new_args[] = {
         { MP_QSTR_slot,     MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int =  1} },
         { MP_QSTR_width,    MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int =  1} },
         { MP_QSTR_cd,       MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = -1} },
