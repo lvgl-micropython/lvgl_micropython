@@ -22,14 +22,13 @@ _CASET = const(0x2A)
 _RAMWR = const(0x2C)
 _MADCTL = const(0x36)
 
-_MADCTL_MY = const(0x80)  # 0=Top to Bottom, 1=Bottom to Top
-_MADCTL_MX = const(0x40)  # 0=Left to Right, 1=Right to Left
-_MADCTL_MV = const(0x20)  # 0=Normal, 1=Row/column exchange
 
-
-_MADCTL_ML = const(0x10)  # Refresh 0=Top to Bottom, 1=Bottom to Top
-_MADCTL_BGR = const(0x08)  # BGR color order
 _MADCTL_MH = const(0x04)  # Refresh 0=Left to Right, 1=Right to Left
+_MADCTL_BGR = const(0x08)  # BGR color order
+_MADCTL_ML = const(0x10)  # Refresh 0=Top to Bottom, 1=Bottom to Top
+_MADCTL_MV = const(0x20)  # 0=Normal, 1=Row/column exchange
+_MADCTL_MX = const(0x40)  # 0=Left to Right, 1=Right to Left
+_MADCTL_MY = const(0x80)  # 0=Top to Bottom, 1=Bottom to Top
 
 
 STATE_HIGH = 1
