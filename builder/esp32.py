@@ -751,9 +751,13 @@ def compile():  # NOQA
             with open(mpconfigboard_path, 'wb') as f:
                 f.write(data.encode('utf-8'))
 
-    machine_hw_spi_src = 'micropy_updates/esp32/machine_hw_spi.c'
-    machine_hw_spi_dst = 'lib/micropython/ports/esp32/machine_hw_spi.c'
-    shutil.copyfile(machine_hw_spi_src, machine_hw_spi_dst)
+    src_path = 'micropy_updates/esp32'
+    dst_path = 'lib/micropython/ports/esp32'
+
+    for file in os.listdir(src_path):
+        src_file = os.path.join(src_path, file)
+        dst_file = os.path.join(dst_path, file)
+        shutil.copyfile(src_file, dst_file)
 
     mpconfigport_path = 'lib/micropython/ports/esp32/mpconfigport.h'
 

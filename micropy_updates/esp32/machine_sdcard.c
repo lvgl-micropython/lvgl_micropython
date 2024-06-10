@@ -56,8 +56,7 @@ typedef struct _micropy_sd_spi_bus_obj_t {
     int8_t mosi;
     int8_t miso;
     int8_t active_devices;
-    enum {
-    } state;
+    int state;
 
 } micropy_sd_spi_bus_obj_t;
 
