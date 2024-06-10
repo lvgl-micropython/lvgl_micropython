@@ -23,6 +23,26 @@ jobs:
     - name: Install Deps
       run: sudo apt-get update && sudo apt-get install --assume-yes --allow-downgrades --allow-remove-essential --allow-change-held-packages build-essential pkg-config cmake ninja-build libffi-dev gnome-desktop-testing libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev fcitx-libs-dev libpipewire-0.3-dev libwayland-dev libdecor-0-dev ccache
 
+    - name: Cached Deps
+      id: cache-deps
+      uses: actions/cache@v4
+      with:
+        path: lib/
+        key: ${{ runner.os }}-deps
+
+    - name: Get Build Deps
+      if: steps.cache-deps.outputs.cache-hit != 'true'
+      run: |
+        git submodule update --init lib/pycparser lib/micropython lib/esp-idf lib/lvgl lib/SDL
+        git checkout v1.23.0 -- lib/micropython
+        git checkout master -- lib/lvgl
+        git checkout release-2.30.2 -- lib/SDL
+        
+        export "IDF_PATH=${GITHUB_WORKSPACE}/lib/esp-idf"
+        git submodule update --init lib/esp-idf/components/bt/host/nimble/nimble lib/esp-idf/components/esp_wifi lib/esp-idf/components/esptool_py/esptool lib/esp-idf/components/lwip/lwip lib/esp-idf/components/mbedtls/mbedtls lib/esp-idf/components/bt/controller/lib_esp32 lib/esp-idf/components/bt/controller/lib_esp32c3_family
+        ./lib/esp-idf/install.sh all
+        . ./lib/esp-idf/export.sh
+
     - name: Build ESP32 port
       run: python3 make.py esp32 submodules clean mpy_cross BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT DISPLAY=rgb_display INDEV=gt911 --ccache
 
@@ -34,8 +54,3 @@ jobs:
 
     - name: Build Unix port
       run: python3 make.py unix submodules clean mpy_cross DISPLAY=sdl_display INDEV=sdl_pointer
-
-
-
-
-
