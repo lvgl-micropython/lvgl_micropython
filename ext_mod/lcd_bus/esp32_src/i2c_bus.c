@@ -19,7 +19,7 @@
 
 
 mp_lcd_err_t i2c_del(mp_obj_t obj);
-mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap);
+mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
 mp_lcd_err_t i2c_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
 
 
@@ -33,8 +33,6 @@ static mp_obj_t mp_lcd_i2c_bus_make_new(const mp_obj_type_t *type, size_t n_args
         ARG_control_phase_bytes,
         ARG_dc_bit_offset,
         ARG_freq,
-        ARG_cmd_bits,
-        ARG_param_bits,
         ARG_dc_low_on_data,
         ARG_sda_pullup,
         ARG_scl_pullup,
@@ -49,8 +47,6 @@ static mp_obj_t mp_lcd_i2c_bus_make_new(const mp_obj_type_t *type, size_t n_args
         { MP_QSTR_control_phase_bytes,   MP_ARG_INT  | MP_ARG_KW_ONLY,  {.u_int = 1         } },
         { MP_QSTR_dc_bit_offset,         MP_ARG_INT  | MP_ARG_KW_ONLY,  {.u_int = 6         } },
         { MP_QSTR_freq,                  MP_ARG_INT  | MP_ARG_KW_ONLY,  {.u_int = 10000000  } },
-        { MP_QSTR_cmd_bits,              MP_ARG_INT  | MP_ARG_KW_ONLY,  {.u_int = 8         } },
-        { MP_QSTR_param_bits,            MP_ARG_INT  | MP_ARG_KW_ONLY,  {.u_int = 8         } },
         { MP_QSTR_dc_low_on_data,        MP_ARG_BOOL | MP_ARG_KW_ONLY,  {.u_bool = false    } },
         { MP_QSTR_sda_pullup,            MP_ARG_BOOL | MP_ARG_KW_ONLY,  {.u_bool = true     } },
         { MP_QSTR_scl_pullup,            MP_ARG_BOOL | MP_ARG_KW_ONLY,  {.u_bool = true     } },
@@ -89,8 +85,6 @@ static mp_obj_t mp_lcd_i2c_bus_make_new(const mp_obj_type_t *type, size_t n_args
     self->panel_io_config.user_ctx = self;
     self->panel_io_config.control_phase_bytes = (size_t)args[ARG_control_phase_bytes].u_int;
     self->panel_io_config.dc_bit_offset = (unsigned int)args[ARG_dc_bit_offset].u_int;
-    self->panel_io_config.lcd_cmd_bits = (int)args[ARG_cmd_bits].u_int;
-    self->panel_io_config.lcd_param_bits = (int)args[ARG_param_bits].u_int;
     self->panel_io_config.flags.dc_low_on_data = (unsigned int)args[ARG_dc_low_on_data].u_bool;
     self->panel_io_config.flags.disable_control_phase = (unsigned int)args[ARG_disable_control_phase].u_bool;
 
@@ -119,7 +113,7 @@ mp_lcd_err_t i2c_del(mp_obj_t obj)
 }
 
 
-mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap)
+mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
 {
     mp_lcd_i2c_bus_obj_t *self = (mp_lcd_i2c_bus_obj_t *)obj;
 
@@ -128,6 +122,9 @@ mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
     } else {
         self->rgb565_byte_swap = false;
     }
+
+    self->panel_io_config.lcd_cmd_bits = (int)cmd_bits;
+    self->panel_io_config.lcd_param_bits = (int)param_bits;
 
     mp_lcd_err_t ret = i2c_param_config(self->host, &self->bus_config);
     if (ret != 0) {

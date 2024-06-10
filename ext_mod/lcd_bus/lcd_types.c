@@ -312,11 +312,11 @@ mp_lcd_err_t lcd_panel_io_del(mp_obj_t obj)
 }
 
 
-mp_lcd_err_t lcd_panel_io_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap)
+mp_lcd_err_t lcd_panel_io_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
 {
     mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
 
-    return self->panel_io_handle.init(obj, width, height, bpp, buffer_size, rgb565_byte_swap);
+    return self->panel_io_handle.init(obj, width, height, bpp, buffer_size, rgb565_byte_swap, cmd_bits, param_bits);
 }
 
 

@@ -75,7 +75,9 @@ class DisplayDriver:
         offset_y=0,
         color_byte_order=BYTE_ORDER_RGB,
         color_space=lv.COLOR_FORMAT.RGB888,
-        rgb565_byte_swap=False
+        rgb565_byte_swap=False,
+        _cmd_bits=8,
+        _param_bits=8
     ):
 
         if power_on_state not in (STATE_HIGH, STATE_LOW):
@@ -208,7 +210,9 @@ class DisplayDriver:
                 display_height,
                 lv.color_format_get_size(color_space) * 8,
                 buffer_size,
-                rgb565_byte_swap
+                rgb565_byte_swap,
+                _cmd_bits,
+                _param_bits
             )
 
             self._disp_drv.set_flush_cb(self._flush_cb)

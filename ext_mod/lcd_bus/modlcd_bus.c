@@ -38,14 +38,16 @@ MP_DEFINE_CONST_FUN_OBJ_VAR(mp_lcd_bus_get_lane_count_obj, 1, mp_lcd_bus_get_lan
 
 mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
-    enum { ARG_self, ARG_width, ARG_height, ARG_bpp, ARG_buffer_size, ARG_rgb565_byte_swap };
+    enum { ARG_self, ARG_width, ARG_height, ARG_bpp, ARG_buffer_size, ARG_rgb565_byte_swap, ARG_cmd_bits, ARG_param_bits };
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_self,             MP_ARG_OBJ  | MP_ARG_REQUIRED, { .u_obj = mp_const_none } },
-        { MP_QSTR_width,            MP_ARG_INT  | MP_ARG_REQUIRED, { .u_int = -1            } },
-        { MP_QSTR_height,           MP_ARG_INT  | MP_ARG_REQUIRED, { .u_int = -1            } },
-        { MP_QSTR_bpp,              MP_ARG_INT  | MP_ARG_REQUIRED, { .u_int = -1            } },
-        { MP_QSTR_buffer_size,      MP_ARG_INT  | MP_ARG_REQUIRED, { .u_int = -1            } },
-        { MP_QSTR_rgb565_byte_swap, MP_ARG_BOOL | MP_ARG_REQUIRED, { .u_bool = false        } },
+        { MP_QSTR_self,             MP_ARG_OBJ  | MP_ARG_REQUIRED },
+        { MP_QSTR_width,            MP_ARG_INT  | MP_ARG_REQUIRED },
+        { MP_QSTR_height,           MP_ARG_INT  | MP_ARG_REQUIRED },
+        { MP_QSTR_bpp,              MP_ARG_INT  | MP_ARG_REQUIRED },
+        { MP_QSTR_buffer_size,      MP_ARG_INT  | MP_ARG_REQUIRED },
+        { MP_QSTR_rgb565_byte_swap, MP_ARG_BOOL | MP_ARG_REQUIRED },
+        { MP_QSTR_cmd_bits,         MP_ARG_INT  | MP_ARG_REQUIRED },
+        { MP_QSTR_param_bits,       MP_ARG_INT  | MP_ARG_REQUIRED },
     };
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
@@ -57,6 +59,8 @@ mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
         (uint8_t)args[ARG_bpp].u_int,
         (uint32_t)args[ARG_buffer_size].u_int,
         (bool)args[ARG_rgb565_byte_swap].u_bool
+        (uint8_t)args[ARG_cmd_bits].u_int,
+        (uint8_t)args[ARG_param_bits].u_int,
     );
 
     if (ret != 0) {

@@ -25,25 +25,43 @@
 #include <string.h>
 
 
+typedef struct _micropy_spi_bus_obj_t {
+    spi_host_device_t host;
+    int8_t sck;
+    int8_t mosi;
+    int8_t miso;
+    int8_t active_devices;
+    enum {
+    } state;
+
+} micropy_spi_bus_obj_t;
+
+
+typedef struct _micropy_spi_obj_t {
+    mp_obj_base_t base;
+    uint32_t baudrate;
+    uint8_t polarity;
+    uint8_t phase;
+    uint8_t bits;
+    uint8_t firstbit;
+    int8_t cs;
+    spi_device_handle_t spi_device;
+    micropy_spi_bus_obj_t *spi_bus;
+} micropy_spi_obj_t;
+
+
 mp_lcd_err_t spi_del(mp_obj_t obj);
-mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap);
+mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
 mp_lcd_err_t spi_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
 
 
 static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
 {
      enum {
+        ARG_spi_bus,
         ARG_dc,
-        ARG_host,
-        ARG_sclk,
         ARG_freq,
-        ARG_mosi,
-        ARG_miso,
         ARG_cs,
-        ARG_wp,
-        ARG_hd,
-        ARG_cmd_bits,
-        ARG_param_bits,
         ARG_dc_low_on_data,
         ARG_sio_mode,
         ARG_lsb_first,
@@ -52,22 +70,16 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     };
 
     const mp_arg_t make_new_args[] = {
+        { MP_QSTR_spi_bus,          MP_ARG_OBJ  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED      },
         { MP_QSTR_dc,               MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED      },
-        { MP_QSTR_host,             MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED      },
-        { MP_QSTR_sclk,             MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED      },
         { MP_QSTR_freq,             MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED      },
-        { MP_QSTR_mosi,             MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED      },
-        { MP_QSTR_miso,             MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED      },
         { MP_QSTR_cs,               MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1       } },
-        { MP_QSTR_wp,               MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1       } },
-        { MP_QSTR_hd,               MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1       } },
-        { MP_QSTR_cmd_bits,         MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 8        } },
-        { MP_QSTR_param_bits,       MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 8        } },
         { MP_QSTR_dc_low_on_data,   MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false   } },
         { MP_QSTR_sio_mode,         MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false   } },
         { MP_QSTR_lsb_first,        MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false   } },
         { MP_QSTR_cs_high_active,   MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false   } },
-        { MP_QSTR_spi_mode,         MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 0        } }
+        { MP_QSTR_spi_mode,         MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 0        } },
+
     };
 
     mp_arg_val_t args[MP_ARRAY_SIZE(make_new_args)];
@@ -84,48 +96,16 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     mp_lcd_spi_bus_obj_t *self = m_new_obj(mp_lcd_spi_bus_obj_t);
     self->base.type = &mp_lcd_spi_bus_type;
 
-    if ((args[ARG_spi_mode].u_int > 3) || (args[ARG_spi_mode].u_int < 0)) {
-        mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("invalid spi mode (%d)"), args[ARG_spi_mode].u_int);
-    }
 
-    uint32_t flags = SPICOMMON_BUSFLAG_MASTER;
-
-    int wp = (int) args[ARG_wp].u_int;
-    int hd = (int) args[ARG_hd].u_int;
-
-    if (wp != -1 && hd != -1) {
-        flags |= SPICOMMON_BUSFLAG_QUAD;
-    } else {
-        wp = -1;
-        hd = -1;
-    }
+    micropy_spi_obj_t *spi_bus = MP_OBJ_TO_PTR(args[ARG_spi_bus].u_obj);
 
     self->callback = mp_const_none;
 
-    spi_host_device_t host = (spi_host_device_t)args[ARG_host].u_int;
-#if SOC_SPI_PERIPH_NUM > 2
-    if (host < SPI2_HOST || host > SPI3_HOST) {
-#else
-    if (host != SPI2_HOST) {
-#endif
-        mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("Host %d is not supported by this MCU"), host);
-    }
+    spi_host_device_t host = spi_bus->spi_bus->host;
 
     self->host = host;
     self->panel_io_handle.panel_io = NULL;
     self->bus_handle = (esp_lcd_spi_bus_handle_t)host;
-
-    self->bus_config.sclk_io_num = (int)args[ARG_sclk].u_int;
-    self->bus_config.mosi_io_num = (int)args[ARG_mosi].u_int;
-    self->bus_config.miso_io_num = (int)args[ARG_miso].u_int;
-    self->bus_config.quadwp_io_num = wp;
-    self->bus_config.quadhd_io_num = hd;
-    self->bus_config.data4_io_num = -1;
-    self->bus_config.data5_io_num = -1;
-    self->bus_config.data6_io_num = -1;
-    self->bus_config.data7_io_num = -1;
-    self->bus_config.flags = flags;
-
 
     self->panel_io_config.cs_gpio_num = (int)args[ARG_cs].u_int;
     self->panel_io_config.dc_gpio_num = (int)args[ARG_dc].u_int;
@@ -133,8 +113,6 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     self->panel_io_config.pclk_hz = (unsigned int)args[ARG_freq].u_int;
     self->panel_io_config.on_color_trans_done = &bus_trans_done_cb;
     self->panel_io_config.user_ctx = self;
-    self->panel_io_config.lcd_cmd_bits = (int)args[ARG_cmd_bits].u_int;
-    self->panel_io_config.lcd_param_bits = (int)args[ARG_param_bits].u_int;
     self->panel_io_config.flags.dc_low_on_data = (unsigned int)args[ARG_dc_low_on_data].u_bool;
     self->panel_io_config.flags.sio_mode = (unsigned int)args[ARG_sio_mode].u_bool;
     self->panel_io_config.flags.lsb_first = (unsigned int)args[ARG_lsb_first].u_bool;
@@ -147,17 +125,10 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
 
 #if CONFIG_LCD_ENABLE_DEBUG_LOG
     printf("host=%d\n", self->host);
-    printf("sclk_io_num=%d\n", self->bus_config.sclk_io_num);
-    printf("mosi_io_num=%d\n", self->bus_config.mosi_io_num);
-    printf("miso_io_num=%d\n", self->bus_config.miso_io_num);
-    printf("quadwp_io_num=%d\n", self->bus_config.quadwp_io_num);
-    printf("quadhd_io_num=%d\n", self->bus_config.quadhd_io_num);
     printf("cs_gpio_num=%d\n", self->panel_io_config.cs_gpio_num);
     printf("dc_gpio_num=%d\n", self->panel_io_config.dc_gpio_num);
     printf("spi_mode=%d\n", self->panel_io_config.spi_mode);
     printf("pclk_hz=%i\n", self->panel_io_config.pclk_hz);
-    printf("lcd_cmd_bits=%d\n", self->panel_io_config.lcd_cmd_bits);
-    printf("lcd_param_bits=%d\n", self->panel_io_config.lcd_param_bits);
     printf("dc_low_on_data=%d\n", self->panel_io_config.flags.dc_low_on_data);
     printf("sio_mode=%d\n", self->panel_io_config.flags.sio_mode);
     printf("lsb_first=%d\n", self->panel_io_config.flags.lsb_first);
@@ -180,18 +151,14 @@ mp_lcd_err_t spi_del(mp_obj_t obj)
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_panel_io_del)"), ret);
     }
 
-    ret = spi_bus_free(self->host);
-    if (ret != ESP_OK) {
-        mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(spi_bus_free)"), ret);
-    }
     return ret;
 }
 
 
-mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap)
+mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
 {
 #if CONFIG_LCD_ENABLE_DEBUG_LOG
-    printf("spi_init(self, width=%i, height=%i, bpp=%i, buffer_size=%lu, rgb565_byte_swap=%i)\n", width, height, bpp, buffer_size, (uint8_t)rgb565_byte_swap);
+    printf("spi_init(self, width=%i, height=%i, bpp=%i, buffer_size=%lu, rgb565_byte_swap=%i, cmd_bits=%i, param_bits=%i)\n", width, height, bpp, buffer_size, (uint8_t)rgb565_byte_swap, cmd_bits, param_bits);
 #endif
     mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
 
@@ -201,37 +168,16 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
         self->rgb565_byte_swap = false;
     }
 
-    if (self->buffer_flags & MALLOC_CAP_DMA) {
-        self->bus_config.max_transfer_sz = buffer_size;
-    } else {
-        self->bus_config.max_transfer_sz = SOC_SPI_MAXIMUM_BUFFER_SIZE;
-    }
-
     self->panel_io_config.trans_queue_depth = 10;
-
-#if CONFIG_IDF_TARGET_ESP32
-    int dma_chan = SPI_DMA_DISABLED;
-
-    if (self->host == SPI2_HOST) {
-        dma_chan = SPI_DMA_CH1;
-    } else {
-       dma_chan = SPI_DMA_CH2;
-    }
-#else
-    int dma_chan = SPI_DMA_CH_AUTO;
-#endif
+    self->panel_io_config.lcd_cmd_bits = (int)cmd_bits;
+    self->panel_io_config.lcd_param_bits = (int)param_bits;
 
 #if CONFIG_LCD_ENABLE_DEBUG_LOG
+    printf("lcd_cmd_bits=%d\n", self->panel_io_config.lcd_cmd_bits);
+    printf("lcd_param_bits=%d\n", self->panel_io_config.lcd_param_bits);
     printf("rgb565_byte_swap=%i\n",  (uint8_t)self->rgb565_byte_swap);
     printf("trans_queue_depth=%i\n", (uint8_t)self->panel_io_config.trans_queue_depth);
-    printf("max_transfer_sz=%d\n", self->bus_config.max_transfer_sz);
-    printf("dma_chan=%d\n", dma_chan);
 #endif
-
-    mp_lcd_err_t ret = spi_bus_initialize(self->host, &self->bus_config, dma_chan);
-    if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
-        mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(spi_bus_initialize)"), ret);
-    }
 
     ret = esp_lcd_new_panel_io_spi(self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io);
     if (ret != ESP_OK) {
@@ -248,8 +194,6 @@ mp_lcd_err_t spi_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
 
     if (self->panel_io_config.flags.sio_mode) {
         *lane_count = 2;
-    } else if (self->bus_config.quadwp_io_num != -1) {
-        *lane_count = 4;
     } else {
         *lane_count = 1;
     }

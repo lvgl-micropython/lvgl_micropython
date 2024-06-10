@@ -33,7 +33,7 @@ class I2CBus:
     ):
         ...
 
-    def init(self, width: int, height: int, bpp: int, buffer_size: int, rgb565_byte_swap: bool, /) -> None:
+    def init(self, width: int, height: int, bpp: int, buffer_size: int, rgb565_byte_swap: bool, cmd_bits: int, param_bits: int, /) -> None:
         ...
 
     def deinit(self) -> None:
@@ -77,7 +77,7 @@ class SPIBus:
     ):
         ...
 
-    def init(self, width: int, height: int, bpp: int, buffer_size: int, rgb565_byte_swap: bool, /) -> None:
+    def init(self, width: int, height: int, bpp: int, buffer_size: int, rgb565_byte_swap: bool, cmd_bits: int, param_bits: int, /) -> None:
         ...
 
     def deinit(self) -> None:
@@ -129,6 +129,8 @@ class SDLBus:
         bpp: int,
         buffer_size: int,
         rgb565_byte_swap: bool,
+        cmd_bits: int,
+        param_bits: int,
         /
     ) -> None:
         ...
@@ -252,7 +254,7 @@ class RGBBus:
     ):
         ...
 
-    def init(self, width: int, height: int, bpp: int, buffer_size: int, rgb565_byte_swap: bool, /) -> None:
+    def init(self, width: int, height: int, bpp: int, buffer_size: int, rgb565_byte_swap: bool, cmd_bits: int, param_bits: int, /) -> None:
         ...
 
     def deinit(self) -> None:
@@ -316,7 +318,7 @@ class I80Bus:
     ):
         ...
 
-    def init(self, width: int, height: int, bpp: int, buffer_size: int, rgb565_byte_swap: bool, /) -> None:
+    def init(self, width: int, height: int, bpp: int, buffer_size: int, rgb565_byte_swap: bool, cmd_bits: int, param_bits: int, /) -> None:
         ...
 
     def deinit(self) -> None:

@@ -1,7 +1,6 @@
 # LVGL binding for Micropython
 ______________________________
 
-
 I have tried to make this as simple as possible for paople to use. 
 There are some glitches still in it I am sure. If you come across an issue 
 please let me know.
@@ -11,6 +10,74 @@ that conforms To the rest of the driver framework. I have started working on
 writing the frameworks for the different indev (input) types that LVGL supports.
 The frameworks are written to make it easier to write display and input drivers
 for the binding.
+
+<br>
+
+### *New changes*
+___________________________
+
+ESP32
+MicroPython SPI class has been modified
+The SPI implimentation in MicroPython for the ESP32 was written so it would fail
+if the SPI bus had already been initialized. This would cause an issue due to the
+creation order of the display and touch drivers. The display driver needs to be 
+initilized before the touch driver does and if the display bus uses SPI the creation 
+of the touch driver would fail because the bus would already be started. Another 
+issue was the MicroPython SPI driver didn't handle the CS line. This was added for 
+ease of use.
+
+The MicroPython SDCard class has been modified
+There were limitations placed on using SPI for an SDCard. This was due to the original 
+SPI not hanmdling the CS line. Since this has now taken place we needed to modify the SDCard class
+to allow for the SPI bus to be shared. The constructor has been modified, the miso, mosi and sclk 
+parameters have been removed. A new parameter has been added which is `spi_bus` and this parameter 
+takes a `machine.SPI` instance. If you want to share the bus you need to also supply a CS pin using 
+the `cs` parameter. All parameters that are used for setting pins now only take integer values, 
+`machine.Pin` instances are no longer allowed.
+
+The `lcd_bus.SPIBus` constructor has changed. The miso, mosi, wp, hd and sclk parameters have been removed.
+A new parameter has been added which is `spi_bus` and this parameter  takes a `machine.SPI` instance. 
+This was done to allow for sharing the SPI bus with other devices like touch panels and SDCard readers. 
+You must supply a CS pin in order to share the bus.
+
+The cmd_buts and param_bits paramaters have been removed from all lcd_bus classes. This is now handled 
+internally by the display driver.
+
+All touch drivers that are SPI must now be initilized by passing a `machine.SPI` instance. If the touch panel 
+is sharing the bus with any other devices then a new `machine.SPI` instance MUST be created with the CS pin given 
+for the touch panel. All other pins MUST remain the same across the `machine.SPI` instances. You are allowed to have
+different frequencies for each device.
+
+<br>
+
+### *Confirmed working*
+_______________________
+
+* Display Bus
+  * ESP32 SPI
+  * ESP32 RGB
+  * ESP32 I8080
+
+* Memory
+  * SRAM
+  * SRAM DMA
+  * PSRAM (SPIRAM)
+  * PSRAM (SPIRAM) DMA
+
+* Display IC
+  * ST7796
+  * ST7789
+  * ILI9341
+  * SDL
+  * RGB
+  * ILI9488
+
+* Touch IC
+  * XPT2046
+  * GT911
+  * Mouse
+  * FT6x06
+  * FT5x06
 
 <br>
 
@@ -38,8 +105,7 @@ compiling for ESP32
     * python
     
   * macOS
-    * `command xcode-select–install`
-    * `brew install make`
+    * `xcode-select -–install`
     * `brew install cmake`
     * `brew install ninja`
     * `brew install python`

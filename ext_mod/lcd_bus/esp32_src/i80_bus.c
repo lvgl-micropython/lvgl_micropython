@@ -20,7 +20,7 @@
 
 
     mp_lcd_err_t i80_del(mp_obj_t obj);
-    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap);
+    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
     mp_lcd_err_t i80_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
 
     static mp_obj_t mp_lcd_i80_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
@@ -51,8 +51,6 @@
             ARG_dc_cmd_high,
             ARG_dc_dummy_high,
             ARG_dc_data_high,
-            ARG_cmd_bits,
-            ARG_param_bits,
             ARG_cs_active_high,
             ARG_reverse_color_bits,
             ARG_swap_color_bytes,
@@ -85,8 +83,6 @@
             { MP_QSTR_dc_cmd_high,        MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false  } },
             { MP_QSTR_dc_dummy_high,      MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false  } },
             { MP_QSTR_dc_data_high,       MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = true   } },
-            { MP_QSTR_cmd_bits,           MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = 8        } },
-            { MP_QSTR_param_bits,         MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = 8        } },
             { MP_QSTR_cs_active_high,     MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false   } },
             { MP_QSTR_reverse_color_bits, MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false   } },
             { MP_QSTR_swap_color_bytes,   MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false   } },
@@ -144,8 +140,6 @@
         self->panel_io_config.trans_queue_depth = 5;
         self->panel_io_config.on_color_trans_done = &bus_trans_done_cb;
         self->panel_io_config.user_ctx = self;
-        self->panel_io_config.lcd_cmd_bits = (int)args[ARG_cmd_bits].u_int;
-        self->panel_io_config.lcd_param_bits = (int)args[ARG_param_bits].u_int;
         self->panel_io_config.dc_levels.dc_idle_level = (unsigned int)args[ARG_dc_idle_high].u_bool;
         self->panel_io_config.dc_levels.dc_cmd_level = (unsigned int)args[ARG_dc_cmd_high].u_bool;
         self->panel_io_config.dc_levels.dc_dummy_level = (unsigned int)args[ARG_dc_dummy_high].u_bool;
@@ -180,8 +174,6 @@
         printf("cs_gpio_num=%d\n", self->panel_io_config.cs_gpio_num);
         printf("pclk_hz=%lu\n", self->panel_io_config.pclk_hz);
         printf("trans_queue_depth=%d\n", self->panel_io_config.trans_queue_depth);
-        printf("lcd_cmd_bits=%d\n", self->panel_io_config.lcd_cmd_bits);
-        printf("lcd_param_bits=%d\n", self->panel_io_config.lcd_param_bits);
         printf("dc_idle_level=%d\n", self->panel_io_config.dc_levels.dc_idle_level);
         printf("dc_cmd_level=%d\n", self->panel_io_config.dc_levels.dc_cmd_level);
         printf("dc_dummy_level=%d\n", self->panel_io_config.dc_levels.dc_dummy_level);
@@ -201,10 +193,10 @@
     }
     
 
-    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap)
+    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
     {
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("i80_init(self, width=%i, height=%i, bpp=%i, buffer_size=%lu, rgb565_byte_swap=%i)\n", width, height, bpp, buffer_size, (uint8_t)rgb565_byte_swap);
+        printf("i80_init(self, width=%i, height=%i, bpp=%i, buffer_size=%lu, rgb565_byte_swap=%i, cmd_bits=%i, param_bits=%i)\n", width, height, bpp, buffer_size, (uint8_t)rgb565_byte_swap, cmd_bits, param_bits);
     #endif
 
         mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)obj;
@@ -215,9 +207,13 @@
             self->rgb565_byte_swap = false;
         }
 
+        self->panel_io_config.lcd_cmd_bits = (int)cmd_bits;
+        self->panel_io_config.lcd_param_bits = (int)param_bits;
         self->bus_config.max_transfer_bytes = (size_t)buffer_size;
 
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
+        printf("lcd_cmd_bits=%d\n", self->panel_io_config.lcd_cmd_bits);
+        printf("lcd_param_bits=%d\n", self->panel_io_config.lcd_param_bits);
         printf("max_transfer_bytes=%d\n", self->bus_config.max_transfer_bytes);
     #endif
         esp_err_t ret = esp_lcd_new_i80_bus(&self->bus_config, &self->bus_handle);
