@@ -58,7 +58,7 @@ mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
         (uint16_t)args[ARG_height].u_int,
         (uint8_t)args[ARG_bpp].u_int,
         (uint32_t)args[ARG_buffer_size].u_int,
-        (bool)args[ARG_rgb565_byte_swap].u_bool
+        (bool)args[ARG_rgb565_byte_swap].u_bool,
         (uint8_t)args[ARG_cmd_bits].u_int,
         (uint8_t)args[ARG_param_bits].u_int,
     );
