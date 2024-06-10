@@ -69,7 +69,7 @@ mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
     return mp_const_none;
 }
 
-MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_bus_init_obj, 6, mp_lcd_bus_init);
+MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_bus_init_obj, 8, mp_lcd_bus_init);
 
 
 mp_obj_t mp_lcd_bus_free_framebuffer(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
