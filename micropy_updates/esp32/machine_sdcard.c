@@ -81,6 +81,8 @@ typedef struct _sdcard_obj_t {
     // The card structure duplicates the host. It's not clear if we
     // can avoid this given the way that it is copied.
     sdmmc_card_t card;
+    sdspi_device_config_t dev_config;
+    sdspi_dev_handle_t sdspi_handle;
 } sdcard_card_obj_t;
 
 
@@ -88,23 +90,6 @@ typedef struct _sdcard_obj_t {
 #define SDCARD_CARD_FLAGS_CARD_INIT_DONE 0x02
 
 #define _SECTOR_SIZE(self) (self->card.csd.sector_size)
-
-
-static const sdspi_device_config_t spi_dev_defaults[2] = {
-    {
-        #if CONFIG_IDF_TARGET_ESP32
-        .host_id = VSPI_HOST,
-        .gpio_cs = GPIO_NUM_5,
-        #else
-        .host_id = SPI3_HOST,
-        .gpio_cs = GPIO_NUM_34,
-        #endif
-        .gpio_cd = SDSPI_SLOT_NO_CD,
-        .gpio_wp = SDSPI_SLOT_NO_WP,
-        .gpio_int = SDSPI_SLOT_NO_INT,
-    },
-    SDSPI_DEVICE_CONFIG_DEFAULT(), // HSPI (ESP32) / SPI2 (ESP32S3)
-};
 
 
 static esp_err_t sdcard_ensure_card_init(sdcard_card_obj_t *self, bool force) {
@@ -178,7 +163,7 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
         is_spi = true;
     } else {
         slot_num = args[ARG_slot].u_int;
-        is_spi = false
+        is_spi = false;
 
         if (slot_num < 0 || slot_num > 3) {
             mp_raise_ValueError(MP_ERROR_TEXT("slot number must be between 0 and 3 inclusive"));
@@ -202,11 +187,7 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
 
     if (is_spi) {
         // Needs to match spi_dev_defaults above.
-        #if CONFIG_IDF_TARGET_ESP32
-        self->host.slot = slot_num ? HSPI_HOST : VSPI_HOST;
-        #else
-        self->host.slot = slot_num ? SPI2_HOST : SPI3_HOST;
-        #endif
+        self->host.slot = slot_num;
     }
 
     check_esp_err(self->host.init());
@@ -214,18 +195,15 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
 
     if (is_spi) {
         // SPI interface
-        spi_host_device_t spi_host_id = self->host.slot;
-        sdspi_device_config_t dev_config = spi_dev_defaults[slot_num];
+        self->dev_config = (sdspi_device_config_t){
+            .host_id = (spi_host_device_t)self->host.slot,
+            .gpio_cs = (int)args[ARG_cs].u_int
+            .gpio_cd = (int)args[ARG_cd].u_int,
+            .gpio_wp = (int)args[ARG_wp].u_int,
+            .gpio_int = SDSPI_SLOT_NO_INT,
+        }
 
-        dev_config.gpio_cs = (int)args[ARG_cs].u_int;
-        dev_config.gpio_cd = (int)args[ARG_cd].u_int;
-        dev_config.gpio_wp = (int)args[ARG_wp].u_int;
-
-        sdspi_dev_handle_t sdspi_handle;
-        esp_err_t ret = sdspi_host_init_device(&dev_config, &sdspi_handle);
-
-        check_esp_err(ret);
-
+        check_esp_err(sdspi_host_init_device(&self->dev_config, &self->sdspi_handle));
     } else {
         // SD/MMC interface
         sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
