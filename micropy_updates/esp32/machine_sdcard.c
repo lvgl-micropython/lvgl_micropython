@@ -171,13 +171,13 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
 
     bool is_spi;
 
-    if (arg_vals[ARG_spi_bus].u_obj != mp_const_none) {
+    if (args[ARG_spi_bus].u_obj != mp_const_none) {
         micropy_sd_spi_obj_t *spi_bus = MP_OBJ_TO_PTR(args[ARG_spi_bus].u_obj);
-        int cs = arg_vals[ARG_cs].u_int
+        int cs = args[ARG_cs].u_int
         int slot_num = (int)spi_bus->spi_bus->host;
         is_spi = true;
     } else {
-        int slot_num = arg_vals[ARG_slot].u_int;
+        int slot_num = args[ARG_slot].u_int;
 
         is_spi = false
         if (slot_num < 0 || slot_num > 3) {
@@ -189,7 +189,7 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
     self->flags = 0;
     // Note that these defaults are macros that expand to structure
     // constants so we can't directly assign them to fields.
-    int freq = arg_vals[ARG_freq].u_int;
+    int freq = args[ARG_freq].u_int;
     if (is_spi) {
         sdmmc_host_t _temp_host = SDSPI_HOST_DEFAULT();
         _temp_host.max_freq_khz = freq / 1000;
@@ -217,9 +217,9 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
         spi_host_device_t spi_host_id = self->host.slot;
         sdspi_device_config_t dev_config = spi_dev_defaults[slot_num];
 
-        dev_config.gpio_cs = (int)arg_vals[ARG_cs].u_int;
-        dev_config.gpio_cd = (int)arg_vals[ARG_cd].u_int;
-        dev_config.gpio_wp = (int)arg_vals[ARG_wp].u_int;
+        dev_config.gpio_cs = (int)args[ARG_cs].u_int;
+        dev_config.gpio_cd = (int)args[ARG_cd].u_int;
+        dev_config.gpio_wp = (int)args[ARG_wp].u_int;
 
         sdspi_dev_handle_t sdspi_handle;
         esp_err_t ret = sdspi_host_init_device(&dev_config, &sdspi_handle);
@@ -233,10 +233,10 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
         // Stronger external pull-ups are still needed but apparently
         // it is a good idea to set the internal pull-ups anyway.
         // slot_config.flags = SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
-        slot_config.gpio_cd = (int)arg_vals[ARG_cd].u_int;
-        slot_config.gpio_wp = (int)arg_vals[ARG_wp].u_int;
+        slot_config.gpio_cd = (int)args[ARG_cd].u_int;
+        slot_config.gpio_wp = (int)args[ARG_wp].u_int;
 
-        int width = arg_vals[ARG_width].u_int;
+        int width = args[ARG_width].u_int;
         if (width == 1 || width == 4 || (width == 8 && slot_num == 0)) {
             slot_config.width = width;
         } else {

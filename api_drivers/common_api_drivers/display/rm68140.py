@@ -21,7 +21,7 @@ class RM68140(display_driver_framework.DisplayDriver):
         param_mv = memoryview(param_buf)
         
         time.sleep_ms(20)
-        self.set_params(display_driver_framework._SLPOUT)
+        self.set_params(_SLPOUT)
 
         param_buf[0] = 0x07
         param_buf[1] = 0x42
@@ -62,25 +62,13 @@ class RM68140(display_driver_framework.DisplayDriver):
         self.set_params(0xC8, param_mv[:12])
 
         param_buf[0] = 0x0A
-        self.set_params(display_driver_framework._MADCTL, param_mv[:1])
+        self.set_params(_MADCTL, param_mv[:1])
 
         param_buf[0] = 0x55
         self.set_params(0x3A, param_mv[:1])
 
-        param_buf[0] = 0x00
-        param_buf[1] = 0x00
-        param_buf[2] = 0x01
-        param_buf[3] = 0x3F
-        self.set_params(display_driver_framework._CASET, param_mv[:4])
-
-        param_buf[0] = 0x00
-        param_buf[1] = 0x00
-        param_buf[2] = 0x01
-        param_buf[3] = 0xDF
-        self.set_params(display_driver_framework._PASET, param_mv[:4])
-
         time.sleep_ms(120)
-        self.set_params(display_driver_framework._DISPON)
+        self.set_params(_DISPON)
 
         time.sleep_ms(25)
 
