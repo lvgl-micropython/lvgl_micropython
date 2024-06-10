@@ -170,16 +170,16 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
     );
 
     bool is_spi;
+    int slot_num;
 
     if (args[ARG_spi_bus].u_obj != mp_const_none) {
         micropy_sd_spi_obj_t *spi_bus = MP_OBJ_TO_PTR(args[ARG_spi_bus].u_obj);
-        int cs = args[ARG_cs].u_int
-        int slot_num = (int)spi_bus->spi_bus->host;
+        slot_num = (int)spi_bus->spi_bus->host;
         is_spi = true;
     } else {
-        int slot_num = args[ARG_slot].u_int;
-
+        slot_num = args[ARG_slot].u_int;
         is_spi = false
+
         if (slot_num < 0 || slot_num > 3) {
             mp_raise_ValueError(MP_ERROR_TEXT("slot number must be between 0 and 3 inclusive"));
         }
