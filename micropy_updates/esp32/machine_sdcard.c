@@ -197,11 +197,11 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
         // SPI interface
         self->dev_config = (sdspi_device_config_t){
             .host_id = (spi_host_device_t)self->host.slot,
-            .gpio_cs = (int)args[ARG_cs].u_int
+            .gpio_cs = (int)args[ARG_cs].u_int,
             .gpio_cd = (int)args[ARG_cd].u_int,
             .gpio_wp = (int)args[ARG_wp].u_int,
-            .gpio_int = SDSPI_SLOT_NO_INT,
-        }
+            .gpio_int = SDSPI_SLOT_NO_INT
+        };
 
         check_esp_err(sdspi_host_init_device(&self->dev_config, &self->sdspi_handle));
     } else {
