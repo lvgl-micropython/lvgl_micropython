@@ -33,13 +33,19 @@ jobs:
     - name: Get Build Deps
       if: steps.cache-deps.outputs.cache-hit != 'true'
       run: |
-        git submodule update --init lib/pycparser lib/micropython lib/esp-idf lib/lvgl lib/SDL
+        git submodule update --init lib/pycparser
+        
+        git submodule update --init -- lib/micropython
         cd lib/micropython && git checkout v1.23.0 && cd ../.. 
+        
+        git submodule update --init -- lib/lvgl
         cd lib/lvgl && git checkout master && cd ../.. 
+        
+        git submodule update --init -- lib/SDL
         cd lib/SDL && git checkout release-2.30.2 && cd ../.. 
         
+        git submodule update --init --recursive -- lib/esp-idf
         export "IDF_PATH=${GITHUB_WORKSPACE}/lib/esp-idf"
-        git submodule update --init lib/esp-idf/components/bt/host/nimble/nimble lib/esp-idf/components/esp_wifi lib/esp-idf/components/esptool_py/esptool lib/esp-idf/components/lwip/lwip lib/esp-idf/components/mbedtls/mbedtls lib/esp-idf/components/bt/controller/lib_esp32 lib/esp-idf/components/bt/controller/lib_esp32c3_family
         ./lib/esp-idf/install.sh all
         . ./lib/esp-idf/export.sh
 
