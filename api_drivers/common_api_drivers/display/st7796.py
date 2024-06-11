@@ -62,9 +62,9 @@ class ST7796(display_driver_framework.DisplayDriver):
 
     _ORIENTATION_TABLE = (
         0x0,
-        _MADCTL_MX | _MADCTL_MV,
+        _MADCTL_MV | _MADCTL_MY,
         _MADCTL_MY | _MADCTL_MX,
-        _MADCTL_MY | _MADCTL_MV
+        _MADCTL_MV | _MADCTL_MX
     )
 
     def init(self):

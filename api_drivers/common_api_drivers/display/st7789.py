@@ -43,12 +43,16 @@ _MADCTL_MX = const(0x40)  # 0=Left to Right, 1=Right to Left
 _MADCTL_MY = const(0x80)  # 0=Top to Bottom, 1=Bottom to Top
 
 
+
+
+
+
 class ST7789(display_driver_framework.DisplayDriver):
     _ORIENTATION_TABLE = (
         0x0,
-        _MADCTL_MX | _MADCTL_MV,
+        _MADCTL_MV | _MADCTL_MY,
         _MADCTL_MY | _MADCTL_MX,
-        _MADCTL_MY | _MADCTL_MV
+        _MADCTL_MV | _MADCTL_MX
     )
 
     def init(self):
