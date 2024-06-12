@@ -243,7 +243,7 @@ static mp_obj_t sd_deinit(mp_obj_t self_in) {
 
     if (self->flags & SDCARD_CARD_FLAGS_HOST_INIT_DONE) {
         if (self->sdspi_handle != -1) {
-            sdspi_host_remove_device(self->sdspi_handle)
+            sdspi_host_remove_device(self->sdspi_handle);
         } else if (self->host.flags & SDMMC_HOST_FLAG_DEINIT_ARG) {
             self->host.deinit_p(self->host.slot);
         } else {
