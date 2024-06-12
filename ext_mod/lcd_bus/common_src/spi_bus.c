@@ -129,7 +129,7 @@
         mp_lcd_spi_bus_obj_t *self = m_new_obj(mp_lcd_spi_bus_obj_t);
         self->base.type = &mp_lcd_spi_bus_type;
 
-        self->spi_bus = (machine_hw_spi_obj_t *)MP_OBJ_TO_PTR(args[ARG_spi_bus].u_obj)
+        self->spi_bus = (machine_hw_spi_obj_t *)MP_OBJ_TO_PTR(args[ARG_spi_bus].u_obj);
 
     #if !defined(IDF_VER)
         self->callback = mp_const_none;
@@ -185,9 +185,6 @@
         LCD_UNUSED(rgb565_byte_swap);
 
         mp_lcd_spi_bus_obj_t *self = MP_OBJ_TO_PTR(obj);
-
-        self->panel_io_config.lcd_cmd_bits = cmd_bits;
-        self->panel_io_config.lcd_param_bits = param_bits;
 
         uint8_t bits;
 

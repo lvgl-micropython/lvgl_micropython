@@ -78,7 +78,7 @@
     mp_lcd_err_t i80_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
     mp_lcd_err_t i80_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end);
     mp_lcd_err_t i80_del(mp_obj_t obj);
-    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap);
+    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
     mp_lcd_err_t i80_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
 
     void write_color8(mp_lcd_i80_bus_obj_t *self, void *color, size_t color_size);
@@ -173,8 +173,6 @@
             { MP_QSTR_dc_cmd_high,        MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false  } },
             { MP_QSTR_dc_dummy_high,      MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false  } },
             { MP_QSTR_dc_data_high,       MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = true   } },
-            { MP_QSTR_cmd_bits,           MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = 8        } },
-            { MP_QSTR_param_bits,         MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = 8        } },
             { MP_QSTR_cs_active_high,     MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false   } },
             { MP_QSTR_reverse_color_bits, MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false   } },
             { MP_QSTR_swap_color_bytes,   MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false   } },
@@ -202,8 +200,6 @@
             mp_raise_msg(&mp_type_NotImplementedError, MP_ERROR_TEXT("LCD I80 but is not available for this MCU"));
         #else
             self->panel_io_config.user_ctx = self;
-            self->panel_io_config.lcd_cmd_bits = (int)args[ARG_cmd_bits].u_int;
-            self->panel_io_config.lcd_param_bits = (int)args[ARG_param_bits].u_int;
             self->panel_io_config.dc_levels.dc_cmd_level = (unsigned int)args[ARG_dc_cmd_high].u_bool;
             self->panel_io_config.dc_levels.dc_data_level = (unsigned int)args[ARG_dc_data_high].u_bool;
             self->panel_io_config.flags.cs_active_high = (unsigned int)args[ARG_cs_active_high].u_bool;
@@ -398,13 +394,15 @@
 
     }
 
-    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap)
+    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
     {
         mp_lcd_i80_bus_obj_t *self = MP_OBJ_TO_PTR(obj);
         LCD_UNUSED(rgb565_byte_swap);
 
         self->buffer_size = buffer_size;
         self->bpp = bpp;
+        self->panel_io_config.lcd_cmd_bits = (int)cmd_bits;
+        self->panel_io_config.lcd_param_bits = (int)param_bits;
 
         if (self->rgb565_byte_swap) {
             if (self->bus_config.bus_width == 8) {
