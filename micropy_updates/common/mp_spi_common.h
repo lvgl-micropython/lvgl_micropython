@@ -34,8 +34,3 @@
 
 #endif /* __MP_SPI_COMMON_H__ */
 
-
-
-user_data = (spi_device_handle_t) spi_device;
-
-user_data = spi_inst_t *const spi_inst;
