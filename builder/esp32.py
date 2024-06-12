@@ -352,7 +352,7 @@ def build_commands(_, extra_args, script_dir, lv_cflags, ___):
         f'LV_PORT=esp32',
         f'BOARD={board}',
         'USER_C_MODULES=../../../../../ext_mod/micropython.cmake',
-        f'"CFLAGS_EXTRA=-I{script_dir}/micropy_updates/common"'
+        f'"IDFPY_FLAGS=-I{script_dir}/micropy_updates/common"'
     ])
 
     esp_cmd.extend(extra_args)
