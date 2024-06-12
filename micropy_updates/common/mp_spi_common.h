@@ -1,3 +1,7 @@
+#include <stdbool.h>
+
+#include "py/obj.h"
+#include "py/runtime.h"
 
 #ifndef __MP_SPI_COMMON_H__
     #define __MP_SPI_COMMON_H__
