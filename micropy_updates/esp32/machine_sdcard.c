@@ -32,7 +32,7 @@
 #include "extmod/vfs_fat.h"
 
 #if MICROPY_HW_ENABLE_SDCARD
-#include "mp_spi_common.h"
+#include "../../../../micropy_updates/common/mp_spi_common.h"
 #include "driver/sdmmc_host.h"
 #include "driver/sdspi_host.h"
 #include "sdmmc_cmd.h"

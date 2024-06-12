@@ -3,7 +3,7 @@
 
     //local_includes
     #include "modlcd_bus.h"
-    #include "mp_spi_common.h"
+    #include "../../../micropy_updates/common/mp_spi_common.h"
     #include "mphalport.h"
 
     // micropython includes

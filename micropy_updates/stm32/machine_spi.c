@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-#include "mp_spi_common.h"
+#include "../../../../micropy_updates/common/mp_spi_common.h"
 #include "py/runtime.h"
 #include "extmod/modmachine.h"
 #include "spi.h"

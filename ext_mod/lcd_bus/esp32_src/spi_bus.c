@@ -3,7 +3,7 @@
 #include "lcd_types.h"
 #include "modlcd_bus.h"
 #include "spi_bus.h"
-#include "mp_spi_common.h"
+#include "../../../micropy_updates/common/mp_spi_common.h"
 
 // esp-idf includes
 #include "driver/spi_common.h"

@@ -29,7 +29,7 @@
 #include "py/mperrno.h"
 #include "extmod/modmachine.h"
 
-#include "mp_spi_common.h"
+#include "../../../../micropy_updates/common/mp_spi_common.h"
 #include "hardware/spi.h"
 #include "hardware/dma.h"
 
