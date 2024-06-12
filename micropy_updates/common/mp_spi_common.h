@@ -19,7 +19,7 @@
         mp_obj_t miso;
         int16_t active_devices;
         mp_spi_state_t state;
-        void *user_data;
+        const void *user_data;
     } machine_hw_spi_bus_obj_t;
 
 
