@@ -469,7 +469,7 @@ mp_obj_t machine_hw_spi_make_new(const mp_obj_type_t *type, size_t n_args, size_
     };
 
     spi_device_handle_t spi_device = NULL;
-    ret = spi_bus_add_device(spi_host_device, &devcfg, &spi_device);
+    ret = spi_bus_add_device(self->spi_bus->host, &devcfg, &spi_device);
     self->user_data = spi_device;
 
     switch (ret) {
