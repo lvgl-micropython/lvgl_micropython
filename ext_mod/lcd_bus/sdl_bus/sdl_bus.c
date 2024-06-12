@@ -31,7 +31,7 @@
     mp_lcd_err_t sdl_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
     mp_lcd_err_t sdl_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end);
     mp_lcd_err_t sdl_del(mp_obj_t obj);
-    mp_lcd_err_t sdl_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size,  bool rgb565_byte_swap);
+    mp_lcd_err_t sdl_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size,  bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
     mp_lcd_err_t sdl_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
 
     int flush_thread(void *self_in);
@@ -163,9 +163,11 @@
         return LCD_OK;
     }
 
-    mp_lcd_err_t sdl_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap)
+    mp_lcd_err_t sdl_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
     {
         LCD_UNUSED(rgb565_byte_swap);
+        LCD_UNUSED(cmd_bits);
+        LCD_UNUSED(param_bits);
 
         mp_lcd_sdl_bus_obj_t *self = MP_OBJ_TO_PTR(obj);
 

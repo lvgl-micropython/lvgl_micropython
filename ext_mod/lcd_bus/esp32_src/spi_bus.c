@@ -3,6 +3,7 @@
 #include "lcd_types.h"
 #include "modlcd_bus.h"
 #include "spi_bus.h"
+#include "mp_spi_common.h"
 
 // esp-idf includes
 #include "driver/spi_common.h"
@@ -25,28 +26,37 @@
 #include <string.h>
 
 
-typedef struct _micropy_spi_bus_obj_t {
-    spi_host_device_t host;
-    int8_t sck;
-    int8_t mosi;
-    int8_t miso;
-    int8_t active_devices;
-    int state;
+/*
+typedef enum _mp_spi_state_t {
+    MP_SPI_STATE_STOPPED,
+    MP_SPI_STATE_STARTED,
+    MP_SPI_STATE_SENDING
+} mp_spi_state_t;
 
-} micropy_spi_bus_obj_t;
+typedef struct _machine_hw_spi_bus_obj_t {
+    uint8_t host;
+    mp_obj_t sck;
+    mp_obj_t mosi;
+    mp_obj_t miso;
+    int16_t active_devices;
+    mp_spi_state_t state;
+    void *user_data;
+} machine_hw_spi_bus_obj_t;
 
 
-typedef struct _micropy_spi_obj_t {
+typedef struct _machine_hw_spi_obj_t {
     mp_obj_base_t base;
     uint32_t baudrate;
     uint8_t polarity;
     uint8_t phase;
     uint8_t bits;
     uint8_t firstbit;
-    int8_t cs;
-    spi_device_handle_t spi_device;
-    micropy_spi_bus_obj_t *spi_bus;
-} micropy_spi_obj_t;
+    mp_obj_t cs;
+    machine_hw_spi_bus_obj_t *spi_bus;
+    void *user_data;
+} machine_hw_spi_obj_t;
+
+*/
 
 
 mp_lcd_err_t spi_del(mp_obj_t obj);
@@ -95,16 +105,13 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     mp_lcd_spi_bus_obj_t *self = m_new_obj(mp_lcd_spi_bus_obj_t);
     self->base.type = &mp_lcd_spi_bus_type;
 
-
-    micropy_spi_obj_t *spi_bus = MP_OBJ_TO_PTR(args[ARG_spi_bus].u_obj);
+    machine_hw_spi_obj_t *spi_bus = MP_OBJ_TO_PTR(args[ARG_spi_bus].u_obj);
 
     self->callback = mp_const_none;
 
-    spi_host_device_t host = spi_bus->spi_bus->host;
-
-    self->host = host;
+    self->host = (spi_host_device_t)spi_bus->spi_bus->host;
     self->panel_io_handle.panel_io = NULL;
-    self->bus_handle = (esp_lcd_spi_bus_handle_t)host;
+    self->bus_handle = (esp_lcd_spi_bus_handle_t)self->host;
 
     self->panel_io_config.cs_gpio_num = (int)args[ARG_cs].u_int;
     self->panel_io_config.dc_gpio_num = (int)args[ARG_dc].u_int;
@@ -212,7 +219,6 @@ mp_obj_t mp_spi_bus_get_host(mp_obj_t obj)
 #if CONFIG_LCD_ENABLE_DEBUG_LOG
     printf("mp_spi_bus_get_host(self) -> %i\n", (uint8_t)self->host);
 #endif
-
     return mp_obj_new_int((uint8_t)self->host);
 }
 

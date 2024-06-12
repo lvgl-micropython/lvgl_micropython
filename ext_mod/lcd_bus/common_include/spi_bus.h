@@ -3,6 +3,7 @@
 
     //local_includes
     #include "modlcd_bus.h"
+    #include "mp_spi_common.h"
     #include "mphalport.h"
 
     // micropython includes
@@ -32,7 +33,6 @@
 
             void (*send_cmd)(mp_lcd_spi_bus_obj_t *self, int lcd_cmd);
             void (*send_param)(mp_lcd_spi_bus_obj_t *self, void *param, size_t param_size);
-
         };
 
     #else
@@ -43,13 +43,10 @@
             #include "extmod/machine_spi.h"
         #endif
 
-
         typedef struct _lcd_panel_io_spi_config_t {
-            mp_hal_pin_obj_t cs_gpio_num;
-            mp_hal_pin_obj_t dc_gpio_num;
+            mp_obj_t cs_gpio;
+            mp_hal_pin_obj_t dc_gpio;
             void (*spi_transfer)(mp_obj_base_t *obj, size_t len, const uint8_t *src, uint8_t *dest);
-            int lcd_cmd_bits;
-            int lcd_param_bits;
             struct {
                 unsigned int dc_low_on_data: 1;
                 unsigned int lsb_first: 1;
@@ -89,6 +86,9 @@
             void (*send_param)(mp_lcd_spi_bus_obj_t *self, void *param, size_t param_size);
 
             int host;
+            machine_hw_spi_obj_t *spi_bus;
+            uint8_t firstbit;
+            uint32_t freq;
         };
 
     #endif

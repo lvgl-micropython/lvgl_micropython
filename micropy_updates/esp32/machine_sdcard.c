@@ -32,7 +32,7 @@
 #include "extmod/vfs_fat.h"
 
 #if MICROPY_HW_ENABLE_SDCARD
-
+#include "mp_spi_common.h"
 #include "driver/sdmmc_host.h"
 #include "driver/sdspi_host.h"
 #include "sdmmc_cmd.h"
@@ -50,28 +50,38 @@
 const mp_obj_type_t machine_sdcard_type;
 
 
-typedef struct _micropy_sd_spi_bus_obj_t {
-    spi_host_device_t host;
-    int8_t sck;
-    int8_t mosi;
-    int8_t miso;
-    int8_t active_devices;
-    int state;
 
-} micropy_sd_spi_bus_obj_t;
+/*
+typedef enum _mp_spi_state_t {
+    MP_SPI_STATE_STOPPED,
+    MP_SPI_STATE_STARTED,
+    MP_SPI_STATE_SENDING
+} mp_spi_state_t;
+
+typedef struct _machine_hw_spi_bus_obj_t {
+    uint8_t host;
+    mp_obj_t sck;
+    mp_obj_t mosi;
+    mp_obj_t miso;
+    int16_t active_devices;
+    mp_spi_state_t state;
+    void *user_data;
+} machine_hw_spi_bus_obj_t;
 
 
-typedef struct _micropy_sd_spi_obj_t {
+typedef struct _machine_hw_spi_obj_t {
     mp_obj_base_t base;
     uint32_t baudrate;
     uint8_t polarity;
     uint8_t phase;
     uint8_t bits;
     uint8_t firstbit;
-    int8_t cs;
-    spi_device_handle_t spi_device;
-    micropy_sd_spi_bus_obj_t *spi_bus;
-} micropy_sd_spi_obj_t;
+    mp_obj_t cs;
+    machine_hw_spi_bus_obj_t *spi_bus;
+    void *user_data;
+} machine_hw_spi_obj_t;
+
+*/
 
 
 typedef struct _sdcard_obj_t {
@@ -158,11 +168,11 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
     int slot_num;
 
     if (args[ARG_spi_bus].u_obj != mp_const_none) {
-        micropy_sd_spi_obj_t *spi_bus = MP_OBJ_TO_PTR(args[ARG_spi_bus].u_obj);
+        machine_hw_spi_obj_t *spi_bus = MP_OBJ_TO_PTR(args[ARG_spi_bus].u_obj);
         slot_num = (int)spi_bus->spi_bus->host;
         is_spi = true;
     } else {
-        slot_num = args[ARG_slot].u_int;
+        slot_num = (int)args[ARG_slot].u_int;
         is_spi = false;
 
         if (slot_num < 0 || slot_num > 3) {
@@ -172,16 +182,17 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
 
     sdcard_card_obj_t *self = mp_obj_malloc_with_finaliser(sdcard_card_obj_t, &machine_sdcard_type);
     self->flags = 0;
+    self->sdspi_handle = -1;
     // Note that these defaults are macros that expand to structure
     // constants so we can't directly assign them to fields.
-    int freq = args[ARG_freq].u_int;
+    uint32_t freq = (uint32_t)args[ARG_freq].u_int;
     if (is_spi) {
         sdmmc_host_t _temp_host = SDSPI_HOST_DEFAULT();
-        _temp_host.max_freq_khz = freq / 1000;
+        _temp_host.max_freq_khz = (int)(freq / 1000);
         self->host = _temp_host;
     } else {
         sdmmc_host_t _temp_host = SDMMC_HOST_DEFAULT();
-        _temp_host.max_freq_khz = freq / 1000;
+        _temp_host.max_freq_khz = (int)(freq / 1000);
         self->host = _temp_host;
     }
 
@@ -231,11 +242,14 @@ static mp_obj_t sd_deinit(mp_obj_t self_in) {
     sdcard_card_obj_t *self = self_in;
 
     if (self->flags & SDCARD_CARD_FLAGS_HOST_INIT_DONE) {
-        if (self->host.flags & SDMMC_HOST_FLAG_DEINIT_ARG) {
+        if (self->sdspi_handle != -1) {
+            sdspi_host_remove_device(self->sdspi_handle)
+        } else if (self->host.flags & SDMMC_HOST_FLAG_DEINIT_ARG) {
             self->host.deinit_p(self->host.slot);
         } else {
             self->host.deinit();
         }
+
         self->flags &= ~SDCARD_CARD_FLAGS_HOST_INIT_DONE;
     }
 

@@ -3,6 +3,7 @@
 #include "lcd_types.h"
 #include "modlcd_bus.h"
 #include "spi_bus.h"
+#include "mp_spi_common.h"
 
 // micropython includes
 // #if defined(STM32_HAL_H) || defined(MICROPY_PY_NRF)
@@ -33,16 +34,48 @@
        #include "modules/machine/spi.h"
     #endif
 
+    /*
+    typedef enum _mp_spi_state_t {
+        MP_SPI_STATE_STOPPED,
+        MP_SPI_STATE_STARTED,
+        MP_SPI_STATE_SENDING
+    } mp_spi_state_t;
+
+    typedef struct _machine_hw_spi_bus_obj_t {
+        uint8_t host;
+        mp_obj_t sck;
+        mp_obj_t mosi;
+        mp_obj_t miso;
+        int16_t active_devices;
+        mp_spi_state_t state;
+        void *user_data;
+    } machine_hw_spi_bus_obj_t;
+
+
+    typedef struct _machine_hw_spi_obj_t {
+        mp_obj_base_t base;
+        uint32_t baudrate;
+        uint8_t polarity;
+        uint8_t phase;
+        uint8_t bits;
+        uint8_t firstbit;
+        mp_obj_t cs;
+        machine_hw_spi_bus_obj_t *spi_bus;
+        void *user_data;
+    } machine_hw_spi_obj_t;
+
+    */
+
     /* macros */
-    #define CS_ON() { if (self->panel_io_config.cs_gpio_num) mp_hal_pin_write(self->panel_io_config.cs_gpio_num, self->panel_io_config.flags.cs_high_active); }
-    #define CS_OFF() { if (self->panel_io_config.cs_gpio_num) mp_hal_pin_write(self->panel_io_config.cs_gpio_num, !self->panel_io_config.flags.cs_high_active); }
-    #define DC_CMD() { mp_hal_pin_write(self->panel_io_config.dc_gpio_num, self->panel_io_config.flags.dc_low_on_data); }
-    #define DC_DATA() { mp_hal_pin_write(self->panel_io_config.dc_gpio_num, !self->panel_io_config.flags.dc_low_on_data); }
+    #define CS_ON() { if (self->panel_io_config.cs_gpio != mp_const_none) mp_hal_pin_write((mp_hal_pin_obj_t)mp_hal_get_pin_obj(self->panel_io_config.cs_gpio), self->panel_io_config.flags.cs_high_active); }
+    #define CS_OFF() { if (self->panel_io_config.cs_gpio != mp_const_none) mp_hal_pin_write((mp_hal_pin_obj_t)mp_hal_get_pin_obj(self->panel_io_config.cs_gpio), !self->panel_io_config.flags.cs_high_active); }
+    #define DC_CMD() { mp_hal_pin_write(self->panel_io_config.dc_gpio, self->panel_io_config.flags.dc_low_on_data); }
+    #define DC_DATA() { mp_hal_pin_write(self->panel_io_config.dc_gpio, !self->panel_io_config.flags.dc_low_on_data); }
     /* end macros */
 
     /* forward declarations */
     mp_lcd_err_t s_spi_del(mp_obj_t obj);
-    mp_lcd_err_t s_spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap);
+    mp_lcd_err_t s_spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
     mp_lcd_err_t s_spi_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
     mp_lcd_err_t s_spi_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
     mp_lcd_err_t s_spi_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
@@ -59,19 +92,10 @@
     static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
         enum {
+            ARG_spi_bus,
             ARG_dc,
-            ARG_host,
-            ARG_sclk,
             ARG_freq,
-            ARG_mosi,
-            ARG_miso,
             ARG_cs,
-            ARG_wp,
-            ARG_hd,
-            ARG_quad_spi,
-            ARG_tx_only,
-            ARG_cmd_bits,
-            ARG_param_bits,
             ARG_dc_low_on_data,
             ARG_sio_mode,
             ARG_lsb_first,
@@ -80,24 +104,15 @@
         };
 
         const mp_arg_t make_new_args[] = {
-            { MP_QSTR_dc,               MP_ARG_OBJ  | MP_ARG_REQUIRED },
-            { MP_QSTR_host,             MP_ARG_OBJ  | MP_ARG_REQUIRED },
-            { MP_QSTR_sclk,             MP_ARG_OBJ  | MP_ARG_REQUIRED },
-            { MP_QSTR_freq,             MP_ARG_OBJ  | MP_ARG_REQUIRED },
-            { MP_QSTR_mosi,             MP_ARG_OBJ  | MP_ARG_REQUIRED },
-            { MP_QSTR_miso,             MP_ARG_OBJ  | MP_ARG_KW_ONLY, { .u_obj = mp_const_none } },
+            { MP_QSTR_spi_bus,          MP_ARG_OBJ  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED      },
+            { MP_QSTR_dc,               MP_ARG_OBJ  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED      },
+            { MP_QSTR_freq,             MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED      },
             { MP_QSTR_cs,               MP_ARG_OBJ  | MP_ARG_KW_ONLY, { .u_obj = mp_const_none } },
-            { MP_QSTR_wp,               MP_ARG_OBJ  | MP_ARG_KW_ONLY, { .u_obj = mp_const_none } },
-            { MP_QSTR_hd,               MP_ARG_OBJ  | MP_ARG_KW_ONLY, { .u_obj = mp_const_none } },
-            { MP_QSTR_quad_spi,         MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false   } },
-            { MP_QSTR_tx_only,          MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false   } },
-            { MP_QSTR_cmd_bits,         MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 8        } },
-            { MP_QSTR_param_bits,       MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 8        } },
             { MP_QSTR_dc_low_on_data,   MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false   } },
             { MP_QSTR_sio_mode,         MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false   } },
             { MP_QSTR_lsb_first,        MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false   } },
             { MP_QSTR_cs_high_active,   MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false   } },
-            { MP_QSTR_spi_mode,         MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 0        } }
+            { MP_QSTR_spi_mode,         MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 0        } },
         };
 
         mp_arg_val_t args[MP_ARRAY_SIZE(make_new_args)];
@@ -114,70 +129,45 @@
         mp_lcd_spi_bus_obj_t *self = m_new_obj(mp_lcd_spi_bus_obj_t);
         self->base.type = &mp_lcd_spi_bus_type;
 
-        #if !defined(IDF_VER)
-            self->callback = mp_const_none;
+        self->spi_bus = (machine_hw_spi_obj_t *)MP_OBJ_TO_PTR(args[ARG_spi_bus].u_obj)
 
-            mp_obj_base_t *spi;
-            mp_obj_t spi_args[10];
+    #if !defined(IDF_VER)
+        self->callback = mp_const_none;
 
-            spi_args[1] = MP_OBJ_NEW_SMALL_INT(args[ARG_freq].u_int);
-            uint8_t firstbit;
+        self->freq = (uint32_t)args[ARG_freq].u_int;
 
-            if (args[ARG_lsb_first].u_bool) {
-                firstbit = 1;
-            } else {
-                firstbit = 0;
-            }
+        if (args[ARG_lsb_first].u_bool) {
+            self->firstbit = 1;
+        } else {
+            self->firstbit = 0;
+        }
 
-            spi_args[0] = mp_obj_new_int_from_uint(args[ARG_host].u_int);
-            spi_args[1] = mp_obj_new_int_from_uint(args[ARG_freq].u_int);
-            spi_args[2] = MP_ROM_QSTR(MP_QSTR_firstbit);
-            spi_args[3] = mp_obj_new_int_from_uint(firstbit);
-            spi_args[4] = MP_ROM_QSTR(MP_QSTR_sck);
-            spi_args[5] = MP_OBJ_FROM_PTR(mp_hal_get_pin_obj(args[ARG_sclk].u_obj));
-            spi_args[6] = MP_ROM_QSTR(MP_QSTR_mosi);
-            spi_args[7] = MP_OBJ_FROM_PTR(mp_hal_get_pin_obj(args[ARG_mosi].u_obj));
+        self->callback = mp_const_none;
 
-            if (args[ARG_miso].u_obj != mp_const_none) {
-                spi_args[8] = MP_ROM_QSTR(MP_QSTR_miso);
-                spi_args[9] = MP_OBJ_FROM_PTR(mp_hal_get_pin_obj(args[ARG_miso].u_obj));
-                spi = MP_OBJ_TO_PTR(MP_OBJ_TYPE_GET_SLOT(&machine_spi_type, make_new)((mp_obj_t)&machine_spi_type, 2, 4, spi_args));
-            } else {
-                spi = MP_OBJ_TO_PTR(MP_OBJ_TYPE_GET_SLOT(&machine_spi_type, make_new)((mp_obj_t)&machine_spi_type, 2, 3, spi_args));
-            }
+        self->host = (int)self->spi_bus->spi_bus->host;
 
-            self->callback = mp_const_none;
+        self->panel_io_config.cs_gpio = args[ARG_cs].u_obj;
+        self->panel_io_config.dc_gpio = (mp_hal_pin_obj_t)mp_hal_get_pin_obj(args[ARG_dc].u_obj);
+        self->panel_io_config.flags.dc_low_on_data = args[ARG_dc_low_on_data].u_bool;
+        self->panel_io_config.flags.lsb_first = args[ARG_lsb_first].u_bool;
+        self->panel_io_config.flags.cs_high_active = args[ARG_cs_high_active].u_bool;
 
-            self->bus_handle = spi;
-            self->host = (int)args[ARG_host].u_int;
+        mp_hal_pin_output(self->panel_io_config.dc_gpio);
+        mp_hal_pin_write(self->panel_io_config.dc_gpio, !self->panel_io_config.flags.dc_low_on_data);
 
-            if (args[ARG_cs].u_obj != mp_const_none) {
-                self->panel_io_config.cs_gpio_num = (mp_hal_pin_obj_t)mp_hal_get_pin_obj(args[ARG_cs].u_obj);
-            }
-            self->panel_io_config.dc_gpio_num = (mp_hal_pin_obj_t)mp_hal_get_pin_obj(args[ARG_dc].u_obj);
-            self->panel_io_config.lcd_cmd_bits = args[ARG_cmd_bits].u_int;
-            self->panel_io_config.lcd_param_bits = args[ARG_param_bits].u_int;
-            self->panel_io_config.flags.dc_low_on_data = args[ARG_dc_low_on_data].u_bool;
-            self->panel_io_config.flags.lsb_first = args[ARG_lsb_first].u_bool;
-            self->panel_io_config.flags.cs_high_active = args[ARG_cs_high_active].u_bool;
+        if (self->panel_io_config.cs_gpio != mp_const_none) {
+            mp_hal_pin_output(mp_hal_get_pin_obj(self->panel_io_config.cs_gpio));
+            mp_hal_pin_write(mp_hal_get_pin_obj(self->panel_io_config.cs_gpio), !self->panel_io_config.flags.cs_high_active);
+        }
 
-            mp_hal_pin_output(self->panel_io_config.dc_gpio_num);
-            mp_hal_pin_write(self->panel_io_config.dc_gpio_num, !self->panel_io_config.flags.dc_low_on_data);
+        self->panel_io_handle.del = s_spi_del;
+        self->panel_io_handle.init = s_spi_init;
+        self->panel_io_handle.tx_param = s_spi_tx_param;
+        self->panel_io_handle.rx_param = s_spi_rx_param;
+        self->panel_io_handle.tx_color = s_spi_tx_color;
+        self->panel_io_handle.get_lane_count = s_spi_get_lane_count;
 
-            if (self->panel_io_config.cs_gpio_num) {
-                mp_hal_pin_output(self->panel_io_config.cs_gpio_num);
-                mp_hal_pin_write(self->panel_io_config.cs_gpio_num, !self->panel_io_config.flags.cs_high_active);
-            }
-
-            self->panel_io_handle.del = s_spi_del;
-            self->panel_io_handle.init = s_spi_init;
-            self->panel_io_handle.tx_param = s_spi_tx_param;
-            self->panel_io_handle.rx_param = s_spi_rx_param;
-            self->panel_io_handle.tx_color = s_spi_tx_color;
-            self->panel_io_handle.get_lane_count = s_spi_get_lane_count;
-
-            self->panel_io_config.spi_transfer = ((mp_machine_spi_p_t *)MP_OBJ_TYPE_GET_SLOT(spi->type, protocol))->transfer;
-        #endif /* !defined(IDF_VER) */
+    #endif /* !defined(IDF_VER) */
 
         return MP_OBJ_FROM_PTR(self);
     }
@@ -190,23 +180,54 @@
     }
 
 
-    mp_lcd_err_t s_spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap)
+    mp_lcd_err_t s_spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
     {
         LCD_UNUSED(rgb565_byte_swap);
 
         mp_lcd_spi_bus_obj_t *self = MP_OBJ_TO_PTR(obj);
 
-        if (self->panel_io_config.lcd_cmd_bits == 16) {
+        self->panel_io_config.lcd_cmd_bits = cmd_bits;
+        self->panel_io_config.lcd_param_bits = param_bits;
+
+        uint8_t bits;
+
+        if (cmd_bits == 16) {
             self->send_cmd = send_cmd_16;
+            bits = 16;
         } else {
             self->send_cmd = send_cmd_8;
+            bits = 8;
         }
 
-        if (self->panel_io_config.lcd_param_bits == 16) {
+        if (param_bits == 16) {
             self->send_param = send_param_16;
+            bits = 16;
         } else {
             self->send_param = send_param_8;
         }
+
+        mp_obj_base_t *spi;
+        mp_obj_t spi_args[12];
+
+
+        spi_args[0] = mp_obj_new_int(self->host);
+        spi_args[1] = mp_obj_new_int_from_uint(self->freq);
+        spi_args[2] = MP_ROM_QSTR(MP_QSTR_bits);
+        spi_args[3] = mp_obj_new_int_from_uint(bits);
+        spi_args[4] = MP_ROM_QSTR(MP_QSTR_firstbit);
+        spi_args[5] = mp_obj_new_int_from_uint(self->firstbit);
+        spi_args[6] = MP_ROM_QSTR(MP_QSTR_sck);
+        spi_args[7] = self->spi_bus->spi_bus->sck;
+        spi_args[8] = MP_ROM_QSTR(MP_QSTR_mosi);
+        spi_args[9] = self->spi_bus->spi_bus->mosi;
+        spi_args[10] = MP_ROM_QSTR(MP_QSTR_miso);
+        spi_args[11] = self->spi_bus->spi_bus->miso;
+
+
+        spi = MP_OBJ_TO_PTR(MP_OBJ_TYPE_GET_SLOT(&machine_spi_type, make_new)((mp_obj_t)&machine_spi_type, 2, 5, spi_args));
+
+        self->bus_handle = spi;
+        self->panel_io_config.spi_transfer = ((mp_machine_spi_p_t *)MP_OBJ_TYPE_GET_SLOT(spi->type, protocol))->transfer;
 
         return LCD_OK;
     }

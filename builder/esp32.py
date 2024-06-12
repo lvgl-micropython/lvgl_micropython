@@ -317,7 +317,6 @@ def parse_args(extra_args, lv_cflags, brd):
     else:
         lv_cflags = '-DLV_KCONFIG_IGNORE=1'
 
-
     return extra_args, lv_cflags, board
 
 
@@ -335,9 +334,9 @@ submodules_cmd = []
 SCRIPT_DIR = ''
 
 
-def build_commands(_, extra_args, script_path, lv_cflags, ___):
+def build_commands(_, extra_args, script_dir, lv_cflags, ___):
     global SCRIPT_DIR
-    SCRIPT_DIR = script_path
+    SCRIPT_DIR = script_dir
 
     clean_cmd.extend(esp_cmd[:])
     clean_cmd[1] = 'clean'
@@ -352,7 +351,8 @@ def build_commands(_, extra_args, script_path, lv_cflags, ___):
         f'LV_CFLAGS="{lv_cflags}"',
         f'LV_PORT=esp32',
         f'BOARD={board}',
-        'USER_C_MODULES=../../../../../ext_mod/micropython.cmake'
+        'USER_C_MODULES=../../../../../ext_mod/micropython.cmake',
+        f'"CFLAGS_EXTRA=-I{script_dir}/micropy_updates/common"'
     ])
 
     esp_cmd.extend(extra_args)

@@ -50,7 +50,7 @@ compile_cmd = []
 submodules_cmd = []
 
 
-def build_commands(_, extra_args, __, lv_cflags, board):
+def build_commands(_, extra_args, script_path, lv_cflags, board):
     rp2_cmd.extend(extra_args)
 
     if lv_cflags:
@@ -71,6 +71,7 @@ def build_commands(_, extra_args, __, lv_cflags, board):
 
     compile_cmd.extend(rp2_cmd[:])
     compile_cmd.pop(1)
+    compile_cmd.append(f'"CFLAGS_EXTRA=-I{script_path}/micropy_updates/common"')
 
     submodules_cmd.extend(rp2_cmd[:])
     submodules_cmd[1] = 'submodules'
@@ -119,6 +120,16 @@ def submodules():
 
 
 def compile():  # NOQA
+    import shutil
+
+    src_path = 'micropy_updates/rp2'
+    dst_path = 'lib/micropython/ports/rp2'
+
+    for file in os.listdir(src_path):
+        src_file = os.path.join(src_path, file)
+        dst_file = os.path.join(dst_path, file)
+        shutil.copyfile(src_file, dst_file)
+
     if 'PICO_SDK_PATH' not in os.environ:
         os.environ['PICO_SDK_PATH'] = (
             f'{os.getcwd()}/lib/micropython/lib/pico-sdk'
