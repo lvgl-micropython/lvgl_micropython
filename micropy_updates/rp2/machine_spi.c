@@ -128,16 +128,16 @@ typedef struct _machine_hw_spi_obj_t {
 machine_hw_spi_bus_obj_t rp2_machine_spi_bus_obj[] = {
     {
         0,
-        mp_obj_new_int_from_uint(MICROPY_HW_SPI0_SCK),
-        mp_obj_new_int_from_uint(MICROPY_HW_SPI0_MOSI),
-        mp_obj_new_int_from_uint(MICROPY_HW_SPI0_MISO),
+        mp_obj_new_int(MICROPY_HW_SPI0_SCK),
+        mp_obj_new_int(MICROPY_HW_SPI0_MOSI),
+        mp_obj_new_int(MICROPY_HW_SPI0_MISO),
         0, 0, (const void *)spi0
     },
     {
         1,
-        mp_obj_new_int_from_uint(MICROPY_HW_SPI1_SCK),
-        mp_obj_new_int_from_uint(MICROPY_HW_SPI1_MOSI),
-        mp_obj_new_int_from_uint(MICROPY_HW_SPI1_MISO),
+        mp_obj_new_int(MICROPY_HW_SPI1_SCK),
+        mp_obj_new_int(MICROPY_HW_SPI1_MOSI),
+        mp_obj_new_int(MICROPY_HW_SPI1_MISO),
         0, 0, (const void *)spi1
     },
 };
