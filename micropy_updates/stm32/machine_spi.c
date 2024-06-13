@@ -167,7 +167,7 @@ mp_obj_t machine_hard_spi_make_new(const mp_obj_type_t *type, size_t n_args, siz
     // set the SPI configuration values
 
     spi_t *spi = (spi_t *)self->spi_bus->user_data;
-    SPI_InitTypeDef *init = spi->spi->Init;
+    SPI_InitTypeDef *init = &spi->spi->Init;
 
     init->Mode = SPI_MODE_MASTER;
 
