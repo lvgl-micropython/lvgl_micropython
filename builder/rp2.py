@@ -7,10 +7,14 @@ from . import update_mphalport
 
 
 board_variant = None
+board = None
 
 
-def parse_args(extra_args, lv_cflags, board):
+def parse_args(extra_args, lv_cflags, brd):
     global board_variant
+    global board
+
+    board = brd
 
     if board == 'WEACTSTUDIO':
         rp2_argParser = ArgumentParser(prefix_chars='-B')
@@ -137,6 +141,27 @@ def compile():  # NOQA
     return_code, _ = spawn(compile_cmd, cmpl=True)
     if return_code != 0:
         sys.exit(return_code)
+
+    os.remove('build/lvgl_header.h')
+
+    for f in os.listdir('build'):
+        if f.startswith('lvgl'):
+            continue
+
+        os.remove(os.path.join('build', f))
+
+    import shutil
+
+    if board_variant:
+        src = f'lib/micropython/ports/rp2/build-{board}_{board_variant}/firmware.uf2'
+        dst = f'build/lvgl_micropy_{board}_{board_variant}.uf2'
+    else:
+        src = f'lib/micropython/ports/rp2/build-{board}_{board_variant}/firmware.uf2'
+        dst = f'build/lvgl_micropy_{board}.uf2'
+
+    shutil.copyfile(src, dst)
+
+    print(f'compiled binary is {os.path.abspath(dst)}')
 
 
 def mpy_cross():

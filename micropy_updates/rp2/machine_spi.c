@@ -33,6 +33,8 @@
 #include "hardware/spi.h"
 #include "hardware/dma.h"
 
+#define SPI_UNUSED(x) ((void)x)
+
 #define DEFAULT_SPI_BAUDRATE    (1000000)
 #define DEFAULT_SPI_POLARITY    (0)
 #define DEFAULT_SPI_PHASE       (0)
@@ -129,23 +131,17 @@ static machine_hw_spi_bus_obj_t machine_spi_bus_obj[] = {
         mp_obj_new_int_from_uint(MICROPY_HW_SPI0_SCK),
         mp_obj_new_int_from_uint(MICROPY_HW_SPI0_MOSI),
         mp_obj_new_int_from_uint(MICROPY_HW_SPI0_MISO),
-        0, 0, (void *)spi0
+        0, 0, (const void *)spi0
     },
     {
         1,
         mp_obj_new_int_from_uint(MICROPY_HW_SPI1_SCK),
         mp_obj_new_int_from_uint(MICROPY_HW_SPI1_MOSI),
         mp_obj_new_int_from_uint(MICROPY_HW_SPI1_MISO),
-        0, 0, (void *)spi1
+        0, 0, (const void *)spi1
     },
 };
 
-static void machine_spi_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
-    machine_spi_obj_t *self = MP_OBJ_TO_PTR(self_in);
-    mp_printf(print, "SPI(%u, baudrate=%u, polarity=%u, phase=%u, bits=%u, sck=%u, mosi=%u, miso=%u)",
-        self->spi_bus->spi_id, self->baudrate, self->spi_bus->polarity, self->spi_bus->phase, self->bits,
-        self->spi_bus->sck, self->spi_bus->mosi, self->spi_bus->miso);
-}
 
 mp_obj_t machine_spi_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
     enum { ARG_id, ARG_baudrate, ARG_polarity, ARG_phase, ARG_bits, ARG_firstbit, ARG_cs, ARG_sck, ARG_mosi, ARG_miso };
@@ -242,20 +238,12 @@ mp_obj_t machine_spi_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
 }
 
 static void machine_spi_init(mp_obj_base_t *self_in, size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    enum { ARG_baudrate, ARG_polarity, ARG_phase, ARG_bits, ARG_firstbit };
-    static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_baudrate, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = -1} },
-        { MP_QSTR_polarity, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = -1} },
-        { MP_QSTR_phase,    MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = -1} },
-        { MP_QSTR_bits,     MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = -1} },
-        { MP_QSTR_firstbit, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = -1} },
-    };
-
-    // Parse the arguments.
-    machine_spi_obj_t *self = (machine_spi_obj_t *)self_in;
-    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
-    mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+    SPI_UNUSED(self_in);
+    SPI_UNUSED(n_args);
+    SPI_UNUSED(pos_args);
+    SPI_UNUSED(kw_args);
 }
+
 
 static void machine_spi_deinit(mp_obj_base_t *self_in)
 {
@@ -288,8 +276,6 @@ static void machine_spi_transfer(mp_obj_base_t *self_in, size_t len, const uint8
     while (self->spi_bus->state == MP_SPI_STATE_SENDING) {}
 
     self->spi_bus->state = MP_SPI_STATE_SENDING;
-
-    spi_init(, self->baudrate);
 
     spi_inst_t *const spi_inst = (spi_inst_t *const)self->spi_bus->user_data;
 
@@ -392,7 +378,6 @@ MP_DEFINE_CONST_OBJ_TYPE(
     MP_QSTR_SPI,
     MP_TYPE_FLAG_NONE,
     make_new, machine_spi_make_new,
-    print, machine_spi_print,
     protocol, &machine_spi_p,
     buffer, machine_spi_get_buffer,
     locals_dict, &mp_machine_spi_locals_dict

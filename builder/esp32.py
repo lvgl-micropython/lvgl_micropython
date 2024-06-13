@@ -901,13 +901,24 @@ def compile():  # NOQA
 
         build_name = f'build-{board}'
 
+        os.remove('build/lvgl_header.h')
+
+        for f in os.listdir('build'):
+            if f.startswith('lvgl'):
+                continue
+
+            os.remove(os.path.join('build', f))
+
         if board_variant:
             build_name += f'-{board_variant}'
 
-        build_bin_file = os.path.abspath(
-            f'lib/micropython/ports/esp32/{build_name}'
-        )
-        build_bin_file = os.path.join(build_bin_file, f'{build_name}.bin')
+        build_bin_file = f'build/lvgl_micropy_{build_name[6:]}-{flash_size}'
+        if oct_flash:
+            build_bin_file += '_OCTFLASH'
+
+        build_bin_file += '.bin'
+        build_bin_file = os.path.abspath(build_bin_file)
+
         cmd = f'{python_path} {esp_tool_path} {out_cmd}'
         cmd = cmd.replace('write_flash', f'merge_bin -o {build_bin_file}')
         cmd = cmd.replace('--flash_freq 80m ', '')

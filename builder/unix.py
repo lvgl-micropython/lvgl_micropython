@@ -237,6 +237,22 @@ def compile():  # NOQA
     if return_code != 0:
         sys.exit(return_code)
 
+    os.remove('build/lvgl_header.h')
+
+    for f in os.listdir('build'):
+        if f.startswith('lvgl'):
+            continue
+
+        os.remove(os.path.join('build', f))
+
+    import shutil
+
+    src = f'lib/micropython/ports/unix/build-{variant}/micropython'
+    dst = f'build/lvgl_micropy_unix'
+    shutil.copyfile(src, dst)
+
+    print(f'compiled binary is {os.path.abspath(dst)}')
+
 
 def mpy_cross():
     _cmd = [

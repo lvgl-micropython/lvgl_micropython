@@ -4,8 +4,13 @@ from . import spawn
 from . import generate_manifest
 from . import update_mphalport
 
+board = None
+board_variant = None
 
-def parse_args(extra_args, lv_cflags, board):
+def parse_args(extra_args, lv_cflags, brd):
+    global board
+    board = brd
+
     return extra_args, lv_cflags, board
 
 
@@ -107,6 +112,27 @@ def compile():  # NOQA
     return_code, _ = spawn(compile_cmd, cmpl=True)
     if return_code != 0:
         sys.exit(return_code)
+
+    os.remove('build/lvgl_header.h')
+
+    for f in os.listdir('build'):
+        if f.startswith('lvgl'):
+            continue
+
+        os.remove(os.path.join('build', f))
+
+    import shutil
+
+    if board_variant:
+        src = f'lib/micropython/ports/stm32/build-{board}_{board_variant}/firmware.dfu'
+        dst = f'build/lvgl_micropy_{board}_{board_variant}.dfu'
+    else:
+        src = f'lib/micropython/ports/stm32/build-{board}_{board_variant}/firmware.dfu'
+        dst = f'build/lvgl_micropy_{board}.dfu'
+
+    shutil.copyfile(src, dst)
+
+    print(f'compiled binary is {os.path.abspath(dst)}')
 
 
 def mpy_cross():
