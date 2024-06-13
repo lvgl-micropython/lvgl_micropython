@@ -68,7 +68,7 @@ typedef struct _machine_hw_spi_obj_t {
 /******************************************************************************/
 // Implementation of hard SPI for machine module
 
-static const machine_hw_spi_bus_obj_t machine_hard_spi_bus_obj[] = {
+static machine_hw_spi_bus_obj_t machine_hard_spi_bus_obj[] = {
     {
         .host = 1,
         .sck = MP_OBJ_NULL,
