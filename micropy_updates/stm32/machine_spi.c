@@ -167,14 +167,16 @@ mp_obj_t machine_hard_spi_make_new(const mp_obj_type_t *type, size_t n_args, siz
     // set the SPI configuration values
 
     spi_t *spi = (spi_t *)self->spi_bus->user_data;
-    spi->spi->Init->Mode = SPI_MODE_MASTER;
+    SPI_InitTypeDef *init = spi->spi->Init;
+
+    init->Mode = SPI_MODE_MASTER;
 
     // these parameters are not currently configurable
-    spi->spi->Init->Direction = SPI_DIRECTION_2LINES;
-    spi->spi->Init->NSS = SPI_NSS_SOFT;
-    spi->spi->Init->TIMode = SPI_TIMODE_DISABLE;
-    spi->spi->Init->CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-    spi->spi->Init->CRCPolynomial = 0;
+    init->Direction = SPI_DIRECTION_2LINES;
+    init->NSS = SPI_NSS_SOFT;
+    init->TIMode = SPI_TIMODE_DISABLE;
+    init->CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+    init->CRCPolynomial = 0;
 
     self->polarity = (uint8_t)args[ARG_polarity].u_int;
     self->phase = (uint8_t)args[ARG_phase].u_int;

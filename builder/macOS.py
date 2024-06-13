@@ -80,8 +80,7 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
             '-Wno-unused-function '
             '-Wno-double-promotion '
             '-Wno-unused-command-line-argument '
-            '-Wno-missing-field-initializers '
-            f'-I{script_dir}/micropy_updates/common"'
+            '-Wno-missing-field-initializers'
             # 'export CPPFLAGS="-I/opt/homebrew/opt/libffi/include"'
         )
     ])

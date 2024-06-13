@@ -71,8 +71,7 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
     unix_cmd.extend([
         f'LV_CFLAGS="{lv_cflags}"',
         f'LV_PORT=unix',
-        f'USER_C_MODULES="{script_dir}/ext_mod"',
-        f'"CFLAGS_EXTRA=-Wno-missing-field-initializers -I{script_dir}/micropy_updates/common"'
+        f'USER_C_MODULES="{script_dir}/ext_mod"'
     ])
 
     unix_cmd.extend(extra_args)

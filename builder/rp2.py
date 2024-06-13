@@ -71,7 +71,6 @@ def build_commands(_, extra_args, script_path, lv_cflags, board):
 
     compile_cmd.extend(rp2_cmd[:])
     compile_cmd.pop(1)
-    compile_cmd.append(f'"CFLAGS_EXTRA=-I{script_path}/micropy_updates/common"')
 
     submodules_cmd.extend(rp2_cmd[:])
     submodules_cmd[1] = 'submodules'
