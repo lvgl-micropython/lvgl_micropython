@@ -165,7 +165,9 @@ mp_obj_t machine_hard_spi_make_new(const mp_obj_type_t *type, size_t n_args, siz
     }
 
     // set the SPI configuration values
-    SPI_InitTypeDef *init = &((spi_t *)(self->spi_bus->user_data)->Init);
+
+    spi_t *spi = (spi_t *)self->spi_bus->user_data
+    SPI_InitTypeDef *init = spi->Init;
     init->Mode = SPI_MODE_MASTER;
 
     // these parameters are not currently configurable
@@ -200,7 +202,7 @@ mp_obj_t machine_hard_spi_make_new(const mp_obj_type_t *type, size_t n_args, siz
             mp_raise_OSError(-ret);
         }
 
-        self->spi_bus->state == MP_SPI_STATE_STARTED;
+        self->spi_bus->state = MP_SPI_STATE_STARTED;
     }
 
     if (self->cs != mp_const_none) {
