@@ -166,16 +166,15 @@ mp_obj_t machine_hard_spi_make_new(const mp_obj_type_t *type, size_t n_args, siz
 
     // set the SPI configuration values
 
-    spi_t *spi = (spi_t *)self->spi_bus->user_data
-    SPI_InitTypeDef *init = spi->Init;
-    init->Mode = SPI_MODE_MASTER;
+    spi_t *spi = (spi_t *)self->spi_bus->user_data;
+    spi->Init->Mode = SPI_MODE_MASTER;
 
     // these parameters are not currently configurable
-    init->Direction = SPI_DIRECTION_2LINES;
-    init->NSS = SPI_NSS_SOFT;
-    init->TIMode = SPI_TIMODE_DISABLE;
-    init->CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-    init->CRCPolynomial = 0;
+    spi->Init->Direction = SPI_DIRECTION_2LINES;
+    spi->Init->NSS = SPI_NSS_SOFT;
+    spi->Init->TIMode = SPI_TIMODE_DISABLE;
+    spi->Init->CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+    spi->Init->CRCPolynomial = 0;
 
     self->polarity = (uint8_t)args[ARG_polarity].u_int;
     self->phase = (uint8_t)args[ARG_phase].u_int;
@@ -187,7 +186,7 @@ mp_obj_t machine_hard_spi_make_new(const mp_obj_type_t *type, size_t n_args, siz
     if (self->spi_bus->state == MP_SPI_STATE_STOPPED) {
         // set configurable parameters
         spi_set_params(
-            (const spi_t *)(self->spi_bus->user_data),
+            (const spi_t *)self->spi_bus->user_data,
             0xffffffff,
             self->baudrate,
             self->polarity,
@@ -197,7 +196,7 @@ mp_obj_t machine_hard_spi_make_new(const mp_obj_type_t *type, size_t n_args, siz
         );
 
         // init the SPI bus
-        int ret = spi_init((const spi_t *)(self->spi_bus->user_data), false);
+        int ret = spi_init((const spi_t *)self->spi_bus->user_data, false);
         if (ret != 0) {
             mp_raise_OSError(-ret);
         }
@@ -246,7 +245,7 @@ static void machine_hard_spi_transfer(mp_obj_base_t *self_in, size_t len, const 
     }
 
     if (!self->active) {
-        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("SPI Device is not longer active"));
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("SPI Device is no longer active"));
         return;
     }
 
