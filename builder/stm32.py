@@ -127,7 +127,7 @@ def compile():  # NOQA
         src = f'lib/micropython/ports/stm32/build-{board}_{board_variant}/firmware.dfu'
         dst = f'build/lvgl_micropy_{board}_{board_variant}.dfu'
     else:
-        src = f'lib/micropython/ports/stm32/build-{board}_{board_variant}/firmware.dfu'
+        src = f'lib/micropython/ports/stm32/build-{board}/firmware.dfu'
         dst = f'build/lvgl_micropy_{board}.dfu'
 
     shutil.copyfile(src, dst)
