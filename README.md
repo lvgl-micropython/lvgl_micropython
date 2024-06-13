@@ -135,7 +135,7 @@ Compiling for RP2
 Compiling for STM32:
   * Ubuntu (Linux): you can install all of these using `apt-get install` 
     * gcc-arm-none-eabi 
-    * libnewlib-arm-none-eabi
+    * libnewlib-arm-none-eabi: maybe??
     * build-essential
     * ninja-build
     * python
