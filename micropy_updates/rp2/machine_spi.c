@@ -125,19 +125,19 @@ typedef struct _machine_hw_spi_obj_t {
 
 */
 
-static machine_hw_spi_bus_obj_t machine_spi_bus_obj[] = {
+machine_hw_spi_bus_obj_t rp2_machine_spi_bus_obj[] = {
     {
         0,
-        (const mp_obj_t)mp_obj_new_int_from_uint(MICROPY_HW_SPI0_SCK),
-        (const mp_obj_t)mp_obj_new_int_from_uint(MICROPY_HW_SPI0_MOSI),
-        (const mp_obj_t)mp_obj_new_int_from_uint(MICROPY_HW_SPI0_MISO),
+        mp_obj_new_int_from_uint(MICROPY_HW_SPI0_SCK),
+        mp_obj_new_int_from_uint(MICROPY_HW_SPI0_MOSI),
+        mp_obj_new_int_from_uint(MICROPY_HW_SPI0_MISO),
         0, 0, (const void *)spi0
     },
     {
         1,
-        (const mp_obj_t)mp_obj_new_int_from_uint(MICROPY_HW_SPI1_SCK),
-        (const mp_obj_t)mp_obj_new_int_from_uint(MICROPY_HW_SPI1_MOSI),
-        (const mp_obj_t)mp_obj_new_int_from_uint(MICROPY_HW_SPI1_MISO),
+        mp_obj_new_int_from_uint(MICROPY_HW_SPI1_SCK),
+        mp_obj_new_int_from_uint(MICROPY_HW_SPI1_MOSI),
+        mp_obj_new_int_from_uint(MICROPY_HW_SPI1_MISO),
         0, 0, (const void *)spi1
     },
 };
@@ -164,14 +164,14 @@ mp_obj_t machine_spi_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
 
     // Get the SPI bus id.
     int spi_id = mp_obj_get_int(args[ARG_id].u_obj);
-    if (spi_id < 0 || spi_id >= MP_ARRAY_SIZE(machine_spi_bus_obj)) {
+    if (spi_id < 0 || spi_id >= MP_ARRAY_SIZE(rp2_machine_spi_bus_obj)) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("SPI(%d) doesn't exist"), spi_id);
     }
 
     machine_hw_spi_obj_t *self = m_new_obj(machine_hw_spi_obj_t);
     self->base.type = &machine_spi_type;
 
-    self->spi_bus = (machine_hw_spi_bus_obj_t *)&machine_spi_bus_obj[spi_id];
+    self->spi_bus = (machine_hw_spi_bus_obj_t *)&rp2_machine_spi_bus_obj[spi_id];
 
     self->baudrate = (uint32_t)args[ARG_baudrate].u_int;
     self->bits = (uint8_t)args[ARG_bits].u_int;
