@@ -23,8 +23,31 @@ jobs:
       run: |
         brew install --force ninja
 
-    - name: Build macOS port
-      run: python3 make.py macOS submodules clean mpy_cross DISPLAY=sdl_display INDEV=sdl_pointer
+    - name: Cached Deps
+      id: cache-deps
+      uses: actions/cache@v4
+      with:
+        path: lib/
+        key: ${{ runner.os }}-deps
+
+    - name: Get Build Deps
+      if: steps.cache-deps.outputs.cache-hit != 'true'
+      run: |
+        git submodule update --init lib/pycparser
+        
+        git submodule update --init -- lib/micropython
+        cd lib/micropython && git checkout v1.23.0 && cd ../.. 
+        
+        git submodule update --init -- lib/lvgl
+        cd lib/lvgl && git checkout master && cd ../.. 
+        
+        git submodule update --init -- lib/SDL
+        cd lib/SDL && git checkout release-2.30.2 && cd ../.. 
+        
+        git submodule update --init --recursive -- lib/esp-idf
+        export "IDF_PATH=${GITHUB_WORKSPACE}/lib/esp-idf"
+        ./lib/esp-idf/install.sh all
+        . ./lib/esp-idf/export.sh
 
     - name: Build ESP32 port
       run: python3 make.py esp32 submodules clean mpy_cross BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT DISPLAY=rgb_display INDEV=gt911
@@ -34,5 +57,8 @@ jobs:
 
     - name: Build Raspberry Pi PICO port
       run: python3 make.py rp2 submodules clean mpy_cross BOARD=RPI_PICO DISPLAY=rgb_display INDEV=gt911
+
+    - name: Build macOS port
+      run: python3 make.py macOS submodules clean mpy_cross DISPLAY=sdl_display INDEV=sdl_pointer
 
 
