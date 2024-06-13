@@ -13,17 +13,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - uses: ammaraskar/gcc-problem-matcher@master
-    - uses: carlosperate/arm-none-eabi-gcc-action@v1.8.1
-      with:
-        release: '9-2020-q2' # The arm-none-eabi-gcc release to use.
-
     - uses: actions/setup-python@v5
       with:
         python-version: '3.10'
 
     - name: Install Deps
-      run: sudo apt-get update && sudo apt-get install --assume-yes --allow-downgrades --allow-remove-essential --allow-change-held-packages build-essential pkg-config cmake ninja-build libffi-dev gnome-desktop-testing libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev fcitx-libs-dev libpipewire-0.3-dev libwayland-dev libdecor-0-dev ccache
+      run: sudo apt-get update && sudo apt-get install --assume-yes --allow-downgrades --allow-remove-essential --allow-change-held-packages build-essential pkg-config cmake ninja-build libffi-dev gnome-desktop-testing libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev fcitx-libs-dev libpipewire-0.3-dev libwayland-dev libdecor-0-dev ccache gcc-arm-none-eabi libnewlib-arm-none-eabi
 
     - name: Cached Deps
       id: cache-deps
