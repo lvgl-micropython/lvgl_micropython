@@ -149,11 +149,8 @@ mp_obj_t machine_hard_spi_make_new(const mp_obj_type_t *type, size_t n_args, siz
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    machine_hw_spi_obj_t
-
-
     // get static peripheral object
-    int spi_id = spi_find_index(mp_obj_get_int(args[ARG_id].u_obj));
+    int spi_id = spi_find_index(args[ARG_id].u_obj);
 
     machine_hw_spi_bus_obj_t *spi_bus = &machine_hard_spi_bus_obj[spi_id - 1];
     machine_hw_spi_obj_t *self = m_new_obj(machine_hw_spi_obj_t);
