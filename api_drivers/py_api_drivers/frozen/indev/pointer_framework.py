@@ -8,7 +8,7 @@ remap = _remap
 
 class PointerDriver(_indev_base.IndevBase):
 
-    def __init__(self, touch_cal=None, debug=False):  # NOQA
+    def __init__(self, touch_cal=None, startup_rotation=lv.DISPLAY_ROTATION._0, debug=False):  # NOQA
         self._last_x = -1
         self._last_y = -1
         self.__debug = debug
@@ -25,6 +25,7 @@ class PointerDriver(_indev_base.IndevBase):
         self._orig_height = self._height
         self._set_type(lv.INDEV_TYPE.POINTER)  # NOQA
         self.__cal_running = None
+        self.__startup_rotation = startup_rotation
 
     def __cal_callback(self, alphaX, betaX, deltaX, alphaY, betaY, deltaY):
         self._cal.alphaX = alphaX
@@ -77,9 +78,21 @@ class PointerDriver(_indev_base.IndevBase):
     def _calc_coords(self, x, y):
         if self.is_calibrated:
             cal = self._cal
-            xpos = int(round(x * cal.alphaX + y * cal.betaX + cal.deltaX))
-            ypos = int(round(x * cal.alphaY + y * cal.betaY + cal.deltaY))
-            return xpos, ypos
+            x = int(round(x * cal.alphaX + y * cal.betaX + cal.deltaX))
+            y = int(round(x * cal.alphaY + y * cal.betaY + cal.deltaY))
+
+        if (
+            self.__startup_rotation == lv.DISPLAY_ROTATION._180 or  # NOQA
+            self.__startup_rotation == lv.DISPLAY_ROTATION._270  # NOQA
+        ):
+            x = self._orig_width - x - 1
+            y = self._orig_height - y - 1
+
+        if (
+            self.__startup_rotation == lv.DISPLAY_ROTATION._90 or  # NOQA
+            self.__startup_rotation == lv.DISPLAY_ROTATION._270  # NOQA
+        ):
+            x, y = self._orig_height - y - 1, x
 
         return x, y
 

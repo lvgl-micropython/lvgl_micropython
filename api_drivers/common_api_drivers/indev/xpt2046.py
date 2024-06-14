@@ -23,6 +23,7 @@ class XPT2046(pointer_framework.PointerDriver):
         self,
         spi_bus,
         touch_cal=None,
+        startup_rotation=pointer_framework.lv.DISPLAY_ROTATION._0,
         debug=False
     ):
         self._debug = debug
@@ -39,7 +40,11 @@ class XPT2046(pointer_framework.PointerDriver):
         self.__margin = margin * margin
 
         self._spi = spi_bus
-        super().__init__(touch_cal=touch_cal, debug=debug)
+        super().__init__(
+            touch_cal=touch_cal,
+            startup_rotation=startup_rotation,
+            debug=debug
+        )
 
     def _read_reg(self, reg):
         self._trans_buf[0] = reg
