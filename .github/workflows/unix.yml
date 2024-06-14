@@ -67,11 +67,11 @@ jobs:
       with:
         format: "YYYY_MM_DD HH_mm_ss_SSS"
 
-    - name: Build Unix port
-      uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v4
       with:
         name: lvgl_micropy_unix-${{ steps.datetime.outputs.month }}.${{ steps.datetime.outputs.day }}.${{ steps.datetime.outputs.year }}-${{ steps.datetime.outputs.hours }}_${{ steps.datetime.outputs.minutes }}_${{ steps.datetime.outputs.seconds }}
         path: build/lvgl_micropy_unix
         if-no-files-found: ignore
 
+    - name: Build Unix port
       run: python3 make.py unix submodules clean mpy_cross DISPLAY=sdl_display INDEV=sdl_pointer
