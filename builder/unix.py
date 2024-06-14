@@ -252,7 +252,6 @@ def compile():  # NOQA
 
         os.remove(os.path.join('build', f))
 
-
     src = f'lib/micropython/ports/unix/build-{variant}/micropython'
     dst = f'build/lvgl_micropy_unix'
     shutil.copyfile(src, dst)

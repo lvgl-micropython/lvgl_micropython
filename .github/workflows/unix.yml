@@ -61,4 +61,15 @@ jobs:
       run: python3 make.py rp2 submodules clean mpy_cross BOARD=RPI_PICO DISPLAY=rgb_display INDEV=gt911
 
     - name: Build Unix port
+      id: unix_port
+      - uses: Kaven-Universe/github-action-current-date-time@v1
+        with:
+          format: "YYYY_MM_DD HH_mm_ss_SSS"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lvgl_micropy_unix-${{ steps.unix_port.outputs.month }}.${{ steps.unix_port.outputs.day }}.${{ steps.unix_port.outputs.year }}-${{ steps.unix_port.outputs.hours }}_${{ steps.unix_port.outputs.minutes }}_${{ steps.unix_port.outputs.seconds }}
+          path: build/lvgl_micropy_unix
+          if-no-files-found: ignore
+
       run: python3 make.py unix submodules clean mpy_cross DISPLAY=sdl_display INDEV=sdl_pointer
