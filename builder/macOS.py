@@ -61,6 +61,10 @@ SCRIPT_PATH = ''
 
 def build_commands(_, extra_args, script_dir, lv_cflags, board):
     global variant
+
+    if board is None:
+        board = 'standard'
+
     variant = board
 
     unix_cmd.append(f'{script_dir}/lib/micropython/ports/unix')
