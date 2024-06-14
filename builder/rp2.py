@@ -154,7 +154,7 @@ def compile():  # NOQA
         src = f'lib/micropython/ports/rp2/build-{board}_{board_variant}/firmware.uf2'
         dst = f'build/lvgl_micropy_{board}_{board_variant}.uf2'
     else:
-        src = f'lib/micropython/ports/rp2/build-{board}_{board_variant}/firmware.uf2'
+        src = f'lib/micropython/ports/rp2/build-{board}/firmware.uf2'
         dst = f'build/lvgl_micropy_{board}.uf2'
 
     shutil.copyfile(src, dst)
