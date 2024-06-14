@@ -23,18 +23,8 @@ jobs:
         python-version: '3.10'
 
     - name: Install Deps
-      run: sudo apt-get update && sudo apt-get install --assume-yes --allow-downgrades --allow-remove-essential --allow-change-held-packages build-essential pkg-config cmake ninja-build libffi-dev gnome-desktop-testing libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev fcitx-libs-dev libpipewire-0.3-dev libwayland-dev libdecor-0-dev ccache
-
-    - name: Cached Deps
-      id: cache-deps
-      uses: actions/cache@v4
-      with:
-        path: lib/esp-idf
-        key: ${{ runner.os }}-v1-deps
-
-    - name: Get Build Deps
-      if: steps.cache-deps.outputs.cache-hit != 'true'
       run: |
+        sudo apt-get update && sudo apt-get install --assume-yes --allow-downgrades --allow-remove-essential --allow-change-held-packages build-essential pkg-config cmake ninja-build libffi-dev gnome-desktop-testing libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev fcitx-libs-dev libpipewire-0.3-dev libwayland-dev libdecor-0-dev ccache
         git submodule update --init lib/pycparser
         
         git submodule update --init -- lib/micropython
@@ -46,7 +36,19 @@ jobs:
         git submodule update --init -- lib/SDL
         cd lib/SDL && git checkout release-2.30.2 && cd ../..
 
-        git submodule update --init --recursive -- lib/esp-idf
+    - name: Cached Deps
+      id: cache-deps
+      uses: actions/cache@v4
+      with:
+        path: lib/esp-idf
+        key: ${{ runner.os }}-v1-deps
+
+    - name: Get Build Deps
+      if: steps.cache-deps.outputs.cache-hit != 'true'
+      run: git submodule update --init --recursive -- lib/esp-idf
+
+    - name: Setup ESP-IDF
+      run: |
         export "IDF_PATH=${GITHUB_WORKSPACE}/lib/esp-idf"
         ./lib/esp-idf/install.sh all
         . ./lib/esp-idf/export.sh
