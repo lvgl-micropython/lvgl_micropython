@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 from . import spawn
 from . import generate_manifest
 from . import update_mphalport
@@ -135,14 +136,7 @@ def _run(c, spinner=False, cmpl=False):
 
 
 def build_sdl():
-    global variant
-
-    if variant is None:
-        variant = 'build-standard'
-    else:
-        variant = f'build-{variant}'
-
-    dst = f'lib/micropython/ports/unix/{variant}/SDL'
+    dst = f'lib/micropython/ports/unix/build-{variant}/SDL'
 
     if not os.path.exists(dst):
         os.makedirs(dst)
@@ -258,9 +252,8 @@ def compile():  # NOQA
 
         os.remove(os.path.join('build', f))
 
-    import shutil
 
-    src = f'lib/micropython/ports/unix/{variant}/micropython'
+    src = f'lib/micropython/ports/unix/build-{variant}/micropython'
     dst = f'build/lvgl_micropy_unix'
     shutil.copyfile(src, dst)
 
