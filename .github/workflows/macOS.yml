@@ -26,8 +26,8 @@ jobs:
       id: cache-deps
       uses: actions/cache@v4
       with:
-        path: lib/
-        key: ${{ runner.os }}-deps
+        path: lib/esp-idf
+        key: ${{ runner.os }}-v1-deps
 
     - name: Get Build Deps
       if: steps.cache-deps.outputs.cache-hit != 'true'
