@@ -127,19 +127,23 @@ typedef struct _machine_hw_spi_obj_t {
 
 machine_hw_spi_bus_obj_t rp2_machine_spi_bus_obj[] = {
     {
-        0,
-        mp_obj_new_int(MICROPY_HW_SPI0_SCK),
-        mp_obj_new_int(MICROPY_HW_SPI0_MOSI),
-        mp_obj_new_int(MICROPY_HW_SPI0_MISO),
-        0, 0, (const void *)spi0
+        .host = 0,
+        .sck = MP_OBJ_NULL,
+        .mosi = MP_OBJ_NULL,
+        .miso = MP_OBJ_NULL,
+        .active_devices = 0,
+        .state = 0,
+        .user_data = (const void *)spi0
     },
     {
-        1,
-        mp_obj_new_int(MICROPY_HW_SPI1_SCK),
-        mp_obj_new_int(MICROPY_HW_SPI1_MOSI),
-        mp_obj_new_int(MICROPY_HW_SPI1_MISO),
-        0, 0, (const void *)spi1
-    },
+        .host = 1,
+        .sck = MP_OBJ_NULL,
+        .mosi = MP_OBJ_NULL,
+        .miso = MP_OBJ_NULL,
+        .active_devices = 0,
+        .state = 0,
+        .user_data = (const void *)spi1
+    }
 };
 
 
@@ -171,8 +175,20 @@ mp_obj_t machine_spi_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     machine_hw_spi_obj_t *self = m_new_obj(machine_hw_spi_obj_t);
     self->base.type = &machine_spi_type;
 
-    self->spi_bus = (machine_hw_spi_bus_obj_t *)&rp2_machine_spi_bus_obj[spi_id];
+    machine_hw_spi_bus_obj_t *spi_bus = &rp2_machine_spi_bus_obj[spi_id];
+    if (spi_bus->sck == MP_OBJ_NULL) {
+        if (spi_id == 0 && .sck = MP_OBJ_NULL)
+            spi_bus->sck = mp_obj_new_int(MICROPY_HW_SPI0_SCK);
+            spi_bus->mosi = mp_obj_new_int(MICROPY_HW_SPI0_MOSI);
+            spi_bus->miso = mp_obj_new_int(MICROPY_HW_SPI0_MISO);
+        } else {
+            spi_bus->sck = mp_obj_new_int(MICROPY_HW_SPI1_SCK);
+            spi_bus->mosi = mp_obj_new_int(MICROPY_HW_SPI1_MOSI);
+            spi_bus->miso = mp_obj_new_int(MICROPY_HW_SPI1_MISO);
+        }
+    }
 
+    self->spi_bus = spi_bus;
     self->baudrate = (uint32_t)args[ARG_baudrate].u_int;
     self->bits = (uint8_t)args[ARG_bits].u_int;
     self->polarity = (uint8_t)args[ARG_polarity].u_int;

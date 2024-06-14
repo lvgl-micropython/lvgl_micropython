@@ -121,8 +121,6 @@ def compile():  # NOQA
 
         os.remove(os.path.join('build', f))
 
-    import shutil
-
     if board_variant:
         src = f'lib/micropython/ports/stm32/build-{board}_{board_variant}/firmware.dfu'
         dst = f'build/lvgl_micropy_{board}_{board_variant}.dfu'
