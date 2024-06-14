@@ -177,7 +177,7 @@ mp_obj_t machine_spi_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
 
     machine_hw_spi_bus_obj_t *spi_bus = &rp2_machine_spi_bus_obj[spi_id];
     if (spi_bus->sck == MP_OBJ_NULL) {
-        if (spi_id == 0 && .sck = MP_OBJ_NULL)
+        if (spi_id == 0) {
             spi_bus->sck = mp_obj_new_int(MICROPY_HW_SPI0_SCK);
             spi_bus->mosi = mp_obj_new_int(MICROPY_HW_SPI0_MOSI);
             spi_bus->miso = mp_obj_new_int(MICROPY_HW_SPI0_MISO);
