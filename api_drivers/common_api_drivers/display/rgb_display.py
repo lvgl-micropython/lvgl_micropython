@@ -52,7 +52,7 @@ class RGBDisplay(display_driver_framework.DisplayDriver):
 
         self.__flushing_fb_index = None
 
-    def _flush_ready_cb(self, buf_num, yield_to_task):
+    def _flush_ready_cb(self, buf_num):
         if (
             self.__flushing_fb_index is None or
             buf_num != self.__flushing_fb_index
