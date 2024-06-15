@@ -21,11 +21,13 @@ jobs:
     - name: Install Dependencies
       run: |
         brew install --force ninja 
-        git submodule update --init lib/pycparser
-        git submodule update --init --remote -- lib/micropython
-        git submodule update --init -- lib/lvgl
-        git submodule update --init -- lib/SDL
-        cd lib/SDL && git checkout release-2.30.2 && cd ../..
+        git submodule update --init -- lib/pycparser
+        git submodule update --init --jobs 4 -- lib/micropython        
+        git submodule update --init --jobs 4 -- lib/lvgl        
+        git submodule update --init --jobs 4 -- lib/SDL
+        cd lib/SDL
+        git checkout release-2.30.2
+        cd ../..
 
     - name: Cached Deps
       id: cache-deps
@@ -36,7 +38,11 @@ jobs:
 
     - name: Get Build Deps
       if: steps.cache-deps.outputs.cache-hit != 'true'
-      run: git submodule update --init --recursive --remote -- lib/esp-idf
+      run: |
+        git submodule update --init --jobs 4 -- lib/esp-idf
+        cd lib/esp-idf
+        git submodule update --init --jobs 4 -- components/bt/host/nimble/nimble components/esp_wifi components/esptool_py/esptool components/lwip/lwip components/mbedtls/mbedtls components/bt/controller/lib_esp32 components/bt/controller/lib_esp32c3_family
+        cd ../..
 
     - name: Setup ESP-IDF
       run: |

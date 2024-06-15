@@ -120,29 +120,31 @@ class Partition:
 
 
 def get_espidf():
-    if sys.platform.startswith('win'):
-        return
 
-    else:
-        cmd = [
-            'git',
-            'submodule',
-            'update',
-            '--init',
-            '--recursive',
-            '--remote',
-            '--',
-            'lib/esp-idf'
+    cmd = [
+        [
+            'git', 'submodule', 'update', '--init',
+            f'--jobs {os.cpu_count()}', '--', 'lib/esp-idf'
+        ],
+        ['cd', 'lib/esp-idf'],
+        [
+            'git', 'submodule', 'update', '--init',
+            f'--jobs {os.cpu_count()}', '--',
+            'components/bt/host/nimble/nimble',
+            'components/esp_wifi',
+            'components/esptool_py/esptool',
+            'components/lwip/lwip',
+            'components/mbedtls/mbedtls',
+            'components/bt/controller/lib_esp32',
+            'components/bt/controller/lib_esp32c3_family'
         ]
-        print()
-        print('collecting ESP-IDF v5.2.0')
-        print('this might take a while...')
-        result, _ = spawn(cmd, spinner=True)
-        if result != 0:
-            sys.exit(result)
-
-        # cmd_ = ['cd lib/esp-idf && git checkout v5.2.0']
-        # spawn(cmd_, out_to_screen=False)
+    ]
+    print()
+    print('collecting ESP-IDF v5.2.0')
+    print('this might take a while...')
+    result, _ = spawn(cmd, spinner=True)
+    if result != 0:
+        sys.exit(result)
 
 
 board_variant = None
@@ -368,15 +370,36 @@ def build_commands(_, extra_args, script_dir, lv_cflags, ___):
         submodules_cmd.append(f'BOARD_VARIANT={board_variant}')
 
 
-def get_idf_version():
+def get_idf_path():
     if 'IDF_PATH' in os.environ:
+        idf_path = os.environ['IDF_PATH']
+        if not os.path.exists(idf_path):
+            idf_path = None
+    else:
+        idf_path = None
+
+    return idf_path
+
+
+cached_idf_version = None
+
+
+def has_correct_idf():
+    global cached_idf_version
+
+    idf_path = get_idf_path()
+
+    if cached_idf_version is None and idf_path:
         exit_code, data = spawn(
-            ['python3', 'idf.py', '--version'],
+            ['python3', f'{idf_path}/tools/idf.py', '--version'],
             out_to_screen=False
         )
-        version = data.split('v')[-1].split('-')[0]
-        if version:
-            return version
+        if not exit_code:
+            version = data.split('v')[-1].split('-')[0]
+            if version:
+                cached_idf_version = version
+
+    return cached_idf_version is not None and cached_idf_version == '5.2.0'
 
 
 def build_manifest(
@@ -418,6 +441,62 @@ def clean(clean_mpy_cross):
     spawn(cmds, env=env)
 
 
+def get_clean_environment():
+    env = {
+        k: v for k, v in os.environ.items()
+        if not k.startswith('IDF')
+    }
+    if 'PATH' in env:
+        env['PATH'] = os.pathsep.join(
+            item for item in env['PATH'].split(os.pathsep)
+            if 'espressif' not in item and 'esp-idf' not in item
+        )
+
+    return env
+
+
+def environ_helper(idf_path):
+    env = get_clean_environment()
+
+    py_path = os.path.split(sys.executable)[0]
+    idf_path = os.path.abspath(idf_path)
+    idf_tools_path = os.path.join(idf_path, 'tools')
+
+    env['PATH'] = (
+        py_path + os.pathsep +
+        os.pathsep + idf_tools_path +
+        os.pathsep + env.get('PATH', '')
+    )
+    env['IDF_PATH'] = idf_path
+
+    for key, value in env.items():
+        os.environ[key] = value
+
+    if 'GITHUB_RUN_ID' in os.environ:
+        if sys.platform.startswith('win'):
+            env_cmds = [
+                ['echo', f"{py_path}", '|', 'Out-File',
+                 '-Append', '-FilePath', '$env:GITHUB_PATH',
+                 '-Encoding', 'utf8'],
+                ['echo', f"{idf_path}", '|', 'Out-File',
+                 '-Append', '-FilePath', '$env:GITHUB_PATH',
+                 '-Encoding', 'utf8'],
+                ['echo', f"{idf_tools_path}", '|', 'Out-File',
+                 '-Append', '-FilePath', '$env:GITHUB_PATH',
+                 '-Encoding', 'utf8']
+            ]
+        else:
+            env_cmds = [
+                ['echo', f"{py_path}", '>>', '$GITHUB_PATH'],
+                ['echo', f"{idf_path}", '>>', '$GITHUB_PATH'],
+                ['echo', f"{idf_tools_path}", '>>', '$GITHUB_PATH']
+            ]
+
+        spawn(env_cmds, out_to_screen=False)
+
+    return env
+
+
 IDF_ENVIRON_SET = False
 
 
@@ -426,126 +505,67 @@ def setup_idf_environ():
     # There were some modifications made with how the environment gets set up
     # @cheops put quite a bit of time in to research the best solution
     # and also with the testing of the code.
-    if not IDF_ENVIRON_SET:
+    if IDF_ENVIRON_SET or (not IDF_ENVIRON_SET and has_correct_idf()):
+        env = os.environ
+        IDF_ENVIRON_SET = True
+    elif not IDF_ENVIRON_SET:
         print('Getting ESP-IDF build Environment')
+        idf_path = 'lib/esp-idf'
 
-        if sys.platform.startswith('win'):
-            return None
+        if not os.path.exists(os.path.join(idf_path, 'export.sh')):
+            args = sys.argv[:]
 
-        idf_ver = get_idf_version()
+            if 'submodules' not in args:
+                args.insert(2, 'submodules')
 
-        if idf_ver is None or idf_ver != '5.2.0':
-            idf_path = 'lib/esp-idf'
+            args = " ".join(args)
 
-            if os.path.exists(os.path.join(idf_path, 'export.sh')):
+            sys.stderr.write('ESP-IDF version 5.2.0 is needed to compile\n')
+            sys.stderr.write(
+                'Please rerun the build using the command below...\n'
+            )
+            sys.stderr.write(f'"{sys.executable} {args}"\n\n')
+            sys.stderr.flush()
+            sys.exit(-1)
 
-                # this removes any IDF environment variable that may
-                # exist if the user has the ESP-IDF installed
-                env = {
-                    k: v
-                    for k, v in os.environ.items()
-                    if not k.startswith('IDF')
-                }
-                if 'PATH' in env:
-                    path = env['PATH'].split(os.pathsep)
-                    out_path = []
-                    for item in path:
-                        if 'espressif' in item or 'esp-idf' in item:
-                            continue
+        environ_helper(idf_path)
 
-                        out_path.append(item)
-
-                    env['PATH'] = os.pathsep.join(out_path)
-
-                py_path = os.path.split(sys.executable)[0]
-                idf_path = os.path.abspath(idf_path)
-                idf_tools_path = os.path.join(idf_path, 'tools')
-                env['PATH'] = (
-                    py_path + os.pathsep +
-                    os.pathsep + idf_tools_path +
-                    os.pathsep + env.get('PATH', '')
-                )
-                env['IDF_PATH'] = idf_path
-
-                for key, value in env.items():
-                    os.environ[key] = value
-
-                if 'GITHUB_RUN_ID' in os.environ:
-                    cmds = [
-                        [f'export "IDF_PATH={idf_path}"'],
-                        ['cd', idf_path],
-                        ['. ./export.sh'],
-                        ['printenv']
-                    ]
-                else:
-                    cmds = [
-                        [f'cd {idf_path}'],
-                        [f'. export.sh'],
-                        ['printenv']
-                    ]
-
-                if 'GITHUB_RUN_ID' in os.environ:
-                    if sys.platform.startswith('win'):
-                        env_cmds = [
-                            ['echo', f"{py_path}", '|', 'Out-File',
-                             '-Append', '-FilePath', '$env:GITHUB_PATH',
-                             '-Encoding', 'utf8'],
-                            ['echo', f"{idf_path}", '|', 'Out-File',
-                             '-Append', '-FilePath', '$env:GITHUB_PATH',
-                             '-Encoding', 'utf8'],
-                            ['echo', f"{idf_tools_path}", '|', 'Out-File',
-                             '-Append', '-FilePath', '$env:GITHUB_PATH',
-                             '-Encoding', 'utf8']
-                        ]
-                    else:
-                        env_cmds = [
-                            ['echo', f"{py_path}", '>>', '$GITHUB_PATH'],
-                            ['echo', f"{idf_path}", '>>', '$GITHUB_PATH'],
-                            ['echo', f"{idf_tools_path}", '>>', '$GITHUB_PATH']
-                        ]
-
-                    spawn(env_cmds, out_to_screen=False)
-
-                result, output = spawn(cmds, out_to_screen=False)
-
-                if result != 0:
-                    print('********* ERROR **********')
-                    print(output)
-                    sys.exit(result)
-
-                output = [line for line in output.split('\n') if '=' in line]
-
-                temp_env = {
-                    line.split('=', 1)[0]: line.split('=', 1)[1]
-                    for line in output
-                }
-
-                for key, value in temp_env.items():
-                    os.environ[key] = value
-
-                env = os.environ
-
-            else:
-                args = sys.argv[:]
-
-                if 'submodules' not in args:
-                    args.insert(2, 'submodules')
-
-                args = " ".join(args)
-
-                print('ESP-IDF version 5.2.0 is needed to compile')
-                print('Please rerun the build using the command below...')
-                print(f'"{sys.executable} {args}"')
-                raise RuntimeError
-
-        elif idf_ver is not None and idf_ver == '5.2.0':
-            env = os.environ
-
+        if 'GITHUB_RUN_ID' in os.environ:
+            cmds = [
+                [f'export "IDF_PATH={idf_path}"'],
+                ['cd', idf_path],
+                ['. ./export.sh'],
+                ['printenv']
+            ]
         else:
-            raise RuntimeError
+            cmds = [
+                [f'cd {idf_path}'],
+                [f'. ./export.sh'],
+                ['printenv']
+            ]
 
+        result, output = spawn(cmds, out_to_screen=False)
+
+        if result != 0:
+            sys.stderr.write('********* ERROR **********\n')
+            sys.stderr.flush()
+            print(output)
+            sys.exit(result)
+
+        output = [line for line in output.split('\n') if '=' in line]
+
+        temp_env = {
+            line.split('=', 1)[0]: line.split('=', 1)[1]
+            for line in output
+        }
+
+        for key, value in temp_env.items():
+            os.environ[key] = value
+
+        env = os.environ
         IDF_ENVIRON_SET = True
     else:
+        # this is a sanity check and should never actually run
         env = os.environ
 
     if 'GITHUB_RUN_ID' in os.environ:
@@ -563,35 +583,30 @@ def setup_idf_environ():
 
 
 def submodules():
-    if not sys.platform.startswith('win'):
-        idf_ver = get_idf_version()
-
-        if idf_ver is None or idf_ver != '5.2.0':
-            idf_path = 'lib/esp-idf'
-            if not os.path.exists(os.path.join(idf_path, 'export.sh')):
-                get_espidf()
-            cmds = [
-                [f'export "IDF_PATH={os.path.abspath(idf_path)}"'],
-                ['cd', idf_path],
-                ['./install.sh', 'all']
-            ]
-
-            print('setting up ESP-IDF v5.2.0')
-            print('this might take a while...')
-            env = {
-                k: v for k, v in os.environ.items() if not k.startswith('IDF')
-            }
-            env['IDF_PATH'] = os.path.abspath(idf_path)
-
-            result, _ = spawn(cmds, env=env)
-            if result != 0:
-                sys.exit(result)
-
-        env, cmds = setup_idf_environ()
-
-        cmds.append(submodules_cmd)
+    if has_correct_idf():
+        idf_path = os.environ['IDF_PATH']
     else:
-        raise RuntimeError('compiling on windows is not supported at this time')
+        idf_path = 'lib/esp-idf'
+        if not os.path.exists(os.path.join(idf_path, 'export.sh')):
+            get_espidf()
+
+    cmds = [
+        [f'export "IDF_PATH={os.path.abspath(idf_path)}"'],
+        ['cd', idf_path],
+        ['./install.sh', 'all']
+    ]
+
+    print('setting up ESP-IDF v5.2.0')
+    print('this might take a while...')
+    env = {k: v for k, v in os.environ.items()}
+    env['IDF_PATH'] = os.path.abspath(idf_path)
+
+    result, _ = spawn(cmds, env=env)
+    if result != 0:
+        sys.exit(result)
+
+    env, cmds = setup_idf_environ()
+    cmds.append(submodules_cmd)
 
     return_code, _ = spawn(cmds, env=env)
     if return_code != 0:
