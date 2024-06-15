@@ -199,6 +199,8 @@ def get_lvgl():
         '--',
         f'lib/lvgl'
     ]
+    print('collecting LVGL')
+    print('this might take a while...')
     result, _ = spawn(cmd_, spinner=True)
     if result != 0:
         sys.exit(result)
@@ -214,7 +216,7 @@ def get_micropython():
         '--',
         f'lib/micropython'
     ]
-
+    print('collecting MicroPython 1.23.0')
     result, _ = spawn(cmd_, spinner=True)
     if result != 0:
         sys.exit(result)
@@ -230,6 +232,7 @@ def get_pycparser():
         f'lib/pycparser'
     ]
 
+    print('collecting pycparser')
     result, _ = spawn(cmd_)
     if result != 0:
         sys.exit(result)

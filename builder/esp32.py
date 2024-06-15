@@ -134,6 +134,8 @@ def get_espidf():
             'lib/esp-idf'
         ]
 
+        print('collecting ESP-IDF v5.2.1')
+        print('this might take a while...')
         result, _ = spawn(cmd, spinner=True)
         if result != 0:
             sys.exit(result)
@@ -566,12 +568,7 @@ def submodules():
         if idf_ver is None or idf_ver != '5.2.1':
             idf_path = 'lib/esp-idf'
             if not os.path.exists(os.path.join(idf_path, 'export.sh')):
-                print('collecting ESP-IDF v5.2.1')
-                print('this might take a bit...')
-                print()
                 get_espidf()
-                print()
-
             cmds = [
                 [f'export "IDF_PATH={os.path.abspath(idf_path)}"'],
                 ['cd', idf_path],
@@ -579,9 +576,7 @@ def submodules():
             ]
 
             print('setting up ESP-IDF v5.2.1')
-            print('this might take a bit...')
-            print()
-
+            print('this might take a while...')
             env = {
                 k: v for k, v in os.environ.items() if not k.startswith('IDF')
             }
