@@ -130,6 +130,7 @@ def get_espidf():
             'update',
             '--init',
             '--recursive',
+            '--remote',
             '--',
             'lib/esp-idf'
         ]

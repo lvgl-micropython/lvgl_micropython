@@ -22,7 +22,7 @@ jobs:
       run: |
         brew install --force ninja 
         git submodule update --init lib/pycparser
-        git submodule update --init -- lib/micropython
+        git submodule update --init --remote -- lib/micropython
         git submodule update --init -- lib/lvgl
         git submodule update --init -- lib/SDL
         cd lib/SDL && git checkout release-2.30.2 && cd ../..
@@ -36,7 +36,7 @@ jobs:
 
     - name: Get Build Deps
       if: steps.cache-deps.outputs.cache-hit != 'true'
-      run: git submodule update --init --recursive -- lib/esp-idf
+      run: git submodule update --init --recursive --remote -- lib/esp-idf
 
     - name: Setup ESP-IDF
       run: |

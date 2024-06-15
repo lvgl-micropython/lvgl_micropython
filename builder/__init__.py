@@ -214,6 +214,7 @@ def get_micropython():
         'submodule',
         'update',
         '--init',
+        '--remote',
         '--',
         f'lib/micropython'
     ]
