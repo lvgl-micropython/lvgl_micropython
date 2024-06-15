@@ -431,7 +431,7 @@ def setup_idf_environ():
 
         idf_ver = get_idf_version()
 
-        if idf_ver is None or idf_ver != '5.0.4':
+        if idf_ver is None or idf_ver != '5.2.1':
             idf_path = 'lib/esp-idf'
 
             if os.path.exists(os.path.join(idf_path, 'export.sh')):
@@ -530,12 +530,12 @@ def setup_idf_environ():
 
                 args = " ".join(args)
 
-                print('ESP-IDF version 5.0.4 is needed to compile')
+                print('ESP-IDF version 5.2.1 is needed to compile')
                 print('Please rerun the build using the command below...')
                 print(f'"{sys.executable} {args}"')
                 raise RuntimeError
 
-        elif idf_ver is not None and idf_ver == '5.0.4':
+        elif idf_ver is not None and idf_ver == '5.2.1':
             env = os.environ
 
         else:
@@ -563,10 +563,10 @@ def submodules():
     if not sys.platform.startswith('win'):
         idf_ver = get_idf_version()
 
-        if idf_ver is None or idf_ver != '5.0.4':
+        if idf_ver is None or idf_ver != '5.2.1':
             idf_path = 'lib/esp-idf'
             if not os.path.exists(os.path.join(idf_path, 'export.sh')):
-                print('collecting ESP-IDF v5.0.4')
+                print('collecting ESP-IDF v5.2.1')
                 print('this might take a bit...')
                 print()
                 get_espidf()
@@ -575,18 +575,10 @@ def submodules():
             cmds = [
                 [f'export "IDF_PATH={os.path.abspath(idf_path)}"'],
                 ['cd', idf_path],
-                [
-                    'git', 'submodule', 'update', '--init',
-                    'components/bt/host/nimble/nimble',
-                    'components/esp_wifi',
-                    'components/esptool_py/esptool',
-                    'components/lwip/lwip',
-                    'components/mbedtls/mbedtls',
-                    'components/bt/controller/lib_esp32',
-                    'components/bt/controller/lib_esp32c3_family'
-                ], ['./install.sh', 'all']]
+                ['./install.sh', 'all']
+            ]
 
-            print('setting up ESP-IDF v5.0.4')
+            print('setting up ESP-IDF v5.2.1')
             print('this might take a bit...')
             print()
 
