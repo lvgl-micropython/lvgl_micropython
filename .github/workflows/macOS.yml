@@ -12,7 +12,7 @@ jobs:
     - uses: actions/checkout@v4
     - uses: carlosperate/arm-none-eabi-gcc-action@v1.8.1
       with:
-        release: '9-2020-q2' # The arm-none-eabi-gcc release to use.
+        release: 'latest' # The arm-none-eabi-gcc release to use.
 
     - uses: actions/setup-python@v5
       with:
