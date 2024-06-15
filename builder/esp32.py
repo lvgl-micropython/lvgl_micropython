@@ -134,13 +134,13 @@ def get_espidf():
             'lib/esp-idf'
         ]
 
-        print('collecting ESP-IDF v5.2.1')
+        print('collecting ESP-IDF v5.2.0')
         print('this might take a while...')
         result, _ = spawn(cmd, spinner=True)
         if result != 0:
             sys.exit(result)
 
-        # cmd_ = ['cd lib/esp-idf && git checkout v5.2.1']
+        # cmd_ = ['cd lib/esp-idf && git checkout v5.2.0']
         # spawn(cmd_, out_to_screen=False)
 
 
@@ -433,7 +433,7 @@ def setup_idf_environ():
 
         idf_ver = get_idf_version()
 
-        if idf_ver is None or idf_ver != '5.2.1':
+        if idf_ver is None or idf_ver != '5.2.0':
             idf_path = 'lib/esp-idf'
 
             if os.path.exists(os.path.join(idf_path, 'export.sh')):
@@ -532,12 +532,12 @@ def setup_idf_environ():
 
                 args = " ".join(args)
 
-                print('ESP-IDF version 5.2.1 is needed to compile')
+                print('ESP-IDF version 5.2.0 is needed to compile')
                 print('Please rerun the build using the command below...')
                 print(f'"{sys.executable} {args}"')
                 raise RuntimeError
 
-        elif idf_ver is not None and idf_ver == '5.2.1':
+        elif idf_ver is not None and idf_ver == '5.2.0':
             env = os.environ
 
         else:
@@ -565,7 +565,7 @@ def submodules():
     if not sys.platform.startswith('win'):
         idf_ver = get_idf_version()
 
-        if idf_ver is None or idf_ver != '5.2.1':
+        if idf_ver is None or idf_ver != '5.2.0':
             idf_path = 'lib/esp-idf'
             if not os.path.exists(os.path.join(idf_path, 'export.sh')):
                 get_espidf()
@@ -575,7 +575,7 @@ def submodules():
                 ['./install.sh', 'all']
             ]
 
-            print('setting up ESP-IDF v5.2.1')
+            print('setting up ESP-IDF v5.2.0')
             print('this might take a while...')
             env = {
                 k: v for k, v in os.environ.items() if not k.startswith('IDF')
@@ -943,21 +943,23 @@ def compile():  # NOQA
 
         if deploy:
             python_env_path = os.path.split(os.path.split(python_path)[0])[0]
-            python_version = os.path.split(python_env_path)[-1].split('_')[1][2:]
+            python_version = (
+                os.path.split(python_env_path)[-1].split('_')[1][2:]
+            )
             site_packages = os.path.join(
                 python_env_path,
                 f'lib/python{python_version}/site-packages'
             )
             sys.path.insert(0, site_packages)
 
-            from esptool.targets import CHIP_DEFS
-            from esptool.util import FatalError
+            from esptool.targets import CHIP_DEFS  # NOQA
+            from esptool.util import FatalError  # NOQA
             from serial.tools import list_ports
 
             cmd = cmd.replace('-b 460800', f'-b {BAUD}')
 
             def get_port_list():
-                pts = sorted(ports.device for ports in list_ports.comports())
+                pts = sorted(p.device for p in list_ports.comports())
                 if sys.platform.startswith('linux'):
                     serial_path = '/dev/serial/by_id'
                     if os.path.exists(serial_path):
@@ -971,10 +973,10 @@ def compile():  # NOQA
 
             def find_esp32(chip):
                 found_ports = []
-                for port in get_port_list():
+                for prt in get_port_list():
                     chip_class = CHIP_DEFS[chip]
                     try:
-                        _esp = chip_class(port, 115200, False)
+                        _esp = chip_class(prt, 115200, False)
                     except (FatalError, OSError):
                         continue
 
@@ -985,8 +987,8 @@ def compile():  # NOQA
                     else:
                         found_ports.append(port)
 
-                    if _esp and _esp._port:
-                        _esp._port.close()
+                    if _esp and _esp._port:  # NOQA
+                        _esp._port.close()  # NOQA
 
                 return found_ports
 
@@ -1009,7 +1011,10 @@ def compile():  # NOQA
 
             cmd = cmd.replace('-p (PORT)', f'-p "{PORT}"')
 
-            erase_flash = f'"{python_path}" "{esp_tool_path}" -p "{PORT}" -b 460800 erase_flash'
+            erase_flash = (
+                f'"{python_path}" "{esp_tool_path}" '
+                f'-p "{PORT}" -b 460800 erase_flash'
+            )
 
             result, _ = spawn(erase_flash)
             if result != 0:

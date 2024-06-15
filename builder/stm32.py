@@ -7,6 +7,7 @@ from . import update_mphalport
 board = None
 board_variant = None
 
+
 def parse_args(extra_args, lv_cflags, brd):
     global board
     board = brd
@@ -29,7 +30,7 @@ compile_cmd = []
 submodules_cmd = []
 
 
-def build_commands(_, extra_args, script_dir, lv_cflags, board):
+def build_commands(_, extra_args, script_dir, lv_cflags, brd):
 
     if lv_cflags:
         lv_cflags += ' -DLV_USE_TINY_TTF=0'
@@ -45,9 +46,9 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
 
     if board is not None:
         if lv_cflags:
-            stm32_cmd.insert(7, f'BOARD={board}')
+            stm32_cmd.insert(7, f'BOARD={brd}')
         else:
-            stm32_cmd.insert(6, f'BOARD={board}')
+            stm32_cmd.insert(6, f'BOARD={brd}')
 
     clean_cmd.extend(stm32_cmd[:])
     clean_cmd[1] = 'clean'
@@ -122,7 +123,10 @@ def compile():  # NOQA
         os.remove(os.path.join('build', f))
 
     if board_variant:
-        src = f'lib/micropython/ports/stm32/build-{board}_{board_variant}/firmware.dfu'
+        src = (
+            f'lib/micropython/ports/stm32/'
+            f'build-{board}_{board_variant}/firmware.dfu'
+        )
         dst = f'build/lvgl_micropy_{board}_{board_variant}.dfu'
     else:
         src = f'lib/micropython/ports/stm32/build-{board}/firmware.dfu'

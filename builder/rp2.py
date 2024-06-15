@@ -54,19 +54,19 @@ compile_cmd = []
 submodules_cmd = []
 
 
-def build_commands(_, extra_args, script_path, lv_cflags, board):
+def build_commands(_, extra_args, __, lv_cflags, brd):
     rp2_cmd.extend(extra_args)
 
     if lv_cflags:
         rp2_cmd.insert(6, f'LV_CFLAGS="{lv_cflags}"')
 
-    if board is not None:
+    if brd is not None:
         if lv_cflags:
-            rp2_cmd.insert(7, f'BOARD={board}')
+            rp2_cmd.insert(7, f'BOARD={brd}')
             if board_variant:
                 rp2_cmd.insert(8, f'BOARD_VARIANT={board_variant}')
         else:
-            rp2_cmd.insert(6, f'BOARD={board}')
+            rp2_cmd.insert(6, f'BOARD={brd}')
             if board_variant:
                 rp2_cmd.insert(7, f'BOARD_VARIANT={board_variant}')
 
@@ -151,7 +151,10 @@ def compile():  # NOQA
         os.remove(os.path.join('build', f))
 
     if board_variant:
-        src = f'lib/micropython/ports/rp2/build-{board}_{board_variant}/firmware.uf2'
+        src = (
+            f'lib/micropython/ports/rp2/'
+            f'build-{board}_{board_variant}/firmware.uf2'
+        )
         dst = f'build/lvgl_micropy_{board}_{board_variant}.uf2'
     else:
         src = f'lib/micropython/ports/rp2/build-{board}/firmware.uf2'
