@@ -32,7 +32,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: lib/esp-idf
-        key: ${{ runner.os }}-v2-deps
+        key: ${{ runner.os }}-v3-deps
 
     - name: Get Build Deps
       if: steps.cache-deps.outputs.cache-hit != 'true'
