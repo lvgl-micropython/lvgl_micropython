@@ -244,7 +244,8 @@ def _busy_spinner(evnt):
             sys.stdout.write('.')
             sys.stdout.flush()
             evnt.wait(2)
-
+        sys.stdout.write('\n')
+        sys.stdout.flush()
     else:
         count = random.randint(1, 25)
         wait = random.randint(10, 100) * 0.001
@@ -266,6 +267,9 @@ def _busy_spinner(evnt):
             if count == 0:
                 count = random.randint(1, 25)
                 wait = random.randint(10, 100) * 0.001
+
+        sys.stdout.write('\r')
+        sys.stdout.flush()
 
 
 def _convert_line(lne):
@@ -380,9 +384,6 @@ def process_output(myproc, out_to_screen, spinner, cmpl, out_queue):
     if t is not None:
         event.set()
         t.join()
-
-        sys.stdout.write('\n')
-        sys.stdout.flush()
 
     elif out_to_screen and cmpl and last_line_len != -1:
         sys.stdout.write('\n')
