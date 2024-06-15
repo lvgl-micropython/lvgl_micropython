@@ -745,18 +745,18 @@ def compile():  # NOQA
         dst_file = os.path.join(dst_path, file)
         shutil.copyfile(src_file, dst_file)
 
-    # mpconfigport_path = 'lib/micropython/ports/esp32/mpconfigport.h'
+    mpconfigport_path = 'lib/micropython/ports/esp32/mpconfigport.h'
 
-    # with open(mpconfigport_path, 'rb') as f:
-    #     data = f.read().decode('utf-8')
+    with open(mpconfigport_path, 'rb') as f:
+        data = f.read().decode('utf-8')
 
-    # if '#define MICROPY_BLUETOOTH_NIMBLE            (0)' not in data:
-    #     data = data.replace(
-    #         '#define MICROPY_BLUETOOTH_NIMBLE            (1)',
-    #         '#define MICROPY_BLUETOOTH_NIMBLE            (0)'
-    #     )
-    #     with open(mpconfigport_path, 'wb') as f:
-    #         f.write(data.encode('utf-8'))
+    if '#define MICROPY_BLUETOOTH_NIMBLE            (0)' not in data:
+        data = data.replace(
+            '#define MICROPY_BLUETOOTH_NIMBLE            (1)',
+            '#define MICROPY_BLUETOOTH_NIMBLE            (0)'
+        )
+        with open(mpconfigport_path, 'wb') as f:
+            f.write(data.encode('utf-8'))
 
     # if '#define MICROPY_PY_MACHINE_I2S (0)' not in data:
     #     data = data.replace(
