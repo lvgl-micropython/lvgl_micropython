@@ -77,6 +77,9 @@ def clean(clean_mpy_cross):
 def submodules():
     nrfx_path = f'lib/micropython/libs/nrfx'
     if not os.path.exists(os.path.join(nrfx_path, 'nrfx.h')):
+        print()
+        print('collecting NRFX')
+
         ret_code, _ = spawn([
             'git',
             'submodule',

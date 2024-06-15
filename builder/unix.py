@@ -162,6 +162,8 @@ def build_sdl():
 
 def submodules():
     if not os.path.exists('lib/SDL/include'):
+        print()
+        print('collecting SDL2')
         cmd_ = [
             'git',
             'submodule',

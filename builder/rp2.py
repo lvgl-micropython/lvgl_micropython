@@ -109,6 +109,9 @@ def submodules():
         if not os.path.exists(
             os.path.join(pico_dsk_path, 'pico_sdk_init.cmake')
         ):
+            print()
+            print('collecting PICO-SDK')
+
             ret_code, _ = spawn([
                 ['cd', pico_dsk_path],
                 ['git', 'submodule', 'update', '--init']

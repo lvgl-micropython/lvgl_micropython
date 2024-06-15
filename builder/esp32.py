@@ -133,7 +133,7 @@ def get_espidf():
             '--',
             'lib/esp-idf'
         ]
-
+        print()
         print('collecting ESP-IDF v5.2.0')
         print('this might take a while...')
         result, _ = spawn(cmd, spinner=True)

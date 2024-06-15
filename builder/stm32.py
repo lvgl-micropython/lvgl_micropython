@@ -85,6 +85,9 @@ def clean(clean_mpy_cross):
 def submodules():
     stm32lib_path = 'lib/micropython/lib/stm32lib'
     if not os.path.exists(os.path.join(stm32lib_path, 'CMSIS')):
+        print()
+        print('collecting STM32 lib')
+
         ret_code, _ = spawn(
             [
                 ['cd', stm32lib_path],

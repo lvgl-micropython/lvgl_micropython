@@ -160,6 +160,8 @@ def build_sdl():
 
 def submodules():
     if not os.path.exists('lib/SDL/include'):
+        print()
+        print('collecting SDK2')
         cmd_ = [
             'git',
             'submodule',
