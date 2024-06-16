@@ -241,21 +241,26 @@ def get_pycparser():
         sys.exit(result)
 
 
-def _busy_spinner(evnt):
+def _busy_spinner(evnt, spinner_lock):
     if 'GITHUB_RUN_ID' in os.environ:
         while not evnt.is_set():
-            sys.stdout.write('.')
-            sys.stdout.flush()
+            with spinner_lock:
+                sys.stdout.write('.')
+                sys.stdout.flush()
             evnt.wait(2)
-        sys.stdout.write('\n')
-        sys.stdout.flush()
+
+        with spinner_lock:
+            sys.stdout.write('\n')
+            sys.stdout.flush()
     else:
         count = random.randint(1, 25)
         wait = random.randint(10, 100) * 0.001
         chars = '\\|/-'
         char_index = 0
-        sys.stdout.write(chars[char_index] + '\r')
-        sys.stdout.flush()
+
+        with spinner_lock:
+            sys.stdout.write(chars[char_index] + '\r')
+            sys.stdout.flush()
 
         while not evnt.is_set():
             evnt.wait(wait)
@@ -264,15 +269,17 @@ def _busy_spinner(evnt):
             if char_index == 4:
                 char_index = 0
 
-            sys.stdout.write(f'{chars[char_index]}\r')
-            sys.stdout.flush()
+            with spinner_lock:
+                sys.stdout.write(f'{chars[char_index]}\r')
+                sys.stdout.flush()
 
             if count == 0:
                 count = random.randint(1, 25)
                 wait = random.randint(10, 100) * 0.001
 
-        sys.stdout.write('\r')
-        sys.stdout.flush()
+        with spinner_lock:
+            sys.stdout.write('\r')
+            sys.stdout.flush()
 
 
 def _convert_line(lne):
@@ -297,9 +304,9 @@ def process_output(myproc, out_to_screen, spinner, cmpl, out_queue):
     err_updated = False
 
     event = threading.Event()
-
+    spinner_lock = threading.Lock()
     if spinner:
-        t = threading.Thread(target=_busy_spinner, args=(event,))
+        t = threading.Thread(target=_busy_spinner, args=(event, spinner_lock))
         t.daemon = True
         t.start()
     else:
@@ -319,10 +326,12 @@ def process_output(myproc, out_to_screen, spinner, cmpl, out_queue):
 
                 out_queue.put(line)
 
-                if not spinner and out_to_screen:
+                if out_to_screen:
                     if (
                         cmpl and (
                             line.startswith('[') or
+                            line.startswith('CC ') or
+                            line.startswith('MPY ') or
                             (
                                 line.startswith('--') and
                                 len(line) <= 80
@@ -331,6 +340,7 @@ def process_output(myproc, out_to_screen, spinner, cmpl, out_queue):
                     ):
                         if last_line_len != -1:
                             sys.stdout.write('\r')
+                            sys.stdout.flush()
 
                         if len(line) < last_line_len:
                             padding = ' ' * (last_line_len - len(line))
@@ -338,15 +348,28 @@ def process_output(myproc, out_to_screen, spinner, cmpl, out_queue):
                             padding = ''
 
                         sys.stdout.write(line + padding)
+                        sys.stdout.flush()
+
                         last_line_len = len(line)
                     else:
                         if last_line_len == -1:
-                            sys.stdout.write(line + '\n')
+                            if spinner:
+                                with spinner_lock:
+                                    sys.stdout.write('\r' + line + '\n')
+                                    sys.stdout.flush()
+                            else:
+                                sys.stdout.write(line + '\n')
+                                sys.stdout.flush()
                         else:
-                            sys.stdout.write('\n' + line + '\n')
-                            last_line_len = -1
+                            if spinner:
+                                with spinner_lock:
+                                    sys.stdout.write('\r' + line + '\n')
+                                    sys.stdout.flush()
+                            else:
+                                sys.stdout.write('\n' + line + '\n')
+                                sys.stdout.flush()
 
-                    sys.stdout.flush()
+                            last_line_len = -1
 
                 line = b''
 
@@ -369,9 +392,14 @@ def process_output(myproc, out_to_screen, spinner, cmpl, out_queue):
                     break
 
                 out_queue.put(err_line)
-                if out_to_screen and not spinner:
-                    sys.stderr.write(err_line + '\n')
-                    sys.stderr.flush()
+                if out_to_screen:
+                    if spinner:
+                        with spinner_lock:
+                            sys.stderr.write('\r' + err_line + '\n')
+                            sys.stdout.flush()
+                    else:
+                        sys.stderr.write(err_line + '\n')
+                        sys.stderr.flush()
 
                 err_line = b''
 
@@ -499,7 +527,7 @@ def compile():  # NOQA
 
 
 def mpy_cross():
-    return_code, _ = spawn(mpy_cross_cmd)
+    return_code, _ = spawn(mpy_cross_cmd, cmpl=True)
     if return_code != 0:
         sys.exit(return_code)
 

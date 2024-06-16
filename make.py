@@ -6,6 +6,8 @@ import builder
 
 from argparse import ArgumentParser
 
+if sys.platform.startswith('win'):
+    raise RuntimeError('compiling on windows is not supported at this time')
 
 SCRIPT_DIR = os.path.abspath(os.path.dirname(sys.argv[0]))
 MPY_DIR = os.path.join(SCRIPT_DIR, 'micropython')

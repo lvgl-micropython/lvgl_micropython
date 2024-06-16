@@ -265,6 +265,6 @@ def mpy_cross():
         'make -C lib/micropython/mpy-cross'
     ]
 
-    res, _ = spawn(_cmd)
+    res, _ = spawn(_cmd, cmpl=True)
     if res:
         sys.exit(res)

@@ -169,6 +169,6 @@ def compile():  # NOQA
 
 
 def mpy_cross():
-    return_code, _ = spawn(mpy_cross_cmd)
+    return_code, _ = spawn(mpy_cross_cmd, cmpl=True)
     if return_code != 0:
         sys.exit(return_code)
