@@ -37,8 +37,10 @@ jobs:
       id: cache-deps
       uses: actions/cache@v4
       with:
-        path: lib/esp-idf
-        key: ${{ runner.os }}-v3-deps
+        path: |
+          lib/esp-idf
+          ~/.espressif
+        key: ${{ runner.os }}-v4-deps
 
     - name: Get Build Deps
       if: steps.cache-deps.outputs.cache-hit != 'true'
@@ -47,11 +49,12 @@ jobs:
         cd lib/esp-idf
         git submodule update --init --jobs 4 -- components/bt/host/nimble/nimble components/esp_wifi components/esptool_py/esptool components/lwip/lwip components/mbedtls/mbedtls components/bt/controller/lib_esp32 components/bt/controller/lib_esp32c3_family
         cd ../..
+        export "IDF_PATH=${GITHUB_WORKSPACE}/lib/esp-idf"
+        ./lib/esp-idf/install.sh all
 
     - name: Setup ESP-IDF
       run: |
         export "IDF_PATH=${GITHUB_WORKSPACE}/lib/esp-idf"
-        ./lib/esp-idf/install.sh all
         . ./lib/esp-idf/export.sh
 
     - name: Build ESP32 port

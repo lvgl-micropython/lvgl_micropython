@@ -363,6 +363,7 @@ def esp32_args(extra_args):
 
     return extra_args
 
+
 def parse_args(extra_args, lv_cflags, brd):
     global board
 
