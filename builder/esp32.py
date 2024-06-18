@@ -962,26 +962,7 @@ def compile():  # NOQA
         build_bin_file += '.bin'
         build_bin_file = os.path.abspath(build_bin_file)
 
-        cmd = f'{python_path} -m {esptool_path} merge_bin -o {build_bin_file} {bin_files}'
-
-        cmd = cmd.replace('esptool.py', esptool_path)
-        cmd = cmd.replace('write_flash', f'')
-        cmd = cmd.replace('--flash_freq 80m ', '')
-        cmd = cmd.replace('-p (PORT) ', '')
-        cmd = cmd.replace('-b 460800 ', '')
-        cmd = cmd.replace('--before default_reset ', '')
-        cmd = cmd.replace('--after no_reset ', '')
-
-        # if not sys.platform.startswith('win'):
-        #     cmds = [
-        #         # [f'export "IDF_PATH={os.path.abspath(env["IDF_PATH"])}"'],
-        #         # ['cd', 'lib/esp-idf'],
-        #         # ['. ./export.sh'],
-        #         # ['cd ../..'],
-        #         cmd
-        #     ]
-        # else:
-        cmds = [cmd]
+        cmds = [f'{python_path} -m {esptool_path} merge_bin -o {build_bin_file} {bin_files}']
 
         result, _ = spawn(cmds, env=env)
         if result:
