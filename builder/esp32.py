@@ -47,14 +47,20 @@ class Partition:
         self.first_offset = 0x9000
         self.nvs = 0x6000
         self.phy_init = 0x1000
-        self.factory = 1 * 1024 * 1024
+        self.factory = 0x279000
 
         if ota:
             self.otadata = 0x2000
         else:
             self.otadata = 0x0
 
-    def build_file(self):
+    def get_app_size(self) -> int:
+        return self.factory
+
+    def set_app_size(self, size):
+        self.factory += size
+
+    def save(self):
         offset = self.first_offset
         data = [f'nvs,data, nvs,0x{offset:X},0x{self.nvs:X}']
         offset += self.nvs
@@ -66,45 +72,32 @@ class Partition:
         data.append(f'phy_init,data,phy,0x{offset:X},0x{self.phy_init:X}')
         offset += self.phy_init
 
+        factory = (int(self.factory / 0x1000) + 1) * 0x1000
+
         if ota:
-            data.append(f'ota_0,app,ota_0,0x{offset:X},0x{self.factory:X}')
-            offset += self.factory
-            data.append(f'ota_1,app,ota_1,0x{offset:X},0x{self.factory:X}')
-            offset += self.factory
+            data.append(f'ota_0,app,ota_0,0x{offset:X},0x{factory:X}')
+            offset += factory
+            data.append(f'ota_1,app,ota_1,0x{offset:X},0x{factory:X}')
+            offset += factory
         else:
-            data.append(f'factory,app,factory,0x{offset:X},0x{self.factory:X}')
-            offset += self.factory
+            data.append(f'factory,app,factory,0x{offset:X},0x{factory:X}')
+            offset += factory
 
-        vfs = (flash_size * 1024 * 1024) - sum([
-            self.first_offset,
-            self.nvs,
-            self.otadata,
-            self.phy_init,
-            self.factory
-        ])
+        total_size = int((flash_size * (2 ** 20)) / 0x1000) * 0x1000
 
-        if ota:
-            vfs -= self.factory
-
-        if vfs < 0:
-            raise RuntimeError('There is not enough flash to store the firmware')
-
+        vfs = int((total_size - offset) / 0x1000) * 0x1000
         data.append(f'vfs,data,fat,0x{offset:X},0x{vfs:X}')
+        offset += vfs
+
+        if offset > total_size:
+            raise RuntimeError(
+                'There is not enough flash to store the firmware'
+            )
 
         with open(self.save_file_path, 'w') as f:
             f.write(PARTITION_HEADER)
             f.write('\n'.join(data))
             f.write('\n')
-
-    def get_app_size(self) -> int:
-        return self.factory
-
-    def set_app_size(self, size):
-        factor = ((self.factory + size) / 4096.0) + 1
-        self.factory = int(factor * 4096)
-
-    def save(self):
-        self.build_file()
 
 
 def get_espidf():
