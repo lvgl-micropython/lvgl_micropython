@@ -39,7 +39,7 @@ PARTITION_HEADER = '''\
 
 class Partition:
 
-    def __init__(self):
+    def __init__(self, size):
         if not os.path.exists('build'):
             os.mkdir('build')
 
@@ -47,7 +47,11 @@ class Partition:
         self.first_offset = 0x9000
         self.nvs = 0x6000
         self.phy_init = 0x1000
-        self.factory = 0x279000
+
+        if size == int(size / 0x1000) * 0x1000:
+            self.factory = size
+        else:
+            self.factory = (int(size / 0x1000) + 1) * 0x1000
 
         if ota:
             self.otadata = 0x2000
@@ -58,7 +62,10 @@ class Partition:
         return self.factory
 
     def set_app_size(self, size):
-        self.factory += size
+        if int((self.factory + size) / 0x1000) * 0x1000 == self.factory + size:
+            self.factory += size
+        else:
+            self.factory = (int((self.factory + size) / 0x1000) + 1) * 0x1000
 
     def save(self):
         offset = self.first_offset
@@ -779,7 +786,12 @@ def compile():  # NOQA
         '../../../../build/sdkconfig.board)'
     )
 
-    partition = Partition()
+    if partition_size == -1:
+        p_size = 0x27A000
+    else:
+        p_size = partition_size
+
+    partition = Partition(p_size)
     partition.save()
 
     if sdkconfig not in data:
@@ -855,14 +867,15 @@ def compile():  # NOQA
         ):
             sys.exit(ret_code)
 
+        if partition_size != -1:
+
+            sys.exit(ret_code)
+
         sys.stdout.write('\n\033[31;1m***** Resizing Partition *****\033[0m\n')
         sys.stdout.flush()
 
-        if partition_size != -1:
-            overflow_amount = partition_size - partition.get_app_size()
-        else:
-            end = output.split('(overflow ', 1)[-1]
-            overflow_amount = int(end.split(')', 1)[0], 16)
+        end = output.split('(overflow ', 1)[-1]
+        overflow_amount = int(end.split(')', 1)[0], 16)
 
         partition.set_app_size(overflow_amount)
         partition.save()
@@ -878,35 +891,19 @@ def compile():  # NOQA
         if ret_code != 0:
             sys.exit(ret_code)
 
-    elif not skip_partition_resize:
+    elif not skip_partition_resize and partition_size == -1:
         if 'build complete' in output:
             remaining = output.rsplit('application')[-1]
             remaining = int(
                 remaining.split('(', 1)[-1].split('remaining')[0].strip()
             )
 
-            if remaining > 4096 or partition_size != -1:
+            if remaining > 0x1000:
                 sys.stdout.write(
                     '\n\033[31;1m***** Resizing Partition *****\033[0m\n'
                 )
                 sys.stdout.flush()
 
-            if partition_size != -1:
-                part_size = partition.get_app_size()
-                resize = abs(part_size - partition_size)
-
-                if part_size < partition_size:
-                    resize = -resize
-
-                partition.set_app_size(-resize)
-                partition.save()
-
-                sys.stdout.write(
-                    '\n\033[31;1m***** Running build again *****\033[0m\n\n'
-                )
-                sys.stdout.flush()
-
-            elif remaining > 4096:
                 partition.set_app_size(-remaining)
                 partition.save()
 
@@ -915,7 +912,6 @@ def compile():  # NOQA
                 )
                 sys.stdout.flush()
 
-            if remaining > 4096 or partition_size != -1:
                 compile_cmd[4] = 'SECOND_BUILD=1'
 
                 ret_code, output = spawn(cmds, env=env, cmpl=True)
