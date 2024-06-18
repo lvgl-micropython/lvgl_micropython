@@ -926,7 +926,7 @@ def compile():  # NOQA
 
         espressif_path = os.path.expanduser('~/.espressif')
         python_path = f'{espressif_path}/python_env/idf5.2_py3.10_env/bin'
-        esptool_path = f'{python_path}/esptool'
+        esptool_path = f'"{python_path}/esptool"'
         python_path += '/python'
 
         output = output.split('python ', 1)[-1]
@@ -940,10 +940,12 @@ def compile():  # NOQA
         full_file_path = (
             f'{SCRIPT_DIR}/lib/micropython/ports/esp32/{build_name}'
         )
-        bin_files = [
-            '0x' + item.replace(build_name, full_file_path).strip()
-            for item in output.split('0x')[1:]
-        ]
+        bin_files = []
+        for item in output.split('0x')[1:]:
+            item, bf = item.split(build_name, 1)
+            bf = f'"{full_file_path}{bf.strip()}"'
+            bin_files.append(f'0x{item.strip()} {bf}')
+
         bin_files = ' '.join(bin_files)
 
         old_bin_files = ['0x' + item.strip() for item in output.split('0x')[1:]]
@@ -965,7 +967,7 @@ def compile():  # NOQA
             build_bin_file += '_OCTFLASH'
 
         build_bin_file += '.bin'
-        build_bin_file = os.path.abspath(build_bin_file)
+        build_bin_file = f'"{os.path.abspath(build_bin_file)}"'
 
         cmds = [''.join([
             f'{python_path} -m {esptool_path} ',
@@ -981,7 +983,7 @@ def compile():  # NOQA
         output = python_path + output
 
         if deploy:
-            tool_path = os.path.split(esptool_path)[0]
+            tool_path = os.path.split(esptool_path[1:-1])[0]
             sys.path.insert(0, tool_path)
 
             from esptool.targets import CHIP_DEFS  # NOQA
