@@ -151,7 +151,7 @@ board_variant = None
 board = None
 skip_partition_resize = False
 partition_size = None
-flash_size = '0'
+flash_size = 4
 oct_flash = False
 
 DEBUG = False
@@ -160,40 +160,21 @@ PORT = None
 BAUD = 460800
 ccache = False
 disable_OTG = True
+onboard_mem_speed = 80
+flash_mode = 'QIO'
 
 
-def parse_args(extra_args, lv_cflags, brd):
-    global board
-    global board_variant
-    global skip_partition_resize
-    global partition_size
-    global flash_size
-    global oct_flash
+def common_args(extra_args):
     global DEBUG
     global PORT
     global BAUD
     global deploy
     global ccache
-    global disable_OTG
+    global skip_partition_resize
+    global partition_size
+    global flash_size
 
-    board = brd
-
-    if board is None:
-        board = 'ESP32_GENERIC'
-
-    if board in ('ESP32_GENERIC_S2', 'ESP32_GENERIC_S3'):
-        esp_argParser = ArgumentParser(prefix_chars='-')
-        esp_argParser.add_argument(
-            '--USB-OTG',
-            dest='usb_otg',
-            default=False,
-            action='store_true'
-        )
-        esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
-
-        disable_OTG = not esp_args.usb_otg
-
-    esp_argParser = ArgumentParser(prefix_chars='BPd')
+    esp_argParser = ArgumentParser(prefix_chars='-BPd')
     esp_argParser.add_argument(
         'BAUD',
         dest='baud',
@@ -213,81 +194,12 @@ def parse_args(extra_args, lv_cflags, brd):
         default=False,
         action='store_true'
     )
-    esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
-
-    BAUD = esp_args.baud
-    PORT = esp_args.port
-    deploy = esp_args.deploy
-
-    if board in ('ESP32_GENERIC', 'ESP32_GENERIC_S3'):
-        esp_argParser = ArgumentParser(prefix_chars='B')
-        esp_argParser.add_argument(
-            'BOARD_VARIANT',
-            dest='board_variant',
-            default='',
-            action='store'
-        )
-        esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
-        board_variant = esp_args.board_variant
-    else:
-        for arg in extra_args:
-            if arg.startswith('BOARD_VARIANT'):
-                raise RuntimeError(f'BOARD_VARIANT not supported by "{board}"')
-
-    if board_variant in ('SPIRAM', 'SPIRAM_OCT'):
-        if board == 'ESP32_GENERIC_S2':
-            esp_argParser = ArgumentParser(prefix_chars='-')
-
-            esp_argParser.add_argument(
-                '--flash-size',
-                dest='flash_size',
-                help='flash size',
-                choices=('2', '4'),
-                default='4',
-            )
-            esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
-            flash_size = esp_args.flash_size
-
-        elif board == 'ESP32_GENERIC':
-            esp_argParser = ArgumentParser(prefix_chars='-')
-
-            esp_argParser.add_argument(
-                '--flash-size',
-                dest='flash_size',
-                help='flash size',
-                choices=('4', '8', '16'),
-                default='4',
-            )
-            esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
-            flash_size = esp_args.flash_size
-
-        elif board == 'ESP32_GENERIC_S3':
-            esp_argParser = ArgumentParser(prefix_chars='-')
-
-            esp_argParser.add_argument(
-                '--octal-flash',
-                help='octal spi flash',
-                dest='oct_flash',
-                action='store_true'
-            )
-
-            esp_argParser.add_argument(
-                '--flash-size',
-                dest='flash_size',
-                help='flash size',
-                choices=('4', '8', '16', '32'),
-                default='8',
-            )
-            esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
-            flash_size = esp_args.flash_size
-            oct_flash = esp_args.oct_flash
-
-    esp_argParser = ArgumentParser(prefix_chars='-')
 
     esp_argParser.add_argument(
         '--skip-partition-resize',
         dest='skip_partition_resize',
         help='clean the build',
+        default=False,
         action='store_true'
     )
 
@@ -298,12 +210,14 @@ def parse_args(extra_args, lv_cflags, brd):
         type=int,
         action='store'
     )
+
     esp_argParser.add_argument(
         '--debug',
         dest='debug',
         default=False,
         action='store_true'
     )
+
     esp_argParser.add_argument(
         '--ccache',
         dest='ccache',
@@ -311,11 +225,140 @@ def parse_args(extra_args, lv_cflags, brd):
         action='store_true'
     )
 
+    esp_argParser.add_argument(
+        '--flash-size',
+        dest='flash_size',
+        help='flash size',
+        choices=(4, 8, 16, 32, 64, 128),
+        default=4,
+        type=int,
+        action='store'
+    )
+
     esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
+
+    BAUD = esp_args.baud
+    PORT = esp_args.port
+    deploy = esp_args.deploy
     skip_partition_resize = esp_args.skip_partition_resize
     partition_size = esp_args.partition_size
     ccache = esp_args.ccache
     DEBUG = esp_args.debug
+    flash_size = esp_args.flash_size
+
+    return extra_args
+
+
+def esp32_s3_args(extra_args):
+    global board_variant
+    global oct_flash
+    global disable_OTG
+    global onboard_mem_speed
+    global flash_mode
+
+    esp_argParser = ArgumentParser(prefix_chars='-B')
+
+    esp_argParser.add_argument(
+        'BOARD_VARIANT',
+        dest='board_variant',
+        default='',
+        action='store'
+    )
+
+    esp_argParser.add_argument(
+        '--USB-OTG',
+        dest='usb_otg',
+        default=False,
+        action='store_true'
+    )
+
+    esp_argParser.add_argument(
+        '--octal-flash',
+        help='octal spi flash',
+        dest='oct_flash',
+        action='store_true'
+    )
+
+    esp_argParser.add_argument(
+        '--onboard-mem-speed',
+        dest='onboard_mem_speed',
+        choices=[120, 80],
+        default=80,
+        type=int,
+        action='store'
+    )
+
+    esp_argParser.add_argument(
+        '--flash-mode',
+        dest='flash_mode',
+        choices=['QIO', 'QOUT', 'DIO', 'DOUT', 'OPI', 'DTR', 'STR'],
+        default='QIO',
+        type=str,
+        action='store'
+    )
+
+    esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
+
+    onboard_mem_speed = esp_args.onboard_mem_speed
+    flash_mode = esp_args.flash_mode
+    oct_flash = esp_args.oct_flash
+    disable_OTG = not esp_args.usb_otg
+    board_variant = esp_args.board_variant
+
+    return extra_args
+
+
+def esp32_s2_args(extra_args):
+    global disable_OTG
+
+    esp_argParser = ArgumentParser(prefix_chars='-')
+    esp_argParser.add_argument(
+        '--USB-OTG',
+        dest='usb_otg',
+        default=False,
+        action='store_true'
+    )
+
+    esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
+    disable_OTG = not esp_args.usb_otg
+
+    return extra_args
+
+
+def esp32_args(extra_args):
+    global board_variant
+
+    esp_argParser = ArgumentParser(prefix_chars='-B')
+
+    esp_argParser.add_argument(
+        'BOARD_VARIANT',
+        dest='board_variant',
+        default='',
+        action='store'
+    )
+
+    esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
+    board_variant = esp_args.board_variant
+
+    return extra_args
+
+
+def parse_args(extra_args, lv_cflags, brd):
+    global board
+
+    if brd is None:
+        brd = 'ESP32_GENERIC'
+
+    board = brd
+
+    extra_args = common_args(extra_args)
+
+    if board == 'ESP32_GENERIC':
+        extra_args = esp32_args(extra_args)
+    elif board == 'ESP32_GENERIC_S2':
+        extra_args = esp32_s2_args(extra_args)
+    elif board == 'ESP32_GENERIC_S3':
+        extra_args = esp32_s3_args(extra_args)
 
     if lv_cflags:
         lv_cflags += ' -DLV_KCONFIG_IGNORE=1'
@@ -621,94 +664,107 @@ def compile():  # NOQA
     if ccache:
         env['IDF_CCACHE_ENABLE'] = '1'
 
-    if (
-        board in ('ESP32_GENERIC', 'ESP32_GENERIC_S2', 'ESP32_GENERIC_S3') and
-        board_variant in ('SPIRAM', 'SPIRAM_OCT')
-    ):
-        base_config = [
-            'CONFIG_ESPTOOLPY_FLASHMODE_QIO=y',
-            'CONFIG_ESPTOOLPY_FLASHFREQ_80M=y',
-            'CONFIG_ESPTOOLPY_AFTER_NORESET=y',
-            'CONFIG_PARTITION_TABLE_CUSTOM=y',
-            'CONFIG_ESPTOOLPY_FLASHSIZE_2MB=n',
-            'CONFIG_ESPTOOLPY_FLASHSIZE_4MB=n',
-            'CONFIG_ESPTOOLPY_FLASHSIZE_8MB=n',
-            'CONFIG_ESPTOOLPY_FLASHSIZE_16MB=n',
-            'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=n',
-            f'CONFIG_ESPTOOLPY_FLASHSIZE_{flash_size}MB=y',
-            'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
-            f'"partitions-{flash_size}MiB.csv"',
-        ]
+    base_config = [
+        'CONFIG_ESPTOOLPY_FLASH_SAMPLE_MODE_STR=n',
+        'CONFIG_ESPTOOLPY_FLASH_SAMPLE_MODE_DTR=n',
+        'CONFIG_ESPTOOLPY_FLASHFREQ_120M=n',
+        'CONFIG_ESPTOOLPY_FLASHFREQ_80M=n',
+        'CONFIG_SPIRAM_MODE_OCT=n',
+        'CONFIG_SPIRAM_MODE_QUAD=n',
+        'CONFIG_SPIRAM_SPEED_120M=n',
+        'CONFIG_SPIRAM_SPEED_80M=n',
+        'CONFIG_ESPTOOLPY_FLASHMODE_QIO=n',
+        'CONFIG_ESPTOOLPY_AFTER_NORESET=y',
+        'CONFIG_PARTITION_TABLE_CUSTOM=y',
+        'CONFIG_ESPTOOLPY_FLASHSIZE_2MB=n',
+        'CONFIG_ESPTOOLPY_FLASHSIZE_4MB=n',
+        'CONFIG_ESPTOOLPY_FLASHSIZE_8MB=n',
+        'CONFIG_ESPTOOLPY_FLASHSIZE_16MB=n',
+        'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=n',
+        'CONFIG_ESPTOOLPY_FLASHSIZE_64MB=n',
+        'CONFIG_ESPTOOLPY_FLASHSIZE_128MB=n',
+        f'CONFIG_ESPTOOLPY_FLASHSIZE_{flash_size}MB=y',
+        'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
+        f'"{SCRIPT_DIR}/build/partitions-{flash_size}MiB.csv"',
+    ]
 
-        if DEBUG:
-            base_config.extend([
-                'CONFIG_BOOTLOADER_LOG_LEVEL_NONE=n',
-                'CONFIG_BOOTLOADER_LOG_LEVEL_ERROR=n',
-                'CONFIG_BOOTLOADER_LOG_LEVEL_WARN=n',
-                'CONFIG_BOOTLOADER_LOG_LEVEL_INFO=n',
-                'CONFIG_BOOTLOADER_LOG_LEVEL_DEBUG=y',
-                'CONFIG_BOOTLOADER_LOG_LEVEL_VERBOSE=n',
-                'CONFIG_LCD_ENABLE_DEBUG_LOG=y',
-                'CONFIG_HAL_LOG_LEVEL_NONE=n',
-                'CONFIG_HAL_LOG_LEVEL_ERROR=n',
-                'CONFIG_HAL_LOG_LEVEL_WARN=n',
-                'CONFIG_HAL_LOG_LEVEL_INFO=n',
-                'CONFIG_HAL_LOG_LEVEL_DEBUG=y',
-                'CONFIG_HAL_LOG_LEVEL_VERBOSE=n',
-                'CONFIG_LOG_MAXIMUM_LEVEL_ERROR=n',
-                'CONFIG_LOG_MAXIMUM_LEVEL_WARN=n',
-                'CONFIG_LOG_MAXIMUM_LEVEL_INFO=n',
-                'CONFIG_LOG_MAXIMUM_LEVEL_DEBUG=y',
-                'CONFIG_LOG_MAXIMUM_LEVEL_VERBOSE=n',
-                'CONFIG_LOG_DEFAULT_LEVEL_NONE=n',
-                'CONFIG_LOG_DEFAULT_LEVEL_ERROR=n',
-                'CONFIG_LOG_DEFAULT_LEVEL_WARN=n',
-                'CONFIG_LOG_DEFAULT_LEVEL_INFO=n',
-                'CONFIG_LOG_DEFAULT_LEVEL_DEBUG=y',
-                'CONFIG_LOG_DEFAULT_LEVEL_VERBOSE=n',
-            ])
+    if DEBUG:
+        base_config.extend([
+            'CONFIG_BOOTLOADER_LOG_LEVEL_NONE=n',
+            'CONFIG_BOOTLOADER_LOG_LEVEL_ERROR=n',
+            'CONFIG_BOOTLOADER_LOG_LEVEL_WARN=n',
+            'CONFIG_BOOTLOADER_LOG_LEVEL_INFO=n',
+            'CONFIG_BOOTLOADER_LOG_LEVEL_DEBUG=y',
+            'CONFIG_BOOTLOADER_LOG_LEVEL_VERBOSE=n',
+            'CONFIG_LCD_ENABLE_DEBUG_LOG=y',
+            'CONFIG_HAL_LOG_LEVEL_NONE=n',
+            'CONFIG_HAL_LOG_LEVEL_ERROR=n',
+            'CONFIG_HAL_LOG_LEVEL_WARN=n',
+            'CONFIG_HAL_LOG_LEVEL_INFO=n',
+            'CONFIG_HAL_LOG_LEVEL_DEBUG=y',
+            'CONFIG_HAL_LOG_LEVEL_VERBOSE=n',
+            'CONFIG_LOG_MAXIMUM_LEVEL_ERROR=n',
+            'CONFIG_LOG_MAXIMUM_LEVEL_WARN=n',
+            'CONFIG_LOG_MAXIMUM_LEVEL_INFO=n',
+            'CONFIG_LOG_MAXIMUM_LEVEL_DEBUG=y',
+            'CONFIG_LOG_MAXIMUM_LEVEL_VERBOSE=n',
+            'CONFIG_LOG_DEFAULT_LEVEL_NONE=n',
+            'CONFIG_LOG_DEFAULT_LEVEL_ERROR=n',
+            'CONFIG_LOG_DEFAULT_LEVEL_WARN=n',
+            'CONFIG_LOG_DEFAULT_LEVEL_INFO=n',
+            'CONFIG_LOG_DEFAULT_LEVEL_DEBUG=y',
+            'CONFIG_LOG_DEFAULT_LEVEL_VERBOSE=n',
+        ])
 
-        base_config.append('')
+    base_config.append('')
 
-        board_config_path = f'build/sdkconfig.board'
-        with open(board_config_path, 'w') as f:
-            f.write('\n'.join(base_config))
+    if onboard_mem_speed == 120:
+        base_config.append('CONFIG_ESPTOOLPY_FLASHFREQ_120M=y')
+        base_config.append('CONFIG_SPIRAM_SPEED_120M=y')
+    else:
+        base_config.append('CONFIG_ESPTOOLPY_FLASHFREQ_80M=y')
+        base_config.append('CONFIG_SPIRAM_SPEED_80M=y')
 
-        config_settings = []
-        if board == 'ESP32_GENERIC_S3':
-            if oct_flash and flash_size in ('16', '32'):
-                if flash_size == '32':
-                    config_settings.extend([
-                        'CONFIG_ESPTOOLPY_FLASHMODE_QIO=n',
-                        'CONFIG_ESPTOOLPY_FLASHMODE_DOUT=y'
-                    ])
+    if oct_flash:
+        base_config.append('CONFIG_ESPTOOLPY_OCT_FLASH=y')
 
-                config_settings.append('CONFIG_ESPTOOLPY_OCT_FLASH=y')
+    if board_variant:
+        if board_variant == 'SPIRAM':
+            base_config.append('CONFIG_SPIRAM_MODE_QUAD=y')
+        elif board_variant == 'SPIRAM_OCT':
+            base_config.append('CONFIG_SPIRAM_MODE_OCT=y')
 
-        with open(board_config_path, 'a') as f:
-            f.write('\n'.join(config_settings))
+    if flash_mode == 'STR':
+        base_config.append('CONFIG_ESPTOOLPY_FLASH_SAMPLE_MODE_STR=y')
+    elif flash_mode == 'DTR':
+        base_config.append('CONFIG_ESPTOOLPY_FLASH_SAMPLE_MODE_DTR=y')
+    else:
+        base_config.append(f'CONFIG_ESPTOOLPY_FLASHMODE_{flash_mode}=y')
 
-        mpconfigboard_cmake_path = (
-            'lib/micropython/ports/esp32/boards/'
-            f'{board}/mpconfigboard.cmake'
-        )
+    mpconfigboard_cmake_path = (
+        'lib/micropython/ports/esp32/boards/'
+        f'{board}/mpconfigboard.cmake'
+    )
 
-        with open(mpconfigboard_cmake_path, 'rb') as f:
-            data = f.read().decode('utf-8')
+    with open(mpconfigboard_cmake_path, 'rb') as f:
+        data = f.read().decode('utf-8')
 
-        sdkconfig = (
-            'set(SDKCONFIG_DEFAULTS ${SDKCONFIG_DEFAULTS} '
-            '../../../../build/sdkconfig.board)'
-        )
+    sdkconfig = (
+        'set(SDKCONFIG_DEFAULTS ${SDKCONFIG_DEFAULTS} '
+        '../../../../build/sdkconfig.board)'
+    )
 
-        if sdkconfig not in data:
-            data += '\n' + sdkconfig + '\n'
+    if sdkconfig not in data:
+        data += '\n' + sdkconfig + '\n'
 
-            with open(mpconfigboard_cmake_path, 'wb') as f:
-                f.write(data.encode('utf-8'))
+        with open(mpconfigboard_cmake_path, 'wb') as f:
+            f.write(data.encode('utf-8'))
+
+    board_config_path = f'build/sdkconfig.board'
+    with open(board_config_path, 'w') as f:
+        f.write('\n'.join(base_config))
 
     if board in ('ESP32_GENERIC_S2', 'ESP32_GENERIC_S3') and disable_OTG:
-
         mphalport_path = 'lib/micropython/ports/esp32/mphalport.c'
 
         with open(mphalport_path, 'rb') as f:
@@ -761,25 +817,7 @@ def compile():  # NOQA
         dst_file = os.path.join(dst_path, file)
         shutil.copyfile(src_file, dst_file)
 
-    # have yet to test to see if removing this is going to cause an issue.
-    # mpconfigport_path = 'lib/micropython/ports/esp32/mpconfigport.h'
-
-    # with open(mpconfigport_path, 'rb') as f:
-    #     data = f.read().decode('utf-8')
-
-    # if '#define MICROPY_PY_MACHINE_I2S (0)' not in data:
-    #     data = data.replace(
-    #         '#ifndef MICROPY_PY_MACHINE_I2S',
-    #         '#define MICROPY_PY_MACHINE_I2S (0)\n'
-    #         '#ifndef MICROPY_PY_MACHINE_I2S'
-    #     )
-    #     with open(mpconfigport_path, 'wb') as f:
-    #         f.write(data.encode('utf-8'))
-
-    if not sys.platform.startswith('win'):
-        cmds.append(compile_cmd)
-    else:
-        cmds = compile_cmd
+    cmds = compile_cmd
 
     ret_code, output = spawn(cmds, env=env, cmpl=True)
     if ret_code != 0:
