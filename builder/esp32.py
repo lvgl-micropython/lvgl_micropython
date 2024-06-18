@@ -926,7 +926,7 @@ def compile():  # NOQA
 
         espressif_path = os.path.expanduser('~/.espressif')
         python_path = f'{espressif_path}/python_env/idf5.2_py3.10_env/bin'
-        esptool_path = f'{python_path}/esptool.py'
+        esptool_path = f'{python_path}/esptool'
         python_path += '/python'
 
         output = output.split('python ', 1)[-1]
@@ -937,8 +937,13 @@ def compile():  # NOQA
         if board_variant:
             build_name += f'-{board_variant}'
 
-        full_file_path = f'{SCRIPT_DIR}/lib/micropython/ports/esp32/{build_name}'
-        bin_files = ['0x' + item.replace(build_name, full_file_path).strip() for item in output.split('0x')[1:]]
+        full_file_path = (
+            f'{SCRIPT_DIR}/lib/micropython/ports/esp32/{build_name}'
+        )
+        bin_files = [
+            '0x' + item.replace(build_name, full_file_path).strip()
+            for item in output.split('0x')[1:]
+        ]
         bin_files = ' '.join(bin_files)
 
         old_bin_files = ['0x' + item.strip() for item in output.split('0x')[1:]]
@@ -962,32 +967,28 @@ def compile():  # NOQA
         build_bin_file += '.bin'
         build_bin_file = os.path.abspath(build_bin_file)
 
-        cmds = [f'{python_path} -m {esptool_path} merge_bin -o {build_bin_file} {bin_files}']
+        cmds = [''.join([
+            f'{python_path} -m {esptool_path} ',
+            f'merge_bin -o {build_bin_file} {bin_files}'
+        ])]
 
         result, _ = spawn(cmds, env=env)
         if result:
             sys.exit(result)
 
         output = output.replace(old_bin_files, f'0x0 {build_bin_file}')
-        output = output.replace('esptool.py', esptool_path)
+        output = output.replace(' esptool ', f' {esptool_path} ')
         output = python_path + output
 
         if deploy:
-            python_env_path = os.path.split(os.path.split(python_path)[0])[0]
-            python_version = (
-                os.path.split(python_env_path)[-1].split('_')[1][2:]
-            )
-            site_packages = os.path.join(
-                python_env_path,
-                f'lib/python{python_version}/site-packages'
-            )
-            sys.path.insert(0, site_packages)
+            tool_path = os.path.split(esptool_path)[0]
+            sys.path.insert(0, tool_path)
 
             from esptool.targets import CHIP_DEFS  # NOQA
             from esptool.util import FatalError  # NOQA
-            from serial.tools import list_ports
+            from serial.tools import list_ports  # NOQA
 
-            cmd = cmd.replace('-b 460800', f'-b {BAUD}')
+            cmd = output.replace('-b 460800', f'-b {BAUD}')
 
             def get_port_list():
                 pts = sorted(p.device for p in list_ports.comports())
@@ -1024,8 +1025,13 @@ def compile():  # NOQA
                 return found_ports
 
             if PORT is None:
-
-                ports = find_esp32(cmd.split('--chip ', 1)[-1].split(' ', 1)[0])
+                ports = find_esp32(
+                    cmd.split(
+                        '--chip ', 1
+                    )[-1].split(
+                        ' ', 1
+                    )[0]
+                )
                 if len(ports) > 1:
                     query = []
                     for i, port in enumerate(ports):
@@ -1040,11 +1046,11 @@ def compile():  # NOQA
 
                 PORT = ports[res]
 
-            cmd = cmd.replace('-p (PORT)', f'-p "{PORT}"')
+            cmd = cmd.replace('-p (PORT)', f'-p {PORT}')
 
             erase_flash = (
-                f'"{python_path}" "{esptool_path}" '
-                f'-p "{PORT}" -b 460800 erase_flash'
+                f'{python_path} -m {esptool_path} '
+                f'-p {PORT} -b 460800 erase_flash'
             )
 
             result, _ = spawn(erase_flash)
@@ -1054,17 +1060,18 @@ def compile():  # NOQA
             result, _ = spawn(cmd)
 
         else:
+            erase_cmd = ''.join([
+                f'{python_path} -m {esptool_path} ',
+                f'-p (PORT) -b 460800 erase_flash'
+            ])
+
             print()
             print()
             print('To flash firmware:')
             print('Replace "(PORT)" with the serial port for your esp32')
             print('and run the commands.')
             print()
-
-            print(
-                python_path, esptool_path, '-p (PORT) -b 460800 erase_flash'
-            )
-
+            print(erase_cmd)
             print()
             print(output.replace('-b 460800', '-b 921600'))
             print()
