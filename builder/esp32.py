@@ -40,6 +40,9 @@ PARTITION_HEADER = '''\
 class Partition:
 
     def __init__(self):
+        if not os.path.exists('build'):
+            os.mkdir('build')
+
         self.save_file_path = f'"{SCRIPT_DIR}/build/partitions-{flash_size}MiB.csv"'
         self.first_offset = 0x9000
         self.nvs = 0x6000
