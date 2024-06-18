@@ -1062,7 +1062,7 @@ def compile():  # NOQA
             cmd = cmd.replace('-p (PORT)', f'-p "{PORT}"')
 
             erase_flash = (
-                f'"{python_path}" "{esp_tool_path}" '
+                f'"{python_path}" "{esptool_path}" '
                 f'-p "{PORT}" -b 460800 erase_flash'
             )
 
