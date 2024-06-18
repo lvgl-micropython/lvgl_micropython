@@ -921,19 +921,17 @@ def compile():  # NOQA
                 if ret_code != 0:
                     sys.exit(ret_code)
 
-    if 'To flash, run this command:' in output:
-        output = output.split('To flash, run this command:')[-1].strip()
-        output = output.split('\n')[0]
+    if 'To flash, run:' in output:
+        output = output.split('To flash, run:')[-1].strip()
 
-        python_path, output = output.split('python ', 1)
-        python_path += 'python'
+        espressif_path = "~/.espressif"
+        python_path = f'{espressif_path}/python_env/idf5.2_py3.10_env/bin'
+        esp_tool_path = f'{python_path}/esptool.py'
 
-        esp_tool_path, output = output.split('esptool.py ', 1)
-        esp_tool_path += 'esptool.py'
-        esp_tool_path = esp_tool_path.replace(
-            '../../../',
-            os.getcwd() + '/lib/'
-        )
+        output = output.split('python ', 1)[-1]
+        output = output.split('\n', 1)[0]
+        output = f'{python_path}/python {output}'
+        output = output.replace('esptool.py', esp_tool_path)
 
         out_cmd = []
 
