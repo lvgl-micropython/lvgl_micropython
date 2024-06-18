@@ -40,11 +40,8 @@ PARTITION_HEADER = '''\
 class Partition:
 
     def __init__(self, size):
-        if not os.path.exists('build'):
-            os.mkdir('build')
-
         self.save_file_path = (
-            f'{SCRIPT_DIR}/build/partitions-{flash_size}MiB.'
+            f'{SCRIPT_DIR}/build/partitions.csv'
         )
         self.first_offset = 0x9000
         self.nvs = 0x6000
@@ -71,7 +68,7 @@ class Partition:
 
     def save(self):
         offset = self.first_offset
-        data = [f'nvs,data, nvs,0x{offset:X},0x{self.nvs:X}']
+        data = [f'nvs,data,nvs,0x{offset:X},0x{self.nvs:X}']
         offset += self.nvs
 
         if ota:
@@ -100,6 +97,9 @@ class Partition:
             raise RuntimeError(
                 'There is not enough flash to store the firmware'
             )
+
+        if not os.path.exists(f'{SCRIPT_DIR}/build'):
+            os.mkdir(f'{SCRIPT_DIR}/build')
 
         with open(self.save_file_path, 'w') as f:
             f.write(PARTITION_HEADER)
@@ -138,7 +138,7 @@ def get_espidf():
 board_variant = None
 board = None
 skip_partition_resize = False
-partition_size = None
+partition_size = -1
 flash_size = 4
 oct_flash = False
 
@@ -284,7 +284,7 @@ def esp32_s3_args(extra_args):
         action='store'
     )
     esp_argParser.add_argument(
-        '--USB-OTG',
+        '--usb-otg',
         dest='usb_otg',
         default=False,
         action='store_true'
@@ -328,7 +328,7 @@ def esp32_s2_args(extra_args):
 
     esp_argParser = ArgumentParser(prefix_chars='-')
     esp_argParser.add_argument(
-        '--USB-OTG',
+        '--usb-otg',
         dest='usb_otg',
         default=False,
         action='store_true'
@@ -746,7 +746,7 @@ def compile():  # NOQA
     base_config.append(f'CONFIG_ESPTOOLPY_FLASHSIZE_{flash_size}MB=y')
     base_config.append(''.join([
         'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME=',
-        f'"{SCRIPT_DIR}/build/partitions-{flash_size}MiB.csv"'
+        f'"{SCRIPT_DIR}/build/partitions.csv"'
     ]))
 
     if optimize_size:
@@ -890,8 +890,8 @@ def compile():  # NOQA
         if ret_code != 0:
             sys.exit(ret_code)
 
-    elif not skip_partition_resize and partition_size == -1:
-        if 'build complete' in output:
+    elif not skip_partition_resize:
+        if partition_size == -1 and 'build complete' in output:
             app_size = output.rsplit('micropython.bin binary size ')[-1]
             app_size = int(
                 app_size.split(' bytes')[0].strip(),
@@ -972,7 +972,7 @@ def compile():  # NOQA
         build_bin_file += '.bin'
         build_bin_file = os.path.abspath(build_bin_file)
 
-        cmd = f'{python_path} {esp_tool_path} {out_cmd}'
+        cmd = f'{python_path}/python {esp_tool_path} {out_cmd}'
         cmd = cmd.replace('write_flash', f'merge_bin -o {build_bin_file}')
         cmd = cmd.replace('--flash_freq 80m ', '')
         cmd = cmd.replace('-p (PORT) ', '')
@@ -995,7 +995,7 @@ def compile():  # NOQA
         if result:
             sys.exit(result)
 
-        cmd = f'{python_path} {esp_tool_path} {out_cmd}'
+        cmd = f'{python_path}/python {esp_tool_path} {out_cmd}'
         cmd = cmd.split('write_flash', 1)[0]
         cmd += f'write_flash 0x0 {build_bin_file}'
 
