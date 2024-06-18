@@ -924,7 +924,7 @@ def compile():  # NOQA
     if 'To flash, run:' in output:
         output = output.rsplit('To flash, run:')[-1].strip()
 
-        espressif_path = "~/.espressif"
+        espressif_path = os.path.expanduser('~/.espressif')
         python_path = f'{espressif_path}/python_env/idf5.2_py3.10_env/bin'
         esptool_path = f'{python_path}/esptool.py'
         python_path += '/python'
