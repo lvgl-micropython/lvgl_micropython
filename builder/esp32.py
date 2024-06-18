@@ -926,7 +926,6 @@ def compile():  # NOQA
 
         espressif_path = os.path.expanduser('~/.espressif')
         python_path = f'{espressif_path}/python_env/idf5.2_py3.10_env/bin'
-        esptool_path = f'"{python_path}/esptool"'
         python_path += '/python'
 
         output = output.split('python ', 1)[-1]
@@ -970,7 +969,7 @@ def compile():  # NOQA
         build_bin_file = f'"{os.path.abspath(build_bin_file)}"'
 
         cmds = [''.join([
-            f'{python_path} -m {esptool_path} ',
+            f'{python_path} -m esptool ',
             f'merge_bin -o {build_bin_file} {bin_files}'
         ])]
 
@@ -979,11 +978,21 @@ def compile():  # NOQA
             sys.exit(result)
 
         output = output.replace(old_bin_files, f'0x0 {build_bin_file}')
-        output = output.replace(' esptool ', f' {esptool_path} ')
         output = python_path + output
 
         if deploy:
-            tool_path = os.path.split(esptool_path[1:-1])[0]
+            result, tool_path = spawn(
+                [[
+                    python_path,
+                    '-c "import esptool;print(esptool.__file__);"'
+                ]],
+                out_to_screen=False
+            )
+
+            if result != 0:
+                raise RuntimeError('ERROR collecting esptool path')
+
+            tool_path = os.path.split(os.path.split(tool_path.strip())[0])
             sys.path.insert(0, tool_path)
 
             from esptool.targets import CHIP_DEFS  # NOQA
@@ -1051,7 +1060,7 @@ def compile():  # NOQA
             cmd = cmd.replace('-p (PORT)', f'-p {PORT}')
 
             erase_flash = (
-                f'{python_path} -m {esptool_path} '
+                f'{python_path} -m esptool '
                 f'-p {PORT} -b 460800 erase_flash'
             )
 
@@ -1063,7 +1072,7 @@ def compile():  # NOQA
 
         else:
             erase_cmd = ''.join([
-                f'{python_path} -m {esptool_path} ',
+                f'{python_path} -m esptool ',
                 f'-p (PORT) -b 460800 erase_flash'
             ])
 
