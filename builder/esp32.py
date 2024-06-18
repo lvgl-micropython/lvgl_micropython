@@ -79,16 +79,14 @@ class Partition:
         data.append(f'phy_init,data,phy,0x{offset:X},0x{self.phy_init:X}')
         offset += self.phy_init
 
-        factory = (int(self.factory / 0x1000) + 1) * 0x1000
-
         if ota:
-            data.append(f'ota_0,app,ota_0,0x{offset:X},0x{factory:X}')
-            offset += factory
-            data.append(f'ota_1,app,ota_1,0x{offset:X},0x{factory:X}')
-            offset += factory
+            data.append(f'ota_0,app,ota_0,0x{offset:X},0x{self.factory:X}')
+            offset += self.factory
+            data.append(f'ota_1,app,ota_1,0x{offset:X},0x{self.factory:X}')
+            offset += self.factory
         else:
-            data.append(f'factory,app,factory,0x{offset:X},0x{factory:X}')
-            offset += factory
+            data.append(f'factory,app,factory,0x{offset:X},0x{self.factory:X}')
+            offset += self.factory
 
         total_size = int((flash_size * (2 ** 20)) / 0x1000) * 0x1000
 
@@ -787,7 +785,7 @@ def compile():  # NOQA
     )
 
     if partition_size == -1:
-        p_size = 0x27A000
+        p_size = 0x267000
     else:
         p_size = partition_size
 
@@ -868,7 +866,6 @@ def compile():  # NOQA
             sys.exit(ret_code)
 
         if partition_size != -1:
-
             sys.exit(ret_code)
 
         sys.stdout.write('\n\033[31;1m***** Resizing Partition *****\033[0m\n')
@@ -893,10 +890,13 @@ def compile():  # NOQA
 
     elif not skip_partition_resize and partition_size == -1:
         if 'build complete' in output:
-            remaining = output.rsplit('application')[-1]
-            remaining = int(
-                remaining.split('(', 1)[-1].split('remaining')[0].strip()
+            app_size = output.rsplit('micropython.bin binary size ')[-1]
+            app_size = int(
+                app_size.split(' bytes')[0].strip(),
+                16
             )
+
+            remaining = app_size - partition.get_app_size()
 
             if remaining > 0x1000:
                 sys.stdout.write(
