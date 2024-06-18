@@ -38,16 +38,13 @@ PARTITION_HEADER = '''\
 class Partition:
 
     def __init__(self, file_path):
-        self.file_path = file_path
+        self.load_file_path = file_path
+        self.save_file_path = f'"{SCRIPT_DIR}/build/partitions-{flash_size}MiB.csv"'
         self._saved_data = None
         self.csv_data = self.read_csv()
         last_partition = self.csv_data[-1]
 
         self.total_space = last_partition[-2] + last_partition[-3]
-
-    def revert_to_original(self):
-        with open(self.file_path, 'w') as f:
-            f.write(self._saved_data)
 
     def get_app_size(self) -> int:
         for part in self.csv_data:
@@ -77,7 +74,7 @@ class Partition:
         if next_offset > self.total_space:
             raise RuntimeError(
                 f'Board does not have enough space, overflow of '
-                f'{next_offset - self.total_space} bytes ({self.file_path})\n'
+                f'{next_offset - self.total_space} bytes ({self.load_file_path})\n'
             )
 
     def save(self):
@@ -91,12 +88,12 @@ class Partition:
         for line in self.csv_data:
             otp.append(','.join(convert_to_hex(item) for item in line))
 
-        with open(self.file_path, 'w') as f:
+        with open(self.save_file_path, 'w') as f:
             f.write(PARTITION_HEADER)
             f.write('\n'.join(otp))
 
     def read_csv(self):
-        with open(self.file_path, 'r') as f:
+        with open(self.load_file_path, 'r') as f:
             csv_data = f.read()
 
         self._saved_data = csv_data
@@ -682,10 +679,7 @@ def compile():  # NOQA
         'CONFIG_ESPTOOLPY_FLASHSIZE_16MB=n',
         'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=n',
         'CONFIG_ESPTOOLPY_FLASHSIZE_64MB=n',
-        'CONFIG_ESPTOOLPY_FLASHSIZE_128MB=n',
-        f'CONFIG_ESPTOOLPY_FLASHSIZE_{flash_size}MB=y',
-        'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME='
-        f'"{SCRIPT_DIR}/build/partitions-{flash_size}MiB.csv"',
+        'CONFIG_ESPTOOLPY_FLASHSIZE_128MB=n'
     ]
 
     if DEBUG:
@@ -718,12 +712,14 @@ def compile():  # NOQA
 
     base_config.append('')
 
-    if onboard_mem_speed == 120:
-        base_config.append('CONFIG_ESPTOOLPY_FLASHFREQ_120M=y')
-        base_config.append('CONFIG_SPIRAM_SPEED_120M=y')
-    else:
-        base_config.append('CONFIG_ESPTOOLPY_FLASHFREQ_80M=y')
-        base_config.append('CONFIG_SPIRAM_SPEED_80M=y')
+    base_config.append(f'CONFIG_ESPTOOLPY_FLASHSIZE_{flash_size}MB=y')
+    base_config.append(''.join([
+        'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME=',
+        f'"{SCRIPT_DIR}/build/partitions-{flash_size}MiB.csv"'
+    ]))
+
+    base_config.append('CONFIG_ESPTOOLPY_FLASHFREQ_{onboard_mem_speed}M=y')
+    base_config.append('CONFIG_SPIRAM_SPEED_{onboard_mem_speed}M=y')
 
     if oct_flash:
         base_config.append('CONFIG_ESPTOOLPY_OCT_FLASH=y')

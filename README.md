@@ -16,6 +16,26 @@ for the binding.
 ### *New changes*
 ___________________________
 
+ESP32-ALL
+Flash sizes that are able to be used are 4, 8, 16, 32, 64 and 128 across all 
+variants of the ESP32. It is up to the user to know what their board is using.
+
+
+ESP32-S3
+2 new command line arguments.
+--onboard-mem-speed: allowed values = 120 or 80
+--flash-mode: allowed values = QIO, QOUT, DIO, DOUT, OPI, DTR, STR
+
+
+OK so this is how this works is wanting to use 120,hz speed
+* octal spi FLASH, octal spi PSRAM: `--onboard-mem-speed=120 --flash-mode=DTR`
+* quad spi FLASH, octal spi PSRAM: `--onboard-mem-speed=120 --flash-mode=STR`
+* quad spi FLASH, quad spi PSRAM: `--onboard-mem-speed=120`
+
+There is one other use case. If you have 32mb worth of flash storage you will 
+need to set `--flash-mode=DOUT` as well as `--flash-size=32`
+
+
 ESP32
 MicroPython SPI class has been modified
 The SPI implimentation in MicroPython for the ESP32 was written so it would fail
