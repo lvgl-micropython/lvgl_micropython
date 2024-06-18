@@ -968,8 +968,10 @@ def compile():  # NOQA
         build_bin_file += '.bin'
         build_bin_file = f'"{os.path.abspath(build_bin_file)}"'
 
+        chip = output.split('--chip ', 1)[-1].split(' ', 1)[0]
+
         cmds = [''.join([
-            f'{python_path} -m esptool ',
+            f'{python_path} -m esptool --chip {chip} ',
             f'merge_bin -o {build_bin_file} {bin_files}'
         ])]
 
