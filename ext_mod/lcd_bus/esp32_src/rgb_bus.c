@@ -53,7 +53,7 @@
         uint8_t bb_fb_index;  // Current frame buffer index which used by bounce buffer
     } rgb_panel_t;
 
-    bool callback_from_isr(mp_obj_t cb, uint8_t buf_num)
+    bool callback_from_isr(mp_obj_t cb)
     {
         volatile uint32_t sp = (uint32_t)esp_cpu_get_sp();
         bool ret = false;
@@ -74,11 +74,8 @@
 
         nlr_buf_t nlr;
         if (nlr_push(&nlr) == 0) {
-            mp_obj_t args[1] = { mp_obj_new_int_from_uint(buf_num) };
-            mp_obj_t ret_val = mp_call_function_n_kw(cb, 1, 0, &args[0]);
-            if ((ret_val != mp_const_none) && mp_obj_is_integer(ret_val) && (mp_obj_get_int_truncated(ret_val) == 1)) {
-                ret = true;
-            }
+            mp_call_function_n_kw(cb,0, 0, NULL);
+            ret = true;
             nlr_pop();
         } else {
             ets_printf("Uncaught exception in IRQ callback handler!\n");
@@ -89,11 +86,10 @@
         mp_sched_unlock();
 
         mp_thread_set_state(old_state);
-        // mp_hal_wake_main_task_from_isr();
+        mp_hal_wake_main_task_from_isr();
 
         return ret;
     }
-
 
     IRAM_ATTR static bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
     {
@@ -104,7 +100,7 @@
         bool ret = false;
 
         if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
-            ret = callback_from_isr(self->callback, (uint8_t)rgb_panel->cur_fb_index);
+            ret = callback_from_isr(self->callback);
         }
         return ret;
     }
