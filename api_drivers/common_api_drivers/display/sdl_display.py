@@ -156,7 +156,9 @@ class SDLDisplay(display_driver_framework.DisplayDriver):
             display_height,
             lv.color_format_get_size(color_space) * 8,
             cf,
-            False
+            False,
+            8,
+            8
         )
 
         self._disp_drv.set_flush_cb(self._flush_cb)
