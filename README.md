@@ -20,6 +20,10 @@ ESP32-ALL
 Flash sizes that are able to be used are 4, 8, 16, 32, 64 and 128 across all 
 variants of the ESP32. It is up to the user to know what their board is using.
 
+--ota if you want to set the partitions so you can do an over the air update of 
+the firmware. I do want to note that this does take up twice as much application 
+storage space. This feature applies to any board.
+
 
 ESP32-S3
 2 new command line arguments.
