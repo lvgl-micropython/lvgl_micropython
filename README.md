@@ -17,6 +17,15 @@ for the binding.
 ___________________________
 
 ESP32-ALL
+
+
+If you are having an issue with getting the firmware to fit into your esp32
+or if space is more of a concern than speed you can set the 
+`--optimize-size` command line option. This will tell the compiler that the 
+firmware size is more important than performance and the compiled binary will 
+be smaller as a result.  
+
+
 Flash sizes that are able to be used are 4, 8, 16, 32, 64 and 128 across all 
 variants of the ESP32. It is up to the user to know what their board is using.
 

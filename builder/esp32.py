@@ -922,37 +922,27 @@ def compile():  # NOQA
                     sys.exit(ret_code)
 
     if 'To flash, run:' in output:
-        output = output.split('To flash, run:')[-1].strip()
+        output = output.rsplit('To flash, run:')[-1].strip()
 
         espressif_path = "~/.espressif"
         python_path = f'{espressif_path}/python_env/idf5.2_py3.10_env/bin'
-        esp_tool_path = f'{python_path}/esptool.py'
+        esptool_path = f'{python_path}/esptool.py'
+        python_path += '/python'
 
         output = output.split('python ', 1)[-1]
         output = output.split('\n', 1)[0]
-        output = f'{python_path}/python {output}'
-        output = output.replace('esptool.py', esp_tool_path)
-
-        out_cmd = []
-
-        for file in (
-            'bootloader.bin',
-            'partition-table.bin',
-            'micropython.bin'
-        ):
-            arg, output = output.split('build-', 1)
-            output = 'build-' + output
-            path, output = output.split(file, 1)
-            output = output.strip()
-            path += file
-            out_cmd.append(arg.strip())
-            out_cmd.append(
-                os.path.abspath('lib/micropython/ports/esp32/' + path)
-            )
-
-        out_cmd = ' '.join(out_cmd)
 
         build_name = f'build-{board}'
+
+        if board_variant:
+            build_name += f'-{board_variant}'
+
+        full_file_path = f'{SCRIPT_DIR}/lib/micropython/ports/esp32/{build_name}'
+        bin_files = ['0x' + item.replace(build_name, full_file_path).strip() for item in output.split('0x')[1:]]
+        bin_files = ' '.join(bin_files)
+
+        old_bin_files = ['0x' + item.strip() for item in output.split('0x')[1:]]
+        old_bin_files = ' '.join(old_bin_files)
 
         os.remove('build/lvgl_header.h')
 
@@ -972,8 +962,10 @@ def compile():  # NOQA
         build_bin_file += '.bin'
         build_bin_file = os.path.abspath(build_bin_file)
 
-        cmd = f'{python_path}/python {esp_tool_path} {out_cmd}'
-        cmd = cmd.replace('write_flash', f'merge_bin -o {build_bin_file}')
+        cmd = f'{python_path} -m {esptool_path} merge_bin -o {build_bin_file} {bin_files}'
+
+        cmd = cmd.replace('esptool.py', esptool_path)
+        cmd = cmd.replace('write_flash', f'')
         cmd = cmd.replace('--flash_freq 80m ', '')
         cmd = cmd.replace('-p (PORT) ', '')
         cmd = cmd.replace('-b 460800 ', '')
@@ -995,9 +987,9 @@ def compile():  # NOQA
         if result:
             sys.exit(result)
 
-        cmd = f'{python_path}/python {esp_tool_path} {out_cmd}'
-        cmd = cmd.split('write_flash', 1)[0]
-        cmd += f'write_flash 0x0 {build_bin_file}'
+        output = output.replace(old_bin_files, f'0x0 {build_bin_file}')
+        output = output.replace('esptool.py', esptool_path)
+        output = python_path + output
 
         if deploy:
             python_env_path = os.path.split(os.path.split(python_path)[0])[0]
@@ -1089,11 +1081,11 @@ def compile():  # NOQA
             print()
 
             print(
-                python_path, esp_tool_path, '-p (PORT) -b 460800 erase_flash'
+                python_path, esptool_path, '-p (PORT) -b 460800 erase_flash'
             )
 
             print()
-            print(cmd.replace('-b 460800', '-b 921600'))
+            print(output.replace('-b 460800', '-b 921600'))
             print()
 
 
