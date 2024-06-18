@@ -94,7 +94,9 @@
     IRAM_ATTR static bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
     {
         LCD_UNUSED(edata);
-        rgb_panel_t *rgb_panel = __containerof(panel, rgb_panel_t, base);
+        LCD_UNUSED(panel);
+
+        // rgb_panel_t *rgb_panel = __containerof(panel, rgb_panel_t, base);
 
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)user_ctx;
         bool ret = false;
