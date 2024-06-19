@@ -754,7 +754,10 @@ def compile():  # NOQA
     else:
         base_config.append('CONFIG_COMPILER_OPTIMIZATION_PERF=y')
 
-    base_config.append('CONFIG_ESPTOOLPY_FLASHFREQ_{onboard_mem_speed}M=y')
+    if onboard_mem_speed == 120 or flash_mode in ('DTR', 'STR'):
+        base_config.append('CONFIG_IDF_EXPERIMENTAL_FEATURES=y')
+
+    base_config.append(f'CONFIG_ESPTOOLPY_FLASHFREQ_{onboard_mem_speed}M=y')
     base_config.append('CONFIG_SPIRAM_SPEED_{onboard_mem_speed}M=y')
 
     if oct_flash:
@@ -980,7 +983,7 @@ def compile():  # NOQA
             sys.exit(result)
 
         output = output.replace(old_bin_files, f'0x0 {build_bin_file}')
-        output = python_path + output
+        output = python_path + ' ' + output
 
         if deploy:
             result, tool_path = spawn(
