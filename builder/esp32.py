@@ -346,6 +346,9 @@ def esp32_s2_args(extra_args):
 def esp32_args(extra_args):
     global board_variant
     global ota
+    global flash_mode
+
+    flash_mode = 'DIO'
 
     esp_argParser = ArgumentParser(prefix_chars='B')
     esp_argParser.add_argument(
