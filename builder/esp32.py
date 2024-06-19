@@ -7,6 +7,9 @@ from . import generate_manifest
 from . import update_mphalport
 
 
+IDF_VER = '5.2.0'
+
+
 def get_partition_file_name(otp):
     if 'Running cmake in directory ' in otp:
         build_path = otp.split('Running cmake in directory ', 1)[-1]
@@ -128,7 +131,7 @@ def get_espidf():
         ]
     ]
     print()
-    print('collecting ESP-IDF v5.2.0')
+    print(f'collecting ESP-IDF v{IDF_VER}')
     print('this might take a while...')
     result, _ = spawn(cmd, spinner=True)
     if result != 0:
@@ -466,7 +469,9 @@ def has_correct_idf():
             if version:
                 cached_idf_version = version
 
-    return cached_idf_version is not None and cached_idf_version == '5.2.0'
+    return (
+        cached_idf_version is not None and cached_idf_version == IDF_VER
+    )
 
 
 def build_manifest(
@@ -587,7 +592,9 @@ def setup_idf_environ():
 
             args = " ".join(args)
 
-            sys.stderr.write('ESP-IDF version 5.2.0 is needed to compile\n')
+            sys.stderr.write(
+                f'ESP-IDF version {IDF_VER} is needed to compile\n'
+            )
             sys.stderr.write(
                 'Please rerun the build using the command below...\n'
             )
@@ -663,7 +670,7 @@ def submodules():
         ['./install.sh', 'all']
     ]
 
-    print('setting up ESP-IDF v5.2.0')
+    print(f'setting up ESP-IDF v{IDF_VER}')
     print('this might take a while...')
     env = {k: v for k, v in os.environ.items()}
     env['IDF_PATH'] = os.path.abspath(idf_path)
@@ -928,7 +935,18 @@ def compile():  # NOQA
         output = output.rsplit('To flash, run:')[-1].strip()
 
         espressif_path = os.path.expanduser('~/.espressif')
-        python_path = f'{espressif_path}/python_env/idf5.2_py3.10_env/bin'
+
+        for ver in ('3.8', '3.9', '3.10', '3.11', '3.12'):
+            python_path = (
+                f'{espressif_path}/python_env/idf{IDF_VER[:-2]}_py{ver}_env/bin'
+            )
+            if os.path.exists(python_path):
+                break
+        else:
+            raise RuntimeError(
+                'unable to locate pyton version used in the ESP-IDF'
+            )
+
         python_path += '/python'
 
         output = output.split('python ', 1)[-1]
