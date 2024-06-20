@@ -151,8 +151,8 @@ PORT = None
 BAUD = 460800
 ccache = False
 disable_OTG = True
-onboard_mem_speed = 80
-flash_mode = 'QIO'
+onboard_mem_speed = None
+flash_mode = None
 optimize_size = False
 ota = False
 
@@ -302,7 +302,7 @@ def esp32_s3_args(extra_args):
         '--onboard-mem-speed',
         dest='onboard_mem_speed',
         choices=[120, 80],
-        default=80,
+        default=None,
         type=int,
         action='store'
     )
@@ -310,7 +310,7 @@ def esp32_s3_args(extra_args):
         '--flash-mode',
         dest='flash_mode',
         choices=['QIO', 'QOUT', 'DIO', 'DOUT', 'OPI', 'DTR', 'STR'],
-        default='QIO',
+        default=None,
         type=str,
         action='store'
     )
@@ -700,15 +700,6 @@ def compile():  # NOQA
         env['IDF_CCACHE_ENABLE'] = '1'
 
     base_config = [
-        'CONFIG_ESPTOOLPY_FLASH_SAMPLE_MODE_STR=n',
-        'CONFIG_ESPTOOLPY_FLASH_SAMPLE_MODE_DTR=n',
-        'CONFIG_ESPTOOLPY_FLASHFREQ_120M=n',
-        'CONFIG_ESPTOOLPY_FLASHFREQ_80M=n',
-        'CONFIG_SPIRAM_MODE_OCT=n',
-        'CONFIG_SPIRAM_MODE_QUAD=n',
-        'CONFIG_SPIRAM_SPEED_120M=n',
-        'CONFIG_SPIRAM_SPEED_80M=n',
-        'CONFIG_ESPTOOLPY_FLASHMODE_QIO=n',
         'CONFIG_ESPTOOLPY_AFTER_NORESET=y',
         'CONFIG_PARTITION_TABLE_CUSTOM=y',
         'CONFIG_ESPTOOLPY_FLASHSIZE_2MB=n',
@@ -753,6 +744,27 @@ def compile():  # NOQA
 
     base_config.append('')
 
+    if flash_mode is not None:
+        if flash_mode == 'DTR':
+            base_config.append('CONFIG_ESPTOOLPY_FLASH_SAMPLE_MODE_DTR=y')
+
+        elif flash_mode == 'STR':
+            base_config.append('CONFIG_ESPTOOLPY_FLASH_SAMPLE_MODE_STR=y')
+        else:
+
+            base_config.append(f'CONFIG_ESPTOOLPY_FLASHMODE_{flash_mode}=y')
+
+    if onboard_mem_speed is not None:
+        base_config.append('CONFIG_ESPTOOLPY_FLASHFREQ_120M=n')
+        base_config.append('CONFIG_ESPTOOLPY_FLASHFREQ_80M=n')
+        base_config.append('CONFIG_SPIRAM_SPEED_120M=n')
+        base_config.append('CONFIG_SPIRAM_SPEED_80M=n')
+        base_config.append(f'CONFIG_ESPTOOLPY_FLASHFREQ_{onboard_mem_speed}M=y')
+        base_config.append(f'CONFIG_SPIRAM_SPEED_{onboard_mem_speed}M=y')
+
+    if flash_mode is not None or onboard_mem_speed is not None:
+        base_config.append('CONFIG_IDF_EXPERIMENTAL_FEATURES=y')
+
     base_config.append(f'CONFIG_ESPTOOLPY_FLASHSIZE_{flash_size}MB=y')
     base_config.append(''.join([
         'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME=',
@@ -764,27 +776,8 @@ def compile():  # NOQA
     else:
         base_config.append('CONFIG_COMPILER_OPTIMIZATION_PERF=y')
 
-    if onboard_mem_speed == 120 or flash_mode in ('DTR', 'STR'):
-        base_config.append('CONFIG_IDF_EXPERIMENTAL_FEATURES=y')
-
-    base_config.append(f'CONFIG_ESPTOOLPY_FLASHFREQ_{onboard_mem_speed}M=y')
-    base_config.append('CONFIG_SPIRAM_SPEED_{onboard_mem_speed}M=y')
-
     if oct_flash:
         base_config.append('CONFIG_ESPTOOLPY_OCT_FLASH=y')
-
-    if board_variant:
-        if board_variant == 'SPIRAM':
-            base_config.append('CONFIG_SPIRAM_MODE_QUAD=y')
-        elif board_variant == 'SPIRAM_OCT':
-            base_config.append('CONFIG_SPIRAM_MODE_OCT=y')
-
-    if flash_mode == 'STR':
-        base_config.append('CONFIG_ESPTOOLPY_FLASH_SAMPLE_MODE_STR=y')
-    elif flash_mode == 'DTR':
-        base_config.append('CONFIG_ESPTOOLPY_FLASH_SAMPLE_MODE_DTR=y')
-    else:
-        base_config.append(f'CONFIG_ESPTOOLPY_FLASHMODE_{flash_mode}=y')
 
     mpconfigboard_cmake_path = (
         'lib/micropython/ports/esp32/boards/'
