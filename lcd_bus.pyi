@@ -1,4 +1,4 @@
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional, Union, ClassVar
 import array
 import spi as _spi
 
@@ -24,8 +24,6 @@ class I2CBus:
         control_phase_bytes: Optional[int] = 1,
         dc_bit_offset: Optional[int] = 6,
         freq: Optional[int] = 10000000,
-        cmd_bits: Optional[int] = 8,
-        param_bits: Optional[int] = 8,
         dc_low_on_data: Optional[bool] = False,
         sda_pullup: Optional[bool] = True,
         scl_pullup: Optional[bool] = True,
@@ -33,7 +31,10 @@ class I2CBus:
     ):
         ...
 
-    def init(self, width: int, height: int, bpp: int, buffer_size: int, rgb565_byte_swap: bool, cmd_bits: int, param_bits: int, /) -> None:
+    def init(
+        self, width: int, height: int, bpp: int, buffer_size: int,
+        rgb565_byte_swap: bool, cmd_bits: int, param_bits: int, /
+    ) -> None:
         ...
 
     def deinit(self) -> None:
@@ -63,21 +64,22 @@ class SPIBus:
     def __init__(
         self,
         *,
-        spi_bus: _spi.Bus,
+        spi_bus: _spi.SPI,
         freq: int,
         dc: int,
         cs: Optional[int] = -1,
         polarity: int = 0,
         phase: int = 0,
-        firstbit: int = _spi.Device.MSB,
-        cmd_bits: int = 8,
-        param_bits: int = 8,
+        firstbit: int = _spi.SPI.MSB,
         cs_high_active: bool = False,
         dc_low_on_data: bool = False,
     ):
         ...
 
-    def init(self, width: int, height: int, bpp: int, buffer_size: int, rgb565_byte_swap: bool, cmd_bits: int, param_bits: int, /) -> None:
+    def init(
+        self, width: int, height: int, bpp: int, buffer_size: int,
+        rgb565_byte_swap: bool, cmd_bits: int, param_bits: int, /
+    ) -> None:
         ...
 
     def deinit(self) -> None:
@@ -103,17 +105,17 @@ class SPIBus:
 
 
 class SDLBus:
-    WINDOW_FULLSCREEN: int = ...
-    WINDOW_FULLSCREEN_DESKTOP: int = ...
-    WINDOW_BORDERLESS: int = ...
-    WINDOW_MINIMIZED: int = ...
-    WINDOW_MAXIMIZED: int = ...
-    WINDOW_ALLOW_HIGHDPI: int = ...
-    WINDOW_ALWAYS_ON_TOP: int = ...
-    WINDOW_SKIP_TASKBAR: int = ...
-    WINDOW_UTILITY: int = ...
-    WINDOW_TOOLTIP: int = ...
-    WINDOW_POPUP_MENU: int = ...
+    WINDOW_FULLSCREEN: ClassVar[int] = ...
+    WINDOW_FULLSCREEN_DESKTOP: ClassVar[int] = ...
+    WINDOW_BORDERLESS: ClassVar[int] = ...
+    WINDOW_MINIMIZED: ClassVar[int] = ...
+    WINDOW_MAXIMIZED: ClassVar[int] = ...
+    WINDOW_ALLOW_HIGHDPI: ClassVar[int] = ...
+    WINDOW_ALWAYS_ON_TOP: ClassVar[int] = ...
+    WINDOW_SKIP_TASKBAR: ClassVar[int] = ...
+    WINDOW_UTILITY: ClassVar[int] = ...
+    WINDOW_TOOLTIP: ClassVar[int] = ...
+    WINDOW_POPUP_MENU: ClassVar[int] = ...
 
     def __init__(
         self,
@@ -123,15 +125,8 @@ class SDLBus:
         ...
 
     def init(
-        self,
-        width: int,
-        height: int,
-        bpp: int,
-        buffer_size: int,
-        rgb565_byte_swap: bool,
-        cmd_bits: int,
-        param_bits: int,
-        /
+        self, width: int, height: int, bpp: int, buffer_size: int,
+        rgb565_byte_swap: bool, cmd_bits: int, param_bits: int, /
     ) -> None:
         ...
 
@@ -174,14 +169,6 @@ class SDLBus:
         ignore_size_chg: bool,
         /
     ) -> None:
-        ...
-
-    def realloc_buffer(
-        self,
-        size: int,
-        buf_num: int,
-        /
-    ) -> Union[None, memoryview]:
         ...
 
     def register_callback(
@@ -254,7 +241,10 @@ class RGBBus:
     ):
         ...
 
-    def init(self, width: int, height: int, bpp: int, buffer_size: int, rgb565_byte_swap: bool, cmd_bits: int, param_bits: int, /) -> None:
+    def init(
+        self, width: int, height: int, bpp: int, buffer_size: int,
+        rgb565_byte_swap: bool, cmd_bits: int, param_bits: int, /
+    ) -> None:
         ...
 
     def deinit(self) -> None:
@@ -308,8 +298,6 @@ class I80Bus:
         dc_cmd_high: Optional[bool] = False,
         dc_dummy_high: Optional[bool] = False,
         dc_data_high: Optional[bool] = True,
-        cmd_bits: Optional[int] = 8,
-        param_bits: Optional[int] = 8,
         cs_active_high: Optional[bool] = False,
         reverse_color_bits: Optional[bool] = False,
         swap_color_bytes: Optional[bool] = False,
@@ -318,7 +306,10 @@ class I80Bus:
     ):
         ...
 
-    def init(self, width: int, height: int, bpp: int, buffer_size: int, rgb565_byte_swap: bool, cmd_bits: int, param_bits: int, /) -> None:
+    def init(
+        self, width: int, height: int, bpp: int, buffer_size: int,
+        rgb565_byte_swap: bool, cmd_bits: int, param_bits: int, /
+    ) -> None:
         ...
 
     def deinit(self) -> None:
