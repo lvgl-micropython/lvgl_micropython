@@ -115,11 +115,12 @@ def get_espidf():
     cmd = [
         [
             'git', 'submodule', 'update', '--init',
-            f'--jobs {os.cpu_count()}', '--', 'lib/esp-idf'
+            f'--jobs {os.cpu_count()}', '--depth=1',
+            '--', 'lib/esp-idf'
         ],
-        ['cd', 'lib/esp-idf'],
+        ['cd lib/esp-idf'],
         [
-            'git', 'submodule', 'update', '--init',
+            'git', 'submodule', 'update', '--init', '--depth=1',
             f'--jobs {os.cpu_count()}', '--',
             'components/bt/host/nimble/nimble',
             'components/esp_wifi',
@@ -473,7 +474,10 @@ def has_correct_idf():
                 cached_idf_version = version
 
     return (
-        cached_idf_version is not None and cached_idf_version == IDF_VER
+        cached_idf_version is not None and (
+            cached_idf_version == IDF_VER or
+            cached_idf_version == IDF_VER.rsplit('.', 1)[0]
+        )
     )
 
 
@@ -580,10 +584,34 @@ def setup_idf_environ():
     # There were some modifications made with how the environment gets set up
     # @cheops put quite a bit of time in to research the best solution
     # and also with the testing of the code.
-    if IDF_ENVIRON_SET or (not IDF_ENVIRON_SET and has_correct_idf()):
+
+    if IDF_ENVIRON_SET:
         env = os.environ
         IDF_ENVIRON_SET = True
-    elif not IDF_ENVIRON_SET:
+    elif has_correct_idf():
+        idf_path = get_idf_path()
+
+        cmd = [
+            ['cd', idf_path],
+            [
+                'git', 'submodule', 'update', '--init', '--depth=1',
+                f'--jobs {os.cpu_count()}', '--',
+                'components/bt/host/nimble/nimble',
+                'components/esp_wifi',
+                'components/esptool_py/esptool',
+                'components/lwip/lwip',
+                'components/mbedtls/mbedtls',
+                'components/bt/controller/lib_esp32',
+                'components/bt/controller/lib_esp32c3_family'
+            ]
+        ]
+        env = os.environ
+        result, _ = spawn(cmd, spinner=True, env=env)
+        if result != 0:
+            sys.exit(result)
+
+        IDF_ENVIRON_SET = True
+    else:
         print('Getting ESP-IDF build Environment')
         idf_path = 'lib/esp-idf'
 
@@ -641,9 +669,6 @@ def setup_idf_environ():
 
         env = os.environ
         IDF_ENVIRON_SET = True
-    else:
-        # this is a sanity check and should never actually run
-        env = os.environ
 
     if 'GITHUB_RUN_ID' in os.environ:
         idf_path = os.path.abspath(env["IDF_PATH"])
@@ -678,7 +703,7 @@ def submodules():
     env = {k: v for k, v in os.environ.items()}
     env['IDF_PATH'] = os.path.abspath(idf_path)
 
-    result, _ = spawn(cmds, env=env)
+    result, _ = spawn(cmds, spinner=True, env=env)
     if result != 0:
         sys.exit(result)
 

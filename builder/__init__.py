@@ -196,6 +196,7 @@ def get_lvgl():
         'submodule',
         'update',
         '--init',
+        '--depth=1',
         '--',
         f'lib/lvgl'
     ]
@@ -214,7 +215,7 @@ def get_micropython():
         'submodule',
         'update',
         '--init',
-        '--remote',
+        '--depth=1',
         '--',
         f'lib/micropython'
     ]
@@ -224,6 +225,19 @@ def get_micropython():
     if result != 0:
         sys.exit(result)
 
+    mkrules_path = 'lib/micropython/py/mkrules.mk'
+    with open(mkrules_path, 'rb') as f:
+        data = f.read().decode('utf-8')
+
+    pattern = '$(Q)git submodule update --init $(addprefix $(TOP)/,$(GIT_SUBMODULES))'
+    if pattern in data:
+        data = data.replace(
+            pattern,
+            '$(Q)git submodule update --init --depth=1 $(addprefix $(TOP)/,$(GIT_SUBMODULES))'
+        )
+        with open(mkrules_path, 'wb') as f:
+            f.write(data.encode('utf-8'))
+
 
 def get_pycparser():
     cmd_ = [
@@ -231,6 +245,7 @@ def get_pycparser():
         'submodule',
         'update',
         '--init',
+        '--depth=1',
         '--',
         f'lib/pycparser'
     ]
@@ -302,6 +317,11 @@ def process_output(myproc, out_to_screen, spinner, cmpl, out_queue):
     last_line_len = -1
     line_updated = False
     err_updated = False
+
+    event = threading.Event()
+
+    os.set_blocking(myproc.stdout.fileno(), False)
+    os.set_blocking(myproc.stderr.fileno(), False)
 
     event = threading.Event()
     spinner_lock = threading.Lock()
@@ -408,6 +428,7 @@ def process_output(myproc, out_to_screen, spinner, cmpl, out_queue):
         if not err_updated and not line_updated:
             if myproc.poll() is not None:
                 break
+            event.wait(0.1)
 
         err_updated = False
         line_updated = False
