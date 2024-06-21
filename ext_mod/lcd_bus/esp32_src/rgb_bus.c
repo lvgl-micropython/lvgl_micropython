@@ -82,7 +82,7 @@
 
             nlr_buf_t nlr;
             if (nlr_push(&nlr) == 0) {
-                mp_call_function_n_kw(cb,0, 0, NULL);
+                mp_call_function_n_kw(self->callback,0, 0, NULL);
                 nlr_pop();
             } else {
                 ets_printf("Uncaught exception in IRQ callback handler!\n");
