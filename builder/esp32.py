@@ -1127,7 +1127,7 @@ def compile():  # NOQA
             print()
             print(erase_cmd)
             print()
-            print(output.replace('-b 460800', '-b 921600'))
+            print(output.replace('-b 460800', '-p (PORT) -b 921600'))
             print()
 
 
