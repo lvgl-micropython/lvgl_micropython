@@ -53,45 +53,8 @@
         uint8_t bb_fb_index;  // Current frame buffer index which used by bounce buffer
     } rgb_panel_t;
 
-    bool callback_from_isr(mp_obj_t cb)
-    {
-        volatile uint32_t sp = (uint32_t)esp_cpu_get_sp();
-        bool ret = false;
 
-        // Calling micropython from ISR
-        // See: https://github.com/micropython/micropython/issues/4895
-        void *old_state = mp_thread_get_state();
-
-        mp_state_thread_t ts; // local thread state for the ISR
-        mp_thread_set_state(&ts);
-        mp_stack_set_top((void*)sp); // need to include in root-pointer scan
-        mp_stack_set_limit(CONFIG_FREERTOS_IDLE_TASK_STACKSIZE - 1024); // tune based on ISR thread stack size
-        mp_locals_set(mp_state_ctx.thread.dict_locals); // use main thread's locals
-        mp_globals_set(mp_state_ctx.thread.dict_globals); // use main thread's globals
-
-        mp_sched_lock(); // prevent VM from switching to another MicroPython thread
-        gc_lock(); // prevent memory allocation
-
-        nlr_buf_t nlr;
-        if (nlr_push(&nlr) == 0) {
-            mp_call_function_n_kw(cb,0, 0, NULL);
-            ret = true;
-            nlr_pop();
-        } else {
-            ets_printf("Uncaught exception in IRQ callback handler!\n");
-            mp_obj_print_exception(&mp_plat_print, MP_OBJ_FROM_PTR(nlr.ret_val));  // changed to &mp_plat_print to fit this context
-        }
-
-        gc_unlock();
-        mp_sched_unlock();
-
-        mp_thread_set_state(old_state);
-        mp_hal_wake_main_task_from_isr();
-
-        return ret;
-    }
-
-    IRAM_ATTR static bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
+    static bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
     {
         LCD_UNUSED(edata);
         LCD_UNUSED(panel);
@@ -99,12 +62,41 @@
         // rgb_panel_t *rgb_panel = __containerof(panel, rgb_panel_t, base);
 
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)user_ctx;
-        bool ret = false;
 
         if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
-            ret = callback_from_isr(self->callback);
+            volatile uint32_t sp = (uint32_t)esp_cpu_get_sp();
+
+            // Calling micropython from ISR
+            // See: https://github.com/micropython/micropython/issues/4895
+            void *old_state = mp_thread_get_state();
+
+            mp_state_thread_t ts; // local thread state for the ISR
+            mp_thread_set_state(&ts);
+            mp_stack_set_top((void*)sp); // need to include in root-pointer scan
+            mp_stack_set_limit(CONFIG_FREERTOS_IDLE_TASK_STACKSIZE - 1024); // tune based on ISR thread stack size
+            mp_locals_set(mp_state_ctx.thread.dict_locals); // use main thread's locals
+            mp_globals_set(mp_state_ctx.thread.dict_globals); // use main thread's globals
+
+            mp_sched_lock(); // prevent VM from switching to another MicroPython thread
+            gc_lock(); // prevent memory allocation
+
+            nlr_buf_t nlr;
+            if (nlr_push(&nlr) == 0) {
+                mp_call_function_n_kw(cb,0, 0, NULL);
+                nlr_pop();
+            } else {
+                ets_printf("Uncaught exception in IRQ callback handler!\n");
+                mp_obj_print_exception(&mp_plat_print, MP_OBJ_FROM_PTR(nlr.ret_val));  // changed to &mp_plat_print to fit this context
+            }
+
+            gc_unlock();
+            mp_sched_unlock();
+
+            mp_thread_set_state(old_state);
+            mp_hal_wake_main_task_from_isr();
         }
-        return ret;
+
+        return false;
     }
 
     esp_lcd_rgb_panel_event_callbacks_t callbacks = { .on_vsync = rgb_bus_trans_done_cb };

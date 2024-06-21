@@ -751,7 +751,6 @@ def compile():  # NOQA
         elif flash_mode == 'STR':
             base_config.append('CONFIG_ESPTOOLPY_FLASH_SAMPLE_MODE_STR=y')
         else:
-
             base_config.append(f'CONFIG_ESPTOOLPY_FLASHMODE_{flash_mode}=y')
 
     if onboard_mem_speed is not None:
