@@ -11,7 +11,7 @@ class PointerDriver(_indev_base.IndevBase):
     def __init__(self, touch_cal=None, startup_rotation=lv.DISPLAY_ROTATION._0, debug=False):  # NOQA
         self._last_x = -1
         self._last_y = -1
-        self.__debug = debug
+        self._last_state = self.RELEASED
 
         super().__init__(debug=debug)
 
@@ -24,8 +24,9 @@ class PointerDriver(_indev_base.IndevBase):
         self._orig_width = self._width
         self._orig_height = self._height
         self._set_type(lv.INDEV_TYPE.POINTER)  # NOQA
-        self.__cal_running = None
-        self.__startup_rotation = startup_rotation
+        self._cal_running = None
+        self._startup_rotation = startup_rotation
+        self._indev_drv.enable(True)
 
     def __cal_callback(self, alphaX, betaX, deltaX, alphaY, betaY, deltaY):
         self._cal.alphaX = alphaX
@@ -35,16 +36,16 @@ class PointerDriver(_indev_base.IndevBase):
         self._cal.betaY = betaY
         self._cal.deltaY = deltaY
         self._cal.save()
-        self.__cal_running = None
+        self._cal_running = None
 
     def calibrate(self, update_handler=None):
-        if self.__cal_running:
+        if self._cal_running:
             return
 
         import time
         import touch_calibrate
-        self.__cal_running = touch_calibrate.TPCal(self, self.__cal_callback)
-        while self.__cal_running:
+        self._cal_running = touch_calibrate.TPCal(self, self.__cal_callback)
+        while self._cal_running:
             if update_handler is not None:
                 delay = update_handler()
                 time.sleep_ms(delay)
@@ -55,7 +56,7 @@ class PointerDriver(_indev_base.IndevBase):
 
     @property
     def is_calibrated(self):
-        if self.__cal_running:
+        if self._cal_running:
             return False
 
         cal = self._cal
@@ -82,15 +83,15 @@ class PointerDriver(_indev_base.IndevBase):
             y = int(round(x * cal.alphaY + y * cal.betaY + cal.deltaY))
 
         if (
-            self.__startup_rotation == lv.DISPLAY_ROTATION._180 or  # NOQA
-            self.__startup_rotation == lv.DISPLAY_ROTATION._270  # NOQA
+            self._startup_rotation == lv.DISPLAY_ROTATION._180 or  # NOQA
+            self._startup_rotation == lv.DISPLAY_ROTATION._270  # NOQA
         ):
             x = self._orig_width - x - 1
             y = self._orig_height - y - 1
 
         if (
-            self.__startup_rotation == lv.DISPLAY_ROTATION._90 or  # NOQA
-            self.__startup_rotation == lv.DISPLAY_ROTATION._270  # NOQA
+            self._startup_rotation == lv.DISPLAY_ROTATION._90 or  # NOQA
+            self._startup_rotation == lv.DISPLAY_ROTATION._270  # NOQA
         ):
             x, y = self._orig_height - y - 1, x
 
@@ -100,27 +101,31 @@ class PointerDriver(_indev_base.IndevBase):
         coords = self._get_coords()
 
         if coords is None:
+            data.continue_reading = False
             state = self.RELEASED
             x, y = self._last_x, self._last_y
         else:
             state, x, y = coords
+            data.continue_reading = True
 
-        if None not in (x, y):
-            self._last_x, self._last_y = x, y
-            if coords is None:
-                data.continue_reading = False
-            else:
-                data.continue_reading = True
-        else:
+        if None in (x, y):
+            x, y = self._last_x, self._last_y
             data.continue_reading = False
 
         data.point.x, data.point.y = (
-            self._calc_coords(self._last_x, self._last_y)
+            self._calc_coords(x, y)
         )
+
         data.state = state
 
-        if self.__debug:
-            print(f'{self.__class__.__name__}(raw_x={self._last_x}, raw_y={self._last_y}, x={data.point.x}, y={data.point.y}, state={"PRESSED" if data.state else "RELEASED"})')
+        if (
+            self._debug and
+            (x != self._last_x or y != self._last_y or self._last_state != state)  # NOQA
+        ):
+            print(f'{self.__class__.__name__}(raw_x={self._last_x}, raw_y={self._last_y}, x={data.point.x}, y={data.point.y}, state={"PRESSED" if data.state else "RELEASED"})')  # NOQA
+
+        self._last_state = state
+        self._last_x, self._last_y = x, y
 
     def get_vect(self, point):
         self._indev_drv.get_vect(point)

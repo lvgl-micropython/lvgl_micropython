@@ -36,6 +36,12 @@ STATE_LOW = 0
 STATE_PWM = -1
 
 
+def _DEBUG_PRINT(cls, *args):
+    if lcd_bus.DEBUG_ENABLED:
+        args = ' '.join(str(arg) for arg in args)
+        print(cls.__class__.__name__, ':', args)
+
+
 class DisplayDriver:
     _INVON = 0x21
     _INVOFF = 0x20
@@ -79,6 +85,7 @@ class DisplayDriver:
         _cmd_bits=8,
         _param_bits=8
     ):
+        _DEBUG_PRINT(self, 'constructing display')
 
         if power_on_state not in (STATE_HIGH, STATE_LOW):
             raise RuntimeError(
@@ -262,8 +269,11 @@ class DisplayDriver:
             self._disp_drv.add_event_cb(self._on_size_change, lv.EVENT.RESOLUTION_CHANGED, None)  # NOQA
 
         self._displays.append(self)
+        _DEBUG_PRINT(self, 'display construction finished')
 
     def _on_size_change(self, _):
+        _DEBUG_PRINT(self, '_on_size_change')
+
         rotation = self._disp_drv.get_rotation()
         self._width = self._disp_drv.get_horizontal_resolution()
         self._height = self._disp_drv.get_vertical_resolution()
@@ -560,6 +570,9 @@ class DisplayDriver:
         return _RAMWR
 
     def _flush_cb(self, _, area, color_p):
+        if lcd_bus.DEBUG_ENABLED:
+            _DEBUG_PRINT(self, '_flush_cb')
+
         x1 = area.x1 + self._offset_x
         x2 = area.x2 + self._offset_x
 

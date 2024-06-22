@@ -516,12 +516,10 @@
             return ret;
         }
 
-        if (self->panel_io_config.flags.double_fb) {
-            ret = esp_lcd_rgb_panel_register_event_callbacks(self->panel_handle, &callbacks, self);
-            if (ret != 0) {
-                mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_rgb_panel_register_event_callbacks)"), ret);
-                return ret;
-            }
+        ret = esp_lcd_rgb_panel_register_event_callbacks(self->panel_handle, &callbacks, self);
+        if (ret != 0) {
+            mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_rgb_panel_register_event_callbacks)"), ret);
+            return ret;
         }
 
         ret = esp_lcd_panel_reset(self->panel_handle);

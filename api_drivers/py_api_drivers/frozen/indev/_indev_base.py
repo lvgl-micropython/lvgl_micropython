@@ -39,11 +39,12 @@ class IndevBase:
         self._width = self._disp_drv.get_horizontal_resolution()
         self._height = self._disp_drv.get_vertical_resolution()
         self._current_state = self.RELEASED
+        self._debug = debug
 
         indev_drv = lv.indev_create()
         indev_drv.set_read_cb(self._read)
         indev_drv.set_display(disp)
-        indev_drv.enable(True)
+        indev_drv.enable(False)
         self._indev_drv = indev_drv
         self._indevs.append(self)
 

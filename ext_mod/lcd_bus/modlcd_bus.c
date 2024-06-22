@@ -20,6 +20,12 @@
     #include "esp_heap_caps.h"
 #endif
 
+#if CONFIG_LCD_ENABLE_DEBUG_LOG
+#define LCD_DEBUG  1
+#else
+#define LCD_DEBUG  0
+#endif
+
 
 mp_obj_t mp_lcd_bus_get_lane_count(size_t n_args, const mp_obj_t *args)
 {
@@ -272,6 +278,7 @@ static const mp_map_elem_t mp_module_lcd_bus_globals_table[] = {
     #ifdef MP_PORT_UNIX
         { MP_ROM_QSTR(MP_QSTR_SDLBus),         (mp_obj_t)&mp_lcd_sdl_bus_type        },
     #endif
+    { MP_ROM_QSTR(MP_QSTR_DEBUG_ENABLED),    MP_ROM_INT(LCD_DEBUG) },
 
     #ifdef ESP_IDF_VERSION
         { MP_ROM_QSTR(MP_QSTR_MEMORY_32BIT),    MP_ROM_INT(MALLOC_CAP_32BIT)    },
