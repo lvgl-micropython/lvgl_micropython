@@ -853,7 +853,7 @@ def compile():  # NOQA
 
             data = data.replace(pattern, pattern + '#define MICROPY_WRAP_MP_SCHED_EXCEPTION(f) IRAM_ATTR f\n')
             data = data.replace(pattern, pattern + '#define MICROPY_WRAP_MP_SCHED_KEYBOARD_INTERRUPT(f) IRAM_ATTR f\n')
-            with open(mpconfigport, 'rb') as f:
+            with open(mpconfigport, 'wb') as f:
                 f.write(data.encode('utf-8'))
 
     if board in ('ESP32_GENERIC_S2', 'ESP32_GENERIC_S3') and disable_OTG:
