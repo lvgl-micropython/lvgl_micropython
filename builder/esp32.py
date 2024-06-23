@@ -834,6 +834,28 @@ def compile():  # NOQA
     with open(board_config_path, 'w') as f:
         f.write('\n'.join(base_config))
 
+    if board == 'ESP32_GENERIC' and board_variant and board_variant == 'SPIRAM':
+        mpconfigport = 'lib/micropython/ports/esp32/mpconfigport.h'
+
+        with open(mpconfigport, 'rb') as f:
+            data = f.read().decode('utf-8')
+
+        pattern = (
+            '#if !(CONFIG_IDF_TARGET_ESP32 && CONFIG_SPIRAM && CONFIG_SPIRAM_CACHE_WORKAROUND)\n'
+            '#define MICROPY_WRAP_MP_BINARY_OP(f) IRAM_ATTR f\n'
+            '#endif'
+        )
+
+        if pattern in data:
+            pattern = '#if !(CONFIG_IDF_TARGET_ESP32 && CONFIG_SPIRAM && CONFIG_SPIRAM_CACHE_WORKAROUND)\n'
+            data = data.replace('#define MICROPY_WRAP_MP_SCHED_EXCEPTION(f) IRAM_ATTR f\n', '')
+            data = data.replace('#define MICROPY_WRAP_MP_SCHED_KEYBOARD_INTERRUPT(f) IRAM_ATTR f\n', '')
+
+            data = data.replace(pattern, pattern + '#define MICROPY_WRAP_MP_SCHED_EXCEPTION(f) IRAM_ATTR f\n')
+            data = data.replace(pattern, pattern + '#define MICROPY_WRAP_MP_SCHED_KEYBOARD_INTERRUPT(f) IRAM_ATTR f\n')
+            with open(mpconfigport, 'rb') as f:
+                f.write(data.encode('utf-8'))
+
     if board in ('ESP32_GENERIC_S2', 'ESP32_GENERIC_S3') and disable_OTG:
         mphalport_path = 'lib/micropython/ports/esp32/mphalport.c'
 
