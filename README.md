@@ -17,69 +17,57 @@ for the binding.
 ___________________________
 
 ESP32-ALL
+* `--optimize-size`: If you are having an issue with getting the firmware to fit into your esp32
+  or if space is more of a concern than speed you can set this command line option. This will tell the compiler that the 
+  firmware size is more important than performance and the compiled binary will be smaller as a result.  
 
+* `--flash-size={size}`: Flash sizes that are able to be used are 4, 8, 16, 32, 64 and 128 across all 
+  variants of the ESP32. It is up to the user to know what their board is using.
 
-If you are having an issue with getting the firmware to fit into your esp32
-or if space is more of a concern than speed you can set the 
-`--optimize-size` command line option. This will tell the compiler that the 
-firmware size is more important than performance and the compiled binary will 
-be smaller as a result.  
+* `--ota`: If you want to set the partitions so you can do an over the air update of 
+  the firmware. I do want to note that this does take up twice as much application 
+  storage space. This feature applies to any board.
 
+* `CONFIG_*={value}`: You can alter the config settings of the esp-idf by using these settings. Refer to the ESP-IDF documentation
+  for further information
 
-Flash sizes that are able to be used are 4, 8, 16, 32, 64 and 128 across all 
-variants of the ESP32. It is up to the user to know what their board is using.
+* `SPI`: The `machine.SPI` class has undergone a HUGE change. It is now split into 2 pieces. `machine.SPI.Bus` and `machine.SPI.Device`
+  They exactly what they seem. It is easier to show a code example then it is to explain it.
+  
 
---ota if you want to set the partitions so you can do an over the air update of 
-the firmware. I do want to note that this does take up twice as much application 
-storage space. This feature applies to any board.
+    import machine
+    
+    spi_bus = machine.SPI.Bus(
+        host=1,
+        mosi=15,
+        miso=16,
+        sck=10
+    )
 
+    spi_device = machine.SPI.Device(
+        spi_bus=spi_bus,
+        freq=10000000,
+        cs=3,
+        polarity=0,
+        phase=0,
+        bits=8,
+        first_bit=machine.SPI.MSB
+    )
 
-ESP32-S3
-2 new command line arguments.
---onboard-mem-speed: allowed values = 120 or 80
---flash-mode: allowed values = QIO, QOUT, DIO, DOUT, OPI, DTR, STR
+    # if you want to delete a device from being used you have to deinit it first
+    # and then you can delete it
+    spi_device.deinit()
+    del spi_device
+    
+    # if you want to stop using a bus and all devices attached to it
+    del spi_bus
+    del spi_device
 
+    # The SPI.Bus instance you need to pass to machine.SDCard, lcd_bus.SPIBus
+    # and any of the touch drivers that use SPI. 
 
-OK so this is how this works is wanting to use 120,hz speed
-* octal spi FLASH, octal spi PSRAM: `--onboard-mem-speed=120 --flash-mode=DTR`
-* quad spi FLASH, octal spi PSRAM: `--onboard-mem-speed=120 --flash-mode=STR`
-* quad spi FLASH, quad spi PSRAM: `--onboard-mem-speed=120`
-
-There is one other use case. If you have 32mb worth of flash storage you will 
-need to set `--flash-mode=DOUT` as well as `--flash-size=32`
-
-
-ESP32
-MicroPython SPI class has been modified
-The SPI implimentation in MicroPython for the ESP32 was written so it would fail
-if the SPI bus had already been initialized. This would cause an issue due to the
-creation order of the display and touch drivers. The display driver needs to be 
-initilized before the touch driver does and if the display bus uses SPI the creation 
-of the touch driver would fail because the bus would already be started. Another 
-issue was the MicroPython SPI driver didn't handle the CS line. This was added for 
-ease of use.
-
-The MicroPython SDCard class has been modified
-There were limitations placed on using SPI for an SDCard. This was due to the original 
-SPI not hanmdling the CS line. Since this has now taken place we needed to modify the SDCard class
-to allow for the SPI bus to be shared. The constructor has been modified, the miso, mosi and sclk 
-parameters have been removed. A new parameter has been added which is `spi_bus` and this parameter 
-takes a `machine.SPI` instance. If you want to share the bus you need to also supply a CS pin using 
-the `cs` parameter. All parameters that are used for setting pins now only take integer values, 
-`machine.Pin` instances are no longer allowed.
-
-The `lcd_bus.SPIBus` constructor has changed. The miso, mosi, wp, hd and sclk parameters have been removed.
-A new parameter has been added which is `spi_bus` and this parameter  takes a `machine.SPI` instance. 
-This was done to allow for sharing the SPI bus with other devices like touch panels and SDCard readers. 
-You must supply a CS pin in order to share the bus.
-
-The cmd_buts and param_bits paramaters have been removed from all lcd_bus classes. This is now handled 
-internally by the display driver.
-
-All touch drivers that are SPI must now be initilized by passing a `machine.SPI` instance. If the touch panel 
-is sharing the bus with any other devices then a new `machine.SPI` instance MUST be created with the CS pin given 
-for the touch panel. All other pins MUST remain the same across the `machine.SPI` instances. You are allowed to have
-different frequencies for each device.
+All methods that existed for the original `machine.SPI` are available in 
+the `machine.SPI.Device` class. They work exactly how they did before.
 
 <br>
 

@@ -170,8 +170,6 @@ void machine_hw_spi_bus_remove_device(machine_hw_spi_device_obj_t *device)
 }
 
 
-
-
 static void machine_hw_spi_device_deinit_callback(machine_hw_spi_device_obj_t *self)
 {
     if (!self->active) return;
