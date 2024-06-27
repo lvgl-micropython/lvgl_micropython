@@ -31,9 +31,9 @@ def parse_args(extra_args, lv_cflags, board):
     unix_argParser.add_argument(
         '--heap-size',
         dest='heap_size',
-        help="heap size to use in bytes. Default is 4mb (4,194,304 bytes). "
-             "Must be more than 100k (102,104 bytes)",
-        default=4194304,
+        help="heap size to use in bytes. Default is 8MiB (8,388,608 bytes). "
+             "Must be more than 100KiB (102,104 bytes)",
+        default=(2 ** 20) * 8,
         type=int,
         action='store'
     )
@@ -88,7 +88,7 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
         )
     ])
 
-    unix_cmd.extend(extra_args)
+    # unix_cmd.extend(extra_args)
 
     clean_cmd.extend(unix_cmd[:])
     clean_cmd[1] = 'clean'
@@ -98,6 +98,7 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
 
     submodules_cmd.extend(unix_cmd[:])
     submodules_cmd[1] = 'submodules'
+    return extra_args
 
 
 def build_manifest(
@@ -174,7 +175,7 @@ def submodules():
         ]
         _run(cmd_)
 
-    cmd_ = ['cd lib/SDL && git checkout  release-2.30.2']
+    cmd_ = ['cd lib/SDL && git checkout release-2.30.2']
     _run(cmd_)
 
     return_code, _ = spawn(submodules_cmd)
@@ -182,7 +183,7 @@ def submodules():
         sys.exit(return_code)
 
 
-def compile():  # NOQA
+def compile(*args):  # NOQA
     main_path = 'lib/micropython/ports/unix/main.c'
 
     with open(main_path, 'rb') as f:
@@ -242,7 +243,10 @@ def compile():  # NOQA
 
     build_sdl()
 
-    return_code, _ = spawn(compile_cmd)
+    cmd_ = compile_cmd[:]
+    cmd_.extend(list(args))
+
+    return_code, _ = spawn(cmd_)
     if return_code != 0:
         sys.exit(return_code)
 

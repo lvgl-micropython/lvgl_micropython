@@ -93,6 +93,7 @@ typedef struct _sdcard_obj_t {
     sdmmc_card_t card;
     sdspi_device_config_t dev_config;
     sdspi_dev_handle_t sdspi_handle;
+    machine_hw_spi_device_obj_t spi_device;
 } sdcard_card_obj_t;
 
 
@@ -142,6 +143,7 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
         ARG_cs,
         ARG_freq,
     };
+
     static const mp_arg_t make_new_args[] = {
         { MP_QSTR_slot,     MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int =  1} },
         { MP_QSTR_width,    MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int =  1} },
@@ -166,11 +168,13 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
 
     bool is_spi;
     int slot_num;
+    sdcard_card_obj_t *self = mp_obj_malloc_with_finaliser(sdcard_card_obj_t, &machine_sdcard_type);
 
     if (args[ARG_spi_bus].u_obj != mp_const_none) {
-        machine_hw_spi_obj_t *spi_bus = MP_OBJ_TO_PTR(args[ARG_spi_bus].u_obj);
-        slot_num = (int)spi_bus->spi_bus->host;
+        machine_hw_spi_bus_obj_t *spi_bus = MP_OBJ_TO_PTR(args[ARG_spi_bus].u_obj);
+        slot_num = (int)spi_bus->host;
         is_spi = true;
+        self->spi_device.spi_bus = spi_bus;
     } else {
         slot_num = (int)args[ARG_slot].u_int;
         is_spi = false;
@@ -180,7 +184,6 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
         }
     }
 
-    sdcard_card_obj_t *self = mp_obj_malloc_with_finaliser(sdcard_card_obj_t, &machine_sdcard_type);
     self->flags = 0;
     self->sdspi_handle = -1;
     // Note that these defaults are macros that expand to structure
@@ -214,7 +217,13 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
             .gpio_int = SDSPI_SLOT_NO_INT
         };
 
+        if (self->spi_device.spi_bus->state == MP_SPI_STATE_STOPPED) {
+            machine_hw_spi_bus_initilize(self->spi_device.spi_bus);
+        }
+
         check_esp_err(sdspi_host_init_device(&self->dev_config, &self->sdspi_handle));
+
+        machine_hw_spi_bus_add_device(&self->spi_device);
     } else {
         // SD/MMC interface
         sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
@@ -244,6 +253,15 @@ static mp_obj_t sd_deinit(mp_obj_t self_in) {
     if (self->flags & SDCARD_CARD_FLAGS_HOST_INIT_DONE) {
         if (self->sdspi_handle != -1) {
             sdspi_host_remove_device(self->sdspi_handle);
+
+            if (!self->spi_device.active) return mp_const_none;
+
+            machine_hw_spi_bus_remove_device(&self->spi_device);
+            self->spi_device.active = false;
+
+            if (self->spi_device.spi_bus->device_count == 0) {
+                self->spi_device.spi_bus->deinit(self->spi_device.spi_bus);
+            }
         } else if (self->host.flags & SDMMC_HOST_FLAG_DEINIT_ARG) {
             self->host.deinit_p(self->host.slot);
         } else {

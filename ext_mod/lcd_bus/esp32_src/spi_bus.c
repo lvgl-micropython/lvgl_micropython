@@ -62,6 +62,7 @@ typedef struct _machine_hw_spi_obj_t {
 mp_lcd_err_t spi_del(mp_obj_t obj);
 mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
 mp_lcd_err_t spi_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
+void spi_deinit_callback(machine_hw_spi_device_obj_t *device);
 
 
 static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
@@ -105,11 +106,11 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     mp_lcd_spi_bus_obj_t *self = m_new_obj(mp_lcd_spi_bus_obj_t);
     self->base.type = &mp_lcd_spi_bus_type;
 
-    machine_hw_spi_obj_t *spi_bus = MP_OBJ_TO_PTR(args[ARG_spi_bus].u_obj);
+    machine_hw_spi_bus_obj_t *spi_bus = MP_OBJ_TO_PTR(args[ARG_spi_bus].u_obj);
 
     self->callback = mp_const_none;
 
-    self->host = (spi_host_device_t)spi_bus->spi_bus->host;
+    self->host = (spi_host_device_t)spi_bus->host;
     self->panel_io_handle.panel_io = NULL;
     self->bus_handle = (esp_lcd_spi_bus_handle_t)self->host;
 
@@ -129,6 +130,12 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     self->panel_io_handle.init = &spi_init;
     self->panel_io_handle.get_lane_count = &spi_get_lane_count;
 
+    self->spi_device.active = true;
+    self->spi_device.base.type = &machine_hw_spi_device_type;
+    self->spi_device.spi_bus = spi_bus;
+    self->spi_device.deinit = &spi_deinit_callback;
+    self->spi_device.user_data = self;
+
 #if CONFIG_LCD_ENABLE_DEBUG_LOG
     printf("host=%d\n", self->host);
     printf("cs_gpio_num=%d\n", self->panel_io_config.cs_gpio_num);
@@ -145,6 +152,12 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     return MP_OBJ_FROM_PTR(self);
 }
 
+void spi_deinit_callback(machine_hw_spi_device_obj_t *device)
+{
+    mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)device->user_data;
+    spi_del(MP_OBJ_FROM_PTR(self));
+}
+
 
 mp_lcd_err_t spi_del(mp_obj_t obj)
 {
@@ -152,9 +165,19 @@ mp_lcd_err_t spi_del(mp_obj_t obj)
 #if CONFIG_LCD_ENABLE_DEBUG_LOG
     printf("spi_del(self)\n");
 #endif
+
+    if (!self->spi_device.active) return ESP_OK;
+
     mp_lcd_err_t ret = esp_lcd_panel_io_del(self->panel_io_handle.panel_io);
     if (ret != ESP_OK) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_panel_io_del)"), ret);
+    }
+
+    machine_hw_spi_bus_remove_device(&self->spi_device);
+    self->spi_device.active = false;
+
+    if (self->spi_device.spi_bus->device_count == 0) {
+        self->spi_device.spi_bus->deinit(self->spi_device.spi_bus);
     }
 
     return ret;
@@ -167,6 +190,10 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
     printf("spi_init(self, width=%i, height=%i, bpp=%i, buffer_size=%lu, rgb565_byte_swap=%i, cmd_bits=%i, param_bits=%i)\n", width, height, bpp, buffer_size, (uint8_t)rgb565_byte_swap, cmd_bits, param_bits);
 #endif
     mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
+
+    if (self->spi_device.spi_bus->state == MP_SPI_STATE_STOPPED) {
+        machine_hw_spi_bus_initilize(self->spi_device.spi_bus);
+    }
 
     if (bpp == 16) {
         self->rgb565_byte_swap = rgb565_byte_swap;
@@ -190,6 +217,7 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_spi)"), ret);
     }
 
+    machine_hw_spi_bus_add_device(&self->spi_device);
     return ret;
 }
 
