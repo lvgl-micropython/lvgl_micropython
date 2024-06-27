@@ -32,7 +32,7 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
 
     nrf_cmd.append(f'USER_C_MODULES="{script_dir}/ext_mod"')
 
-    nrf_cmd.extend(extra_args)
+    # nrf_cmd.extend(extra_args)
 
     if lv_cflags:
         nrf_cmd.insert(6, f'LV_CFLAGS="{lv_cflags}"')
@@ -51,6 +51,7 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
 
     submodules_cmd.extend(nrf_cmd[:])
     submodules_cmd[1] = 'submodules'
+    return extra_args
 
 
 def build_manifest(
@@ -97,8 +98,11 @@ def submodules():
         sys.exit(return_code)
 
 
-def compile():  # NOQA
-    return_code, _ = spawn(compile_cmd, cmpl=True)
+def compile(*args):  # NOQA
+    cmd_ = compile_cmd[:]
+    cmd_.extend(list(args))
+
+    return_code, _ = spawn(cmd_, cmpl=True)
     if return_code != 0:
         sys.exit(return_code)
 

@@ -205,7 +205,7 @@ if __name__ == '__main__':
         import builder as mod
 
     extra_args, lv_cflags, board = mod.parse_args(extra_args, lv_cflags, board)
-    mod.build_commands(target, extra_args, SCRIPT_DIR, lv_cflags, board)
+    extra_args = mod.build_commands(target, extra_args, SCRIPT_DIR, lv_cflags, board)
 
     if submodules:
         print('Collecting build requirements....')
@@ -227,4 +227,4 @@ if __name__ == '__main__':
     create_lvgl_header()
 
     print('Compiling....')
-    mod.compile()
+    mod.compile(*extra_args)

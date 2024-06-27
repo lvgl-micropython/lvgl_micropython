@@ -92,8 +92,9 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
     # clean_cmd.append(f'USER_C_MODULES="{script_dir}/ext_mod"')
     # compile_cmd.append(f'USER_C_MODULES="{script_dir}/ext_mod"')
 
-    clean_cmd.extend(extra_args)
-    compile_cmd.extend(extra_args)
+    # clean_cmd.extend(extra_args)
+    # compile_cmd.extend(extra_args)
+    return extra_args
 
 
 SCRIPT_PATH = ''
@@ -158,13 +159,6 @@ def build_sdl():
 
     os.chdir(cwd)
 
-
-def compile():  # NOQA
-    return_code, _ = spawn(compile_cmd, cmpl=True)
-    if return_code != 0:
-        sys.exit(return_code)
-
-
 portable_filter_path_templ = '''\
     <Filter Include="{p}">
       <UniqueIdentifier>{{{guid}}}</UniqueIdentifier>
@@ -194,7 +188,7 @@ portable_include_templ = '''\
 import uuid
 
 
-def compile():  # NOQA
+def compile(*args):  # NOQA
     main_path = 'lib/micropython/ports/unix/main.c'
     build_path = f'lib/micropython/ports/windows/build-{variant}'
 

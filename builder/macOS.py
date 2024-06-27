@@ -90,7 +90,7 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
         )
     ])
 
-    unix_cmd.extend(extra_args)
+    # unix_cmd.extend(extra_args)
 
     clean_cmd.extend(unix_cmd[:])
     clean_cmd[1] = 'clean'
@@ -100,6 +100,8 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
 
     submodules_cmd.extend(unix_cmd[:])
     submodules_cmd[1] = 'submodules'
+
+    return extra_args
 
 
 def build_manifest(_, script_dir, lvgl_api, displays, indevs, frozen_manifest):
@@ -180,7 +182,7 @@ def submodules():
         sys.exit(return_code)
 
 
-def compile():  # NOQA
+def compile(*args):  # NOQA
     main_path = 'lib/micropython/ports/unix/main.c'
 
     with open(main_path, 'rb') as f:
@@ -241,7 +243,10 @@ def compile():  # NOQA
 
     build_sdl()
 
-    return_code, _ = spawn(compile_cmd)
+    cmd_ = compile_cmd[:]
+    cmd_.extend(list(args))
+
+    return_code, _ = spawn(cmd_)
     if return_code != 0:
         sys.exit(return_code)
 

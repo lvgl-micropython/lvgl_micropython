@@ -55,7 +55,7 @@ submodules_cmd = []
 
 
 def build_commands(_, extra_args, __, lv_cflags, brd):
-    rp2_cmd.extend(extra_args)
+    # rp2_cmd.extend(extra_args)
 
     if lv_cflags:
         rp2_cmd.insert(6, f'LV_CFLAGS="{lv_cflags}"')
@@ -78,6 +78,9 @@ def build_commands(_, extra_args, __, lv_cflags, brd):
 
     submodules_cmd.extend(rp2_cmd[:])
     submodules_cmd[1] = 'submodules'
+
+    return extra_args
+
 
 
 def build_manifest(
@@ -125,7 +128,7 @@ def submodules():
         sys.exit(return_code)
 
 
-def compile():  # NOQA
+def compile(*args):  # NOQA
     import shutil
 
     src_path = 'micropy_updates/rp2'
@@ -141,7 +144,10 @@ def compile():  # NOQA
             f'{os.getcwd()}/lib/micropython/lib/pico-sdk'
         )
 
-    return_code, _ = spawn(compile_cmd, cmpl=True)
+    cmd_ = compile_cmd[:]
+    cmd_.extend(list(args))
+
+    return_code, _ = spawn(cmd_, cmpl=True)
     if return_code != 0:
         sys.exit(return_code)
 

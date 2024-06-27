@@ -659,7 +659,7 @@ for item in ast.ext[:]:
 # ast_file.write(str(ast))
 # ast_file.close()
 
-pp_cmd = ' '.join(cpp_cmd)
+pp_cmd = cpp_cmd
 
 # the stdout code below is to override output to stdout from the print
 # statements. This will output to a file instead of stdout. This is done

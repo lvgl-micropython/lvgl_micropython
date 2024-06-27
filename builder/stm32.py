@@ -39,7 +39,7 @@ def build_commands(_, extra_args, script_dir, lv_cflags, brd):
 
     stm32_cmd.append(f'USER_C_MODULES="{script_dir}/ext_mod"')
 
-    stm32_cmd.extend(extra_args)
+    # stm32_cmd.extend(extra_args)
 
     if lv_cflags:
         stm32_cmd.insert(6, f'LV_CFLAGS="{lv_cflags}"')
@@ -58,6 +58,7 @@ def build_commands(_, extra_args, script_dir, lv_cflags, brd):
 
     submodules_cmd.extend(stm32_cmd[:])
     submodules_cmd[1] = 'submodules'
+    return extra_args
 
 
 def build_manifest(
@@ -102,7 +103,7 @@ def submodules():
         sys.exit(return_code)
 
 
-def compile():  # NOQA
+def compile(*args):  # NOQA
     import shutil
 
     src_path = 'micropy_updates/stm32'
@@ -113,7 +114,10 @@ def compile():  # NOQA
         dst_file = os.path.join(dst_path, file)
         shutil.copyfile(src_file, dst_file)
 
-    return_code, _ = spawn(compile_cmd, cmpl=True)
+    cmd_ = compile_cmd[:]
+    cmd_.extend(list(args))
+
+    return_code, _ = spawn(cmd_, cmpl=True)
     if return_code != 0:
         sys.exit(return_code)
 

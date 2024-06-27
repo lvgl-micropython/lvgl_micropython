@@ -541,7 +541,7 @@ def submodules():
         sys.exit(return_code)
 
 
-def compile():  # NOQA
+def compile(*args):  # NOQA
     return_code, _ = spawn(compile_cmd)
     if return_code != 0:
         sys.exit(return_code)

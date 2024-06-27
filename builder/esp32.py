@@ -152,8 +152,6 @@ PORT = None
 BAUD = 460800
 ccache = False
 disable_OTG = True
-onboard_mem_speed = None
-flash_mode = None
 optimize_size = False
 ota = False
 
@@ -275,8 +273,6 @@ def common_args(extra_args):
 def esp32_s3_args(extra_args):
     global oct_flash
     global disable_OTG
-    global onboard_mem_speed
-    global flash_mode
     global board_variant
 
     esp_argParser = ArgumentParser(prefix_chars='-B')
@@ -299,27 +295,9 @@ def esp32_s3_args(extra_args):
         dest='oct_flash',
         action='store_true'
     )
-    esp_argParser.add_argument(
-        '--onboard-mem-speed',
-        dest='onboard_mem_speed',
-        choices=[120, 80],
-        default=None,
-        type=int,
-        action='store'
-    )
-    esp_argParser.add_argument(
-        '--flash-mode',
-        dest='flash_mode',
-        choices=['QIO', 'QOUT', 'DIO', 'DOUT', 'OPI', 'DTR', 'STR'],
-        default=None,
-        type=str,
-        action='store'
-    )
 
     esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
 
-    onboard_mem_speed = esp_args.onboard_mem_speed
-    flash_mode = esp_args.flash_mode
     oct_flash = esp_args.oct_flash
     disable_OTG = not esp_args.usb_otg
     board_variant = esp_args.board_variant
@@ -347,9 +325,6 @@ def esp32_s2_args(extra_args):
 def esp32_args(extra_args):
     global board_variant
     global ota
-    global flash_mode
-
-    flash_mode = 'DIO'
 
     esp_argParser = ArgumentParser(prefix_chars='B')
     esp_argParser.add_argument(
@@ -433,7 +408,7 @@ def build_commands(_, extra_args, script_dir, lv_cflags, ___):
         'USER_C_MODULES=../../../../../ext_mod/micropython.cmake'
     ])
 
-    esp_cmd.extend(extra_args)
+    # esp_cmd.extend(extra_args)
 
     compile_cmd.extend(esp_cmd[:])
     compile_cmd.pop(1)
@@ -442,6 +417,8 @@ def build_commands(_, extra_args, script_dir, lv_cflags, ___):
         clean_cmd.append(f'BOARD_VARIANT={board_variant}')
         compile_cmd.insert(7, f'BOARD_VARIANT={board_variant}')
         submodules_cmd.append(f'BOARD_VARIANT={board_variant}')
+
+    return extra_args
 
 
 def get_idf_path():
@@ -715,7 +692,43 @@ def submodules():
         sys.exit(return_code)
 
 
-def compile():  # NOQA
+def find_esp32_ports(chip):
+    from esptool.targets import CHIP_DEFS  # NOQA
+    from esptool.util import FatalError  # NOQA
+    from serial.tools import list_ports  # NOQA
+
+    pts = sorted(p.device for p in list_ports.comports())
+    if sys.platform.startswith('linux'):
+        serial_path = '/dev/serial/by_id'
+        if os.path.exists(serial_path):
+            pts_alt = [
+                os.path.join(serial_path, fle)
+                for fle in os.listdir(serial_path)
+            ]
+            pts = pts_alt + pts
+
+    found_ports = []
+    for prt in pts:
+        chip_class = CHIP_DEFS[chip]
+        try:
+            _esp = chip_class(prt, 115200, False)
+        except (FatalError, OSError):
+            continue
+
+        try:
+            _esp.connect('no_reset', 2)
+        except (FatalError, OSError):
+            pass
+        else:
+            found_ports.append(prt)
+
+        if _esp and _esp._port:  # NOQA
+            _esp._port.close()  # NOQA
+
+    return found_ports
+
+
+def compile(*args):  # NOQA
     global PORT
     global flash_size
 
@@ -768,26 +781,29 @@ def compile():  # NOQA
         ])
 
     base_config.append('')
+    args = list(args)
 
-    if flash_mode is not None:
-        if flash_mode == 'DTR':
-            base_config.append('CONFIG_ESPTOOLPY_FLASH_SAMPLE_MODE_DTR=y')
+    for arg in args[:]:
+        if arg.startswith('CONFIG_'):
+            if 'ESPTOOLPY_FLASHMODE' in arg:
+                for itm in ('OPI', 'QIO', 'QOUT', 'DIO', 'DOUT'):
+                    base_config.append(f'CONFIG_ESPTOOLPY_FLASHMODE_{itm}=n')
+            elif 'ESPTOOLPY_FLASHFREQ' in arg:
+                for itm in (
+                    15, 16, 20, 24, 26, 30, 32, 40, 48, 60, 64, 80, 120
+                ):
+                    base_config.append(f'CONFIG_ESPTOOLPY__FLASHFREQ_{itm}M=n')
+            elif 'SPIRAM_SPEED' in arg:
+                for itm in (20, 26, 40, 80, 120):
+                    base_config.append(f'CONFIG_SPIRAM_SPEED_{itm}M=n')
+            elif 'FLASH_SAMPLE_MODE' in arg:
+                for itm in ('STR', 'DTR'):
+                    base_config.append(
+                        f'CONFIG_ESPTOOLPY_FLASH_SAMPLE_MODE_{itm}=n'
+                    )
 
-        elif flash_mode == 'STR':
-            base_config.append('CONFIG_ESPTOOLPY_FLASH_SAMPLE_MODE_STR=y')
-        else:
-            base_config.append(f'CONFIG_ESPTOOLPY_FLASHMODE_{flash_mode}=y')
-
-    if onboard_mem_speed is not None:
-        base_config.append('CONFIG_ESPTOOLPY_FLASHFREQ_120M=n')
-        base_config.append('CONFIG_ESPTOOLPY_FLASHFREQ_80M=n')
-        base_config.append('CONFIG_SPIRAM_SPEED_120M=n')
-        base_config.append('CONFIG_SPIRAM_SPEED_80M=n')
-        base_config.append(f'CONFIG_ESPTOOLPY_FLASHFREQ_{onboard_mem_speed}M=y')
-        base_config.append(f'CONFIG_SPIRAM_SPEED_{onboard_mem_speed}M=y')
-
-    if flash_mode is not None or onboard_mem_speed is not None:
-        base_config.append('CONFIG_IDF_EXPERIMENTAL_FEATURES=y')
+            base_config.append(arg)
+            args.remove(arg)
 
     base_config.append(f'CONFIG_ESPTOOLPY_FLASHSIZE_{flash_size}MB=y')
     base_config.append(''.join([
@@ -841,18 +857,18 @@ def compile():  # NOQA
             data = f.read().decode('utf-8')
 
         pattern = (
-            '#if !(CONFIG_IDF_TARGET_ESP32 && CONFIG_SPIRAM && CONFIG_SPIRAM_CACHE_WORKAROUND)\n'
+            '#if !(CONFIG_IDF_TARGET_ESP32 && CONFIG_SPIRAM && CONFIG_SPIRAM_CACHE_WORKAROUND)\n'  # NOQA
             '#define MICROPY_WRAP_MP_BINARY_OP(f) IRAM_ATTR f\n'
             '#endif'
         )
 
         if pattern in data:
-            pattern = '#if !(CONFIG_IDF_TARGET_ESP32 && CONFIG_SPIRAM && CONFIG_SPIRAM_CACHE_WORKAROUND)\n'
-            data = data.replace('#define MICROPY_WRAP_MP_SCHED_EXCEPTION(f) IRAM_ATTR f\n', '')
-            data = data.replace('#define MICROPY_WRAP_MP_SCHED_KEYBOARD_INTERRUPT(f) IRAM_ATTR f\n', '')
+            pattern = '#if !(CONFIG_IDF_TARGET_ESP32 && CONFIG_SPIRAM && CONFIG_SPIRAM_CACHE_WORKAROUND)\n'  # NOQA
+            data = data.replace('#define MICROPY_WRAP_MP_SCHED_EXCEPTION(f) IRAM_ATTR f\n', '')  # NOQA
+            data = data.replace('#define MICROPY_WRAP_MP_SCHED_KEYBOARD_INTERRUPT(f) IRAM_ATTR f\n', '')  # NOQA
 
-            data = data.replace(pattern, pattern + '#define MICROPY_WRAP_MP_SCHED_EXCEPTION(f) IRAM_ATTR f\n')
-            data = data.replace(pattern, pattern + '#define MICROPY_WRAP_MP_SCHED_KEYBOARD_INTERRUPT(f) IRAM_ATTR f\n')
+            data = data.replace(pattern, pattern + '#define MICROPY_WRAP_MP_SCHED_EXCEPTION(f) IRAM_ATTR f\n')  # NOQA
+            data = data.replace(pattern, pattern + '#define MICROPY_WRAP_MP_SCHED_KEYBOARD_INTERRUPT(f) IRAM_ATTR f\n')  # NOQA
             with open(mpconfigport, 'wb') as f:
                 f.write(data.encode('utf-8'))
 
@@ -909,9 +925,10 @@ def compile():  # NOQA
         dst_file = os.path.join(dst_path, file)
         shutil.copyfile(src_file, dst_file)
 
-    cmds = compile_cmd
+    cmd_ = compile_cmd[:]
+    cmd_.extend(list(args))
 
-    ret_code, output = spawn(cmds, env=env, cmpl=True)
+    ret_code, output = spawn(cmd_, env=env, cmpl=True)
     if ret_code != 0:
         if (
             'partition is too small ' not in output or
@@ -986,7 +1003,7 @@ def compile():  # NOQA
                 break
         else:
             raise RuntimeError(
-                'unable to locate pyton version used in the ESP-IDF'
+                'unable to locate python version used in the ESP-IDF'
             )
 
         python_path += '/python'
@@ -1005,10 +1022,8 @@ def compile():  # NOQA
         bin_files = []
         for item in output.split('0x')[1:]:
             item, bf = item.split(build_name, 1)
-            bf = f'"{full_file_path}{bf.strip()}"'
-            bin_files.append(f'0x{item.strip()} {bf}')
-
-        bin_files = ' '.join(bin_files)
+            bf = f'{full_file_path}{bf.strip()}'
+            bin_files.extend([f'0x{item.strip()}', bf])
 
         old_bin_files = ['0x' + item.strip() for item in output.split('0x')[1:]]
         old_bin_files = ' '.join(old_bin_files)
@@ -1029,85 +1044,46 @@ def compile():  # NOQA
             build_bin_file += '_OCTFLASH'
 
         build_bin_file += '.bin'
-        build_bin_file = f'"{os.path.abspath(build_bin_file)}"'
+        build_bin_file = os.path.abspath(build_bin_file)
 
         chip = output.split('--chip ', 1)[-1].split(' ', 1)[0]
 
-        cmds = [''.join([
-            f'{python_path} -m esptool --chip {chip} ',
-            f'merge_bin -o {build_bin_file} {bin_files}'
-        ])]
+        result, tool_path = spawn(
+            [[
+                python_path,
+                '-c "import esptool;print(esptool.__file__);"'
+            ]],
+            out_to_screen=False
+        )
 
-        result, _ = spawn(cmds, env=env)
-        if result:
-            sys.exit(result)
+        if result != 0:
+            raise RuntimeError('ERROR collecting esptool path')
 
-        output = output.replace(old_bin_files, f'0x0 {build_bin_file}')
-        output = python_path + ' ' + output
+        tool_path = os.path.split(os.path.split(tool_path.strip())[0])
+        sys.path.insert(0, tool_path)
+
+        import esptool
+
+        args = ['--chip', chip, 'merge_bin', '-o', build_bin_file]
+        args.extend(bin_files)
+
+        esptool.main(args)
+
+        output = output.replace(old_bin_files, '').strip()
+
+        if PORT is None:
+            PORT = '(PORT)'
+
+        output = output.replace('-b 460800', f'-p {PORT} -b {BAUD}')
+
+        args = output.split(' ')
+        args.extend(['--erase-all', '0x0', build_bin_file])
+        output = python_path + ' ' + (' '.join(args))
 
         if deploy:
-            result, tool_path = spawn(
-                [[
-                    python_path,
-                    '-c "import esptool;print(esptool.__file__);"'
-                ]],
-                out_to_screen=False
-            )
+            if PORT == '(PORT)':
+                ports = find_esp32_ports(chip)
 
-            if result != 0:
-                raise RuntimeError('ERROR collecting esptool path')
-
-            tool_path = os.path.split(os.path.split(tool_path.strip())[0])
-            sys.path.insert(0, tool_path)
-
-            from esptool.targets import CHIP_DEFS  # NOQA
-            from esptool.util import FatalError  # NOQA
-            from serial.tools import list_ports  # NOQA
-
-            cmd = output.replace('-b 460800', f'-b {BAUD}')
-
-            def get_port_list():
-                pts = sorted(p.device for p in list_ports.comports())
-                if sys.platform.startswith('linux'):
-                    serial_path = '/dev/serial/by_id'
-                    if os.path.exists(serial_path):
-                        pts_alt = [
-                            os.path.join(serial_path, fle)
-                            for fle in os.listdir(serial_path)
-                        ]
-                        pts = pts_alt + pts
-
-                return pts
-
-            def find_esp32(chip):
-                found_ports = []
-                for prt in get_port_list():
-                    chip_class = CHIP_DEFS[chip]
-                    try:
-                        _esp = chip_class(prt, 115200, False)
-                    except (FatalError, OSError):
-                        continue
-
-                    try:
-                        _esp.connect('no_reset', 2)
-                    except (FatalError, OSError):
-                        pass
-                    else:
-                        found_ports.append(port)
-
-                    if _esp and _esp._port:  # NOQA
-                        _esp._port.close()  # NOQA
-
-                return found_ports
-
-            if PORT is None:
-                ports = find_esp32(
-                    cmd.split(
-                        '--chip ', 1
-                    )[-1].split(
-                        ' ', 1
-                    )[0]
-                )
                 if len(ports) > 1:
                     query = []
                     for i, port in enumerate(ports):
@@ -1122,35 +1098,38 @@ def compile():  # NOQA
 
                 PORT = ports[res]
 
-            cmd = cmd.replace('-p (PORT)', f'-p {PORT}')
+                for i, arg in args:
+                    if arg == '(PORT)':
+                        args[i] = f'{PORT}'
+                        break
 
-            erase_flash = (
-                f'{python_path} -m esptool '
-                f'-p {PORT} -b 460800 erase_flash'
+                output = output.replace('(PORT)', PORT)
+
+            esptool.main(args)
+            print()
+            print('firmware flashed')
+            print()
+            print(
+                'If you need to reflash your ESP32 run the following command.'
             )
-
-            result, _ = spawn(erase_flash)
-            if result != 0:
-                sys.exit(result)
-
-            result, _ = spawn(cmd)
-
+            print()
         else:
-            erase_cmd = ''.join([
-                f'{python_path} -m esptool ',
-                f'-p (PORT) -b 460800 erase_flash'
-            ])
-
             print()
             print()
             print('To flash firmware:')
-            print('Replace "(PORT)" with the serial port for your esp32')
-            print('and run the commands.')
-            print()
-            print(erase_cmd)
-            print()
-            print(output.replace('-b 460800', '-p (PORT) -b 921600'))
-            print()
+
+        if PORT == '(PORT)':
+            print(
+                'Replace `(PORT)` with the serial port for '
+                'your esp32 and run the following command.'
+            )
+        else:
+            print(
+                'Run the following command to flash your ESP32.'
+            )
+        print()
+        print(output)
+        print()
 
 
 def mpy_cross():

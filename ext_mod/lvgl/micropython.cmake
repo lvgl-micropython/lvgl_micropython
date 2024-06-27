@@ -5,7 +5,11 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter)
 get_filename_component(BINDING_DIR ${CMAKE_CURRENT_LIST_DIR}/../.. ABSOLUTE)
 
 separate_arguments(LV_CFLAGS_ENV UNIX_COMMAND $ENV{LV_CFLAGS})
-list(APPEND LV_CFLAGS ${LV_CFLAGS_ENV} -Wno-unused-function)
+list(APPEND LV_CFLAGS
+    ${LV_CFLAGS_ENV}
+    -Wno-unused-function
+    -DMICROPY_FLOAT=1
+)
 
 separate_arguments(SECOND_BUILD_ENV UNIX_COMMAND $ENV{SECOND_BUILD})
 
