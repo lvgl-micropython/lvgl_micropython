@@ -1,12 +1,15 @@
 from typing import Optional, Tuple, TYPE_CHECKING
 import _indev_base
 import lcd_utils as _lcd_utils
+import lvgl as _lv  # NOQA
+
+lv = _lv
 
 
 if TYPE_CHECKING:
     import touch_cal_data as _touch_cal_data
     import display_driver_framework as _display_driver_framework
-    import lvgl as _lv  # NOQA
+
 
 
 remap = _lcd_utils.remap
@@ -20,7 +23,7 @@ class PointerDriver(_indev_base.IndevBase):
     _orig_height: int = ...
     _config: _touch_cal_data.TouchCalData = ...
 
-    def __init__(self, touch_cal: Optional[_touch_cal_data.TouchCalData] = None, debug: bool=False):
+    def __init__(self, touch_cal: Optional[_touch_cal_data.TouchCalData] = None, startup_rotation=lv.DISPLAY_ROTATION._0, debug: bool=False):
         ...
 
     def calibrate(self) -> None:
@@ -45,10 +48,10 @@ class PointerDriver(_indev_base.IndevBase):
         """
         ...
 
-    def get_vect(self, point: _lv.point_t):
+    def get_vect(self, point: lv.point_t):
         ...
 
-    def get_scroll_obj(self) -> Optional[_lv.obj]:
+    def get_scroll_obj(self) -> Optional[lv.obj]:
         ...
 
     def get_scroll_dir(self) -> int:
@@ -57,7 +60,7 @@ class PointerDriver(_indev_base.IndevBase):
     def get_gesture_dir(self) -> int:
         ...
 
-    def get_point(self, point: _lv.point_t) -> None:
+    def get_point(self, point: lv.point_t) -> None:
         ...
 
     def set_cursor(self, cur_obj) -> None:

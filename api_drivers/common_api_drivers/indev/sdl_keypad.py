@@ -157,7 +157,7 @@ MOD_KEY_META = MOD_KEY_LMETA | MOD_KEY_RMETA
 
 class SDLKeypad(keypad_framework.KeypadDriver):
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):  # NOQA
         super().__init__()
         self.__last_key = -1
         self.__current_state = self.RELEASED

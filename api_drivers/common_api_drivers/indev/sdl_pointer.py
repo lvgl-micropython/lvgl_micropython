@@ -5,8 +5,16 @@ import micropython  # NOQA
 
 
 class SDLPointer(pointer_framework.PointerDriver):
-    def __init__(self, debug=False):
-        super().__init__(touch_cal=None, debug=debug)
+    def __init__(
+        self,
+        *args,
+        startup_rotation=pointer_framework.lv.DISPLAY_ROTATION._0,  # NOQA
+        debug=False,
+        **kwargs
+    ):  # NOQA
+        super().__init__(
+            touch_cal=None, startup_rotation=startup_rotation, debug=debug
+        )
 
         self.__current_state = self.RELEASED
         self.__x = -1

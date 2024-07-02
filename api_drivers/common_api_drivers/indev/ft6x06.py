@@ -1,11 +1,13 @@
-from micropython import const
+from micropython import const  # NOQA
 import pointer_framework
 
 _DEV_MODE = const(0x00)
 _GEST_ID = const(0x01)
 _TD_STATUS = const(0x02)
 
-_I2C_SLAVE_ADDR = const(0x38)
+I2C_ADDR = 0x38
+BITS = 8
+
 _FT6206_CHIPID = const(0x06)
 
 
@@ -37,54 +39,67 @@ _G_MODE = const(0xA4)
 
 class FT6x06(pointer_framework.PointerDriver):
 
-    def _i2c_read8(self, register_addr):
-        self._i2c.read_mem(register_addr, buf=self._mv[:1])
-        return self._buf[0]
+    def _read_reg(self, reg):
+        self._tx_buf[0] = reg
+        self._rx_buf[0] = 0x00
 
-    def _i2c_write8(self, register_addr, data):
-        self._buf[0] = data
-        self._i2c.write_mem(register_addr, self._mv[:1])
+        self._device.write_readinto(self._tx_mv[:1], self._rx_mv[:1])
 
-    def __init__(self, i2c_bus, touch_cal=None, debug=False):  # NOQA
-        self._buf = bytearray(5)
-        self._mv = memoryview(self._buf)
+    def _write_reg(self, reg, value):
+        self._tx_buf[0] = reg
+        self._tx_buf[1] = value
+        self._device.write(self._tx_mv[:2])
 
-        self._i2c_bus = i2c_bus
-        self._i2c = i2c_bus.add_device(_I2C_SLAVE_ADDR, 8)
+    def __init__(
+        self,
+        device,
+        touch_cal=None,
+        startup_rotation=pointer_framework.lv.DISPLAY_ROTATION._0,  # NOQA
+        debug=False
+    ):  # NOQA
+        self._tx_buf = bytearray(2)
+        self._tx_mv = memoryview(self._tx_buf)
+        self._rx_buf = bytearray(5)
+        self._rx_mv = memoryview(self._rx_buf)
 
-        data = self._i2c_read8(_PANEL_ID_REG)
-        print("Device ID: 0x%02x" % data)
-        if data != _VENDID:
+        self._device = device
+
+        self._read_reg(_PANEL_ID_REG)
+        print("Touch Device ID: 0x%02x" % self._rx_buf[0])
+        ven_id = self._rx_buf[0]
+
+        self._read_reg(_CHIPID_REG)
+        print("Touch Chip ID: 0x%02x" % self._rx_buf[0])
+        chip_id = self._rx_buf[0]
+
+        self._read_reg(_DEV_MODE_REG)
+        print("Touch Device mode: 0x%02x" % self._rx_buf[0])
+
+        self._read_reg(_FIRMWARE_ID_REG)
+        print("Touch Firmware ID: 0x%02x" % self._rx_buf[0])
+
+        self._read_reg(_RELEASECODE_REG)
+        print("Touch Release code: 0x%02x" % self._rx_buf[0])
+
+        if chip_id not in (_FT6206_CHIPID,):
             raise RuntimeError()
 
-        data = self._i2c_read8(_CHIPID_REG)
-        print("Chip ID: 0x%02x" % data)
-
-        if data not in (_FT6206_CHIPID,):
+        if ven_id != _VENDID:
             raise RuntimeError()
 
-        data = self._i2c_read8(_DEV_MODE_REG)
-        print("Device mode: 0x%02x" % data)
+        self._write_reg(_DEV_MODE_REG, _DEV_MODE_WORKING)
+        self._write_reg(_PERIOD_ACTIVE_REG, 0x0E)
+        self._write_reg(_G_MODE, 0x00)
 
-        data = self._i2c_read8(_FIRMWARE_ID_REG)
-        print("Firmware ID: 0x%02x" % data)
-
-        data = self._i2c_read8(_RELEASECODE_REG)
-        print("Release code: 0x%02x" % data)
-
-        self._i2c_write8(_DEV_MODE_REG, _DEV_MODE_WORKING)
-        self._i2c_write8(_PERIOD_ACTIVE_REG, 0x0E)
-        self._i2c_write8(_G_MODE, 0x00)
-        super().__init__(touch_cal=touch_cal, debug=debug)
+        super().__init__(
+            touch_cal=touch_cal, startup_rotation=startup_rotation, debug=debug
+        )
 
     def _get_coords(self):
-        buf = self._buf
-        mv = self._mv
+        self._tx_buf[0] = _TD_STAT_REG
+        self._device.write_readinto(self._tx_mv[:1], self._rx_mv[:1])
 
-        try:
-            self._i2c.read_mem(_TD_STAT_REG, buf=mv)
-        except OSError:
-            return None
+        buf = self._rx_buf
 
         touch_pnt_cnt = buf[0]
 
@@ -99,4 +114,5 @@ class FT6x06(pointer_framework.PointerDriver):
             ((buf[3] & _MSB_MASK) << 8) |
             (buf[4] & _LSB_MASK)
         )
+
         return self.PRESSED, x, y

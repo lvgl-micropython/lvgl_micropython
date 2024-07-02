@@ -16,6 +16,28 @@ for the binding.
 ### *New changes*
 ___________________________
 
+ALL MCU's
+I have started to nail down a commoin API for the indev drivers, specifically the pointer/touch drivers.
+In order to do this I had to change the handling of the type of bus being used. Just like the displays the 
+touch/pointer driver IC's can sometimes accept an SPI bus or an I2C bus as the way to communicate.
+Instead of having to duplicate code for these driver IC's I decided to make the software driver completely
+unaware of the bus that is being used. To do this i made the I2C driver work in the same manner as the SPI driver.
+
+Here is a code example of how to use the I2C bus with a touch driver.
+
+
+    from i2c import I2C
+    import ft5x06
+
+    i2c_bus = I2C.Bus(host=1, sda=10, sdl=11)
+    touch_i2c = I2C.Device(i2c_bus, ft5x06.I2C_ADDR, ft5x06.BITS)
+    touch = ft5x06.FT5x06(touch_i2c)
+
+
+If a touch driver doesn't have the variable `I2C_ADDR` or `BITS` then that driver 
+doesn't support the I2C bus.
+
+
 ESP32-ALL
 * `--optimize-size`: If you are having an issue with getting the firmware to fit into your esp32
   or if space is more of a concern than speed you can set this command line option. This will tell the compiler that the 
@@ -35,23 +57,23 @@ ESP32-ALL
   They exactly what they seem. It is easier to show a code example then it is to explain it.
   
 
-    import machine
+    from machine import SPI
     
-    spi_bus = machine.SPI.Bus(
+    spi_bus = SPI.Bus(
         host=1,
         mosi=15,
         miso=16,
         sck=10
     )
 
-    spi_device = machine.SPI.Device(
+    spi_device = SPI.Device(
         spi_bus=spi_bus,
         freq=10000000,
         cs=3,
         polarity=0,
         phase=0,
         bits=8,
-        first_bit=machine.SPI.MSB
+        first_bit=SPI.MSB
     )
 
     # if you want to delete a device from being used you have to deinit it first
@@ -65,6 +87,7 @@ ESP32-ALL
 
     # The SPI.Bus instance you need to pass to machine.SDCard, lcd_bus.SPIBus
     # and any of the touch drivers that use SPI. 
+
 
 All methods that existed for the original `machine.SPI` are available in 
 the `machine.SPI.Device` class. They work exactly how they did before.
