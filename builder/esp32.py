@@ -930,46 +930,44 @@ def compile(*args):  # NOQA
 
     ret_code, output = spawn(cmd_, env=env, cmpl=True)
     if ret_code != 0:
-        if (
-            'partition is too small ' not in output or
-            skip_partition_resize
-        ):
+        if skip_partition_resize:
             sys.exit(ret_code)
 
         if partition_size != -1:
             sys.exit(ret_code)
 
-        sys.stdout.write('\n\033[31;1m***** Resizing Partition *****\033[0m\n')
-        sys.stdout.flush()
+    if not skip_partition_resize and partition_size == -1:
+        if 'partition is too small ' in output:
+            sys.stdout.write('\n\033[31;1m***** Resizing Partition *****\033[0m\n')
+            sys.stdout.flush()
 
-        end = output.split('(overflow ', 1)[-1]
-        overflow_amount = int(end.split(')', 1)[0], 16)
+            end = output.split('(overflow ', 1)[-1]
+            overflow_amount = int(end.split(')', 1)[0], 16)
 
-        partition.set_app_size(overflow_amount)
-        partition.save()
+            partition.set_app_size(overflow_amount)
+            partition.save()
 
-        sys.stdout.write(
-            '\n\033[31;1m***** Running build again *****\033[0m\n\n'
-        )
-        sys.stdout.flush()
+            sys.stdout.write(
+                '\n\033[31;1m***** Running build again *****\033[0m\n\n'
+            )
+            sys.stdout.flush()
 
-        cmd_[4] = 'SECOND_BUILD=1'
-        ret_code, output = spawn(cmd_, env=env, cmpl=True)
+            cmd_[4] = 'SECOND_BUILD=1'
+            ret_code, output = spawn(cmd_, env=env, cmpl=True)
 
-        if ret_code != 0:
-            sys.exit(ret_code)
+            if ret_code != 0:
+                sys.exit(ret_code)
 
-    if not skip_partition_resize:
-        if partition_size == -1 and 'build complete' in output:
-            app_size = output.rsplit('micropython.bin binary size ')[-1]
+        elif 'Project build complete.' in output:
+            app_size = output.rsplit('micropython.bin binary size ', 1)[1]
             app_size = int(
-                app_size.split(' bytes')[0].strip(),
+                app_size.split(' bytes', 1)[0].strip(),
                 16
             )
 
             remaining = app_size - partition.get_app_size()
 
-            if remaining > 0x1000:
+            if abs(remaining) > 0x1000:
                 sys.stdout.write(
                     '\n\033[31;1m***** Resizing Partition *****\033[0m\n'
                 )
@@ -983,14 +981,14 @@ def compile(*args):  # NOQA
                 )
                 sys.stdout.flush()
 
-                compile_cmd[4] = 'SECOND_BUILD=1'
+                cmd_[4] = 'SECOND_BUILD=1'
 
-                ret_code, output = spawn(cmds, env=env, cmpl=True)
+                ret_code, output = spawn(cmd_, env=env, cmpl=True)
 
                 if ret_code != 0:
                     sys.exit(ret_code)
 
-    if 'To flash, run:' in output:
+    if 'Project build complete.' in output:
         output = output.rsplit('To flash, run:')[-1].strip()
 
         espressif_path = os.path.expanduser('~/.espressif')
