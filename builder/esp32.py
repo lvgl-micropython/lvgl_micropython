@@ -833,7 +833,7 @@ def compile(*args):  # NOQA
     )
 
     if partition_size == -1:
-        p_size = 0x267000
+        p_size = 0x258000  # 0x259000
     else:
         p_size = partition_size
 
@@ -938,7 +938,9 @@ def compile(*args):  # NOQA
 
     if not skip_partition_resize and partition_size == -1:
         if 'partition is too small ' in output:
-            sys.stdout.write('\n\033[31;1m***** Resizing Partition *****\033[0m\n')
+            sys.stdout.write(
+                '\n\033[31;1m***** Resizing Partition *****\033[0m\n'
+            )
             sys.stdout.flush()
 
             end = output.split('(overflow ', 1)[-1]
@@ -966,6 +968,8 @@ def compile(*args):  # NOQA
             )
 
             remaining = app_size - partition.get_app_size()
+
+            app_size
 
             if abs(remaining) > 0x1000:
                 sys.stdout.write(
