@@ -1053,13 +1053,13 @@ def compile(*args):  # NOQA
                 python_path,
                 '-c "import esptool;print(esptool.__file__);"'
             ]],
-            out_to_screen=True
+            out_to_screen=False
         )
 
         if result != 0:
             raise RuntimeError('ERROR collecting esptool path')
 
-        tool_path = os.path.split(os.path.split(tool_path.strip())[0])
+        tool_path = os.path.split(os.path.split(tool_path.strip())[0])[0]
         sys.path.insert(0, tool_path)
 
         import esptool
