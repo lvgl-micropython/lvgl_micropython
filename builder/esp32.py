@@ -1053,7 +1053,7 @@ def compile(*args):  # NOQA
                 python_path,
                 '-c "import esptool;print(esptool.__file__);"'
             ]],
-            out_to_screen=False
+            out_to_screen=True
         )
 
         if result != 0:
