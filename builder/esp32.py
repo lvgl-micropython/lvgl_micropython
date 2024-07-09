@@ -64,10 +64,15 @@ class Partition:
         return self.factory
 
     def set_app_size(self, size):
-        if int((self.factory + size) / 0x1000) * 0x1000 == self.factory + size:
-            self.factory += size
-        else:
-            self.factory = (int((self.factory + size) / 0x1000) + 1) * 0x1000
+        if int(size / 0x1000) * 0x1000 != size:
+            size = (int(size / 0x1000) + 1) * 0x1000
+        
+        if self.factory == size:
+            return False
+
+        self.factory = size
+
+        return True
 
     def save(self):
         offset = self.first_offset
@@ -937,16 +942,17 @@ def compile(*args):  # NOQA
             sys.exit(ret_code)
 
     if not skip_partition_resize and partition_size == -1:
-        if 'partition is too small ' in output:
+        if 'Error: app partition is too small' in output:
             sys.stdout.write(
                 '\n\033[31;1m***** Resizing Partition *****\033[0m\n'
             )
             sys.stdout.flush()
 
-            end = output.split('(overflow ', 1)[-1]
-            overflow_amount = int(end.split(')', 1)[0], 16)
+            app_size = output.rsplit('Error: app partition is too small', 1)[1]
+            app_size = app_size.split('micropython.bin size', 1)[1]
+            app_size = int(app_size.split(':', 1)[0].strip(), 16)
 
-            partition.set_app_size(overflow_amount)
+            partition.set_app_size(app_size)
             partition.save()
 
             sys.stdout.write(
@@ -960,26 +966,22 @@ def compile(*args):  # NOQA
             if ret_code != 0:
                 sys.exit(ret_code)
 
-        elif 'Project build complete.' in output:
-            app_size = output.rsplit('micropython.bin binary size ', 1)[1]
+        if 'Project build complete.' in output:
+            app_size = output.rsplit('Project build complete.', 1)[0]
+
+            app_size = app_size.rsplit('micropython.bin binary size', 1)[1]
             app_size = int(
-                app_size.split(' bytes', 1)[0].strip(),
+                app_size.split('bytes', 1)[0].strip(),
                 16
             )
 
-            remaining = app_size - partition.get_app_size()
+            if partition.set_app_size(app_size):
+                partition.save()
 
-            app_size
-
-            if abs(remaining) > 0x1000:
                 sys.stdout.write(
                     '\n\033[31;1m***** Resizing Partition *****\033[0m\n'
                 )
                 sys.stdout.flush()
-
-                partition.set_app_size(-remaining)
-                partition.save()
-
                 sys.stdout.write(
                     '\n\033[31;1m***** Running build again *****\033[0m\n\n'
                 )
