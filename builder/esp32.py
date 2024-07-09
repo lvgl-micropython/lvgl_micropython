@@ -917,7 +917,7 @@ def compile(*args):  # NOQA
                 '#ifndef MP_USB_OTG\n'
                 '#if CONFIG_IDF_TARGET_ESP32C3\n'
                 '#define MP_USB_OTG    (CONFIG_USB_OTG_SUPPORTED)\n'
-                '#else'
+                '#else\n'
                 '#define MP_USB_OTG    (0)\n'
                 '#endif'
             )
