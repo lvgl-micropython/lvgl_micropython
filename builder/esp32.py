@@ -959,7 +959,7 @@ def compile(*args):  # NOQA
         if ret_code != 0:
             sys.exit(ret_code)
 
-    elif not skip_partition_resize:
+    if not skip_partition_resize:
         if partition_size == -1 and 'build complete' in output:
             app_size = output.rsplit('micropython.bin binary size ')[-1]
             app_size = int(
