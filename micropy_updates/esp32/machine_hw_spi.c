@@ -516,6 +516,8 @@ mp_obj_t machine_hw_spi_device_make_new(const mp_obj_type_t *type, size_t n_args
 
     self->spi_bus = MP_OBJ_TO_PTR(args[ARG_spi_bus].u_obj);
     self->cs = mp_obj_new_int((mp_int_t)cs);
+    self->bits =  (uint8_t)args[ARG_bits].u_int;
+    
     self->deinit = &machine_hw_spi_device_deinit_callback;
 
     spi_device_interface_config_t devcfg = {
