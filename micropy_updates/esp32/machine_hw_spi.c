@@ -462,7 +462,7 @@ void machine_hw_spi_bus_initilize(machine_hw_spi_bus_obj_t *bus)
 #if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C3
     ret = spi_bus_initialize((spi_host_device_t)bus->host, &buscfg, SPI_DMA_CH_AUTO);
 #else
-    if (self->host == SPI2_HOST) {
+    if (bus->host == SPI2_HOST) {
         ret = spi_bus_initialize((spi_host_device_t)bus->host, &buscfg, 1);
     } else {
         ret = spi_bus_initialize((spi_host_device_t)bus->host, &buscfg, 2);

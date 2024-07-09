@@ -953,8 +953,8 @@ def compile(*args):  # NOQA
         )
         sys.stdout.flush()
 
-        compile_cmd[4] = 'SECOND_BUILD=1'
-        ret_code, output = spawn(cmds, env=env, cmpl=True)
+        cmd_[4] = 'SECOND_BUILD=1'
+        ret_code, output = spawn(cmd_, env=env, cmpl=True)
 
         if ret_code != 0:
             sys.exit(ret_code)
