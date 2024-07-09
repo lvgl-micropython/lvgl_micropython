@@ -66,7 +66,7 @@ class Partition:
     def set_app_size(self, size):
         if int(size / 0x1000) * 0x1000 != size:
             size = (int(size / 0x1000) + 1) * 0x1000
-        
+
         if self.factory == size:
             return False
 
@@ -838,7 +838,7 @@ def compile(*args):  # NOQA
     )
 
     if partition_size == -1:
-        p_size = 0x258000  # 0x259000
+        p_size = 0x25A000
     else:
         p_size = partition_size
 
