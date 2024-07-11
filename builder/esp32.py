@@ -919,7 +919,8 @@ def compile(*args):  # NOQA
                 '#define MP_USB_OTG    (CONFIG_USB_OTG_SUPPORTED)\n'
                 '#else\n'
                 '#define MP_USB_OTG    (0)\n'
-                '#endif'
+                '#endif\n'
+                '#endif\n'
             )
 
             with open(mpconfigboard_path, 'wb') as f:
