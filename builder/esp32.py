@@ -1044,9 +1044,6 @@ def compile(*args):  # NOQA
 
             os.remove(os.path.join('build', f))
 
-        if board_variant:
-            build_name += f'-{board_variant}'
-
         build_bin_file = f'build/lvgl_micropy_{build_name[6:]}-{flash_size}'
         if oct_flash:
             build_bin_file += '_OCTFLASH'
