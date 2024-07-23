@@ -39,9 +39,7 @@
             mp_obj_array_t *view1;
             mp_obj_array_t *view2;
 
-            void *queued_buf;
             void *transmitting_buf;
-            bool ready_called;
 
         } mp_lcd_rgb_bus_obj_t;
 
