@@ -7,19 +7,16 @@
     #include "modlcd_bus.h"
     #include "rgb_bus.h"
 
+    // esp-idf includes
     #include "hal/lcd_hal.h"
     #include "esp_pm.h"
     #include "esp_intr_alloc.h"
     #include "esp_heap_caps.h"
-    #include "freertos/FreeRTOS.h"
-    #include "freertos/task.h"
+
     #include "esp_lcd_panel_io.h"
     #include "esp_lcd_panel_ops.h"
     #include "esp_lcd_panel_interface.h"
     #include "esp_lcd_panel_rgb.h"
-    #include "esp_cpu.h"
-    #include "esp_system.h"
-    #include "rom/ets_sys.h"
 
     // micropython includes
     #include "mphalport.h"
@@ -27,8 +24,6 @@
     #include "py/runtime.h"
     #include "py/objarray.h"
     #include "py/binary.h"
-    #include "py/stackctrl.h"
-    #include "py/gc.h"
 
     // stdlib includes
     #include <string.h>
@@ -57,43 +52,15 @@
     static bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
     {
         LCD_UNUSED(edata);
-        LCD_UNUSED(panel);
 
-        // rgb_panel_t *rgb_panel = __containerof(panel, rgb_panel_t, base);
-
+        rgb_panel_t *rgb_panel = __containerof(panel, rgb_panel_t, base);
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)user_ctx;
 
-        if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
-            volatile uint32_t sp = (uint32_t)esp_cpu_get_sp();
-
-            // Calling micropython from ISR
-            // See: https://github.com/micropython/micropython/issues/4895
-            void *old_state = mp_thread_get_state();
-
-            mp_state_thread_t ts; // local thread state for the ISR
-            mp_thread_set_state(&ts);
-            mp_stack_set_top((void*)sp); // need to include in root-pointer scan
-            mp_stack_set_limit(CONFIG_FREERTOS_IDLE_TASK_STACKSIZE - 1024); // tune based on ISR thread stack size
-            mp_locals_set(mp_state_ctx.thread.dict_locals); // use main thread's locals
-            mp_globals_set(mp_state_ctx.thread.dict_globals); // use main thread's globals
-
-            mp_sched_lock(); // prevent VM from switching to another MicroPython thread
-            gc_lock(); // prevent memory allocation
-
-            nlr_buf_t nlr;
-            if (nlr_push(&nlr) == 0) {
-                mp_call_function_n_kw(self->callback,0, 0, NULL);
-                nlr_pop();
-            } else {
-                ets_printf("Uncaught exception in IRQ callback handler!\n");
-                mp_obj_print_exception(&mp_plat_print, MP_OBJ_FROM_PTR(nlr.ret_val));  // changed to &mp_plat_print to fit this context
-            }
-
-            gc_unlock();
-            mp_sched_unlock();
-
-            mp_thread_set_state(old_state);
-            mp_hal_wake_main_task_from_isr();
+        if (!self->trans_done && rgb_panel->fbs[rgb_panel->cur_fb_index] == self->transmitting_buf) {
+           if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
+               cb_isr(self->callback);
+           }
+           self->trans_done = true;
         }
 
         return false;
@@ -489,7 +456,6 @@
             self->rgb565_byte_swap = false;
         }
 
-
         self->panel_io_config.timings.h_res = (uint32_t)width;
         self->panel_io_config.timings.v_res = (uint32_t)height;
         self->panel_io_config.bits_per_pixel = (size_t)bpp;
@@ -516,10 +482,12 @@
             return ret;
         }
 
-        ret = esp_lcd_rgb_panel_register_event_callbacks(self->panel_handle, &callbacks, self);
-        if (ret != 0) {
-            mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_rgb_panel_register_event_callbacks)"), ret);
-            return ret;
+        if (self->panel_io_config.flags.double_fb) {
+            ret = esp_lcd_rgb_panel_register_event_callbacks(self->panel_handle, &callbacks, self);
+            if (ret != 0) {
+                mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_rgb_panel_register_event_callbacks)"), ret);
+                return ret;
+            }
         }
 
         ret = esp_lcd_panel_reset(self->panel_handle);
@@ -572,6 +540,9 @@
 
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
 
+        self->trans_done = false;
+        self->transmitting_buf = color;
+
         esp_err_t ret = esp_lcd_panel_draw_bitmap(
             self->panel_handle,
             x_start,
@@ -586,9 +557,13 @@
             return LCD_OK;
         }
 
+        if (self->callback == mp_const_none || !self->panel_io_config.flags.double_fb) {
+            while (!self->trans_done) {}
+            self->trans_done = false;
+        }
+        
         return LCD_OK;
     }
-
 
     MP_DEFINE_CONST_OBJ_TYPE(
         mp_lcd_rgb_bus_type,
