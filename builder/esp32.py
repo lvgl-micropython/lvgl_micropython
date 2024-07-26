@@ -1080,6 +1080,7 @@ def compile(*args):  # NOQA
             PORT = '(PORT)'
 
         output = output.replace('-b 460800', f'-p {PORT} -b {BAUD}')
+        output = output.replace('no_reset', 'hard_reset')
 
         args = output.split(' ')
         args.extend(['--erase-all', '0x0', build_bin_file])
