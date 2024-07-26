@@ -561,7 +561,7 @@
             while (!self->trans_done) {}
             self->trans_done = false;
         }
-        
+
         return LCD_OK;
     }
 

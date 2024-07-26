@@ -698,6 +698,20 @@ def setup_idf_environ():
     return env, cmds
 
 
+def add_components():
+    port_path = f'{SCRIPT_DIR}/lib/micropython/ports/esp32'
+    for pth in ('esp32', 'esp32c3', 'esp32s2', 'esp32s3'):
+        pth = os.path.join(port_path, f'main_{pth}', 'idf_component.yml')
+        with open(pth, 'rb') as f:
+            data = f.read().decode('utf-8')
+
+        if 'espressif/esp_lcd_panel_io_additions: "~1.0.1"' not in data:
+            data += '\n  espressif/esp_io_expander: "~1.0.1"'
+            data += '\n  espressif/esp_lcd_panel_io_additions: "~1.0.1"\n'
+            with open(pth, 'wb') as f:
+                f.write(data.encode('utf-8'))
+
+
 def submodules():
     if has_correct_idf():
         idf_path = os.environ['IDF_PATH']
@@ -768,6 +782,8 @@ def find_esp32_ports(chip):
 def compile(*args):  # NOQA
     global PORT
     global flash_size
+
+    add_components()
 
     env, cmds = setup_idf_environ()
 

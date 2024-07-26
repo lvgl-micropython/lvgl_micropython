@@ -57,6 +57,7 @@ class DisplayDriver:
     _frame_buffer2: Optional[_BufferType] = ...
     _backup_set_memory_location: Optional[Callable] = ...
     _rotation: int = ...
+    _spi_3wire: lcd_bus.SPI3Wire = None
 
     # Default values of "power" and "backlight" are reversed logic! 0 means ON.
     # You can change this by setting backlight_on and power_on arguments.
@@ -111,6 +112,7 @@ class DisplayDriver:
         color_byte_order: int = BYTE_ORDER_RGB,
         color_space: int = lv.COLOR_FORMAT.RGB888,  # NOQA
         rgb565_byte_swap: bool = False,
+        spi_3wire: Optional[lcd_bus.SPI3Wire] = None,
         _cmd_bits: int = 8,
         _param_bits: int = 8
     ) -> object:

@@ -13,6 +13,33 @@ MEMORY_DEFAULT: Final[int] = ...
 DEBUG_ENABLED: Final[int] = ...
 
 
+class SPI3Wire:
+
+    def __init__(
+        self,
+        *,
+        mosi: int,
+        sclk: int,
+        freq: int = 500000,
+        cs: int = -1,
+        cs_high_active: bool = False,
+        keep_cs_inactive: bool = True,
+        lsb_first: bool = False,
+        dc_zero_on_data: bool = False,
+        use_dc_bit: bool = False,
+    ):
+        ...
+
+    def init(self, cmd_bits: int, param_bits: int, /) -> None:
+        ...
+
+    def deinit(self) -> None:
+        ...
+
+    def tx_param(self, cmd: int, params: Optional[_BufferType] = None, /) -> None:
+        ...
+
+
 class I2CBus:
 
     def __init__(

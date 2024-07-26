@@ -18,6 +18,7 @@
 
 #ifdef ESP_IDF_VERSION
     #include "esp_heap_caps.h"
+    #include "spi_3wire.h"
 #endif
 
 #if CONFIG_LCD_ENABLE_DEBUG_LOG
@@ -281,12 +282,13 @@ static const mp_map_elem_t mp_module_lcd_bus_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_DEBUG_ENABLED),    MP_ROM_INT(LCD_DEBUG) },
 
     #ifdef ESP_IDF_VERSION
-        { MP_ROM_QSTR(MP_QSTR_MEMORY_32BIT),    MP_ROM_INT(MALLOC_CAP_32BIT)    },
-        { MP_ROM_QSTR(MP_QSTR_MEMORY_8BIT),     MP_ROM_INT(MALLOC_CAP_8BIT)     },
-        { MP_ROM_QSTR(MP_QSTR_MEMORY_DMA),      MP_ROM_INT(MALLOC_CAP_DMA)      },
-        { MP_ROM_QSTR(MP_QSTR_MEMORY_SPIRAM),   MP_ROM_INT(MALLOC_CAP_SPIRAM)   },
-        { MP_ROM_QSTR(MP_QSTR_MEMORY_INTERNAL), MP_ROM_INT(MALLOC_CAP_INTERNAL) },
-        { MP_ROM_QSTR(MP_QSTR_MEMORY_DEFAULT),  MP_ROM_INT(MALLOC_CAP_DEFAULT)  },
+        { MP_ROM_QSTR(MP_QSTR_SPI3Wire),        (mp_obj_t)&mp_lcd_spi_3wire_type },
+        { MP_ROM_QSTR(MP_QSTR_MEMORY_32BIT),    MP_ROM_INT(MALLOC_CAP_32BIT)     },
+        { MP_ROM_QSTR(MP_QSTR_MEMORY_8BIT),     MP_ROM_INT(MALLOC_CAP_8BIT)      },
+        { MP_ROM_QSTR(MP_QSTR_MEMORY_DMA),      MP_ROM_INT(MALLOC_CAP_DMA)       },
+        { MP_ROM_QSTR(MP_QSTR_MEMORY_SPIRAM),   MP_ROM_INT(MALLOC_CAP_SPIRAM)    },
+        { MP_ROM_QSTR(MP_QSTR_MEMORY_INTERNAL), MP_ROM_INT(MALLOC_CAP_INTERNAL)  },
+        { MP_ROM_QSTR(MP_QSTR_MEMORY_DEFAULT),  MP_ROM_INT(MALLOC_CAP_DEFAULT)   },
     #else
         { MP_ROM_QSTR(MP_QSTR_MEMORY_32BIT),    MP_ROM_INT(0) },
         { MP_ROM_QSTR(MP_QSTR_MEMORY_8BIT),     MP_ROM_INT(0) },
