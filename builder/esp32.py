@@ -156,7 +156,8 @@ deploy = False
 PORT = None
 BAUD = 460800
 ccache = False
-disable_OTG = True
+usb_otg = False
+usb_jtag = False
 optimize_size = False
 ota = False
 
@@ -277,7 +278,8 @@ def common_args(extra_args):
 
 def esp32_s3_args(extra_args):
     global oct_flash
-    global disable_OTG
+    global usb_otg
+    global usb_jtag
     global board_variant
 
     esp_argParser = ArgumentParser(prefix_chars='-B')
@@ -294,6 +296,14 @@ def esp32_s3_args(extra_args):
         default=False,
         action='store_true'
     )
+
+    esp_argParser.add_argument(
+        '--usb-jtag',
+        dest='usb_jtag',
+        default=False,
+        action='store_true'
+    )
+
     esp_argParser.add_argument(
         '--octal-flash',
         help='octal spi flash',
@@ -304,14 +314,16 @@ def esp32_s3_args(extra_args):
     esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
 
     oct_flash = esp_args.oct_flash
-    disable_OTG = not esp_args.usb_otg
+    usb_otg = esp_args.usb_otg
+    usb_jtag = esp_args.usb_jtag
     board_variant = esp_args.board_variant
 
     return extra_args
 
 
 def esp32_s2_args(extra_args):
-    global disable_OTG
+    global usb_otg
+    global usb_jtag
 
     esp_argParser = ArgumentParser(prefix_chars='-')
     esp_argParser.add_argument(
@@ -321,9 +333,24 @@ def esp32_s2_args(extra_args):
         action='store_true'
     )
 
-    esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
-    disable_OTG = not esp_args.usb_otg
+    esp_argParser.add_argument(
+        '--usb-jtag',
+        dest='usb_jtag',
+        default=False,
+        action='store_true'
+    )
 
+    esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
+    usb_otg = esp_args.usb_otg
+    usb_jtag = esp_args.usb_jtag
+
+    return extra_args
+
+
+def esp32_c3_args(extra_args):
+    global usb_jtag
+
+    usb_jtag = True
     return extra_args
 
 
@@ -370,11 +397,16 @@ def parse_args(extra_args, lv_cflags, brd):
         extra_args = esp32_s2_args(extra_args)
     elif board == 'ESP32_GENERIC_S3':
         extra_args = esp32_s3_args(extra_args)
+    elif board == 'ESP32_GENERIC_C3':
+        extra_args = esp32_c3_args(extra_args)
 
     if lv_cflags:
         lv_cflags += ' -DLV_KCONFIG_IGNORE=1'
     else:
         lv_cflags = '-DLV_KCONFIG_IGNORE=1'
+
+    if usb_otg and usb_jtag:
+        raise RuntimeError('You cannot use both --usb-otg and --usb-jtag')
 
     return extra_args, lv_cflags, board
 
@@ -877,54 +909,46 @@ def compile(*args):  # NOQA
             with open(mpconfigport, 'wb') as f:
                 f.write(data.encode('utf-8'))
 
-    if board in ('ESP32_GENERIC_S2', 'ESP32_GENERIC_S3') and disable_OTG:
-        mphalport_path = 'lib/micropython/ports/esp32/mphalport.c'
+    mphalport_path = 'lib/micropython/ports/esp32/mphalport.c'
+    main_path = 'lib/micropython/ports/esp32/main.c'
 
-        with open(mphalport_path, 'rb') as f:
+    for file in (mphalport_path, main_path):
+        with open(file, 'rb') as f:
             data = f.read().decode('utf-8')
 
+        data = data.replace(
+            '#if CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG',
+            '#if MP_USB_SERIAL_JTAG'
+        )
         data = data.replace(
             '#elif CONFIG_USB_OTG_SUPPORTED',
             '#elif MP_USB_OTG'
         )
 
-        with open(mphalport_path, 'wb') as f:
+        with open(file, 'wb') as f:
             f.write(data.encode('utf-8'))
 
-        main_path = 'lib/micropython/ports/esp32/main.c'
+    mpconfigport_path = (
+        f'lib/micropython/ports/esp32/mpconfigport.h'
+    )
 
-        with open(main_path, 'rb') as f:
-            data = f.read().decode('utf-8')
+    with open(mpconfigport_path, 'rb') as f:
+        data = f.read().decode('utf-8')
 
-        data = data.replace(
-            '#elif CONFIG_USB_OTG_SUPPORTED',
-            '#elif MP_USB_OTG'
-        )
+    if 'MP_USB_OTG' in data:
+        data = data.rsplit('\n\n#define MP_USB_OTG', 1)[0]
 
-        with open(main_path, 'wb') as f:
-            f.write(data.encode('utf-8'))
+    data += (
+        '\n\n#define MP_USB_OTG'
+        f'  (SOC_USB_OTG_SUPPORTED && {str(usb_otg).lower()})\n'
+    )
+    data += (
+        '\n\n#define MP_USB_SERIAL_JTAG'
+        f'  (SOC_USB_SERIAL_JTAG_SUPPORTED && {str(usb_jtag).lower()})\n'
+    )
 
-        mpconfigboard_path = (
-            f'lib/micropython/ports/esp32/boards/{board}/mpconfigboard.h'
-        )
-
-        with open(mpconfigboard_path, 'rb') as f:
-            data = f.read().decode('utf-8')
-
-        if 'MP_USB_OTG' not in data:
-            data += (
-                '\n'
-                '#ifndef MP_USB_OTG\n'
-                '#if CONFIG_IDF_TARGET_ESP32C3\n'
-                '#define MP_USB_OTG    (CONFIG_USB_OTG_SUPPORTED)\n'
-                '#else\n'
-                '#define MP_USB_OTG    (0)\n'
-                '#endif\n'
-                '#endif\n'
-            )
-
-            with open(mpconfigboard_path, 'wb') as f:
-                f.write(data.encode('utf-8'))
+    with open(mpconfigport_path, 'wb') as f:
+        f.write(data.encode('utf-8'))
 
     src_path = 'micropy_updates/esp32'
     dst_path = 'lib/micropython/ports/esp32'
