@@ -18,23 +18,10 @@ if(ESP_PLATFORM)
         ${CMAKE_CURRENT_LIST_DIR}/esp32_src/spi_3wire.c
     )
 
-    # gets esp_io_expander include paths
-    idf_component_get_property(ESP_IO_EXPANDER_INCLUDES esp_io_expander INCLUDE_DIRS)
-    idf_component_get_property(ESP_IO_EXPANDER_DIR esp_io_expander COMPONENT_DIR)
-
-    if(ESP_IO_EXPANDER_INCLUDES)
-        list(TRANSFORM ESP_IO_EXPANDER_INCLUDES PREPEND ${ESP_IO_EXPANDER_DIR}/)
-        list(APPEND LCD_INCLUDES ${ESP_IO_EXPANDER_INCLUDES})
-    endif()
-
-    # gets esp_lcd_panel_io_additions include paths
-    idf_component_get_property(ESP_IO_ADDITIONS_INCLUDES esp_lcd_panel_io_additions INCLUDE_DIRS)
-    idf_component_get_property(ESP_IO_ADDITIONS_DIR esp_lcd_panel_io_additions COMPONENT_DIR)
-
-    if(ESP_IO_ADDITIONS_INCLUDES)
-        list(TRANSFORM ESP_IO_ADDITIONS_INCLUDES PREPEND ${ESP_IO_ADDITIONS_DIR}/)
-        list(APPEND LCD_INCLUDES ${ESP_IO_ADDITIONS_INCLUDES})
-    endif()
+    list(APPEND LCD_INCLUDES
+        ${CMAKE_CURRENT_LIST_DIR}/../../lib/micropython/ports/esp32/managed_components/espressif__esp_io_expander/include
+        ${CMAKE_CURRENT_LIST_DIR}/../../lib/micropython/ports/esp32/managed_components/espressif__esp_lcd_panel_io_additions/include
+    )
 
     # gets esp_lcd include paths
     idf_component_get_property(ESP_LCD_INCLUDES esp_lcd INCLUDE_DIRS)

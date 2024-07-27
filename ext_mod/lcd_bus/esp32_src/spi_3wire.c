@@ -19,7 +19,7 @@ static mp_obj_t mp_lcd_spi_3wire_make_new(const mp_obj_type_t *type, size_t n_ar
 {
     enum {
         ARG_mosi,
-        ARG_clk,
+        ARG_sclk,
         ARG_freq,
         ARG_cs,
         ARG_cs_high_active,
@@ -75,7 +75,7 @@ mp_obj_t mp_lcd_spi_3wire_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t
 {
     enum { ARG_self, ARG_cmd_bits, ARG_param_bits };
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_self,             MP_ARG_OBJ  | MP_ARG_REQUIRED }
+        { MP_QSTR_self,             MP_ARG_OBJ  | MP_ARG_REQUIRED },
         { MP_QSTR_cmd_bits,         MP_ARG_INT  | MP_ARG_REQUIRED },
         { MP_QSTR_param_bits,       MP_ARG_INT  | MP_ARG_REQUIRED }
     };
@@ -105,7 +105,7 @@ mp_obj_t mp_lcd_spi_3wire_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t
             .lcd_param_bytes = (uint32_t)args[ARG_param_bits].u_int / 8,
             .flags = {
                 .use_dc_bit = (uint32_t)((self->flags >> 0) & 0x1),
-                .dc_zero_on_data = (uint32_t)((self >> 1) & 0x1),
+                .dc_zero_on_data = (uint32_t)((self->flags >> 1) & 0x1),
                 .lsb_first = (uint32_t)((self->flags >> 2) & 0x1),
                 .cs_high_active = (uint32_t)((self->flags >> 3) & 0x1),
                 .del_keep_cs_inactive = (uint32_t)((self->flags >> 4) & 0x1),
