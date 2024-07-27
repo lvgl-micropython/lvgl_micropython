@@ -514,11 +514,9 @@ class DisplayDriver:
             self._power_pin.value(not value)
 
     def delete(self):
-        self._data_bus.delete()
         self._disp_drv.delete()
 
     def __del__(self):
-        self._data_bus.delete()
         self._disp_drv.delete()
 
     def reset(self):
