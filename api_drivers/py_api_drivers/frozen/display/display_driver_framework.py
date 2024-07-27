@@ -225,9 +225,6 @@ class DisplayDriver:
                 _param_bits
             )
 
-            if self._spi_3wire is not None:
-                self._spi_3wire.init(_cmd_bits, _param_bits)
-
             self._disp_drv.set_flush_cb(self._flush_cb)
 
             if isinstance(data_bus, lcd_bus.RGBBus):
