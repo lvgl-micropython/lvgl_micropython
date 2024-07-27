@@ -38,6 +38,13 @@ _MADCTL_MX = const(0x40)  # 0=Left to Right, 1=Right to Left
 _MADCTL_MY = const(0x80)  # 0=Top to Bottom, 1=Bottom to Top
 
 
+_ORIENTATION_TABLE = (
+    _MADCTL_MX,
+    _MADCTL_MV,
+    _MADCTL_MY,
+    _MADCTL_MY | _MADCTL_MX | _MADCTL_MV
+)
+
 class ST7796(display_driver_framework.DisplayDriver):
     # The st7795 display controller has an internal framebuffer
     # arranged in 320 x 480
@@ -61,10 +68,10 @@ class ST7796(display_driver_framework.DisplayDriver):
     # We just have to tell lvgl that we want to use
 
     _ORIENTATION_TABLE = (
-        0x0,
-        _MADCTL_MV | _MADCTL_MY,
-        _MADCTL_MY | _MADCTL_MX,
-        _MADCTL_MV | _MADCTL_MX
+        _MADCTL_MX,
+        _MADCTL_MV | _MADCTL_MY | _MADCTL_MX,
+        _MADCTL_MY,
+        _MADCTL_MV
     )
 
     def init(self):
