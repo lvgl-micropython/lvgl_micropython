@@ -45,6 +45,24 @@ def setup_windows_build():
     return _windows_env
 
 
+def set_mp_version(port):
+    mpconfigport = f'lib/micropython/ports/{port}/mpconfigport.h'
+
+    with open(mpconfigport, 'rb') as f:
+        data = f.read().decode('utf-8')
+
+    if 'MICROPY_BANNER_NAME_AND_VERSION' not in data:
+        data += (
+            '\n\n#include "genhdr/mpversion.h"'
+            '\n\n#define MICROPY_BANNER_NAME_AND_VERSION "LVGL MicroPython '
+            '1.23.0 on " MICROPY_BUILD_DATE\n\n'
+        )
+
+        with open(mpconfigport, 'wb') as f:
+            f.write(data.encode('utf-8'))
+
+
+
 def update_mphalport(target):
     if target == 'esp8266':
         mphalport_path = f'lib/micropython/ports/{target}/esp_mphal.h'

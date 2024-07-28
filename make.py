@@ -180,6 +180,8 @@ def create_lvgl_header():
 
 if __name__ == '__main__':
 
+    from builder import set_mp_version
+
     if sys.platform.startswith('win'):
         from builder import setup_windows_build
 
@@ -199,6 +201,7 @@ if __name__ == '__main__':
         from builder import renesas as mod
     elif target.lower() == 'macos':
         from builder import macOS as mod
+        target = 'unix'
     elif target.lower() == 'windows':
         from builder import windows as mod
     else:
@@ -221,6 +224,8 @@ if __name__ == '__main__':
         mod.mpy_cross()
 
     print('Generating build files....')
+    set_mp_version(target.lower())
+
     mod.build_manifest(
         target, SCRIPT_DIR, lvgl_api, displays, indevs, frozen_manifest
     )

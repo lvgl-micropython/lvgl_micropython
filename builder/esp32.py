@@ -925,6 +925,19 @@ def compile(*args):  # NOQA
             with open(mpconfigport, 'wb') as f:
                 f.write(data.encode('utf-8'))
 
+    panichandler = 'lib/micropython/ports/esp32/panichandler.c'
+
+    with open(panichandler, 'rb') as f:
+        data = f.read().decode('utf-8')
+
+    if '"MPY version : "' in data:
+        beg, end = data.split('"MPY version : "', 1)
+        end = end.split('"\\r\\n"', 1)[1]
+        data = f'{beg}"LVGL MPY version : 1.23.0 on " MICROPY_BUILD_DATE MICROPY_BUILD_TYPE_PAREN "\\r\\n"{end}'  # NOQA
+
+        with open(panichandler, 'wb') as f:
+            f.write(data.encode('utf-8'))
+
     mphalport_path = 'lib/micropython/ports/esp32/mphalport.c'
     main_path = 'lib/micropython/ports/esp32/main.c'
 
