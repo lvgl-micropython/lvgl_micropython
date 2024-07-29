@@ -19,7 +19,7 @@ static mp_obj_t mp_lcd_utils_int_float_converter(size_t n_args, const mp_obj_t *
         return mp_obj_new_int_from_uint(u.i);
     } else {
         u.i = (uint32_t)mp_obj_get_int(args[0]);
-        return mp_obj_new_float_from_f(u.f)
+        return mp_obj_new_float_from_f(u.f);
     }
 }
 
