@@ -1,37 +1,115 @@
-import os
-
-# this class is used as a template for writing the mechanism that is
-# used to store the touch screen calibration data. All properties and functions
-# seen in this class need to exist in the class that is written to store the
-# touch calibration data.
-
-# For more information on how to do this see the touch calibration for the ESP32
-
 import lcd_utils
 import struct
-import os
+
+try:
+    from esp32 import NVS  # NOQA
+except ImportError:
+    import os
+
+    class NVS:
+
+        def __init__(self, name):
+            self.name = name
+            try:
+                self._file = open(name, 'rb')
+            except OSError:
+                open(name, 'w').close()
+                self._file = open(name, 'rb')
+
+            self._data_to_commit = None
+
+        def get_blob(self, key, buf):
+            key = key.encode('utf-8')
+
+            buf_len = len(buf)
+            self._file.seek(0)
+            data = self._file.read()
+            if key not in data:
+                raise OSError
+
+            data = data.split(key)[1]
+            data_len = int(data[0])
+            if data_len < buf_len:
+                raise OSError
+
+            for i in range(buf_len):
+                buf[i] = data[i + 1]
+
+        def set_blob(self, key, buf):
+            key = key.encode('utf-8')
+
+            self._file.seek(0)
+            data = self._file.read()
+
+            if key in data:
+                start_data, end_data = data.split(key)
+                data_len = int(end_data[0])
+                end_data = end_data[data_len + 1:]
+
+                data = (
+                    start_data +
+                    key +
+                    bytes(bytearray([len(buf)])) +
+                    bytes(buf) +
+                    end_data
+                )
+            else:
+                data += (
+                    key +
+                    bytes(bytearray([len(buf)])) +
+                    bytes(buf)
+                )
+
+            self._data_to_commit = data
+
+        def erase(self, key):
+            key = key.encode('utf-8')
+
+            self._file.seek(0)
+            data = self._file.read()
+
+            if key not in data:
+                raise OSError
+
+            start_data, end_data = data.split(key)
+            data_len = int(end_data[0])
+            end_data = end_data[data_len + 1:]
+
+            self._data_to_commit = start_data + end_data
+
+        def commit(self):
+            if self._data_to_commit is None:
+                return
+
+            self._file.close()
+            with open(self.name, 'wb') as f:
+                f.write(self._data_to_commit)
+
+            self._file = open(self.name, 'rb')
+
+            self._data_to_commit = None
 
 
 class TouchCalData(object):
 
     def __init__(self, name):
-        self._name = name
-        try:
-            with open(name, 'rb') as f:
-                blob = f.read()
+        self._config = NVS(name)
 
+        blob = bytearray(24)
+        try:
+            self._config.get_blob("ts_config", blob)
             (
                 alphaX, betaX, deltaX, alphaY, betaY, deltaY
             ) = struct.unpack("<IIIIII", blob)
 
-            self._alphaX = round(lcd_utils.binary_to_float(alphaX), 7)
-            self._betaX = round(lcd_utils.binary_to_float(betaX), 7)
-            self._deltaX = round(lcd_utils.binary_to_float(deltaX), 7)
-            self._alphaY = round(lcd_utils.binary_to_float(alphaY), 7)
-            self._betaY = round(lcd_utils.binary_to_float(betaY), 7)
-            self._deltaY = round(lcd_utils.binary_to_float(deltaY), 7)
+            self._alphaX = round(lcd_utils.int_float_converter(alphaX), 7)
+            self._betaX = round(lcd_utils.int_float_converter(betaX), 7)
+            self._deltaX = round(lcd_utils.int_float_converter(deltaX), 7)
+            self._alphaY = round(lcd_utils.int_float_converter(alphaY), 7)
+            self._betaY = round(lcd_utils.int_float_converter(betaY), 7)
+            self._deltaY = round(lcd_utils.int_float_converter(deltaY), 7)
 
-        except:  # NOQA
+        except OSError:
             self._alphaX = None
             self._betaX = None
             self._deltaX = None
@@ -51,28 +129,24 @@ class TouchCalData(object):
                 self._betaY,
                 self._deltaY
             ):
-                try:
-                    os.remove(self._name)
-                except:  # NOQA
-                    pass
+                self._config.erase('ts_config')
 
             else:
-                alphaX = lcd_utils.float_to_binary(self._alphaX)
-                betaX = lcd_utils.float_to_binary(self._betaX)
-                deltaX = lcd_utils.float_to_binary(self._deltaX)
-                alphaY = lcd_utils.float_to_binary(self._alphaY)
-                betaY = lcd_utils.float_to_binary(self._betaY)
-                deltaY = lcd_utils.float_to_binary(self._deltaY)
+                alphaX = lcd_utils.int_float_converter(self._alphaX)
+                betaX = lcd_utils.int_float_converter(self._betaX)
+                deltaX = lcd_utils.int_float_converter(self._deltaX)
+                alphaY = lcd_utils.int_float_converter(self._alphaY)
+                betaY = lcd_utils.int_float_converter(self._betaY)
+                deltaY = lcd_utils.int_float_converter(self._deltaY)
 
                 blob = struct.pack(
                     '<IIIIII',
                     alphaX, betaX, deltaX, alphaY, betaY, deltaY
                 )
 
-                with open(self._name, 'wb') as f:
-                    f.write(blob)
+                self._config.set_blob("ts_config", blob)
 
-        self._is_dirty = False
+            self._config.commit()
 
     @property
     def alphaX(self):
