@@ -1,28 +1,4 @@
 
-typedef struct {
-    rmt_tx_done_callback_t on_trans_done; /*!< Event callback, invoked when transmission is finished */
-} rmt_tx_event_callbacks_t;
-
-
-typedef struct {
-    int loop_count; /*!< Specify the times of transmission in a loop, -1 means transmitting in an infinite loop */
-    struct {
-        uint32_t eot_level : 1;         /*!< Set the output level for the "End Of Transmission" */
-        uint32_t queue_nonblocking : 1; /*!< If set, when the transaction queue is full, driver will not block the thread but return directly */
-    } flags;                            /*!< Transmit specific config flags */
-} rmt_transmit_config_t;
-
-
-rmt_sync_manager_config_t
-tx_channel_array
-array_size
-
-
-rmt_new_tx_channel(const rmt_tx_channel_config_t *config, rmt_channel_handle_t *ret_chan)
-rmt_transmit(rmt_channel_handle_t tx_channel, rmt_encoder_handle_t encoder, const void *payload, size_t payload_bytes, const rmt_transmit_config_t *config)
-rmt_tx_register_event_callbacks(rmt_channel_handle_t tx_channel, const rmt_tx_event_callbacks_t *cbs, void *user_data)
-rmt_tx_wait_all_done(rmt_channel_handle_t tx_channel, int timeout_ms)
-
 
 static bool led_rmt_bus_trans_done_cb(rmt_channel_handle_t tx_chan, const rmt_tx_done_event_data_t *edata, void *user_ctx)
 {
@@ -44,9 +20,8 @@ static bool led_rmt_bus_trans_done_cb(rmt_channel_handle_t tx_chan, const rmt_tx
 #include "driver/rmt_types.h"
 
 
-#define START_HEADER_SIZE  4
 
-void c_temp2rgb(uint16_t kelvin, uint8_t *r, uint8_t *g, uint8_t *b)
+static void c_temp2rgb(uint16_t kelvin, uint8_t *r, uint8_t *g, uint8_t *b)
 {
     uint16_t temp = kelvin / 100;
 
@@ -68,7 +43,7 @@ void c_temp2rgb(uint16_t kelvin, uint8_t *r, uint8_t *g, uint8_t *b)
 #define LED_MIN(x, y) x < y ? x : y
 
 // The  RGB to RGBW conversion function.
-void rgb2rgbw(mp_lcd_led_color_temp *color_temp, uint8_t rgbw[])
+static void rgb2rgbw(mp_lcd_led_color_temp *color_temp, uint8_t rgbw[])
 {
     // Calculate all of the color's white values corrected taking into account the white color temperature.
     float wRed = (float)(rgbw[0]) * (255.0f / (float)color_temp->r);
@@ -223,304 +198,19 @@ static mp_obj_t mp_lcd_led_bus_make_new(const mp_obj_type_t *type, size_t n_args
         c_temp2rgb(color_temp, &self->color_temp.r, &self->color_temp.g, &self->color_temp.b);
     }
     
-    mp_lcd_led_pixel_order byte_order = (mp_lcd_led_pixel_order)args[ARG_byte_order].u_int;
+    self->pixel_order = (mp_lcd_led_pixel_order)args[ARG_byte_order].u_int;
 
     if (args[ARG_spi_bus].u_int == mp_const_none) {
         self->data_pin = (esp_gpio_t)args[ARG_data_pin].u_int;
 
         self->strip_encoder = m_new_obj(mp_lcd_led_strip_encoder_t);
-        mp_lcd_led_ic_type ic_type = (mp_lcd_led_ic_type)args[ARG_ic_type].u_int;
 
+        self->bit0.duration1 = (int)args[ARG_b0dur1].u_int;
+        self->bit0.duration2 = (int)args[ARG_b0dur2].u_int;
+        self->bit1.duration1 = (int)args[ARG_b1dur1].u_int;
+        self->bit1.duration2 = (int)args[ARG_b1dur2].u_int;
 
-        switch(ic_type) {
-            case APA105:
-            case APA109:
-            case SK6805:
-            case SK6812:
-            case SK6818:
-            case WS2813:
-                self->bit0.high = 300;
-                break;
-            case APA104:
-            case SK6822:
-            case WS2812:
-                self->bit0.high = 350;
-                break;
-            case WS2818A:
-            case WS2818B:
-            case WS2851:
-            case WS2815B:
-            case WS2815:
-            case WS2811:
-            case WS2814:
-            case WS2818:
-                self->bit0.high = 220;
-                break;
-            case WS2816A:
-            case WS2816B:
-            case WS2816C:
-                self->bit0.high = 200;
-                break;
-            case WS2812B:
-                self->bit0.high = 400;
-                break;
-            case SK6813:
-                self->bit0.high = 240;
-                break;
-            case CUSTOM:
-                if (args[ARG_high0].u_int == -1) {
-                    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("You must supply high0 parameter"));
-                    return mp_const_none;
-                }
-                self->bit0.high = (uint16_t)args[ARG_high0].u_int;
-                break;
-
-            default:
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported IC type"));
-                return mp_const_none;
-        }
-
-        switch(ic_type) {
-            case APA105:
-            case APA109:
-            case SK6805:
-            case SK6812:
-            case SK6818:
-                self->bit1.high = 600;
-                break;
-            case WS2818A:
-            case WS2818B:
-            case WS2851:
-            case WS2815B:
-            case WS2815:
-            case WS2811:
-            case WS2814:
-                self->bit1.high = 580;
-                break;
-            case WS2816A:
-            case WS2816B:
-            case WS2816C:
-                self->bit1.high = 520;
-                break;
-            case WS2818:
-            case WS2813:
-                self->bit1.high = 750;
-                break;
-            case WS2812B:
-                self->bit1.high = 800;
-                break;
-            case WS2812:
-                self->bit1.high = 700;
-                break;
-            case APA104:
-            case SK6822:
-                self->bit1.high = 1360;
-                break;
-            case SK6813:
-                self->bit1.high = 740;
-                break;
-
-            case CUSTOM:
-                if (args[ARG_high1].u_int == -1) {
-                    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("You must supply high1 parameter"));
-                    return mp_const_none;
-                }
-                self->bit1.high = (uint16_t)args[ARG_high1].u_int;
-                break;
-
-            default:
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported IC type"));
-                return mp_const_none;
-        }
-
-        switch(ic_type) {
-            case APA105:
-            case APA109:
-            case SK6805:
-            case SK6812:
-            case SK6818:
-                self->bit0.low = 900;
-                break;
-            case APA104:
-            case SK6822:
-                self->bit0.low = 1360;
-                break;
-            case SK6813:
-            case WS2812:
-            case WS2816A:
-            case WS2816B:
-            case WS2816C:
-                self->bit0.low = 800;
-                break;
-            case WS2812B:
-                self->bit0.low = 850;
-                break;
-            case WS2813:
-                self->bit0.low = 300;
-                break;
-            case WS2818:
-                self->bit0.low = 750;
-                break;
-            case WS2818A:
-            case WS2818B:
-            case WS2851:
-            case WS2815B:
-            case WS2815:
-            case WS2811:
-            case WS2814:
-                self->bit0.low = 580;
-                break;
-
-            case CUSTOM:
-                if (args[ARG_low0].u_int == -1) {
-                    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("You must supply low0 parameter"));
-                    return mp_const_none;
-                }
-                self->bit0.low = (uint16_t)args[ARG_low0].u_int;
-                break;
-
-            default:
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported IC type"));
-                return mp_const_none;
-
-        }
-
-        switch(ic_type) {
-            case APA105:
-            case APA109:
-            case SK6805:
-            case SK6812:
-            case SK6818:
-            case WS2812:
-                self->bit1.low = 600;
-                break;
-            case APA104:
-            case SK6822:
-                self->bit1.low = 350;
-                break;
-            case SK6813:
-                self->bit1.low = 200;
-                break;
-            case WS2812B:
-                self->bit1.low = 450;
-                break;
-            case WS2813:
-                self->bit1.low = 300;
-                break;
-            case WS2818:
-            case WS2818A:
-            case WS2818B:
-            case WS2851:
-            case WS2815B:
-            case WS2815:
-            case WS2811:
-                self->bit1.low = 220;
-                break;
-            case WS2816A:
-            case WS2816B:
-            case WS2816C:
-                self->bit1.low = 480;
-                break;
-            case WS2814:
-                self->bit1.low = 580;
-                break;
-
-            case CUSTOM:
-                if (args[ARG_low1].u_int == -1) {
-                    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("You must supply low1 parameter"));
-                    return mp_const_none;
-                }
-                self->bit1.low = (uint16_t)args[ARG_low1].u_int;
-                break;
-
-            default:
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported IC type"));
-                return mp_const_none;
-
-        }
-
-        switch(ic_type) {
-            case APA105:
-            case APA109:
-            case SK6805:
-            case SK6812:
-            case SK6818:
-            case SK6813:
-                self->res = 800;
-                break;
-            case APA104:
-                self->res = 240;
-                break;
-            case SK6822:
-                self->res = 500;
-                break;
-            case WS2812:
-            case WS2812B:
-                self->res = 5000;
-                break;
-            case WS2813:
-            case WS2818:
-                self->res = 300;
-                break;
-            case WS2816A:
-            case WS2816B:
-            case WS2816C:
-            case WS2818A:
-            case WS2818B:
-            case WS2851:
-            case WS2815B:
-            case WS2815:
-            case WS2811:
-            case WS2814:
-                self->res = 280;
-                break;
-
-            case CUSTOM:
-                if (args[ARG_res].u_int == -1) {
-                    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("You must supply res parameter"));
-                    return mp_const_none;
-                }
-                self->res = (uint16_t)args[ARG_res].u_int;
-                break;
-
-            default:
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported IC type"));
-                return mp_const_none;
-        }
-
-        switch(ic_type) {
-            case WS2818A:
-            case WS2818B:
-            case WS2851:
-            case WS2818:
-            case SK6822:
-            case SK6818:
-            case APA104:
-            case WS2814:
-                byte_order = RGB;
-                break;
-            case WS2815B:
-            case WS2815:
-            case WS2811:
-            case WS2816A:
-            case WS2816B:
-            case WS2816C:
-            case WS2813:
-            case WS2812:
-            case WS2812B:
-            case SK6813:
-            case APA105:
-            case APA109:
-            case SK6805:
-            case SK6812:
-                byte_order = GRB;
-                break;
-            case CUSTOM:
-                break;
-            default:
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported IC type"));
-                return mp_const_none;
-        }
+        self->res = (int)args[ARG_res].u_int;
     } else {
         machine_hw_spi_bus_obj_t *spi_bus = MP_OBJ_TO_PTR(args[ARG_spi_bus].u_obj);
 
@@ -549,57 +239,30 @@ static mp_obj_t mp_lcd_led_bus_make_new(const mp_obj_type_t *type, size_t n_args
     }
 
     self->freq = (uint32_t)args[ARG_freq].u_int;
-    
-    if (byte_order < 0 || byte_order > BGR) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid byte order"));
-        return mp_const_none;
-    }
-                
-    switch(byte_order) {
+
+    switch(self->pixel_order) {
         case RGB:
+            self->rgb_order = (uint8_t *) { 0, 1, 2 };
+            break;
         case RBG:
-            self->rgb_order[0] = 0;
+            self->rgb_order = (uint8_t *) { 0, 2, 1 };
             break;
         case GRB:
+            self->rgb_order = (uint8_t *) { 1, 0, 2 };
+            break;
         case GBR
-            self->rgb_order[0] = 1;
+            self->rgb_order = (uint8_t *) { 1, 2, 0 };
             break;
         case BRG:
+            self->rgb_order = (uint8_t *) { 2, 0, 1 };
+            break;
         case BGR:
-            self->rgb_order[0] = 2;
-            break;                        
+            self->rgb_order = (uint8_t *) { 2, 1, 0 };
+            break;
+        default:
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid byte order"));
+            return mp_const_none;
     }
-        
-    switch(byte_order) {
-        case GRB:
-        case BRG:
-            self->rgb_order[1] = 0;
-            break;
-        case RGB:
-        case BGR:
-            self->rgb_order[1] = 1;
-            break;
-        case RBG:
-        case GBR:
-            self->rgb_order[1] = 2;
-            break;
-    }
-        
-    switch(byte_order) {
-        case GBR:
-        case BGR:
-            self->rgb_order[2] = 0;
-            break;
-        case RBG:
-        case BRG:
-            self->rgb_order[2] = 1;
-            break;
-        case RGB:
-        case GRB:
-            self->rgb_order[2] = 2;
-            break;
-    }
-    self->pixel_order = byte_order;
 
     self->panel_io_handle.get_lane_count = &led_get_lane_count;
     self->panel_io_handle.del = &led_del;
@@ -650,13 +313,12 @@ mp_obj_t led_free_framebuffer(mp_obj_t obj, mp_obj_t buf)
     }
 
     mp_obj_array_t *array_buf = (mp_obj_array_t *)MP_OBJ_TO_PTR(buf);
-    void *item_buf = array_buf->items;
 
     if (array_buf == self->view1) {
-        heap_caps_free(item_buf);
+        heap_caps_free(array_buf->items);
         self->view1 = NULL;
     } else if (array_buf == self->view2) {
-        heap_caps_free(item_buf);
+        heap_caps_free(array_buf->items);
         self->view2 = NULL;
     } else {
         mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("No matching buffer found"));
@@ -672,61 +334,26 @@ mp_obj_t led_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps)
     mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE, 1, buf));
     view->typecode |= 0x80; // used to indicate writable buffer
 
-    if ((caps | MALLOC_CAP_SPIRAM) == caps) {
-        uint32_t available = (uint32_t)heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
-        if (available < size) {
-            heap_caps_free(buf);
-            mp_raise_msg_varg(
-                &mp_type_MemoryError,
-                MP_ERROR_TEXT("Not enough memory available in SPIRAM (%d)"),
-                size
-            );
-            return mp_const_none;
-        }
-        self->panel_io_config.flags.fb_in_psram = 1;
-
-        if (self->view1 == NULL) {
-            self->buffer_size = size;
-            self->view1 = view;
-        } else if (self->buffer_size != size) {
-            heap_caps_free(buf);
-            mp_raise_msg_varg(
-                &mp_type_MemoryError,
-                MP_ERROR_TEXT("Frame buffer sizes do not match (%d)"),
-                size
-            );
-            return mp_const_none;
-        } else if (self->view2 == NULL) {
-            self->view2 = view;
-            self->panel_io_config.flags.double_fb = 1;
-        } else {
-            heap_caps_free(buf);
-            mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("There is a maximum of 2 frame buffers allowed"));
-            return mp_const_none;
-        }
-
-        return MP_OBJ_FROM_PTR(view);
+    if (self->view1 == NULL) {
+        self->buffer_size = size;
+        self->view1 = view;
+    } else if (self->buffer_size != size) {
+        heap_caps_free(buf);
+        mp_raise_msg_varg(
+            &mp_type_MemoryError,
+            MP_ERROR_TEXT("Frame buffer sizes do not match (%d)"),
+            size
+        );
+        return mp_const_none;
+    } else if (self->view2 == NULL) {
+        self->view2 = view;
     } else {
-        uint32_t available = (uint32_t)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
-        if (size % 2 != 0) {
-            heap_caps_free(buf);
-            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("bounce buffer size needs to be divisible by 2"));
-            return mp_const_none;
-        }
-
-        if (available < size) {
-            heap_caps_free(buf);
-            mp_raise_msg_varg(
-                &mp_type_MemoryError,
-                MP_ERROR_TEXT("Not enough SRAM DMA memory (%d)"),
-                size
-            );
-            return mp_const_none;
-        }
-        self->panel_io_config.flags.bb_invalidate_cache = true;
-        self->panel_io_config.bounce_buffer_size_px = size;
-        return MP_OBJ_FROM_PTR(view);
+        heap_caps_free(buf);
+        mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("There is a maximum of 2 frame buffers allowed"));
+        return mp_const_none;
     }
+
+    return MP_OBJ_FROM_PTR(view);
 }
 
 
@@ -738,13 +365,19 @@ mp_lcd_err_t led_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
 
     mp_lcd_led_bus_obj_t *self = (mp_lcd_led_bus_obj_t *)obj;
 
-    if (bpp != 24) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Must set bpp to 24"));
+    if (bpp != 24 || bpp != 32) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Must set bpp to 24 or 32"));
         return LCD_ERR_INVALID_ARG;
     }
 
     self->pixel_count = width * height;
-    self->buffer_size = self->leds_per_pixel * self->pixel_count;
+    self->leds_per_pixel = bpp / 8;
+    uint32_t buf_size = self->leds_per_pixel * self->pixel_count;
+
+    if (self->buffer_size != buf_size) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("buffer size is not correct"));
+        return LCD_ERR_INVALID_ARG;
+    }
 
     if (self->spi_device == NULL) {
         rmt_tx_channel_config_t rmt_chan_config = {
@@ -753,7 +386,7 @@ mp_lcd_err_t led_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
             .mem_block_symbols = 64,
             .resolution_hz = self->freq,
             .trans_queue_depth = 4,
-            .flags.with_dma = self->buf2 != NULL ? 1:0,
+            .flags.with_dma = self->buf2 != NULL ? 1 : 0,
             .flags.invert_out = 0,
         };
 
@@ -764,17 +397,17 @@ mp_lcd_err_t led_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
         self->strip_encoder->base.del = led_del_strip;
         self->strip_encoder->base.reset = led_reset_strip;
 
-        uint16_t bit0_level0 = self->bit0.high >= 0 ? 1:0;
-        uint16_t bit0_level1 = self->bit0.high >= 0 ? 1:0;
+        uint16_t bit0_level0 = self->bit0.duration1 >= 0 ? 1 : 0;
+        uint16_t bit0_level1 = self->bit0.duration2 >= 0 ? 1 : 0;
 
-        uint16_t bit0_duration0 = self->bit0.high >= 0 ? (uint16_t)self->bit0.high:(uint16_t)-self->bit0.high;
-        uint16_t bit0_duration1 = self->bit0.low >= 0 ? (uint16_t)self->bit0.low:(uint16_t)-self->bit0.low;
+        uint16_t bit0_duration0 = self->bit0.duration1 >= 0 ? (uint16_t)self->bit0.duration1 : (uint16_t)-self->bit0.duration1;
+        uint16_t bit0_duration1 = self->bit0.duration2 >= 0 ? (uint16_t)self->bit0.duration2 : (uint16_t)-self->bit0.duration2;
 
-        uint16_t bit1_level0 = self->bit1.high >= 0 ? 1:0;
-        uint16_t bit1_level1 = self->bit1.high >= 0 ? 1:0;
+        uint16_t bit1_level0 = self->bit1.duration1 >= 0 ? 1 : 0;
+        uint16_t bit1_level1 = self->bit1.duration1 >= 0 ? 1 : 0;
 
-        uint16_t bit1_duration0 = self->bit1.high >= 0 ? (uint16_t)self->bit1.high:(uint16_t)-self->bit1.high;
-        uint16_t bit1_duration1 = self->bit1.low >= 0 ? (uint16_t)self->bit1.low:(uint16_t)-self->bit1.low;
+        uint16_t bit1_duration0 = self->bit1.duration1 >= 0 ? (uint16_t)self->bit1.duration1 : (uint16_t)-self->bit1.duration1;
+        uint16_t bit1_duration1 = self->bit1.duration2 >= 0 ? (uint16_t)self->bit1.duration2 : (uint16_t)-self->bit1.duration2;
 
         rmt_bytes_encoder_config_t bytes_encoder_config = (rmt_bytes_encoder_config_t) {
             .bit0 = {
@@ -796,12 +429,13 @@ mp_lcd_err_t led_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
         rmt_copy_encoder_config_t copy_encoder_config = {};
         ESP_ERROR_CHECK(rmt_new_copy_encoder(&copy_encoder_config, &self->strip_encoder->copy_encoder));
 
-        uint32_t reset_ticks = self->freq / 1000000 * self->res / 2;
+        uint16_t reset_level = self->res >= 0 ? 1 : 0;
+        uint16_t reset_ticks = reset_level ? (uint16_t)(self->freq / 1000000 * (uint32_t) self->res / 2) : (uint16_t)(self->freq / 1000000 * (uint32_t)-self->res / 2);
 
         self->strip_encoder->reset_code = (rmt_symbol_word_t) {
-            .level0 = 0,
+            .level0 = reset_level,
             .duration0 = reset_ticks,
-            .level1 = 0,
+            .level1 = reset_level,
             .duration1 = reset_ticks,
         };
 
@@ -811,7 +445,6 @@ mp_lcd_err_t led_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
 
         rmt_tx_register_event_callbacks(self->rmt_chan, &callback, self);
         ESP_ERROR_CHECK(rmt_enable(self->rmt_chan));
-
     } else {
         if (self->spi_device->spi_bus->state == MP_SPI_STATE_STOPPED) {
             machine_hw_spi_bus_initilize(self->spi_device->spi_bus);
@@ -824,18 +457,18 @@ mp_lcd_err_t led_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
 
         machine_hw_spi_bus_add_device(*self->spi_device);
 
-        self->buffer_size = self->pixel_count * 4 + 8;
+        buf_size = self->pixel_count * 4 + 8;
     }
 
     void *buf1 = self->view1->items;
-    self->view1->items = heaps_caps_calloc(1, self->buffer_size, self->buffer_flags);
+    self->view1->items = heaps_caps_calloc(1, buf_size, self->buffer_flags);
     self->buf1 = self->view1->items;
     self->view1->len = self->buffer_size;
     heap_caps_free(buf1);
 
     if (self->buf2 != NULL) {
         void *buf2 = self->view2->items;
-        self->view2->items = heaps_caps_calloc(1, self->buffer_size, self->buffer_flags);
+        self->view2->items = heaps_caps_calloc(1, buf_size, self->buffer_flags);
         self->buf2 = self->view2->items;
         self->view2->len = self->buffer_size;
         heap_caps_free(buf2);
@@ -909,3 +542,33 @@ mp_lcd_err_t led_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_s
     return err;
 }
 
+
+static const mp_rom_map_elem_t mp_lcd_led_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_get_lane_count),       MP_ROM_PTR(&mp_lcd_bus_get_lane_count_obj)       },
+    { MP_ROM_QSTR(MP_QSTR_allocate_framebuffer), MP_ROM_PTR(&mp_lcd_bus_allocate_framebuffer_obj) },
+    { MP_ROM_QSTR(MP_QSTR_free_framebuffer),     MP_ROM_PTR(&mp_lcd_bus_free_framebuffer_obj)     },
+    { MP_ROM_QSTR(MP_QSTR_register_callback),    MP_ROM_PTR(&mp_lcd_bus_register_callback_obj)    },
+    { MP_ROM_QSTR(MP_QSTR_tx_param),             MP_ROM_PTR(&mp_lcd_bus_tx_param_obj)             },
+    { MP_ROM_QSTR(MP_QSTR_tx_color),             MP_ROM_PTR(&mp_lcd_bus_tx_color_obj)             },
+    { MP_ROM_QSTR(MP_QSTR_rx_param),             MP_ROM_PTR(&mp_lcd_bus_rx_param_obj)             },
+    { MP_ROM_QSTR(MP_QSTR_init),                 MP_ROM_PTR(&mp_lcd_bus_init_obj)                 },
+    { MP_ROM_QSTR(MP_QSTR_deinit),               MP_ROM_PTR(&mp_lcd_bus_deinit_obj)               },
+    { MP_ROM_QSTR(MP_QSTR___del__),              MP_ROM_PTR(&mp_lcd_bus_deinit_obj)               },
+    { MP_ROM_QSTR(MP_QSTR_RGB),                  MP_ROM_INT(RGB)                                  },
+    { MP_ROM_QSTR(MP_QSTR_RBG),                  MP_ROM_INT(RBG)                                  },
+    { MP_ROM_QSTR(MP_QSTR_GRB),                  MP_ROM_INT(GRB)                                  },
+    { MP_ROM_QSTR(MP_QSTR_GBR),                  MP_ROM_INT(GBR)                                  },
+    { MP_ROM_QSTR(MP_QSTR_BRG),                  MP_ROM_INT(BRG)                                  },
+    { MP_ROM_QSTR(MP_QSTR_BGR),                  MP_ROM_INT(BGR)                                  },
+};
+
+MP_DEFINE_CONST_DICT(mp_lcd_led_locals_dict, mp_lcd_led_locals_dict_table);
+
+
+MP_DEFINE_CONST_OBJ_TYPE(
+    mp_lcd_led_bus_type,
+    MP_QSTR_LEDBus,
+    MP_TYPE_FLAG_NONE,
+    make_new, mp_lcd_led_bus_make_new,
+    locals_dict, (mp_obj_dict_t *)&mp_lcd_led_locals_dict
+);

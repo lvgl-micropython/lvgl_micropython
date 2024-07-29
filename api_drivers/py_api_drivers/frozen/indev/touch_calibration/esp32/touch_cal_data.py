@@ -1,55 +1,65 @@
+import esp32  # NOQA
+import lcd_utils
+import struct
+
 import nvs  # NOQA
 
 
 class TouchCalData(object):
 
     def __init__(self, name):
-        self._config = nvs.NVS(name)
+        self._config = esp32.NVS(name)
 
+        blob = bytearray(24)
         try:
-            self._alphaX = self._config.get(nvs.TYPE_FLOAT, 'alphaX')
+            self._config.get_blob("ts_config", blob)
+            (
+                alphaX, betaX, deltaX, alphaY, betaY, deltaY
+            ) = struct.unpack("<IIIIII", blob)
+
+            self._alphaX = round(lcd_utils.binary_to_float(alphaX), 7)
+            self._betaX = round(lcd_utils.binary_to_float(betaX), 7)
+            self._deltaX = round(lcd_utils.binary_to_float(deltaX), 7)
+            self._alphaY = round(lcd_utils.binary_to_float(alphaY), 7)
+            self._betaY = round(lcd_utils.binary_to_float(betaY), 7)
+            self._deltaY = round(lcd_utils.binary_to_float(deltaY), 7)
+
         except OSError:
             self._alphaX = None
-        try:
-            self._betaX = self._config.get(nvs.TYPE_FLOAT, 'betaX')
-        except OSError:
             self._betaX = None
-
-        try:
-            self._deltaX = self._config.get(nvs.TYPE_FLOAT, 'deltaX')
-        except OSError:
             self._deltaX = None
-        try:
-            self._alphaY = self._config.get(nvs.TYPE_FLOAT, 'alphaY')
-        except OSError:
             self._alphaY = None
-
-        try:
-            self._betaY = self._config.get(nvs.TYPE_FLOAT, 'betaY')
-        except OSError:
             self._betaY = None
-
-        try:
-            self._deltaY = self._config.get(nvs.TYPE_FLOAT, 'deltaY')
-        except OSError:
             self._deltaY = None
 
         self._is_dirty = False
 
     def save(self):
         if self._is_dirty:
-            if self._alphaX is None:
-                self._config.erase('alphaX')
-            if self._betaX is None:
-                self._config.erase('betaX')
-            if self._deltaX is None:
-                self._config.erase('deltaX')
-            if self._alphaY is None:
-                self._config.erase('alphaY')
-            if self._betaY is None:
-                self._config.erase('betaY')
-            if self._deltaY is None:
-                self._config.erase('deltaY')
+            if None in (
+                self._alphaX,
+                self._betaX,
+                self._deltaX,
+                self._alphaY,
+                self._betaY,
+                self._deltaY
+            ):
+                self._config.erase('ts_config')
+
+            else:
+                alphaX = lcd_utils.float_to_binary(self._alphaX)
+                betaX = lcd_utils.float_to_binary(self._betaX)
+                deltaX = lcd_utils.float_to_binary(self._deltaX)
+                alphaY = lcd_utils.float_to_binary(self._alphaY)
+                betaY = lcd_utils.float_to_binary(self._betaY)
+                deltaY = lcd_utils.float_to_binary(self._deltaY)
+
+                blob = struct.pack(
+                    '<IIIIII',
+                    alphaX, betaX, deltaX, alphaY, betaY, deltaY
+                )
+
+                self._config.set_blob("ts_config", blob)
 
             self._config.commit()
 
@@ -59,10 +69,12 @@ class TouchCalData(object):
 
     @alphaX.setter
     def alphaX(self, value):
-        self._alphaX = value
-        if value is not None:
-            self._config.set(nvs.TYPE_FLOAT, 'alphaX', value)
-            self._is_dirty = True
+        if value is None:
+            self._alphaX = value
+        else:
+            self._alphaX = round(value, 7)
+
+        self._is_dirty = True
 
     @property
     def betaX(self):
@@ -70,10 +82,12 @@ class TouchCalData(object):
 
     @betaX.setter
     def betaX(self, value):
-        self._betaX = value
-        if value is not None:
-            self._config.set(nvs.TYPE_FLOAT, 'betaX', value)
-            self._is_dirty = True
+        if value is None:
+            self._betaX = value
+        else:
+            self._betaX = round(value, 7)
+
+        self._is_dirty = True
 
     @property
     def deltaX(self):
@@ -81,10 +95,12 @@ class TouchCalData(object):
 
     @deltaX.setter
     def deltaX(self, value):
-        self._deltaX = value
-        if value is not None:
-            self._config.set(nvs.TYPE_FLOAT, 'deltaX', value)
-            self._is_dirty = True
+        if value is None:
+            self._deltaX = value
+        else:
+            self._deltaX = round(value, 7)
+
+        self._is_dirty = True
 
     @property
     def alphaY(self):
@@ -92,10 +108,12 @@ class TouchCalData(object):
 
     @alphaY.setter
     def alphaY(self, value):
-        self._alphaY = value
-        if value is not None:
-            self._config.set(nvs.TYPE_FLOAT, 'alphaY', value)
-            self._is_dirty = True
+        if value is None:
+            self._alphaY = value
+        else:
+            self._alphaY = round(value, 7)
+
+        self._is_dirty = True
 
     @property
     def betaY(self):
@@ -103,10 +121,12 @@ class TouchCalData(object):
 
     @betaY.setter
     def betaY(self, value):
-        self._betaY = value
-        if value is not None:
-            self._config.set(nvs.TYPE_FLOAT, 'betaY', value)
-            self._is_dirty = True
+        if value is None:
+            self._betaY = value
+        else:
+            self._betaY = round(value, 7)
+
+        self._is_dirty = True
 
     @property
     def deltaY(self):
@@ -114,10 +134,12 @@ class TouchCalData(object):
 
     @deltaY.setter
     def deltaY(self, value):
-        self._deltaY = value
-        if value is not None:
-            self._config.set(nvs.TYPE_FLOAT, 'deltaY', value)
-            self._is_dirty = True
+        if value is None:
+            self._deltaY = value
+        else:
+            self._deltaY = round(value, 7)
+
+        self._is_dirty = True
 
     def reset(self):
         self.alphaX = None

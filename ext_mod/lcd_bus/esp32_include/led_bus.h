@@ -13,32 +13,6 @@
     #include "py/obj.h"
     #include "py/objarray.h"
 
-    typedef enum mp_lcd_led_ic_type {
-        APA104,
-        APA105,
-        APA109,
-        WS2811,
-        WS2812,
-        WS2812B,
-        WS2813,
-        WS2814,
-        WS2815,
-        WS2815B,
-        WS2816A,
-        WS2816B,
-        WS2816C,
-        WS2818,
-        WS2818A,
-        WS2818B,
-        WS2851,
-        SK6805,
-        SK6812,
-        SK6813,
-        SK6818,
-        SK6822,
-        CUSTOM = 0xFF
-    } mp_lcd_led_ic_type;
-
     typedef enum mp_lcd_led_pixel_order {
         RGB,
         RBG,
@@ -49,8 +23,8 @@
     } mp_lcd_led_pixel_order;
 
     typedef struct _mp_lcd_led_bit_timing {
-        uint16_t high;
-        uint16_t low;
+        int duration1;
+        int duration2;
     } mp_lcd_led_bit_timing;
 
     typedef struct {
@@ -106,6 +80,7 @@
         esp_lcd_panel_io_spi_config_t *panel_io_config;
         esp_lcd_spi_bus_handle_t *bus_handle;
         machine_hw_spi_device_obj_t *spi_device;
+
     } mp_lcd_led_bus_obj_t;
 
 

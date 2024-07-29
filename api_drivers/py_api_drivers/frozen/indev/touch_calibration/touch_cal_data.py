@@ -1,3 +1,4 @@
+import os
 
 # this class is used as a template for writing the mechanism that is
 # used to store the touch screen calibration data. All properties and functions
@@ -6,20 +7,71 @@
 
 # For more information on how to do this see the touch calibration for the ESP32
 
+import lcd_utils
+import struct
+import os
+
+
 class TouchCalData(object):
 
     def __init__(self, name):
-        self.name = name
-        self._alphaX = None
-        self._betaX = None
-        self._deltaX = None
-        self._alphaY = None
-        self._betaY = None
-        self._deltaY = None
+        self._name = name
+        try:
+            with open(name, 'rb') as f:
+                blob = f.read()
+
+            (
+                alphaX, betaX, deltaX, alphaY, betaY, deltaY
+            ) = struct.unpack("<IIIIII", blob)
+
+            self._alphaX = round(lcd_utils.binary_to_float(alphaX), 7)
+            self._betaX = round(lcd_utils.binary_to_float(betaX), 7)
+            self._deltaX = round(lcd_utils.binary_to_float(deltaX), 7)
+            self._alphaY = round(lcd_utils.binary_to_float(alphaY), 7)
+            self._betaY = round(lcd_utils.binary_to_float(betaY), 7)
+            self._deltaY = round(lcd_utils.binary_to_float(deltaY), 7)
+
+        except:  # NOQA
+            self._alphaX = None
+            self._betaX = None
+            self._deltaX = None
+            self._alphaY = None
+            self._betaY = None
+            self._deltaY = None
 
         self._is_dirty = False
 
     def save(self):
+        if self._is_dirty:
+            if None in (
+                self._alphaX,
+                self._betaX,
+                self._deltaX,
+                self._alphaY,
+                self._betaY,
+                self._deltaY
+            ):
+                try:
+                    os.remove(self._name)
+                except:  # NOQA
+                    pass
+
+            else:
+                alphaX = lcd_utils.float_to_binary(self._alphaX)
+                betaX = lcd_utils.float_to_binary(self._betaX)
+                deltaX = lcd_utils.float_to_binary(self._deltaX)
+                alphaY = lcd_utils.float_to_binary(self._alphaY)
+                betaY = lcd_utils.float_to_binary(self._betaY)
+                deltaY = lcd_utils.float_to_binary(self._deltaY)
+
+                blob = struct.pack(
+                    '<IIIIII',
+                    alphaX, betaX, deltaX, alphaY, betaY, deltaY
+                )
+
+                with open(self._name, 'wb') as f:
+                    f.write(blob)
+
         self._is_dirty = False
 
     @property
@@ -28,7 +80,11 @@ class TouchCalData(object):
 
     @alphaX.setter
     def alphaX(self, value):
-        self._alphaX = value
+        if value is None:
+            self._alphaX = value
+        else:
+            self._alphaX = round(value, 7)
+
         self._is_dirty = True
 
     @property
@@ -37,7 +93,11 @@ class TouchCalData(object):
 
     @betaX.setter
     def betaX(self, value):
-        self._betaX = value
+        if value is None:
+            self._betaX = value
+        else:
+            self._betaX = round(value, 7)
+
         self._is_dirty = True
 
     @property
@@ -46,7 +106,11 @@ class TouchCalData(object):
 
     @deltaX.setter
     def deltaX(self, value):
-        self._deltaX = value
+        if value is None:
+            self._deltaX = value
+        else:
+            self._deltaX = round(value, 7)
+
         self._is_dirty = True
 
     @property
@@ -55,7 +119,11 @@ class TouchCalData(object):
 
     @alphaY.setter
     def alphaY(self, value):
-        self._alphaY = value
+        if value is None:
+            self._alphaY = value
+        else:
+            self._alphaY = round(value, 7)
+
         self._is_dirty = True
 
     @property
@@ -64,7 +132,11 @@ class TouchCalData(object):
 
     @betaY.setter
     def betaY(self, value):
-        self._betaY = value
+        if value is None:
+            self._betaY = value
+        else:
+            self._betaY = round(value, 7)
+
         self._is_dirty = True
 
     @property
@@ -73,8 +145,18 @@ class TouchCalData(object):
 
     @deltaY.setter
     def deltaY(self, value):
-        self._deltaY = value
+        if value is None:
+            self._deltaY = value
+        else:
+            self._deltaY = round(value, 7)
+
         self._is_dirty = True
 
     def reset(self):
+        self.alphaX = None
+        self.betaX = None
+        self.deltaX = None
+        self.alphaY = None
+        self.betaY = None
+        self.deltaY = None
         self.save()

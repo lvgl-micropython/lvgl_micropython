@@ -10,3 +10,4 @@ endif
 
 SRC_USERMOD_C += $(MOD_DIR)/src/lcd_utils.c
 SRC_USERMOD_C += $(MOD_DIR)/src/remap.c
+SRC_USERMOD_C += $(MOD_DIR)/src/binary_float.c

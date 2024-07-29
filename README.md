@@ -753,3 +753,21 @@ The main Flash and PSRAM are connected to the host 0. It is recommended to use
 SPI host 2 when connecting an SPI device like a display that is going to utilize
 the PSRAM for the frame buffer.
 
+
+Bit orders are a tuple of durations. The first 2 numbers define a bit as 0 and the second 2 define a bit as 1. Negitive numbers are the duration to hold low and positive are for how long to hold high
+"Res" or "Reset" is sent at the end of the data. 
+
+| Name                                                                        |  Bit 0<br/>Duration 1   | Bit 0<br/>Duration 2 | Bit 1<br/>Duration 1  | Bit 1<br/>Duration 2 |  Res  |  Order  |
+|:----------------------------------------------------------------------------|:-----------------------:|:--------------------:|:---------------------:|:--------------------:|:-----:|:-------:|
+| APA105<br/>APA109<br/>APA109<br/>SK6805<br/>SK6812<br/>SK6818               |           300           |         -900         |          600          |         -600         | -800  |   GRB   |
+| WS2813                                                                      |           300           |         -300         |          750          |         -300         | -300  |   GRB   |
+| APA104                                                                      |           350           |        -1360         |         1360          |         -350         | -240  |   RGB   |
+| SK6822                                                                      |           350           |        -1360         |         1360          |         -350         | -500  |   RGB   |
+| WS2812                                                                      |           350           |         -800         |          700          |         -600         | -5000 |   GRB   |
+| WS2818A<br/>WS2818B<br/>WS2851<br/>WS2815B<br/>WS2815<br/>WS2811<br/>WS2814 |           220           |         -580         |          580          |         -220         | -280  |   RGB   |
+| WS2818                                                                      |           220           |         -750         |          750          |         -220         | -300  |   RGB   |
+| WS2816A<br/>WS2816B<br/>WS2816C                                             |           200           |         -800         |          520          |         -480         | -280  |   GRB   |
+| WS2812B                                                                     |           400           |         -850         |          800          |         -450         | -5000 |   GRB   |
+| SK6813                                                                      |           240           |         -800         |          740          |         -200         | -800  |   GRB   |
+
+

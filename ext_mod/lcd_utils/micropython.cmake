@@ -7,6 +7,7 @@ set(LCD_UTILS_INCLUDES)
 set(LCD_UTILS_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/src/lcd_utils.c
     ${CMAKE_CURRENT_LIST_DIR}/src/remap.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/binary_float.c
 )
 
 # Add our source files to the lib
