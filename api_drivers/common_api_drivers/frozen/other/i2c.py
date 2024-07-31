@@ -84,8 +84,10 @@ class I2C(object):
 
         def write_readinto(self, write_buf, read_buf):
             memaddr = 0
-            for i in range(int(self._reg_bits / 8)):
-                memaddr |= write_buf[i] << i
+
+            for i in range(int(self._reg_bits / 8) - 1, -1, -1):
+                memaddr |= write_buf[i] << ((~i + int(self._reg_bits / 8)) * 8)
+
             self.read_mem(memaddr, buf=read_buf)
 
         def read_mem(self, memaddr, num_bytes=None, buf=None):
@@ -123,10 +125,5 @@ class I2C(object):
                     self._bus.readfrom_into(self.dev_id, buf)
 
         def write(self, buf):
-            memaddr = 0
-            for i in range(int(self._reg_bits / 8)):
-                memaddr |= buf[i] << i
-            else:
-                i = int(self._reg_bits / 8) - 1
+            self._bus.writeto(self.dev_id, buf)
 
-            self.write_mem(memaddr, buf=buf[i + 1:])

@@ -1,13 +1,8 @@
 from micropython import const  # NOQA
 import pointer_framework
+import machine  # NOQA
+import time
 
-# FT3267
-# FT5336GQQ
-# FT5436
-#
-# FT5x46
-# FT5x26
-# ft5302
 
 I2C_ADDR = const(0x38)
 BITS = 8
@@ -17,11 +12,16 @@ _DEV_MODE_REG = const(0x00)
 
 # ** Possible modes as of FT6X36_DEV_MODE_REG **
 _DEV_MODE_WORKING = const(0x00)
+_CTRL = const(0x86)
 
 
 # Status register: stores number of active touch points (0, 1, 2)
 _TD_STAT_REG = const(0x02)
+_P1_XH = const(0x03)
+_P1_XL = const(0x04)
 
+_P1_YH = const(0x05)
+_P1_YL = const(0x06)
 
 _MSB_MASK = const(0x0F)
 _LSB_MASK = const(0xFF)
@@ -29,9 +29,7 @@ _LSB_MASK = const(0xFF)
 # Report rate in Active mode
 _PERIOD_ACTIVE_REG = const(0x88)
 
-# 0x36 for ft6236; 0x06 for ft6206
-_FT6236_CHIPID = const(0x36)
-_FT6336_CHIPID = const(0x64)
+_FT6x36_CHIPID = const(0x36)
 _VENDID = const(0x11)
 _CHIPID_REG = const(0xA3)
 
@@ -62,7 +60,7 @@ class FT6x36(pointer_framework.PointerDriver):
         startup_rotation=pointer_framework.lv.DISPLAY_ROTATION._0,  # NOQA
         debug=False
     ):  # NOQA
-        self._tx_buf = bytearray(2)
+        self._tx_buf = bytearray(5)
         self._tx_mv = memoryview(self._tx_buf)
         self._rx_buf = bytearray(5)
         self._rx_mv = memoryview(self._rx_buf)
@@ -86,7 +84,7 @@ class FT6x36(pointer_framework.PointerDriver):
         self._read_reg(_RELEASECODE_REG)
         print("Touch Release code: 0x%02x" % self._rx_buf[0])
 
-        if chip_id not in (_FT6236_CHIPID, _FT6336_CHIPID):
+        if chip_id != _FT6x36_CHIPID:
             raise RuntimeError()
 
         if ven_id != _VENDID:
@@ -95,28 +93,26 @@ class FT6x36(pointer_framework.PointerDriver):
         self._write_reg(_DEV_MODE_REG, _DEV_MODE_WORKING)
         self._write_reg(_PERIOD_ACTIVE_REG, 0x0E)
         self._write_reg(_G_MODE, 0x00)
+
+        # This is needed so the TS doesn't go to sleep
+        self._write_reg(_CTRL, 0x00)
+
         super().__init__(
             touch_cal=touch_cal, startup_rotation=startup_rotation, debug=debug
         )
 
     def _get_coords(self):
         self._tx_buf[0] = _TD_STAT_REG
-        self._device.write_readinto(self._tx_mv[:1], self._rx_mv[:1])
+
+        self._device.write_readinto(self._tx_mv, self._rx_mv)
 
         buf = self._rx_buf
 
         touch_pnt_cnt = buf[0]
-
         if touch_pnt_cnt != 1:
             return None
 
-        x = (
-            ((buf[1] & _MSB_MASK) << 8) |
-            (buf[2] & _LSB_MASK)
-        )
-        y = (
-            ((buf[3] & _MSB_MASK) << 8) |
-            (buf[4] & _LSB_MASK)
-        )
+        x = ((buf[1] & _MSB_MASK) << 8) | buf[2]
+        y = ((buf[3] & _MSB_MASK) << 8) | buf[4]
 
         return self.PRESSED, x, y
