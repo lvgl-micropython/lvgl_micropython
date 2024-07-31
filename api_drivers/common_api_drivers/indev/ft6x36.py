@@ -29,7 +29,9 @@ _LSB_MASK = const(0xFF)
 # Report rate in Active mode
 _PERIOD_ACTIVE_REG = const(0x88)
 
-_FT6x36_CHIPID = const(0x36)
+_FT6x36_CHIPID_1 = const(0x36)
+_FT6x36_CHIPID_2 = const(0x64)
+
 _VENDID = const(0x11)
 _CHIPID_REG = const(0xA3)
 
@@ -84,7 +86,7 @@ class FT6x36(pointer_framework.PointerDriver):
         self._read_reg(_RELEASECODE_REG)
         print("Touch Release code: 0x%02x" % self._rx_buf[0])
 
-        if chip_id != _FT6x36_CHIPID:
+        if chip_id in (_FT6x36_CHIPID_1, _FT6x36_CHIPID_2):
             raise RuntimeError()
 
         if ven_id != _VENDID:
@@ -103,8 +105,10 @@ class FT6x36(pointer_framework.PointerDriver):
 
     def _get_coords(self):
         self._tx_buf[0] = _TD_STAT_REG
-
-        self._device.write_readinto(self._tx_mv, self._rx_mv)
+        try:
+            self._device.write_readinto(self._tx_mv, self._rx_mv)
+        except OSError:
+            return None
 
         buf = self._rx_buf
 
