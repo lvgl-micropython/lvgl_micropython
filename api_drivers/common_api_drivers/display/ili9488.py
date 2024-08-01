@@ -1,4 +1,6 @@
 from micropython import const  # NOQA
+import micropython  # NOQA
+import time
 import lvgl as lv  # NOQA
 import lcd_bus  # NOQA
 import display_driver_framework
@@ -18,6 +20,9 @@ _AC3 = const(0xF7)
 _MADCTL = const(0x36)
 _COLMOD = const(0x3A)
 _NOP = const(0x00)
+_SLPOUT  = const(0x11)
+_DISPON  = const(0x29)
+_SWRESET = const(0x01)
 
 STATE_HIGH = display_driver_framework.STATE_HIGH
 STATE_LOW = display_driver_framework.STATE_LOW
@@ -25,6 +30,13 @@ STATE_PWM = display_driver_framework.STATE_PWM
 
 BYTE_ORDER_RGB = display_driver_framework.BYTE_ORDER_RGB
 BYTE_ORDER_BGR = display_driver_framework.BYTE_ORDER_BGR
+
+_MADCTL_MH = const(0x04)  # Refresh 0=Left to Right, 1=Right to Left
+_MADCTL_BGR = const(0x08)  # BGR color order
+_MADCTL_ML = const(0x10)  # Refresh 0=Top to Bottom, 1=Bottom to Top
+_MADCTL_MV = const(0x20)  # 0=Normal, 1=Row/column exchange
+_MADCTL_MX = const(0x40)  # 0=Left to Right, 1=Right to Left
+_MADCTL_MY = const(0x80)  # 0=Top to Bottom, 1=Bottom to Top
 
 
 class ILI9488(display_driver_framework.DisplayDriver):
@@ -52,16 +64,30 @@ class ILI9488(display_driver_framework.DisplayDriver):
 
     display_name = 'ILI9488'
 
+    _ORIENTATION_TABLE = (
+        _MADCTL_MX,
+        _MADCTL_MV,
+        _MADCTL_MY,
+        _MADCTL_MX | _MADCTL_MY | _MADCTL_MV
+    )
+
     def init(self):
         param_buf = bytearray(15)
         param_mv = memoryview(param_buf)
+
+        time.sleep_ms(120)
+
+        self.set_params(_SWRESET)
+        time.sleep_ms(200)
+
+        self.set_params(_SLPOUT)
+        time.sleep_ms(120)
 
         param_buf[:15] = bytearray([
             0x00, 0x03, 0x09, 0x08, 0x16,
             0x0A, 0x3F, 0x78, 0x4C, 0x09,
             0x0A, 0x08, 0x16, 0x1A, 0x0F
         ])
-
         self.set_params(_PGC, param_mv[:15])
 
         param_buf[:15] = bytearray([
@@ -73,7 +99,6 @@ class ILI9488(display_driver_framework.DisplayDriver):
 
         param_buf[0] = 0x17
         param_buf[1] = 0x15
-
         self.set_params(_PWR1, param_mv[:2])
 
         param_buf[0] = 0x41
@@ -96,7 +121,10 @@ class ILI9488(display_driver_framework.DisplayDriver):
         if color_size == 2:  # NOQA
             pixel_format = 0x55
         elif color_size == 3:
-            pixel_format = 0x77
+            if isinstance(self._data_bus, lcd_bus.SPIBus):
+                pixel_format = 0x66
+            else:
+                pixel_format = 0x77
         else:
             raise RuntimeError(
                 'ILI9488 IC only supports '
@@ -126,8 +154,44 @@ class ILI9488(display_driver_framework.DisplayDriver):
         param_buf[:4] = bytearray([
             0xA9, 0x51, 0x2C, 0x02
         ])
-        self._data_bus.tx_param(_AC3, param_mv[:4])
+        self.set_params(_AC3, param_mv[:4])
 
-        self.set_params(_NOP)
+        self.set_params(_DISPON)
+        time.sleep_ms(100)
 
         display_driver_framework.DisplayDriver.init(self)
+
+    def _flush_cb(self, _, area, color_p):
+        x1 = area.x1 + self._offset_x
+        x2 = area.x2 + self._offset_x
+
+        y1 = area.y1 + self._offset_y
+        y2 = area.y2 + self._offset_y
+
+        size = (
+            (x2 - x1 + 1) *
+            (y2 - y1 + 1) *
+            lv.color_format_get_size(self._color_space)
+        )
+
+        cmd = self._set_memory_location(x1, y1, x2, y2)
+
+        # we have to use the __dereference__ method because this method is
+        # what converts from the C_Array object the binding passes into a
+        # memoryview object that can be passed to the bus drivers
+        data_view = color_p.__dereference__(size)
+
+        if (
+            self._color_space == lv.COLOR_FORMAT.RGB888 and
+            isinstance(self._data_bus, lcd_bus.SPIBus)
+        ):
+            self._rgb888_to_rgb666(data_view, size)
+
+        self._data_bus.tx_color(cmd, data_view, x1, y1, x2, y2)
+
+    @micropython.viper
+    def _rgb888_to_rgb666(self, buf: ptr8, buf_len: int):
+        for i in range(int(buf_len / 3)):
+            buf[i] <<= 2
+            buf[i + 1] <<= 2
+            buf[i + 2] <<= 2
