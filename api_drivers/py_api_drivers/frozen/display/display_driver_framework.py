@@ -82,7 +82,6 @@ class DisplayDriver:
         color_byte_order=BYTE_ORDER_RGB,
         color_space=lv.COLOR_FORMAT.RGB888,
         rgb565_byte_swap=False,
-        spi_3wire=None,
         _cmd_bits=8,
         _param_bits=8
     ):
@@ -131,8 +130,6 @@ class DisplayDriver:
 
         self._rotation = lv.DISPLAY_ROTATION._0  # NOQA
         self._invert_colors = False
-
-        self._spi_3wire = spi_3wire
 
         if data_bus is None:
             self._reset_pin = None
@@ -482,14 +479,10 @@ class DisplayDriver:
         self._initilized = True
 
     def set_params(self, cmd, params=None):
-        if self._spi_3wire is None:
-            self._data_bus.tx_param(cmd, params)
-        else:
-            self._spi_3wire.tx_param(cmd, params)
+        self._data_bus.tx_param(cmd, params)
 
     def get_params(self, cmd, params):
-        if self._spi_3wire is None:
-            self._data_bus.rx_param(cmd, params)
+        self._data_bus.rx_param(cmd, params)
 
     def get_power(self):
         if self._power_pin is None:

@@ -195,4 +195,3 @@ class ILI9488(display_driver_framework.DisplayDriver):
             buf[i] <<= 2
             buf[i + 1] <<= 2
             buf[i + 2] <<= 2
-

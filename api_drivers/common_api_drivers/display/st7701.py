@@ -20,11 +20,11 @@
 #
 # display = ST7701(
 #     display_bus,
+#     spi3wire
 #     width,
 #     height,
 #     ...
 #     color_space=lv.COLOR_FORMAT.RGB565,
-#     spi_3wire=spi3wire,
 #     # this is if you are sharing the rgb data lines with the 3wire
 #     bus_shared_pins=False
 # )
@@ -138,6 +138,7 @@ class ST7701(display_driver_framework.DisplayDriver):
     def __init__(
         self,
         data_bus,
+        spi_3wire,
         display_width,
         display_height,
         frame_buffer1=None,
@@ -153,28 +154,21 @@ class ST7701(display_driver_framework.DisplayDriver):
         color_byte_order=BYTE_ORDER_RGB,
         color_space=lv.COLOR_FORMAT.RGB888,
         rgb565_byte_swap=False,
-        spi_3wire=None,
         bus_shared_pins=False
     ):
+        self.set_power(True)
+        self._spi_3wire = spi_3wire
+        spi_3wire.init(16, 8)
 
-        if spi_3wire is not None:
-            spi_3wire.init(16, 8)
-
-            # we need to run the initilization commands prior to
-            # initilizing the RGB display in case the user has charged pins with
-            # the RGB display
-            if bus_shared_pins:
-                self.init()
-                self.init = lambda\
-                    x=None: display_driver_framework.DisplayDriver.init(self)
-                # shut down the spi3wire prior to constructing the display driver so we
-                # don't have a conflict between the bus and the 3wire
-                spi_3wire.deinit()
-
-        else:
-            raise RuntimeError(
-                'You need to pass an lcd_bus.SPI3Wire object for this display'
-            )
+        # we need to run the initilization commands prior to
+        # initilizing the RGB display in case the user has shared pins with
+        # the RGB display
+        if bus_shared_pins:
+            self.init()
+            self.init = self._dummy_init
+            # shut down the spi3wire prior to constructing the display driver
+            # so we don't have a conflict between the bus and the 3wire
+            spi_3wire.deinit()
 
         super().__init__(
             data_bus=data_bus,
@@ -193,13 +187,21 @@ class ST7701(display_driver_framework.DisplayDriver):
             color_byte_order=color_byte_order,
             color_space=color_space,
             rgb565_byte_swap=rgb565_byte_swap,
-            spi_3wire=spi_3wire,
             _cmd_bits=16,
             _param_bits=8
         )
 
+    def set_params(self, cmd, params=None):
+        self._spi_3wire.tx_param(cmd, params)
+
+    def get_params(self, cmd, params):
+        pass
+
     def _set_memory_location(self, x1, y1, x2, y2):  # NOQA
         return -1
+
+    def _dummy_init(self):
+        display_driver_framework.DisplayDriver.init(self)
 
     def init(self):
         param_buf = bytearray(16)
@@ -207,9 +209,9 @@ class ST7701(display_driver_framework.DisplayDriver):
 
         color_size = lv.color_format_get_size(self._color_space)
         if color_size == 2:  # NOQA
-            pixel_format = 0x50
+            pixel_format = 0x55
         elif color_size == 3:
-            pixel_format = 0x70
+            pixel_format = 0x77
         else:
             raise RuntimeError(
                 'ST7701 IC only supports '
@@ -255,10 +257,14 @@ class ST7701(display_driver_framework.DisplayDriver):
         param_buf[0] = 0x10
         self.set_params(_PROMACT, param_mv[:1])
 
-        param_buf[:16] = bytearray([0x00, 0x13, 0x5A, 0x0F, 0x12, 0x07, 0x09, 0x08, 0x08, 0x24, 0x07, 0x13, 0x12, 0x6B, 0x73, 0xFF])
+        param_buf[:16] = bytearray([
+            0x00, 0x13, 0x5A, 0x0F, 0x12, 0x07, 0x09, 0x08,
+            0x08, 0x24, 0x07, 0x13, 0x12, 0x6B, 0x73, 0xFF])
         self.set_params(_PVGAMCTRL, param_mv)
 
-        param_buf[:16] = bytearray([0x00, 0x13, 0x5A, 0x0F, 0x12, 0x07, 0x09, 0x08, 0x08, 0x24, 0x07, 0x13, 0x12, 0x6B, 0x73, 0xFF])
+        param_buf[:16] = bytearray([
+            0x00, 0x13, 0x5A, 0x0F, 0x12, 0x07, 0x09, 0x08,
+            0x08, 0x24, 0x07, 0x13, 0x12, 0x6B, 0x73, 0xFF])
         self.set_params(_NVGAMCTRL, param_mv)
 
         # Command2_BK1
@@ -299,10 +305,14 @@ class ST7701(display_driver_framework.DisplayDriver):
         param_buf[:3] = bytearray([0x00, 0x00, 0x02])
         self.set_params(_SRCTRL, param_mv[:3])
 
-        param_buf[:11] = bytearray([0x05, 0xC0, 0x07, 0xC0, 0x04, 0xC0, 0x06, 0xC0, 0x00, 0x44, 0x44])
+        param_buf[:11] = bytearray([
+            0x05, 0xC0, 0x07, 0xC0, 0x04, 0xC0,
+            0x06, 0xC0, 0x00, 0x44, 0x44])
         self.set_params(_NRCTRL, param_mv[:11])
 
-        param_buf[:13] = bytearray([0x00, 0x00, 0x33, 0x33, 0x01, 0xC0, 0x00, 0x00, 0x01, 0xC0, 0x00, 0x00, 0x00])
+        param_buf[:13] = bytearray([
+            0x00, 0x00, 0x33, 0x33, 0x01, 0xC0, 0x00,
+            0x00, 0x01, 0xC0, 0x00, 0x00, 0x00])
         self.set_params(_SECTRL, param_mv[:13])
 
         param_buf[:4] = bytearray([0x00, 0x00, 0x11, 0x11])
@@ -312,7 +322,9 @@ class ST7701(display_driver_framework.DisplayDriver):
         param_buf[1] = 0x44
         self.set_params(_SKCTRL, param_mv[:2])
 
-        param_buf[:16] = bytearray([0x0D, 0xF1, 0x10, 0x98, 0x0F, 0xF3, 0x10, 0x98, 0x09, 0xED, 0x10, 0x98, 0x0B, 0xEF, 0x10, 0x98])
+        param_buf[:16] = bytearray([
+            0x0D, 0xF1, 0x10, 0x98, 0x0F, 0xF3, 0x10, 0x98,
+            0x09, 0xED, 0x10, 0x98, 0x0B, 0xEF, 0x10, 0x98])
         self.set_params(0xE5, param_mv)
 
         param_buf[:4] = bytearray([0x00, 0x00, 0x11, 0x11])
@@ -322,13 +334,17 @@ class ST7701(display_driver_framework.DisplayDriver):
         param_buf[1] = 0x44
         self.set_params(0xE7, param_mv[:2])
 
-        param_buf[:16] = bytearray([0x0C, 0xF0, 0x10, 0x98, 0x0E, 0xF2, 0x10, 0x98, 0x08, 0xEC, 0x10, 0x98, 0x0A, 0xEE, 0x10, 0x98])
+        param_buf[:16] = bytearray([
+            0x0C, 0xF0, 0x10, 0x98, 0x0E, 0xF2, 0x10, 0x98,
+            0x08, 0xEC, 0x10, 0x98, 0x0A, 0xEE, 0x10, 0x98])
         self.set_params(0xE8, param_mv)
 
         param_buf[:7] = bytearray([0x00, 0x01, 0xE4, 0xE4, 0x44, 0x88, 0x00])
         self.set_params(0xEB, param_mv[:7])
 
-        param_buf[:16] = bytearray([0xFF, 0x04, 0x56, 0x7F, 0xBA, 0x2F, 0xFF, 0xFF, 0xFF, 0xFF, 0xF2, 0xAB, 0xF7, 0x65, 0x40, 0xFF])
+        param_buf[:16] = bytearray([
+            0xFF, 0x04, 0x56, 0x7F, 0xBA, 0x2F, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xF2, 0xAB, 0xF7, 0x65, 0x40, 0xFF])
         self.set_params(0xED, param_mv)
 
         param_buf[:6] = bytearray([0x10, 0x0D, 0x04, 0x08, 0x3F, 0x1F])
