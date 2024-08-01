@@ -191,7 +191,8 @@ class ILI9488(display_driver_framework.DisplayDriver):
 
     @micropython.viper
     def _rgb888_to_rgb666(self, buf: ptr8, buf_len: int):
-        for i in range(int(buf_len / 3)):
+        for i in range(0, buf_len, 3):
             buf[i] <<= 2
             buf[i + 1] <<= 2
             buf[i + 2] <<= 2
+
