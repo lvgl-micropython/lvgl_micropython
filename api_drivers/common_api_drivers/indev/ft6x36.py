@@ -86,7 +86,7 @@ class FT6x36(pointer_framework.PointerDriver):
         self._read_reg(_RELEASECODE_REG)
         print("Touch Release code: 0x%02x" % self._rx_buf[0])
 
-        if chip_id in (_FT6x36_CHIPID_1, _FT6x36_CHIPID_2):
+        if chip_id not in (_FT6x36_CHIPID_1, _FT6x36_CHIPID_2):
             raise RuntimeError()
 
         if ven_id != _VENDID:
