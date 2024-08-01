@@ -1,15 +1,19 @@
-# FT6206/FT6306
+# FT5426DQ8/FT5526EEZ
 
 from micropython import const  # NOQA
 import focaltech_touch
 
+_DEV_MODE = const(0x00)
+_GEST_ID = const(0x01)
+_TD_STATUS = const(0x02)
+
 I2C_ADDR = 0x38
 BITS = 8
 
-_FT6206_CHIPID = const(0x06)
+_FT5x26_CHIPID = const(0x54)
 
 
-class FT6x06(focaltech_touch.FocalTechTouch):
+class FT5x26(focaltech_touch.FocalTechTouch):
 
     def __init__(
         self,
@@ -24,6 +28,6 @@ class FT6x06(focaltech_touch.FocalTechTouch):
             touch_cal,
             startup_rotation,
             debug,
-            None,
-            _FT6206_CHIPID
+            (2.24, 2.14),
+            _FT5x26_CHIPID
         )

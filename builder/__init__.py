@@ -163,11 +163,21 @@ def generate_manifest(
             if not os.path.exists(tmp_file):
                 raise RuntimeError(f'File not found "{file}"')
 
+            if file.startswith('ft'):
+                focaltech_touch = (
+                    f'{script_dir}/api_drivers/common_api_drivers/indev/focaltech_touch.py'
+                )
+                print(focaltech_touch)
+                directory, file_name = os.path.split(focaltech_touch)
+                entry = f"freeze('{directory}', '{file_name}')"
+                manifest_files.append(entry)
+
             file = tmp_file
 
         directory, file_name = os.path.split(file)
         extension_file = file_name.rsplit('.')[0] + '_extension.py'
         extension = os.path.join(directory, extension_file)
+
         if os.path.exists(extension):
             print(extension_file)
             entry = f"freeze('{directory}', '{extension_file}')"
