@@ -62,7 +62,6 @@ def set_mp_version(port):
             f.write(data.encode('utf-8'))
 
 
-
 def update_mphalport(target):
     if target == 'esp8266':
         mphalport_path = f'lib/micropython/ports/{target}/esp_mphal.h'
@@ -165,7 +164,8 @@ def generate_manifest(
 
             if file.startswith('ft'):
                 focaltech_touch = (
-                    f'{script_dir}/api_drivers/common_api_drivers/indev/focaltech_touch.py'
+                    f'{script_dir}/api_drivers/common_api_drivers/'
+                    f'indev/focaltech_touch.py'
                 )
                 print(focaltech_touch)
                 directory, file_name = os.path.split(focaltech_touch)
@@ -249,11 +249,17 @@ def get_micropython():
     with open(mkrules_path, 'rb') as f:
         data = f.read().decode('utf-8')
 
-    pattern = '$(Q)git submodule update --init $(addprefix $(TOP)/,$(GIT_SUBMODULES))'
+    pattern = (
+        '$(Q)git submodule update --init '
+        '$(addprefix $(TOP)/,$(GIT_SUBMODULES))'
+    )
     if pattern in data:
         data = data.replace(
             pattern,
-            '$(Q)git submodule update --init --depth=1 $(addprefix $(TOP)/,$(GIT_SUBMODULES))'
+            (
+                '$(Q)git submodule update --init --depth=1 '
+                '$(addprefix $(TOP)/,$(GIT_SUBMODULES))'
+            )
         )
         with open(mkrules_path, 'wb') as f:
             f.write(data.encode('utf-8'))
@@ -337,8 +343,6 @@ def process_output(myproc, out_to_screen, spinner, cmpl, out_queue):
     last_line_len = -1
     line_updated = False
     err_updated = False
-
-    event = threading.Event()
 
     os.set_blocking(myproc.stdout.fileno(), False)
     os.set_blocking(myproc.stderr.fileno(), False)
