@@ -2,6 +2,7 @@
 
 from micropython import const  # NOQA
 import focaltech_touch
+import pointer_framework
 
 _DEV_MODE = const(0x00)
 _GEST_ID = const(0x01)
