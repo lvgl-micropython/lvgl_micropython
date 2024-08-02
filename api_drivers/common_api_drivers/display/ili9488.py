@@ -119,6 +119,11 @@ class ILI9488(display_driver_framework.DisplayDriver):
 
         color_size = lv.color_format_get_size(self._color_space)
         if color_size == 2:  # NOQA
+            if isinstance(self._data_bus, lcd_bus.SPIBus):
+                raise RuntimeError(
+                    'ILI9488 IC only supports '
+                    'lv.COLOR_FORMAT.RGB888 when using the SPIBus'
+                )
             pixel_format = 0x55
         elif color_size == 3:
             if isinstance(self._data_bus, lcd_bus.SPIBus):
@@ -126,10 +131,16 @@ class ILI9488(display_driver_framework.DisplayDriver):
             else:
                 pixel_format = 0x77
         else:
-            raise RuntimeError(
-                'ILI9488 IC only supports '
-                'lv.COLOR_FORMAT.RGB565 or lv.COLOR_FORMAT.RGB888'
-            )
+            if isinstance(self._data_bus, lcd_bus.SPIBus):
+                raise RuntimeError(
+                    'ILI9488 IC only supports '
+                    'lv.COLOR_FORMAT.RGB888 when using the SPIBus'
+                )
+            else:
+                raise RuntimeError(
+                    'ILI9488 IC only supports '
+                    'lv.COLOR_FORMAT.RGB565 or lv.COLOR_FORMAT.RGB888'
+                )
 
         param_buf[0] = pixel_format
         self.set_params(_COLMOD, param_mv[:1])
@@ -160,38 +171,3 @@ class ILI9488(display_driver_framework.DisplayDriver):
         time.sleep_ms(100)
 
         display_driver_framework.DisplayDriver.init(self)
-
-    def _flush_cb(self, _, area, color_p):
-        x1 = area.x1 + self._offset_x
-        x2 = area.x2 + self._offset_x
-
-        y1 = area.y1 + self._offset_y
-        y2 = area.y2 + self._offset_y
-
-        size = (
-            (x2 - x1 + 1) *
-            (y2 - y1 + 1) *
-            lv.color_format_get_size(self._color_space)
-        )
-
-        cmd = self._set_memory_location(x1, y1, x2, y2)
-
-        # we have to use the __dereference__ method because this method is
-        # what converts from the C_Array object the binding passes into a
-        # memoryview object that can be passed to the bus drivers
-        data_view = color_p.__dereference__(size)
-
-        if (
-            self._color_space == lv.COLOR_FORMAT.RGB888 and
-            isinstance(self._data_bus, lcd_bus.SPIBus)
-        ):
-            self._rgb888_to_rgb666(data_view, size)
-
-        self._data_bus.tx_color(cmd, data_view, x1, y1, x2, y2)
-
-    @micropython.viper
-    def _rgb888_to_rgb666(self, buf: ptr8, buf_len: int):
-        for i in range(0, buf_len, 3):
-            buf[i] <<= 2
-            buf[i + 1] <<= 2
-            buf[i + 2] <<= 2
