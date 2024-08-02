@@ -2,6 +2,7 @@
 
 from micropython import const  # NOQA
 import focaltech_touch
+import pointer_framework
 
 
 I2C_ADDR = const(0x38)
