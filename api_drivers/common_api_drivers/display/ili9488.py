@@ -1,5 +1,4 @@
 from micropython import const  # NOQA
-import micropython  # NOQA
 import time
 import lvgl as lv  # NOQA
 import lcd_bus  # NOQA
@@ -20,8 +19,8 @@ _AC3 = const(0xF7)
 _MADCTL = const(0x36)
 _COLMOD = const(0x3A)
 _NOP = const(0x00)
-_SLPOUT  = const(0x11)
-_DISPON  = const(0x29)
+_SLPOUT = const(0x11)
+_DISPON = const(0x29)
 _SWRESET = const(0x01)
 
 STATE_HIGH = display_driver_framework.STATE_HIGH
@@ -61,8 +60,6 @@ class ILI9488(display_driver_framework.DisplayDriver):
     # written. The entire 8 bits for each byte gets sent. The controller simply
     # ignores the lowest 2 bits in the byte to make it a 6 bit color channel
     # We just have to tell lvgl that we want to use
-
-    display_name = 'ILI9488'
 
     _ORIENTATION_TABLE = (
         _MADCTL_MX,
