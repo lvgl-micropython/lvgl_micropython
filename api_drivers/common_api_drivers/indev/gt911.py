@@ -35,14 +35,11 @@ _ADDR2 = const(0x14)
 class GT911(pointer_framework.PointerDriver):
 
     def _read_reg(self, reg, num_bytes):
-        self._tx_buf[0] = reg & 0xFF
-        self._tx_buf[1] = reg >> 8
-
-        self._device.write_readinto(self._tx_mv[:2], self._rx_mv[:num_bytes])
+        self._device.read_mem(reg & 0xFFFF, buf=self._rx_mv[:num_bytes])
 
     def _write_reg(self, reg, value):
-        self._tx_buf[0] = reg & 0xFF
-        self._tx_buf[1] = reg >> 8
+        self._tx_buf[0] = reg >> 8
+        self._tx_buf[1] = reg & 0xFF
         self._tx_buf[2] = value
         self._device.write(self._tx_mv[:3])
 
@@ -74,7 +71,7 @@ class GT911(pointer_framework.PointerDriver):
 
         self._reset_pin = reset_pin
         self._interrupt_pin = interrupt_pin
-
+        self._debug = debug
         self.hw_reset()
         super().__init__(
             touch_cal=touch_cal, startup_rotation=startup_rotation, debug=debug
@@ -101,24 +98,21 @@ class GT911(pointer_framework.PointerDriver):
 
         self._read_reg(_PRODUCT_ID_REG, 4)
 
-        product_id = ''
-        for item in self._rx_buf[:4]:
-            if item == 0x00:
-                break
-            product_id += item.decode('utf-8')
+        if self._debug:
+            product_id = self._rx_buf[:4].decode('utf-8')
 
-        print('Touch Product id:', product_id)
+            print('Touch Product id:', product_id)
 
-        self._read_reg(_FIRMWARE_VERSION_REG, 2)
-        print(
-            'Touch Firmware version:',
-            hex(self._rx_buf[0] + (self._rx_buf[1] << 8))
+            self._read_reg(_FIRMWARE_VERSION_REG, 2)
+            print(
+                'Touch Firmware version:',
+                hex(self._rx_buf[0] + (self._rx_buf[1] << 8))
             )
 
-        self._read_reg(_VENDOR_ID_REG, 1)
-        print(f'Touch Vendor id: 0x{hex(self._rx_buf[0])[2:].upper()}')
-        x, y = self.hw_size
-        print(f'Touch resolution: width={x}, height={y}')
+            self._read_reg(_VENDOR_ID_REG, 1)
+            print(f'Touch Vendor id: 0x{hex(self._rx_buf[0])[2:].upper()}')
+            x, y = self.hw_size
+            print(f'Touch resolution: width={x}, height={y}')
 
     @property
     def hw_size(self):
