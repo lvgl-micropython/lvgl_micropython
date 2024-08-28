@@ -3,7 +3,6 @@
 
     //local_includes
     #include "modlcd_bus.h"
-    #include "../../../micropy_updates/common/mp_spi_common.h"
     #include "mphalport.h"
 
     // micropython includes
@@ -37,11 +36,8 @@
 
     #else
         // Fix for MicroPython > 1.21 https://github.com/ricksorensen
-        #if MICROPY_VERSION_MAJOR >= 1 && MICROPY_VERSION_MINOR > 21
-            #include "extmod/modmachine.h"
-        #else
-            #include "extmod/machine_spi.h"
-        #endif
+        #include "../../../micropy_updates/common/mp_spi_common.h"
+
 
         typedef struct _lcd_panel_io_spi_config_t {
             mp_obj_t cs_gpio;
@@ -86,7 +82,7 @@
             void (*send_param)(mp_lcd_spi_bus_obj_t *self, void *param, size_t param_size);
 
             int host;
-            machine_hw_spi_obj_t *spi_bus;
+            machine_hw_spi_device_obj_t *spi_bus;
             uint8_t firstbit;
             uint32_t freq;
         };

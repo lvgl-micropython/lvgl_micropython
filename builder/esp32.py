@@ -161,6 +161,8 @@ usb_jtag = False
 optimize_size = False
 ota = False
 
+dual_core_threads = False
+
 
 def common_args(extra_args):
     global DEBUG
@@ -174,6 +176,7 @@ def common_args(extra_args):
     global board_variant
     global optimize_size
     global ota
+    global dual_core_threads
 
     if board == 'ARDUINO_NANO_ESP32':
         raise RuntimeError('Board is not currently supported')
@@ -214,7 +217,6 @@ def common_args(extra_args):
     esp_argParser.add_argument(
         '--skip-partition-resize',
         dest='skip_partition_resize',
-        help='clean the build',
         default=False,
         action='store_true'
     )
@@ -260,6 +262,13 @@ def common_args(extra_args):
         action='store_true'
     )
 
+    esp_argParser.add_argument(
+        '--dual-core-threads',
+        dest='dual_core_threads',
+        default=False,
+        action='store_true'
+    )
+
     esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
 
     BAUD = esp_args.baud
@@ -272,6 +281,7 @@ def common_args(extra_args):
     flash_size = esp_args.flash_size
     optimize_size = esp_args.optimize_size
     ota = esp_args.ota
+    dual_core_threads = esp_args.dual_core_threads
 
     return extra_args
 
@@ -743,6 +753,71 @@ def submodules():
         sys.exit(return_code)
 
 
+MPTHREADPORT_PATH = 'lib/micropython/ports/esp32/mpthreadport.c'
+MPCONFIGPORT_PATH = 'lib/micropython/ports/esp32/mpconfigport.h'
+PANICHANDLER_PATH = 'lib/micropython/ports/esp32/panichandler.c'
+SDKCONFIG_PATH = f'build/sdkconfig.board'
+MPHALPORT_PATH = 'lib/micropython/ports/esp32/mphalport.c'
+MAIN_PATH = 'lib/micropython/ports/esp32/main.c'
+
+
+def set_thread_core():
+    with open(MPTHREADPORT_PATH, 'rb') as f:
+        data = f.read().decode('utf-8')
+
+    if '_CORE_ID' not in data:
+        data = data.replace('MP_TASK_COREID', '_CORE_ID')
+
+        new_data = [
+            '#if MICROPY_PY_THREAD'
+            ''
+            '#if (MP_USE_DUAL_CORE && !CONFIG_FREERTOS_UNICORE)',
+            '    #define _CORE_ID    tskNO_AFFINITY',
+            '#else',
+            '    #define _CORE_ID    MP_TASK_COREID',
+            '#endif',
+            ''
+        ]
+
+        data = data.replace('#if MICROPY_PY_THREAD', '\n'.join(new_data), 1)
+
+        with open(MPTHREADPORT_PATH, 'wb') as f:
+            f.write(data.encode('utf-8'))
+
+    with open(MPCONFIGPORT_PATH, 'rb') as f:
+        data = f.read().decode('utf-8')
+
+    for i in range(2):
+        pattern = f'#define MP_USE_DUAL_CORE                    ({i})'
+        if pattern in data:
+            text = (
+                f'#define MP_USE_DUAL_CORE                    '
+                f'({int(dual_core_threads)})'
+            )
+            break
+    else:
+        pattern = '#define MICROPY_PY_THREAD_GIL'
+        text = (
+            f'#define MP_USE_DUAL_CORE                    '
+            f'({int(dual_core_threads)})\n{pattern}'
+        )
+
+    data = data.replace(pattern, text)
+    text = (
+        f'#define MICROPY_PY_THREAD_GIL               '
+        f'({int(not dual_core_threads)})'
+    )
+    for i in range(2):
+        pattern = f'#define MICROPY_PY_THREAD_GIL               ({i})'
+
+        if pattern in data:
+            data = data.replace(pattern, text)
+            break
+
+    with open(MPCONFIGPORT_PATH, 'wb') as f:
+        f.write(data.encode('utf-8'))
+
+
 def find_esp32_ports(chip):
     from esptool.targets import CHIP_DEFS  # NOQA
     from esptool.util import FatalError  # NOQA
@@ -779,17 +854,44 @@ def find_esp32_ports(chip):
     return found_ports
 
 
-def compile(*args):  # NOQA
-    global PORT
-    global flash_size
+def update_panic_handler():
+    with open(PANICHANDLER_PATH, 'rb') as f:
+        data = f.read().decode('utf-8')
 
-    add_components()
+    if '"MPY version : "' in data:
+        beg, end = data.split('"MPY version : "', 1)
+        end = end.split('"\\r\\n"', 1)[1]
+        data = (
+            f'{beg}"LVGL MPY version : 1.23.0 on " '
+            f'MICROPY_BUILD_DATE MICROPY_BUILD_TYPE_PAREN "\\r\\n"{end}'
+        )
 
-    env, cmds = setup_idf_environ()
+        with open(PANICHANDLER_PATH, 'wb') as f:
+            f.write(data.encode('utf-8'))
 
-    if ccache:
-        env['IDF_CCACHE_ENABLE'] = '1'
 
+def update_mpconfigboard():
+    mpconfigboard_cmake_path = (
+        'lib/micropython/ports/esp32/boards/'
+        f'{board}/mpconfigboard.cmake'
+    )
+
+    with open(mpconfigboard_cmake_path, 'rb') as f:
+        data = f.read().decode('utf-8')
+
+    sdkconfig = (
+        'set(SDKCONFIG_DEFAULTS ${SDKCONFIG_DEFAULTS} '
+        '../../../../build/sdkconfig.board)'
+    )
+
+    if sdkconfig not in data:
+        data += '\n' + sdkconfig + '\n'
+
+        with open(mpconfigboard_cmake_path, 'wb') as f:
+            f.write(data.encode('utf-8'))
+
+
+def build_sdkconfig(*args):
     base_config = [
         'CONFIG_ESPTOOLPY_AFTER_NORESET=y',
         'CONFIG_PARTITION_TABLE_CUSTOM=y',
@@ -806,32 +908,34 @@ def compile(*args):  # NOQA
     ]
 
     if DEBUG:
-        base_config.extend([
-            'CONFIG_BOOTLOADER_LOG_LEVEL_NONE=n',
-            'CONFIG_BOOTLOADER_LOG_LEVEL_ERROR=n',
-            'CONFIG_BOOTLOADER_LOG_LEVEL_WARN=n',
-            'CONFIG_BOOTLOADER_LOG_LEVEL_INFO=n',
-            'CONFIG_BOOTLOADER_LOG_LEVEL_DEBUG=y',
-            'CONFIG_BOOTLOADER_LOG_LEVEL_VERBOSE=n',
-            'CONFIG_LCD_ENABLE_DEBUG_LOG=y',
-            'CONFIG_HAL_LOG_LEVEL_NONE=n',
-            'CONFIG_HAL_LOG_LEVEL_ERROR=n',
-            'CONFIG_HAL_LOG_LEVEL_WARN=n',
-            'CONFIG_HAL_LOG_LEVEL_INFO=n',
-            'CONFIG_HAL_LOG_LEVEL_DEBUG=y',
-            'CONFIG_HAL_LOG_LEVEL_VERBOSE=n',
-            'CONFIG_LOG_MAXIMUM_LEVEL_ERROR=n',
-            'CONFIG_LOG_MAXIMUM_LEVEL_WARN=n',
-            'CONFIG_LOG_MAXIMUM_LEVEL_INFO=n',
-            'CONFIG_LOG_MAXIMUM_LEVEL_DEBUG=y',
-            'CONFIG_LOG_MAXIMUM_LEVEL_VERBOSE=n',
-            'CONFIG_LOG_DEFAULT_LEVEL_NONE=n',
-            'CONFIG_LOG_DEFAULT_LEVEL_ERROR=n',
-            'CONFIG_LOG_DEFAULT_LEVEL_WARN=n',
-            'CONFIG_LOG_DEFAULT_LEVEL_INFO=n',
-            'CONFIG_LOG_DEFAULT_LEVEL_DEBUG=y',
-            'CONFIG_LOG_DEFAULT_LEVEL_VERBOSE=n',
-        ])
+        base_config.extend(
+            [
+                'CONFIG_BOOTLOADER_LOG_LEVEL_NONE=n',
+                'CONFIG_BOOTLOADER_LOG_LEVEL_ERROR=n',
+                'CONFIG_BOOTLOADER_LOG_LEVEL_WARN=n',
+                'CONFIG_BOOTLOADER_LOG_LEVEL_INFO=n',
+                'CONFIG_BOOTLOADER_LOG_LEVEL_DEBUG=y',
+                'CONFIG_BOOTLOADER_LOG_LEVEL_VERBOSE=n',
+                'CONFIG_LCD_ENABLE_DEBUG_LOG=y',
+                'CONFIG_HAL_LOG_LEVEL_NONE=n',
+                'CONFIG_HAL_LOG_LEVEL_ERROR=n',
+                'CONFIG_HAL_LOG_LEVEL_WARN=n',
+                'CONFIG_HAL_LOG_LEVEL_INFO=n',
+                'CONFIG_HAL_LOG_LEVEL_DEBUG=y',
+                'CONFIG_HAL_LOG_LEVEL_VERBOSE=n',
+                'CONFIG_LOG_MAXIMUM_LEVEL_ERROR=n',
+                'CONFIG_LOG_MAXIMUM_LEVEL_WARN=n',
+                'CONFIG_LOG_MAXIMUM_LEVEL_INFO=n',
+                'CONFIG_LOG_MAXIMUM_LEVEL_DEBUG=y',
+                'CONFIG_LOG_MAXIMUM_LEVEL_VERBOSE=n',
+                'CONFIG_LOG_DEFAULT_LEVEL_NONE=n',
+                'CONFIG_LOG_DEFAULT_LEVEL_ERROR=n',
+                'CONFIG_LOG_DEFAULT_LEVEL_WARN=n',
+                'CONFIG_LOG_DEFAULT_LEVEL_INFO=n',
+                'CONFIG_LOG_DEFAULT_LEVEL_DEBUG=y',
+                'CONFIG_LOG_DEFAULT_LEVEL_VERBOSE=n',
+            ]
+        )
 
     base_config.append('')
     args = list(args)
@@ -859,10 +963,14 @@ def compile(*args):  # NOQA
             args.remove(arg)
 
     base_config.append(f'CONFIG_ESPTOOLPY_FLASHSIZE_{flash_size}MB=y')
-    base_config.append(''.join([
-        'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME=',
-        f'"{SCRIPT_DIR}/build/partitions.csv"'
-    ]))
+    base_config.append(
+        ''.join(
+            [
+                'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME=',
+                f'"{SCRIPT_DIR}/build/partitions.csv"'
+            ]
+        )
+    )
 
     if optimize_size:
         base_config.append('CONFIG_COMPILER_OPTIMIZATION_SIZE=y')
@@ -872,76 +980,52 @@ def compile(*args):  # NOQA
     if oct_flash:
         base_config.append('CONFIG_ESPTOOLPY_OCT_FLASH=y')
 
-    mpconfigboard_cmake_path = (
-        'lib/micropython/ports/esp32/boards/'
-        f'{board}/mpconfigboard.cmake'
-    )
-
-    with open(mpconfigboard_cmake_path, 'rb') as f:
-        data = f.read().decode('utf-8')
-
-    sdkconfig = (
-        'set(SDKCONFIG_DEFAULTS ${SDKCONFIG_DEFAULTS} '
-        '../../../../build/sdkconfig.board)'
-    )
-
-    if partition_size == -1:
-        p_size = 0x25A000
-    else:
-        p_size = partition_size
-
-    partition = Partition(p_size)
-    partition.save()
-
-    if sdkconfig not in data:
-        data += '\n' + sdkconfig + '\n'
-
-        with open(mpconfigboard_cmake_path, 'wb') as f:
-            f.write(data.encode('utf-8'))
-
-    board_config_path = f'build/sdkconfig.board'
-    with open(board_config_path, 'w') as f:
+    with open(SDKCONFIG_PATH, 'w') as f:
         f.write('\n'.join(base_config))
 
-    if board == 'ESP32_GENERIC' and board_variant and board_variant == 'SPIRAM':
-        mpconfigport = 'lib/micropython/ports/esp32/mpconfigport.h'
 
-        with open(mpconfigport, 'rb') as f:
-            data = f.read().decode('utf-8')
-
-        pattern = (
-            '#if !(CONFIG_IDF_TARGET_ESP32 && CONFIG_SPIRAM && CONFIG_SPIRAM_CACHE_WORKAROUND)\n'  # NOQA
-            '#define MICROPY_WRAP_MP_BINARY_OP(f) IRAM_ATTR f\n'
-            '#endif'
-        )
-
-        if pattern in data:
-            pattern = '#if !(CONFIG_IDF_TARGET_ESP32 && CONFIG_SPIRAM && CONFIG_SPIRAM_CACHE_WORKAROUND)\n'  # NOQA
-            data = data.replace('#define MICROPY_WRAP_MP_SCHED_EXCEPTION(f) IRAM_ATTR f\n', '')  # NOQA
-            data = data.replace('#define MICROPY_WRAP_MP_SCHED_KEYBOARD_INTERRUPT(f) IRAM_ATTR f\n', '')  # NOQA
-
-            data = data.replace(pattern, pattern + '#define MICROPY_WRAP_MP_SCHED_EXCEPTION(f) IRAM_ATTR f\n')  # NOQA
-            data = data.replace(pattern, pattern + '#define MICROPY_WRAP_MP_SCHED_KEYBOARD_INTERRUPT(f) IRAM_ATTR f\n')  # NOQA
-            with open(mpconfigport, 'wb') as f:
-                f.write(data.encode('utf-8'))
-
-    panichandler = 'lib/micropython/ports/esp32/panichandler.c'
-
-    with open(panichandler, 'rb') as f:
+def update_isr():
+    with open(MPCONFIGPORT_PATH, 'rb') as f:
         data = f.read().decode('utf-8')
 
-    if '"MPY version : "' in data:
-        beg, end = data.split('"MPY version : "', 1)
-        end = end.split('"\\r\\n"', 1)[1]
-        data = f'{beg}"LVGL MPY version : 1.23.0 on " MICROPY_BUILD_DATE MICROPY_BUILD_TYPE_PAREN "\\r\\n"{end}'  # NOQA
+    pattern = (
+        '#if !(CONFIG_IDF_TARGET_ESP32 && CONFIG_SPIRAM && '
+        'CONFIG_SPIRAM_CACHE_WORKAROUND)\n'
+        '#define MICROPY_WRAP_MP_BINARY_OP(f) IRAM_ATTR f\n'
+        '#endif'
+    )
 
-        with open(panichandler, 'wb') as f:
+    if pattern in data:
+        pattern = (
+            '#if !(CONFIG_IDF_TARGET_ESP32 && CONFIG_SPIRAM '
+            '&& CONFIG_SPIRAM_CACHE_WORKAROUND)\n'
+        )
+        data = data.replace(
+            '#define MICROPY_WRAP_MP_SCHED_EXCEPTION(f) IRAM_ATTR f\n',
+            ''
+        )
+        data = data.replace(
+            '#define MICROPY_WRAP_MP_SCHED_KEYBOARD_INTERRUPT(f) '
+            'IRAM_ATTR f\n',
+            ''
+        )
+        data = data.replace(
+            pattern,
+            pattern + '#define MICROPY_WRAP_MP_SCHED_EXCEPTION(f) IRAM_ATTR f\n'
+        )
+
+        data = data.replace(
+            pattern,
+            pattern + '#define MICROPY_WRAP_MP_SCHED_KEYBOARD_INTERRUPT(f) '
+                      'IRAM_ATTR f\n'
+        )
+
+        with open(MPCONFIGPORT_PATH, 'wb') as f:
             f.write(data.encode('utf-8'))
 
-    mphalport_path = 'lib/micropython/ports/esp32/mphalport.c'
-    main_path = 'lib/micropython/ports/esp32/main.c'
 
-    for file in (mphalport_path, main_path):
+def update_for_usb():
+    for file in (MPHALPORT_PATH, MAIN_PATH):
         with open(file, 'rb') as f:
             data = f.read().decode('utf-8')
 
@@ -957,11 +1041,7 @@ def compile(*args):  # NOQA
         with open(file, 'wb') as f:
             f.write(data.encode('utf-8'))
 
-    mpconfigport_path = (
-        f'lib/micropython/ports/esp32/mpconfigport.h'
-    )
-
-    with open(mpconfigport_path, 'rb') as f:
+    with open(MPCONFIGPORT_PATH, 'rb') as f:
         data = f.read().decode('utf-8')
 
     if 'MP_USB_OTG' in data:
@@ -976,8 +1056,43 @@ def compile(*args):  # NOQA
         f'  (SOC_USB_SERIAL_JTAG_SUPPORTED && {str(usb_jtag).lower()})\n'
     )
 
-    with open(mpconfigport_path, 'wb') as f:
+    with open(MPCONFIGPORT_PATH, 'wb') as f:
         f.write(data.encode('utf-8'))
+
+
+def compile(*args):  # NOQA
+    global PORT
+    global flash_size
+
+    add_components()
+
+    env, cmds = setup_idf_environ()
+
+    if ccache:
+        env['IDF_CCACHE_ENABLE'] = '1'
+
+    build_sdkconfig(*args)
+
+    if partition_size == -1:
+        p_size = 0x25A000
+    else:
+        p_size = partition_size
+
+    partition = Partition(p_size)
+    partition.save()
+
+    update_mpconfigboard()
+
+    if (
+        board == 'ESP32_GENERIC' and
+        board_variant and
+        board_variant == 'SPIRAM'
+    ):
+        update_isr()
+
+    update_panic_handler()
+    set_thread_core()
+    update_for_usb()
 
     src_path = 'micropy_updates/esp32'
     dst_path = 'lib/micropython/ports/esp32'
@@ -1147,6 +1262,7 @@ def compile(*args):  # NOQA
                     query = []
                     for i, port in enumerate(ports):
                         query.append(str(i + 1) + ': ' + port)
+
                     query.append('')
                     query.append('Which ESP32? :')
 
@@ -1169,7 +1285,8 @@ def compile(*args):  # NOQA
             print('firmware flashed')
             print()
             print(
-                'If you need to reflash your ESP32 run the following command.'
+                'If you need to reflash your '
+                'ESP32 run the following command.'
             )
             print()
         else:

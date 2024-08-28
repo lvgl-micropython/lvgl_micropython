@@ -31,7 +31,6 @@ BITS = 16
 
 _ADDR2 = const(0x14)
 
-
 class GT911(pointer_framework.PointerDriver):
 
     def _read_reg(self, reg, num_bytes):
