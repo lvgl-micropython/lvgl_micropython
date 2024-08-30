@@ -769,8 +769,8 @@ def set_thread_core():
         data = data.replace('MP_TASK_COREID', '_CORE_ID')
 
         new_data = [
-            '#if MICROPY_PY_THREAD'
-            ''
+            '#if MICROPY_PY_THREAD',
+            '',
             '#if (MP_USE_DUAL_CORE && !CONFIG_FREERTOS_UNICORE)',
             '    #define _CORE_ID    tskNO_AFFINITY',
             '#else',
