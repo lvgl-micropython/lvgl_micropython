@@ -393,6 +393,7 @@ def esp32_args(extra_args):
 
 def parse_args(extra_args, lv_cflags, brd):
     global board
+    global usb_otg
 
     if brd is None:
         brd = 'ESP32_GENERIC'
@@ -409,6 +410,8 @@ def parse_args(extra_args, lv_cflags, brd):
         extra_args = esp32_s3_args(extra_args)
     elif board == 'ESP32_GENERIC_C3':
         extra_args = esp32_c3_args(extra_args)
+    elif board == 'LOLIN_S2_MINI':
+        usb_otg = True
 
     if lv_cflags:
         lv_cflags += ' -DLV_KCONFIG_IGNORE=1'
