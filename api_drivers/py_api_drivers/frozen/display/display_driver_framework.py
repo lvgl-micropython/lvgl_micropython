@@ -36,12 +36,6 @@ STATE_LOW = 0
 STATE_PWM = -1
 
 
-def _DEBUG_PRINT(cls, *args):
-    if lcd_bus.DEBUG_ENABLED:
-        args = ' '.join(str(arg) for arg in args)
-        print(cls.__class__.__name__, ':', args)
-
-
 class DisplayDriver:
     _INVON = 0x21
     _INVOFF = 0x20
@@ -56,10 +50,10 @@ class DisplayDriver:
 
     @staticmethod
     def get_default():
-        disp = lv.display_get_default()
+        disp = lv.display_get_default()  # NOQA
 
         for d in DisplayDriver.get_displays():
-            if d._disp_drv == disp:
+            if d._disp_drv == disp:  # NOQA
                 return disp
 
         return None
@@ -80,13 +74,12 @@ class DisplayDriver:
         offset_x=0,
         offset_y=0,
         color_byte_order=BYTE_ORDER_RGB,
-        color_space=lv.COLOR_FORMAT.RGB888,
+        color_space=lv.COLOR_FORMAT.RGB888,  # NOQA
         rgb565_byte_swap=False,
         _cmd_bits=8,
-        _param_bits=8
+        _param_bits=8,
+        _init_bus=True
     ):
-        _DEBUG_PRINT(self, 'constructing display')
-
         if power_on_state not in (STATE_HIGH, STATE_LOW):
             raise RuntimeError(
                 'power on state must be either STATE_HIGH or STATE_LOW'
@@ -131,6 +124,10 @@ class DisplayDriver:
         self._rotation = lv.DISPLAY_ROTATION._0  # NOQA
         self._invert_colors = False
 
+        self._rgb565_byte_swap = rgb565_byte_swap
+        self._cmd_bits = _cmd_bits
+        self._param_bits = _param_bits
+
         if data_bus is None:
             self._reset_pin = None
             self._power_pin = None
@@ -162,11 +159,13 @@ class DisplayDriver:
                 pin = machine.Pin(backlight_pin, machine.Pin.OUT)
                 self._backlight_pin = machine.PWM(pin, freq=38000)
             else:
-                self._backlight_pin = machine.Pin(backlight_pin, machine.Pin.OUT)
+                self._backlight_pin = (
+                    machine.Pin(backlight_pin, machine.Pin.OUT)
+                )
                 self._backlight_pin.value(not backlight_on_state)
 
             self._data_bus = data_bus
-            self._disp_drv = lv.display_create(display_width, display_height)
+            self._disp_drv = lv.display_create(display_width, display_height)  # NOQA
             self._disp_drv.set_color_format(color_space)
             self._disp_drv.set_driver_data(self)
 
@@ -188,92 +187,100 @@ class DisplayDriver:
                     lcd_bus.MEMORY_SPIRAM
                 ):
                     try:
-                        frame_buffer1 = data_bus.allocate_framebuffer(buf_size, flags)
+                        frame_buffer1 = (
+                            data_bus.allocate_framebuffer(buf_size, flags)
+                        )
 
                         if (flags | lcd_bus.MEMORY_DMA) == flags:
-                            frame_buffer2 = data_bus.allocate_framebuffer(buf_size, flags)
+                            frame_buffer2 = (
+                                data_bus.allocate_framebuffer(buf_size, flags)
+                            )
 
                         break
-
                     except MemoryError:
                         frame_buffer1 = data_bus.free_framebuffer(frame_buffer1)
 
                 if frame_buffer1 is None:
                     raise MemoryError(
-                        f'Unable to allocate memory for frame buffer ({buf_size})'
+                        f'Unable to allocate memory for frame buffer ({buf_size})'  # NOQA
                     )
-
-            if isinstance(data_bus, lcd_bus.RGBBus):
-                buffer_size = int(
-                    display_width *
-                    display_height *
-                    lv.color_format_get_size(color_space)
-                )
-            else:
-                buffer_size = len(frame_buffer1)
-
-            data_bus.init(
-                display_width,
-                display_height,
-                lv.color_format_get_size(color_space) * 8,
-                buffer_size,
-                rgb565_byte_swap,
-                _cmd_bits,
-                _param_bits
-            )
-
-            self._disp_drv.set_flush_cb(self._flush_cb)
-
-            if isinstance(data_bus, lcd_bus.RGBBus):
-                self._disp_drv.set_buffers(
-                    frame_buffer2,
-                    frame_buffer1,
-                    len(frame_buffer1),
-                    lv.DISPLAY_RENDER_MODE.DIRECT
-                )
-                # we don't need to set column and page addresses for the RGBBus.
-                # The tx_params function in C code for the RGB Bus is a dummy
-                # function that only has the purpose of keeping the API the same
-                # across all of the busses. No point in using cpu time to make a
-                # call to a do nothing function.
-                setattr(
-                    self,
-                    '_set_memory_location',
-                    self._dummy_set_memory_location
-                )
-            else:
-                full_screen_size = (
-                    display_width *
-                    display_height *
-                    lv.color_format_get_size(color_space)
-                )
-                if full_screen_size == len(frame_buffer1):
-                    render_mode = lv.DISPLAY_RENDER_MODE.FULL
-                else:
-                    render_mode = lv.DISPLAY_RENDER_MODE.PARTIAL
-
-                self._disp_drv.set_buffers(
-                    frame_buffer1,
-                    frame_buffer2,
-                    len(frame_buffer1),
-                    render_mode
-                )
-
-            data_bus.register_callback(self._flush_ready_cb)
 
             self._frame_buffer1 = frame_buffer1
             self._frame_buffer2 = frame_buffer2
 
-            self.set_default()
+            if _init_bus:
+                self._init_bus()
 
-            self._disp_drv.add_event_cb(self._on_size_change, lv.EVENT.RESOLUTION_CHANGED, None)  # NOQA
+    def _init_bus(self):
+        if isinstance(self._data_bus, lcd_bus.RGBBus):
+            buffer_size = int(
+                self.display_width *
+                self.display_height *
+                lv.color_format_get_size(self._color_space)
+            )
+        else:
+            buffer_size = len(self._frame_buffer1)
+
+        self._data_bus.init(
+            self.display_width,
+            self.display_height,
+            lv.color_format_get_size(self._color_space) * 8,
+            buffer_size,
+            self._rgb565_byte_swap,
+            self._cmd_bits,
+            self._param_bits
+        )
+
+        self._disp_drv.set_flush_cb(self._flush_cb)
+
+        if isinstance(self._data_bus, lcd_bus.RGBBus):
+            self._disp_drv.set_buffers(
+                self._frame_buffer2,
+                self._frame_buffer1,
+                len(self._frame_buffer1),
+                lv.DISPLAY_RENDER_MODE.DIRECT  # NOQA
+            )
+            # we don't need to set column and page addresses for the RGBBus.
+            # The tx_params function in C code for the RGB Bus is a dummy
+            # function that only has the purpose of keeping the API the same
+            # across all of the busses. No point in using cpu time to make a
+            # call to a do nothing function.
+            setattr(
+                self,
+                '_set_memory_location',
+                self._dummy_set_memory_location
+            )
+        else:
+            full_screen_size = (
+                self.display_width *
+                self.display_height *
+                lv.color_format_get_size(self._color_space)
+            )
+            if full_screen_size == len(self._frame_buffer1):
+                render_mode = lv.DISPLAY_RENDER_MODE.FULL  # NOQA
+            else:
+                render_mode = lv.DISPLAY_RENDER_MODE.PARTIAL  # NOQA
+
+            self._disp_drv.set_buffers(
+                self._frame_buffer1,
+                self._frame_buffer2,
+                len(self._frame_buffer1),
+                render_mode
+            )
+
+        self._data_bus.register_callback(self._flush_ready_cb)
+
+        self.set_default()
+
+        self._disp_drv.add_event_cb(
+            self._on_size_change,
+            lv.EVENT.RESOLUTION_CHANGED,  # NOQA
+            None
+        )
 
         self._displays.append(self)
-        _DEBUG_PRINT(self, 'display construction finished')
 
     def _on_size_change(self, _):
-        _DEBUG_PRINT(self, '_on_size_change')
-
         rotation = self._disp_drv.get_rotation()
         self._width = self._disp_drv.get_horizontal_resolution()
         self._height = self._disp_drv.get_vertical_resolution()
@@ -523,7 +530,7 @@ class DisplayDriver:
 
         if self._backlight_on_state == STATE_PWM:
             value = self._backlight_pin.duty_u16()  # NOQA
-            return round(value / 65535 * 100.0)
+            return round(value / 65535 * 100.0, 2)
 
         value = self._backlight_pin.value()
 
@@ -537,7 +544,7 @@ class DisplayDriver:
             return
 
         if self._backlight_on_state == STATE_PWM:
-            self._backlight_pin.duty_u16(value / 100 * 65535)  # NOQA
+            self._backlight_pin.duty_u16(int(value / 100.0 * 65535.0))  # NOQA
         elif self._power_on_state:
             self._backlight_pin.value(int(bool(value)))
         else:
@@ -568,9 +575,6 @@ class DisplayDriver:
         return _RAMWR
 
     def _flush_cb(self, _, area, color_p):
-        if lcd_bus.DEBUG_ENABLED:
-            _DEBUG_PRINT(self, '_flush_cb')
-
         x1 = area.x1 + self._offset_x
         x2 = area.x2 + self._offset_x
 
