@@ -1,3 +1,18 @@
+# ***IMPORTANT PLEASE READ***
+_____________________________
+
+
+The `mpy_cross` build command has been removed. It will be compiled automatically if it has not been compiled yet.
+
+The `submodules` build command has been removed. The build script takes care of this for you automatically.
+
+The `clean` command has changed behavior. All ports are cleaned prior to a build using makefile's clean routine. 
+There are occasions where something gets stuck and the clean is not completed. That is where this command comes in. This wil do a complete
+wipe of the micropython build folders no matter what is in them. On the `unix` and `macos` ports using this command will remove 
+the SDL2 compilation. the clean that gets performed prior to every build will not.
+
+
+
 # LVGL binding for Micropython
 ______________________________
 

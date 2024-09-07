@@ -96,7 +96,7 @@ def build_manifest(
     )
 
 
-def clean(clean_mpy_cross):
+def force_clean(clean_mpy_cross):
     if clean_mpy_cross:
         cross_clean = mpy_cross_cmd[:]
         cross_clean.insert(1, 'clean')
@@ -105,27 +105,30 @@ def clean(clean_mpy_cross):
     spawn(clean_cmd)
 
 
+def clean():
+    force_clean(False)
+
+
 def submodules():
-    if 'PICO_SDK_PATH' not in os.environ:
-        pico_dsk_path = os.path.abspath('lib/micropython/lib/pico-sdk')
+    pico_dsk_path = os.path.abspath('lib/micropython/lib/pico-sdk')
 
-        if not os.path.exists(
-            os.path.join(pico_dsk_path, 'pico_sdk_init.cmake')
-        ):
-            print()
-            print('collecting PICO-SDK')
+    if not os.path.exists(
+        os.path.join(pico_dsk_path, 'pico_sdk_init.cmake')
+    ):
+        print()
+        print('collecting PICO-SDK')
 
-            ret_code, _ = spawn([
-                ['cd', pico_dsk_path],
-                ['git', 'submodule', 'update', '--init']
-            ])
+        ret_code, _ = spawn([
+            ['cd', pico_dsk_path],
+            ['git', 'submodule', 'update', '--init']
+        ])
 
-            if ret_code != 0:
-                sys.exit(ret_code)
+        if ret_code != 0:
+            sys.exit(ret_code)
 
-    return_code, _ = spawn(submodules_cmd)
-    if return_code != 0:
-        sys.exit(return_code)
+        return_code, _ = spawn(submodules_cmd)
+        if return_code != 0:
+            sys.exit(return_code)
 
 
 def compile(*args):  # NOQA

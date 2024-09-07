@@ -112,7 +112,7 @@ def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manife
     generate_manifest(script_dir, lvgl_api, manifest_path, displays, indevs, frozen_manifest)
 
 
-def clean(clean_mpy_cross):
+def force_clean(clean_mpy_cross):
     if clean_mpy_cross:
         cross_clean = mpy_cross_cmd[:]
         cross_clean.insert(1, 'clean')

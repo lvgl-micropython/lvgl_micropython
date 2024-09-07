@@ -30,18 +30,6 @@ target = args1.target[0]
 
 argParser = ArgumentParser(prefix_chars='mscLBFDIV')
 
-argParser.add_argument(
-    'mpy_cross',
-    dest='mpy_cross',
-    help='compile mpy_cross',
-    action='store_true'
-)
-argParser.add_argument(
-    'submodules',
-    dest='submodules',
-    help='build submodules',
-    action='store_true'
-)
 
 argParser.add_argument(
     'clean',
@@ -111,8 +99,6 @@ args2, extra_args = argParser.parse_known_args(extra_args)
 
 lv_cflags = args2.lv_cflags
 clean = args2.clean
-submodules = args2.submodules
-mpy_cross = args2.mpy_cross
 board = args2.board
 frozen_manifest = args2.frozen_manifest
 displays = args2.displays
@@ -152,13 +138,18 @@ if lv_cflags is not None:
 
 
 def get_submodules():
+
     if not os.path.exists(
         os.path.join(SCRIPT_DIR, 'lib/micropython/mpy-cross')
     ):
         builder.get_micropython()
-    if not os.path.exists(os.path.join(SCRIPT_DIR, 'lib/lvgl/lvgl.h')):
+    if not os.path.exists(
+        os.path.join(SCRIPT_DIR, 'lib/lvgl/lvgl.h')
+    ):
         builder.get_lvgl()
-    if not os.path.exists(os.path.join(SCRIPT_DIR, 'lib/pycparser/pycparser')):
+    if not os.path.exists(os.path.join(
+        SCRIPT_DIR, 'lib/pycparser/pycparser')
+    ):
         builder.get_pycparser()
 
 
@@ -210,16 +201,17 @@ if __name__ == '__main__':
     extra_args, lv_cflags, board = mod.parse_args(extra_args, lv_cflags, board)
     extra_args = mod.build_commands(target, extra_args, SCRIPT_DIR, lv_cflags, board)
 
-    if submodules:
-        print('Collecting build requirements....')
-        get_submodules()
-        mod.submodules()
-
     if clean:
         print('Cleaning build....')
-        mod.clean(mpy_cross)
+        mod.force_clean(True)
+    else:
+        mod.clean()
 
-    if mpy_cross:
+    get_submodules()
+
+    mod.submodules()
+
+    if not os.path.exists('lib/micropython/mpy_cross/build/mpy-cross'):
         print('Compiling mpy-cross....')
         mod.mpy_cross()
 

@@ -66,7 +66,7 @@ def build_manifest(
     )
 
 
-def clean(clean_mpy_cross):
+def force_clean(clean_mpy_cross):
     if clean_mpy_cross:
         cross_clean = mpy_cross_cmd[:]
         cross_clean.insert(1, 'clean')
@@ -75,10 +75,15 @@ def clean(clean_mpy_cross):
     spawn(clean_cmd)
 
 
+def clean():
+    force_clean(False)
+
+
 def submodules():
-    return_code, _ = spawn(submodules_cmd)
-    if return_code != 0:
-        sys.exit(return_code)
+    if not os.path.exists('lib/micropython/lib/fsp/README.md'):
+        return_code, _ = spawn(submodules_cmd)
+        if return_code != 0:
+            sys.exit(return_code)
 
 
 def compile(*args):  # NOQA

@@ -407,7 +407,7 @@ def parse_args(extra_args, lv_cflags, brd):
     elif board == 'ESP32_GENERIC_S2':
         extra_args = esp32_s2_args(extra_args)
     elif board == 'ESP32_GENERIC_S3':
-        extra_args = esp32_s3_args(extra_args)
+        extra_args = esp32_s3_args(mextra_args)
     elif board == 'ESP32_GENERIC_C3':
         extra_args = esp32_c3_args(extra_args)
     elif board == 'LOLIN_S2_MINI':
@@ -533,7 +533,7 @@ def build_manifest(
     )
 
 
-def clean(clean_mpy_cross):
+def force_clean(clean_mpy_cross):
     env, cmds = setup_idf_environ()
 
     if clean_mpy_cross:
@@ -545,6 +545,27 @@ def clean(clean_mpy_cross):
     cmds.append(clean_cmd)
 
     spawn(cmds, env=env)
+
+
+def clean():
+    build_name = f'build-{board}'
+    if board_variant:
+        build_name += f'-{board_variant}'
+
+    full_file_path = (
+        f'{SCRIPT_DIR}/lib/micropython/ports/esp32/{build_name}'
+    )
+    try:
+        shutil.rmtree(full_file_path)
+    except OSError:
+        print()
+        print(
+            'There was an error performing the clean.\n'
+            'Check to make sure nothing is using any of the files '
+            'or folder in the build directory.\n'
+            f'{full_file_path}'
+        )
+        print()
 
 
 def get_clean_environment():
@@ -749,11 +770,15 @@ def submodules():
         sys.exit(result)
 
     env, cmds = setup_idf_environ()
-    cmds.append(submodules_cmd)
 
-    return_code, _ = spawn(cmds, env=env)
-    if return_code != 0:
-        sys.exit(return_code)
+    wifi_lib = os.path.abspath(os.path.join(idf_path, 'components/esp_wifi/lib'))
+    if not os.path.exists(wifi_lib):
+
+        cmds.append(submodules_cmd)
+
+        return_code, _ = spawn(cmds, env=env)
+        if return_code != 0:
+            sys.exit(return_code)
 
 
 MPTHREADPORT_PATH = 'lib/micropython/ports/esp32/mpthreadport.c'

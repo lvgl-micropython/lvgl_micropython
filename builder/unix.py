@@ -121,13 +121,32 @@ def build_manifest(
     )
 
 
-def clean(clean_mpy_cross):
+def force_clean(clean_mpy_cross):
     if clean_mpy_cross:
         cross_clean = mpy_cross_cmd[:]
         cross_clean.insert(1, 'clean')
         spawn(cross_clean)
 
     spawn(clean_cmd)
+
+
+def clean():
+    path = f'lib/micropython/ports/unix/build-{variant}'
+    if not os.path.exists(path):
+        return
+
+    for file in os.listdir(path):
+        if file == 'SDL':
+            continue
+
+        file = os.path.join(path, file)
+        try:
+            if os.path.isdir(file):
+                shutil.rmtree(file)
+            else:
+                os.remove(file)
+        except OSError:
+            pass
 
 
 def _run(c, spinner=False, cmpl=False):
