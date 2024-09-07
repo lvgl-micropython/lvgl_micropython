@@ -13,6 +13,56 @@ for the binding.
 
 <br>
 
+
+### *Supported displays and touch interfaces*
+_____________________________________________
+
+* Supported Display IC's
+  * GC9A01
+  * HX8357B
+  * HX8357D
+  * ILI9163
+  * ILI9225
+  * ILI9341
+  * ILI9481
+  * ILI9486
+  * ILI9488
+  * LT768x \**WIP*\*
+  * R61581
+  * RA8876 \**WIP*\*
+  * RM68120
+  * RM68140
+  * S6D02A1
+  * SSD1351
+  * SSD1963_480
+  * SSD1963_800
+  * SSD1963_800ALT
+  * SSD1963_800BD
+  * ST7701S \**WIP*\*
+  * ST7735B
+  * ST7735R_Red
+  * ST7735R_Green
+  * ST7789
+  * ST7796
+
+* Supported Touch IC's
+  * CST816S
+  * FT5x06
+  * FT5x16
+  * FT5x26
+  * FT5x36
+  * FT5x46
+  * FT6x06
+  * FT6x36
+  * GT911
+  * STMPE610
+  * XPT2046
+
+* Special use drivers
+  * SDL2 \**Only for the unix and macOS ports*\* 
+
+<br>
+
 ### *New changes*
 ___________________________
 
@@ -544,35 +594,26 @@ build without submodules or mpy_cross
 
 I always recommend building with the clean command, this will ensure you get a good fresh build.
 
-NOTE:
-There is a bug in the ESP32 build. The first time around it will fail saying that 
-one of the sumbodules is not available. Run the build again with the submodules 
-argument in there and then it will build fine. For the life of me I cam not able to locate
-where the issue is stemming from. I will find it eventually.
-
-<br>
 
 I will provide directions on how to use the driver framework and also the drivers that are included
 with the binding in the coming weeks.
 
-<br>
 
+<br>
 
 SDL fpr Unix is working properly. Make sure you review the requirements needed to compile for unix!!!
 The build system compiles the latest version of SDL2 so the list is pretty long for the requirements.
 
 To build for Unix use the following build command
 
-    python3 make.py unix clean DISPLAY=sdl_display INDEV=sdl_pointer
+    python3 make.py unix mpy_cross submodules clean DISPLAY=sdl_display INDEV=sdl_pointer
 
 
 Couple of notes:
 
-  * I recommend making 2 frame buffers as seen in the code example below. This will give you 
-    better performance. 
   * **DO NOT** enable LV_USE_DRAW_SDL, I have not written code to allow for it's use (yet).
   * I recommend running `lv.task_handler` once every 5 milliseconds, shorter than that and you 
-    will have a lot of CPU time comsumed. Linger than that and your mouse response is not 
+    will have a lot of CPU time comsumed. Longer than that and your mouse response is not 
     going to be great.
 
 
@@ -592,7 +633,6 @@ Here is some example code for the unix port
     bus = lcd_bus.SDLBus(flags=0)
     
     buf1 = bus.allocate_framebuffer(_BUFFER_SIZE, 0)
-    buf2 = bus.allocate_framebuffer(_BUFFER_SIZE, 0)
     
     import lvgl as lv  # NOQA
     import sdl_display  # NOQA
@@ -604,7 +644,6 @@ Here is some example code for the unix port
         display_width=_WIDTH,
         display_height=_HEIGHT,
         frame_buffer1=buf1,
-        frame_buffer2=buf2,
         color_space=lv.COLOR_FORMAT.RGB888
     )
     
