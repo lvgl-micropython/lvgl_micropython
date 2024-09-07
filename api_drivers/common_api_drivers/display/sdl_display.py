@@ -81,7 +81,7 @@ class SDLDisplay(display_driver_framework.DisplayDriver):
         offset_x=0,
         offset_y=0,
         color_byte_order=display_driver_framework.BYTE_ORDER_RGB,  # NOQA
-        color_space=lv.COLOR_FORMAT.RGB888,
+        color_space=lv.COLOR_FORMAT.RGB888,  # NOQA
         rgb565_byte_swap=False  # NOQA
     ):
         super().__init__(
@@ -124,26 +124,26 @@ class SDLDisplay(display_driver_framework.DisplayDriver):
         self._frame_buffer1 = frame_buffer1
         self._frame_buffer2 = frame_buffer2
 
-        self._disp_drv = lv.display_create(display_width, display_height)
+        self._disp_drv = lv.display_create(display_width, display_height)  # NOQA
 
         self._disp_drv.set_color_format(color_space)
         self._disp_drv.set_driver_data(self)
 
         mapping = {
-            lv.COLOR_FORMAT.I1: _SDL_PIXELFORMAT_INDEX1MSB,
-            lv.COLOR_FORMAT.I4: _SDL_PIXELFORMAT_INDEX4MSB,
-            lv.COLOR_FORMAT.I8: _SDL_PIXELFORMAT_INDEX8,
-            lv.COLOR_FORMAT.RGB565: _SDL_PIXELFORMAT_RGB565,
-            lv.COLOR_FORMAT.RGB888: _SDL_PIXELFORMAT_RGB24,
-            lv.COLOR_FORMAT.ARGB8888: _SDL_PIXELFORMAT_ARGB8888,
-            lv.COLOR_FORMAT.XRGB8888: _SDL_PIXELFORMAT_RGB888,
-            lv.COLOR_FORMAT.I420: _SDL_PIXELFORMAT_IYUV,
-            lv.COLOR_FORMAT.NV21: _SDL_PIXELFORMAT_NV21,
-            lv.COLOR_FORMAT.NV12: _SDL_PIXELFORMAT_NV12,
-            lv.COLOR_FORMAT.YUY2: _SDL_PIXELFORMAT_YUY2,
-            lv.COLOR_FORMAT.UYVY: _SDL_PIXELFORMAT_UYVY,
-            lv.COLOR_FORMAT.RAW: _SDL_PIXELFORMAT_RGB24,
-            lv.COLOR_FORMAT.RAW_ALPHA: _SDL_PIXELFORMAT_RGBA8888
+            lv.COLOR_FORMAT.I1: _SDL_PIXELFORMAT_INDEX1MSB,  # NOQA
+            lv.COLOR_FORMAT.I4: _SDL_PIXELFORMAT_INDEX4MSB,  # NOQA
+            lv.COLOR_FORMAT.I8: _SDL_PIXELFORMAT_INDEX8,  # NOQA
+            lv.COLOR_FORMAT.RGB565: _SDL_PIXELFORMAT_RGB565,  # NOQA
+            lv.COLOR_FORMAT.RGB888: _SDL_PIXELFORMAT_RGB24,  # NOQA
+            lv.COLOR_FORMAT.ARGB8888: _SDL_PIXELFORMAT_ARGB8888,  # NOQA
+            lv.COLOR_FORMAT.XRGB8888: _SDL_PIXELFORMAT_RGB888,  # NOQA
+            lv.COLOR_FORMAT.I420: _SDL_PIXELFORMAT_IYUV,  # NOQA
+            lv.COLOR_FORMAT.NV21: _SDL_PIXELFORMAT_NV21,  # NOQA
+            lv.COLOR_FORMAT.NV12: _SDL_PIXELFORMAT_NV12,  # NOQA
+            lv.COLOR_FORMAT.YUY2: _SDL_PIXELFORMAT_YUY2,  # NOQA
+            lv.COLOR_FORMAT.UYVY: _SDL_PIXELFORMAT_UYVY,  # NOQA
+            lv.COLOR_FORMAT.RAW: _SDL_PIXELFORMAT_RGB24,  # NOQA
+            lv.COLOR_FORMAT.RAW_ALPHA: _SDL_PIXELFORMAT_RGBA8888  # NOQA
         }
 
         cf = self._cf = mapping.get(color_space, None)
@@ -167,7 +167,7 @@ class SDLDisplay(display_driver_framework.DisplayDriver):
             frame_buffer1,
             frame_buffer2,
             len(frame_buffer1),
-            lv.DISPLAY_RENDER_MODE.DIRECT
+            lv.DISPLAY_RENDER_MODE.DIRECT  # NOQA
         )
 
         self._ignore_size_chg = False
@@ -178,16 +178,18 @@ class SDLDisplay(display_driver_framework.DisplayDriver):
         data_bus.register_window_callback(self._windows_event_cb)
 
         self._disp_drv.add_event_cb(
-            self._res_chg_event_cb, lv.EVENT.RESOLUTION_CHANGED, None)
+            self._res_chg_event_cb, lv.EVENT.RESOLUTION_CHANGED, None)  # NOQA
         self._disp_drv.add_event_cb(
-            self._release_disp_cb, lv.EVENT.DELETE, None)
+            self._release_disp_cb, lv.EVENT.DELETE, None)  # NOQA
 
         global _active_event_poll
 
         if not _active_event_poll:
             _active_event_poll = True
-            self._timer = lv.timer_create(self._timer_cb, 5, None)
-            self._timer.set_repeat_count(-1)
+            self._timer = lv.timer_create(self._timer_cb, 5, None)  # NOQA
+            self._timer.set_repeat_count(-1)  # NOQA
+
+        self._displays.append(self)
 
     def _timer_cb(self, _):
         self._data_bus.poll_events()
@@ -203,14 +205,14 @@ class SDLDisplay(display_driver_framework.DisplayDriver):
 
         buf_size = int(hor_res * ver_res * bpp)
 
-        self._frame_buffer1 = self._data_bus.realloc_buffer(buf_size, 1)
-        self._frame_buffer2 = self._data_bus.realloc_buffer(buf_size, 2)
+        self._frame_buffer1 = self._data_bus.realloc_buffer(buf_size, 1)  # NOQA
+        self._frame_buffer2 = self._data_bus.realloc_buffer(buf_size, 2)  # NOQA
 
         self._disp_drv.set_buffers(
             self._frame_buffer1,
             self._frame_buffer2,
             len(self._frame_buffer1),
-            lv.DISPLAY_RENDER_MODE.DIRECT
+            lv.DISPLAY_RENDER_MODE.DIRECT  # NOQA
         )
 
         self._data_bus.set_window_size(
@@ -235,8 +237,8 @@ class SDLDisplay(display_driver_framework.DisplayDriver):
         global _active_event_poll
 
         try:
-            self._timer.pause()
-            self._timer.delete()
+            self._timer.pause()  # NOQA
+            self._timer.delete()  # NOQA
             del self._timer
             displays = self.get_displays()
 
@@ -244,8 +246,8 @@ class SDLDisplay(display_driver_framework.DisplayDriver):
                 _active_event_poll = False
             else:
                 disp = displays[0]
-                disp._timer = lv.timer_create(disp._timer_cb, 5, None)
-                disp._timer.set_repeat_count(-1)
+                disp._timer = lv.timer_create(disp._timer_cb, 5, None)  # NOQA
+                disp._timer.set_repeat_count(-1)  # NOQA
         except AttributeError:
             pass
 

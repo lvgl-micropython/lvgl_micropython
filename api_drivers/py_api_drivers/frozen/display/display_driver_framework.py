@@ -208,8 +208,8 @@ class DisplayDriver:
             self._frame_buffer1 = frame_buffer1
             self._frame_buffer2 = frame_buffer2
 
-        if _init_bus:
-            self._init_bus()
+            if _init_bus:
+                self._init_bus()
 
     def _init_bus(self):
         if isinstance(self._data_bus, lcd_bus.RGBBus):

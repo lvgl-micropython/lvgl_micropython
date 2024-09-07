@@ -226,6 +226,9 @@ class SDLBus:
     def allocate_framebuffer(self, size: int, caps: int, /) -> Union[None, memoryview]:
         ...
 
+    def poll_events(self):
+        ...
+
 class RGBBus:
 
     def __init__(
