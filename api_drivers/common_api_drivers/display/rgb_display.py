@@ -14,5 +14,5 @@ class RGBDisplay(display_driver_framework.DisplayDriver):
         return 0x00
 
     def set_rotation(self, value):
-        self._disp_drv.set_orientation(value)
+        self._disp_drv.set_rotation(value)
         self._rotation = value
