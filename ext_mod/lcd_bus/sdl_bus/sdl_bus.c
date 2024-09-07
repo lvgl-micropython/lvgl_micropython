@@ -24,7 +24,6 @@
     mp_lcd_sdl_bus_obj_t *instances[10] = { NULL };
 
     uint8_t instance_count = 0;
-    bool exit_thread = false;
     bool sdl_inited = false;
 
     mp_lcd_err_t sdl_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
@@ -112,10 +111,13 @@
         LCD_UNUSED(color_size);
 
         mp_lcd_sdl_bus_obj_t *self = MP_OBJ_TO_PTR(obj);
-        while (!self->trans_done) {}
-        self->trans_done = false;
-        self->panel_io_config.buf_to_flush = color;
-        SDL_UnlockMutex(self->panel_io_config.mutex);
+
+        int pitch = self->panel_io_config.width * self->panel_io_config.bytes_per_pixel;
+
+        SDL_UpdateTexture(self->texture, NULL, color, pitch);
+        SDL_RenderClear(self->renderer);
+        SDL_RenderCopy(self->renderer, self->texture, NULL, NULL);
+        SDL_RenderPresent(self->renderer);
 
         if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
             mp_call_function_n_kw(self->callback, 0, 0, NULL);
@@ -128,15 +130,9 @@
     {
         mp_lcd_sdl_bus_obj_t *self = MP_OBJ_TO_PTR(obj);
 
-        self->panel_io_config.buf_to_flush = NULL;
-        self->panel_io_config.exit_thread = true;
-        SDL_UnlockMutex(self->panel_io_config.mutex);
-        SDL_WaitThread(self->panel_io_config.thread, NULL);
-
         SDL_DestroyTexture(self->texture);
         SDL_DestroyRenderer(self->renderer);
         SDL_DestroyWindow(self->window);
-        SDL_DestroyMutex(self->panel_io_config.mutex);
 
         uint8_t i = 0;
 
@@ -156,7 +152,6 @@
         }
 
         if (instance_count == 0) {
-            exit_thread = true;
             SDL_Quit();
         }
 
@@ -176,8 +171,6 @@
 
         SDL_StartTextInput();
 
-        self->panel_io_config.mutex = SDL_CreateMutex();
-        SDL_LockMutex(self->panel_io_config.mutex);
         self->window = SDL_CreateWindow(
             "LVGL MP\0",
             SDL_WINDOWPOS_UNDEFINED,
@@ -195,7 +188,6 @@
         SDL_SetWindowSize(self->window, width, height);
 
         self->rgb565_byte_swap = false;
-        self->panel_io_config.thread = SDL_CreateThread(flush_thread, "LVGL_MP_RENDERER\0", (void *)self);
         self->trans_done = true;
 
         instance_count += 1;
@@ -214,28 +206,6 @@
         LCD_UNUSED(obj);
         *lane_count = 1;
         return LCD_OK;
-    }
-
-    int flush_thread(void *self_in) {
-        mp_lcd_sdl_bus_obj_t *self = (mp_lcd_sdl_bus_obj_t *)self_in;
-        void* buf;
-        int pitch;
-
-        while (!self->panel_io_config.exit_thread) {
-            SDL_LockMutex(self->panel_io_config.mutex);
-
-            if (self->panel_io_config.buf_to_flush != NULL) {
-                pitch = self->panel_io_config.width * self->panel_io_config.bytes_per_pixel;
-                buf = self->panel_io_config.buf_to_flush;
-                SDL_UpdateTexture(self->texture, NULL, buf, pitch);
-                SDL_RenderClear(self->renderer);
-                SDL_RenderCopy(self->renderer, self->texture, NULL, NULL);
-                SDL_RenderPresent(self->renderer);
-            }
-
-            self->trans_done = true;
-        }
-        return 0;
     }
 
     static mp_obj_t mp_lcd_sdl_poll_events(mp_obj_t self_in)

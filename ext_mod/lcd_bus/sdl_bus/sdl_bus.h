@@ -22,11 +22,8 @@
             uint16_t width;
             uint16_t height;
             uint32_t win_id;
-            bool exit_thread;
             void *buf_to_flush;
-            SDL_Thread *thread;
             uint8_t bytes_per_pixel;
-            SDL_mutex *mutex;
             int flags;
         } panel_io_config_t;
 
