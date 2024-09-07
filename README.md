@@ -57,36 +57,36 @@ ESP32-ALL
   They exactly what they seem. It is easier to show a code example then it is to explain it.
   
 
-    from machine import SPI
-    
-    spi_bus = SPI.Bus(
-        host=1,
-        mosi=15,
-        miso=16,
-        sck=10
-    )
-
-    spi_device = SPI.Device(
-        spi_bus=spi_bus,
-        freq=10000000,
-        cs=3,
-        polarity=0,
-        phase=0,
-        bits=8,
-        first_bit=SPI.MSB
-    )
-
-    # if you want to delete a device from being used you have to deinit it first
-    # and then you can delete it
-    spi_device.deinit()
-    del spi_device
-    
-    # if you want to stop using a bus and all devices attached to it
-    del spi_bus
-    del spi_device
-
-    # The SPI.Bus instance you need to pass to machine.SDCard, lcd_bus.SPIBus
-    # and any of the touch drivers that use SPI. 
+      from machine import SPI
+      
+      spi_bus = SPI.Bus(
+          host=1,
+          mosi=15,
+          miso=16,
+          sck=10
+      )
+      
+      spi_device = SPI.Device(
+          spi_bus=spi_bus,
+          freq=10000000,
+          cs=3,
+          polarity=0,
+          phase=0,
+          bits=8,
+          first_bit=SPI.MSB
+      )
+      
+      # if you want to delete a device from being used you have to deinit it first
+      # and then you can delete it
+      spi_device.deinit()
+      del spi_device
+      
+      # if you want to stop using a bus and all devices attached to it
+      del spi_bus
+      del spi_device
+      
+      # The SPI.Bus instance you need to pass to machine.SDCard, lcd_bus.SPIBus
+      # and any of the touch drivers that use SPI. 
 
 
 All methods that existed for the original `machine.SPI` are available in 
