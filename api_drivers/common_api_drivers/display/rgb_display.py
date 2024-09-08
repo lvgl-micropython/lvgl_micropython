@@ -10,9 +10,10 @@ BYTE_ORDER_BGR = display_driver_framework.BYTE_ORDER_BGR
 
 class RGBDisplay(display_driver_framework.DisplayDriver):
 
+    def init(self):
+        self._disp_drv.sw_rotate = 1
+        display_driver_framework.DisplayDriver.init(self)
+
     def _dummy_set_memory_location(self, *_, **__):
         return 0x00
-
-    def set_rotation(self, value):
-        self._disp_drv.set_rotation(value)
-        self._rotation = value
+    

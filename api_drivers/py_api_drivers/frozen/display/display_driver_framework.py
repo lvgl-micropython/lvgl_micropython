@@ -445,6 +445,16 @@ class DisplayDriver:
     def set_rotation(self, value):
         self._disp_drv.set_rotation(value)
 
+        if self._disp_drv.sw_rotate:
+            value *= 90 * 100
+            for layer in (
+                self._disp_drv.get_layer_top(),
+                self._disp_drv.get_layer_sys(),
+                self._disp_drv.layer_bottom()
+            ):
+                layer.set_style_transform_rotation(
+                    value, lv.PART.ANY | lv.STATE.ANY)
+
     def get_horizontal_resolution(self):
         return self._disp_drv.get_horizontal_resolution()
 
