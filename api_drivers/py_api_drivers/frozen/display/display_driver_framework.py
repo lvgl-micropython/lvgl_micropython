@@ -291,9 +291,6 @@ class DisplayDriver:
         self._rotation = rotation
 
         if self._disp_drv.sw_rotate:
-            center_x = int(self.display_width / 2)
-            center_y = int(self.display_height / 2)
-
             rotation *= 900
 
             for layer in (
@@ -301,9 +298,24 @@ class DisplayDriver:
                 self._disp_drv.get_layer_sys(),
                 self._disp_drv.layer_bottom()
             ):
-                layer.set_style_transform_pivot_x(center_x, 0)
-                layer.set_style_transform_pivot_y(center_y, 0)
+                layer.update_layout()
+                width = layer.get_width()
+                height = layer.get_height()
+
+                layer.set_style_transform_pivot_x(int(width / 2), 0)
+                layer.set_style_transform_pivot_y(int(height / 2), 0)
                 layer.set_style_transform_rotation(rotation, 0)
+
+            for i in range(self._disp_drv.screen_cnt):
+                scrn = self._disp_drv.screens[i]
+
+                scrn.update_layout()
+                width = scrn.get_width()
+                height = scrn.get_height()
+
+                scrn.set_style_transform_pivot_x(int(width / 2), 0)
+                scrn.set_style_transform_pivot_y(int(height / 2), 0)
+                scrn.set_style_transform_rotation(rotation, 0)
 
         elif self._initilized:
             self._param_buf[0] = (self._madctl(
@@ -338,28 +350,10 @@ class DisplayDriver:
         self._offset_x, self._offset_y = x, y
 
     def get_offset_x(self):
-        rotation = self.get_rotation()
-
-        if rotation == lv.DISPLAY_ROTATION._90:  # NOQA
-            return self._offset_y
-        if rotation == lv.DISPLAY_ROTATION._180:  # NOQA
-            return self.get_physical_horizontal_resolution() - self._offset_x
-        if rotation == lv.DISPLAY_ROTATION._270:  # NOQA
-            return self.get_physical_horizontal_resolution() - self._offset_y
-
-        return self._offset_x
+        return self._disp_drv.get_offset_x()
 
     def get_offset_y(self):
-        rotation = self.get_rotation()
-
-        if rotation == lv.DISPLAY_ROTATION._90:  # NOQA
-            return self._offset_x
-        if rotation == lv.DISPLAY_ROTATION._180:  # NOQA
-            return self.get_physical_vertical_resolution() - self._offset_y
-        if rotation == lv.DISPLAY_ROTATION._270:  # NOQA
-            return self.get_physical_vertical_resolution() - self._offset_x
-
-        return self._offset_y
+        return self._disp_drv.get_offset_y()
 
     def get_dpi(self):
         return self._disp_drv.get_dpi()
