@@ -290,10 +290,25 @@ class DisplayDriver:
 
         self._rotation = rotation
 
-        if self._initilized:
-            self._param_buf[0] = (
-                self._madctl(self._color_byte_order, self._ORIENTATION_TABLE, ~rotation)  # NOQA
-            )
+        if self._disp_drv.sw_rotate:
+            center_x = int(self.display_width / 2)
+            center_y = int(self.display_height / 2)
+
+            rotation *= 900
+
+            for layer in (
+                self._disp_drv.get_layer_top(),
+                self._disp_drv.get_layer_sys(),
+                self._disp_drv.layer_bottom()
+            ):
+                layer.set_style_transform_pivot_x(center_x, 0)
+                layer.set_style_transform_pivot_y(center_y, 0)
+                layer.set_style_transform_rotation(rotation, 0)
+
+        elif self._initilized:
+            self._param_buf[0] = (self._madctl(
+                self._color_byte_order, self._ORIENTATION_TABLE, ~rotation
+            ))
             self._data_bus.tx_param(_MADCTL, self._param_mv[:1])
 
     @staticmethod
@@ -444,16 +459,6 @@ class DisplayDriver:
 
     def set_rotation(self, value):
         self._disp_drv.set_rotation(value)
-
-        if self._disp_drv.sw_rotate:
-            value *= 90 * 100
-            for layer in (
-                self._disp_drv.get_layer_top(),
-                self._disp_drv.get_layer_sys(),
-                self._disp_drv.layer_bottom()
-            ):
-                layer.set_style_transform_rotation(
-                    value, lv.PART.ANY | lv.STATE.ANY)
 
     def get_horizontal_resolution(self):
         return self._disp_drv.get_horizontal_resolution()
