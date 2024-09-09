@@ -39,101 +39,105 @@ class GT911Extension(object):
         self._buf = bytearray(1)
         self._mv = memoryview(self._buf)
 
-        self._config_data = bytearray(184)
+        self._config_data = bytearray(186)
         self._config_mv = memoryview(self._config_data)
 
-        self._i2c.read_mem(_CONFIG_START_REG, buf=self._config_mv)
+        self._indev._read_reg(_CONFIG_START_REG, buf=self._config_mv[2:])
 
     @property
     def width(self):
         return (
-            (self._config_data[_X_OUTPUT_MAX_HIGH_POS] << 8) |
-            self._config_data[_X_OUTPUT_MAX_LOW_POS]
+            (self._config_data[_X_OUTPUT_MAX_HIGH_POS + 2] << 8) |
+            self._config_data[_X_OUTPUT_MAX_LOW_POS + 2]
         )
 
     @width.setter
     def width(self, value):
-        self._config_data[_X_OUTPUT_MAX_LOW_POS] = value & 0xFF
-        self._config_data[_X_OUTPUT_MAX_HIGH_POS] = (value >> 8) & 0xFF
+        self._config_data[_X_OUTPUT_MAX_LOW_POS + 2] = value & 0xFF
+        self._config_data[_X_OUTPUT_MAX_HIGH_POS + 2] = (value >> 8) & 0xFF
 
     @property
     def height(self):
         return (
-            (self._config_data[_Y_OUTPUT_MAX_HIGH_POS] << 8) |
-            self._config_data[_Y_OUTPUT_MAX_LOW_POS]
+            (self._config_data[_Y_OUTPUT_MAX_HIGH_POS + 2] << 8) |
+            self._config_data[_Y_OUTPUT_MAX_LOW_POS + 2]
         )
 
     @height.setter
     def height(self, value):
-        self._config_data[_Y_OUTPUT_MAX_LOW_POS] = value & 0xFF
-        self._config_data[_Y_OUTPUT_MAX_HIGH_POS] = (value >> 8) & 0xFF
+        self._config_data[_Y_OUTPUT_MAX_LOW_POS + 2] = value & 0xFF
+        self._config_data[_Y_OUTPUT_MAX_HIGH_POS + 2] = (value >> 8) & 0xFF
 
     @property
     def noise_reduction(self):
-        return self._config_data[_NOISE_REDUCTION_POS] & 0x0F
+        return self._config_data[_NOISE_REDUCTION_POS + 2] & 0x0F
 
     @noise_reduction.setter
     def noise_reduction(self, value):
-        upper_val = self._config_data[_NOISE_REDUCTION_POS] >> 4
-        self._config_data[_NOISE_REDUCTION_POS] = (upper_val << 4) | (value & 0x0F)
+        upper_val = self._config_data[_NOISE_REDUCTION_POS + 2] >> 4
+        self._config_data[_NOISE_REDUCTION_POS + 2] = (upper_val << 4) | (value & 0x0F)
 
     @property
     def touch_press_level(self):
-        return self._config_data[_TOUCH_PRESS_LEVEL_POS]
+        return self._config_data[_TOUCH_PRESS_LEVEL_POS + 2]
 
     @touch_press_level.setter
     def touch_press_level(self, value):
-        self._config_data[_TOUCH_PRESS_LEVEL_POS] = value & 0xFF
+        self._config_data[_TOUCH_PRESS_LEVEL_POS + 2] = value & 0xFF
 
     @property
     def touch_leave_level(self):
-        return self._config_data[_TOUCH_LEAVE_LEVEL_POS]
+        return self._config_data[_TOUCH_LEAVE_LEVEL_POS + 2]
 
     @touch_leave_level.setter
     def touch_leave_level(self, value):
-        self._config_data[_TOUCH_LEAVE_LEVEL_POS] = value & 0xFF
+        self._config_data[_TOUCH_LEAVE_LEVEL_POS + 2] = value & 0xFF
 
     @property
     def pad_left(self):
-        return self._config_data[_HOR_SPACE_POS] >> 4
+        return self._config_data[_HOR_SPACE_POS + 2] >> 4
 
     @pad_left.setter
     def pad_left(self, value):
-        self._config_data[_HOR_SPACE_POS] = (value << 4) | self.pad_right
+        self._config_data[_HOR_SPACE_POS + 2] = (value << 4) | self.pad_right
 
     @property
     def pad_right(self):
-        return self._config_data[_HOR_SPACE_POS] & 0xF
+        return self._config_data[_HOR_SPACE_POS + 2] & 0xF
 
     @pad_right.setter
     def pad_right(self, value):
-        self._config_data[_HOR_SPACE_POS] = (self.pad_left << 4) | (value & 0xF)
+        self._config_data[_HOR_SPACE_POS + 2] = (self.pad_left << 4) | (value & 0xF)
 
     @property
     def pad_top(self):
-        return self._config_data[_VER_SPACE_POS] >> 4
+        return self._config_data[_VER_SPACE_POS + 2] >> 4
 
     @pad_top.setter
     def pad_top(self, value):
-        self._config_data[_VER_SPACE_POS] = (value << 4) | self.pad_bottom
+        self._config_data[_VER_SPACE_POS + 2] = (value << 4) | self.pad_bottom
 
     @property
     def pad_bottom(self):
-        return self._config_data[_VER_SPACE_POS] & 0xF
+        return self._config_data[_VER_SPACE_POS + 2] & 0xF
 
     @pad_bottom.setter
     def pad_bottom(self, value):
-        self._config_data[_VER_SPACE_POS] = (self.pad_top << 4) | (value & 0xF)
+        self._config_data[_VER_SPACE_POS + 2] = (self.pad_top << 4) | (value & 0xF)
 
     def save(self):
-        checksum = ((~sum(self._config_data)) + 1) & 0xFF
+        checksum = ((~sum(self._config_data[2:])) + 1) & 0xFF
 
-        self._i2c.write_mem(_CONFIG_CHKSUM_REG, buf=self._config_mv)
+        self._config_data[0] = _CONFIG_CHKSUM_REG >> 8
+        self._config_data[1] = _CONFIG_CHKSUM_REG & 0xFF
+        self._indev._write_reg(_CONFIG_CHKSUM_REG, buf=self._config_mv)
 
-        self._buf[0] = checksum
-        self._i2c.write_mem(_CONFIG_CHKSUM_REG, buf=self._mv[:1])
+        self._buf[2] = checksum
+        self._indev._write_reg(_CONFIG_CHKSUM_REG, buf=self._mv[:3])
 
-        self._buf[0] = 0x01
-        self._i2c.write_mem(_CONFIG_FRESH_REG, buf=self._mv[:1])
+        self._config_data[0] = _CONFIG_FRESH_REG >> 8
+        self._config_data[1] = _CONFIG_FRESH_REG & 0xFF
+        self._buf[2] = 0x01
+        self._indev._write_reg(_CONFIG_FRESH_REG, buf=self._mv[:3])
 
         self._indev.hw_reset()
