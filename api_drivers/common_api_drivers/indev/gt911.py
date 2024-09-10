@@ -108,9 +108,10 @@ class GT911(pointer_framework.PointerDriver):
 
         product_id = ''
         for item in self._rx_buf[:4]:
-            if item == 0x00:
+            try:
+                product_id += chr(item)
+            except:  # NOQA
                 break
-            product_id += item.decode('utf-8')
 
         print('Touch Product id:', product_id)
 
