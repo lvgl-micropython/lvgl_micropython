@@ -99,18 +99,16 @@ class PointerDriver(_indev_base.IndevBase):
 
     def _read(self, drv, data):  # NOQA
         coords = self._get_coords()
+        data.continue_reading = False
 
         if coords is None:
-            data.continue_reading = False
             state = self.RELEASED
             x, y = self._last_x, self._last_y
         else:
             state, x, y = coords
-            data.continue_reading = True
 
         if None in (x, y):
             x, y = self._last_x, self._last_y
-            data.continue_reading = False
 
         data.point.x, data.point.y = (
             self._calc_coords(x, y)
