@@ -44,12 +44,10 @@ class GT911(pointer_framework.PointerDriver):
 
     def _write_reg(self, reg, value=None, buf=None):
         if value is not None:
-            self._tx_buf[0] = reg >> 8
-            self._tx_buf[1] = reg & 0xFF
-            self._tx_buf[2] = value
-            self._device.write(self._tx_mv[:3])
+            self._tx_buf[0] = value
+            self._device.write_mem(reg, self._tx_mv[:1])
         elif buf is not None:
-            self._device.write(buf)
+            self._device.write_mem(reg, buf)
 
     def __init__(
         self,
