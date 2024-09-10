@@ -36,9 +36,6 @@ class GT911Extension(object):
         self._indev = indev
         self._i2c = i2c
 
-        self._buf = bytearray(1)
-        self._mv = memoryview(self._buf)
-
         self._config_data = bytearray(186)
         self._config_mv = memoryview(self._config_data)
 
@@ -132,12 +129,12 @@ class GT911Extension(object):
         self._config_data[1] = _CONFIG_CHKSUM_REG & 0xFF
         self._indev._write_reg(_CONFIG_CHKSUM_REG, buf=self._config_mv)
 
-        self._buf[2] = checksum
-        self._indev._write_reg(_CONFIG_CHKSUM_REG, buf=self._mv[:3])
+        self._config_data[2] = checksum
+        self._indev._write_reg(_CONFIG_CHKSUM_REG, buf=self._config_mv[:3])
 
         self._config_data[0] = _CONFIG_FRESH_REG >> 8
         self._config_data[1] = _CONFIG_FRESH_REG & 0xFF
-        self._buf[2] = 0x01
-        self._indev._write_reg(_CONFIG_FRESH_REG, buf=self._mv[:3])
+        self._config_data[2] = 0x01
+        self._indev._write_reg(_CONFIG_FRESH_REG, buf=self._config_mv[:3])
 
         self._indev.hw_reset()
