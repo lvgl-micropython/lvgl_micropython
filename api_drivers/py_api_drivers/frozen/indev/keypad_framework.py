@@ -1,5 +1,6 @@
 import lvgl as lv  # NOQA
 import _indev_base
+import display_driver_framework
 
 
 class KeypadDriver(_indev_base.IndevBase):
@@ -27,7 +28,7 @@ class KeypadDriver(_indev_base.IndevBase):
             )
 
         self._last_key = -1
-        self._current_state = lv.INDEV_STATE.RELEASED
+        self._current_state = self.RELEASED
 
         indev_drv = lv.indev_create()
         indev_drv.set_type(lv.INDEV_TYPE.KEYPAD)

@@ -155,7 +155,7 @@ MOD_KEY_ALT = MOD_KEY_LALT | MOD_KEY_RALT
 MOD_KEY_META = MOD_KEY_LMETA | MOD_KEY_RMETA
 
 
-class SDLKeypad(keypad_framework.KeypadDriver):
+class SDLKeyboard(keypad_framework.KeypadDriver):
 
     def __init__(self, *args, **kwargs):  # NOQA
         super().__init__()
@@ -243,7 +243,7 @@ class SDLKeypad(keypad_framework.KeypadDriver):
         else:
             self.__current_state = self.RELEASED
 
-        micropython.schedule(self.read, 0)
+        micropython.schedule(SDLKeyboard.read, self)
 
     def _get_key(self):
         return self.__current_state, self.__last_key
