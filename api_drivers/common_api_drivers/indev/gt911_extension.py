@@ -36,10 +36,10 @@ class GT911Extension(object):
         self._indev = indev
         self._i2c = i2c
 
-        self._config_data = bytearray(_CONFIG_FRESH_REG - _CONFIG_START_REG)
+        self._config_data = bytearray(_CONFIG_FRESH_REG - _CONFIG_START_REG + 1)
         self._config_mv = memoryview(self._config_data)
 
-        self._indev._read_reg(_CONFIG_START_REG, buf=self._config_mv[2:])
+        self._indev._read_reg(_CONFIG_START_REG, buf=self._config_mv[:-2])
 
     @property
     def width(self):
@@ -124,7 +124,7 @@ class GT911Extension(object):
 
     def save(self):
         # calculate the checksum
-        self._config_data[_CONFIG_CHKSUM_REG - _CONFIG_START_REG] = ((~sum(self._config_data[:-2])) + 1) & 0xFF
+        self._config_data[-2] = ((~sum(self._config_data[:-2])) + 1) & 0xFF
 
         # set the flag to save the data the data
         self._config_data[-1] = 0x01  # _CONFIG_FRESH_REG
