@@ -32,14 +32,34 @@ _CONFIG_FRESH_REG = const(0x8100)
 
 class GT911Extension(object):
 
+    def _read_reg(self, reg, num_bytes=None, buf=None):
+        self._tx_buf[0] = reg >> 8
+        self._tx_buf[1] = reg & 0xFF
+        if num_bytes is not None:
+            self._i2c.write_readinto(self._tx_mv[:2], self._rx_mv[:num_bytes])
+        else:
+            self._i2c.write_readinto(self._tx_mv[:2], buf)
+
+    def _write_reg(self, reg, value=None, buf=None):
+        if value is not None:
+            self._tx_buf[0] = value
+            self._i2c.write_mem(reg, self._tx_mv[:1])
+        elif buf is not None:
+            self._i2c.write_mem(reg, buf)
+
     def __init__(self, indev, i2c):
         self._indev = indev
         self._i2c = i2c
 
+        self._tx_buf = bytearray(3)
+        self._tx_mv = memoryview(self._tx_buf)
+        self._rx_buf = bytearray(6)
+        self._rx_mv = memoryview(self._rx_buf)
+
         self._config_data = bytearray(_CONFIG_FRESH_REG - _CONFIG_START_REG + 1)
         self._config_mv = memoryview(self._config_data)
 
-        self._indev._read_reg(_CONFIG_START_REG, buf=self._config_mv[:-2])
+        self._read_reg(_CONFIG_START_REG, buf=self._config_mv[:-2])
 
     @property
     def width(self):
@@ -130,6 +150,6 @@ class GT911Extension(object):
         self._config_data[-1] = 0x01  # _CONFIG_FRESH_REG
 
         # write all config data to the touch IC
-        self._indev._write_reg(_CONFIG_START_REG, buf=self._config_mv)
+        self._write_reg(_CONFIG_START_REG, buf=self._config_mv)
 
         self._indev.hw_reset()
