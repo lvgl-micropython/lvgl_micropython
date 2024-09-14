@@ -8,7 +8,6 @@ LVGL_BINDING_DIR = $(subst /ext_mod/lvgl,,$(MOD_DIR))
 
 LIB_DIR = $(LVGL_BINDING_DIR)/lib
 LVGL_DIR = $(LVGL_BINDING_DIR)/lib/lvgl
-LVGL_ADDON_DIR = $(LVGL_BINDING_DIR)/ext_mod/lvgl_addons
 LVGL_HEADER = $(LVGL_BINDING_DIR)/build/lvgl_header.h
 
 CURRENT_DIR = $(LVGL_BINDING_DIR)/ext_mod/lvgl

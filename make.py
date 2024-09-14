@@ -163,10 +163,6 @@ def create_lvgl_header():
         f.write(
             f'#include "{SCRIPT_DIR}/lib/lvgl/src/lvgl_private.h"\n'
         )
-        f.write(
-            f'#include "{SCRIPT_DIR}/ext_mod/lvgl_addons'
-            f'/include/color_addons.h"\n'
-        )
 
 
 if __name__ == '__main__':

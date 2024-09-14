@@ -555,6 +555,9 @@ def clean():
     full_file_path = (
         f'{SCRIPT_DIR}/lib/micropython/ports/esp32/{build_name}'
     )
+    if not os.path.exists(full_file_path):
+        return
+
     try:
         shutil.rmtree(full_file_path)
     except OSError:
