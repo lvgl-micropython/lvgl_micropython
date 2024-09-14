@@ -555,6 +555,7 @@ def clean():
     full_file_path = (
         f'{SCRIPT_DIR}/lib/micropython/ports/esp32/{build_name}'
     )
+
     if not os.path.exists(full_file_path):
         return
 
@@ -775,8 +776,9 @@ def submodules():
     env, cmds = setup_idf_environ()
 
     wifi_lib = os.path.abspath(os.path.join(idf_path, 'components/esp_wifi/lib'))
-    if not os.path.exists(wifi_lib):
+    berkeley_db = os.path.abspath('lib/micropython/lib/berkeley-db-1.xx/README')
 
+    if not os.path.exists(berkeley_db) or not os.path.exists(wifi_lib):
         cmds.append(submodules_cmd)
 
         return_code, _ = spawn(cmds, env=env)
