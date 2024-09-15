@@ -71,7 +71,7 @@ _GPIO_STATUS1_W1TC_REG = const(0x3FF44058)
 # GPIO_PINn_INT_TYPE
 
 
-class LOW_SPEED_SPI:
+class Spi3Wire:
 
     def __init__(self, miso, sck, cs, cs_active_high=False):
         self._miso_pin = None
@@ -145,17 +145,23 @@ class LOW_SPEED_SPI:
     @micropython.viper
     def __deinit_sck(self):
         GPIO_ENABLE_W1TC_REG = ptr32(self._sck_enable_reg)
-        GPIO_ENABLE_W1TC_REG[0] |= int(ptr32(self._sck_mask))
+        sck_mask = int(ptr32(self._sck_mask))
+
+        GPIO_ENABLE_W1TC_REG[0] |= sck_mask
 
     @micropython.viper
     def __deinit_miso(self):
         GPIO_ENABLE_W1TC_REG = ptr32(self._miso_enable_reg)
-        GPIO_ENABLE_W1TC_REG[0] |= int(ptr32(self._miso_mask))
+        miso_mask = int(ptr32(self._miso_mask))
+
+        GPIO_ENABLE_W1TC_REG[0] |= miso_mask
 
     @micropython.viper
     def __deinit_cs(self):
         GPIO_ENABLE_W1TC_REG = ptr32(self._cs_enable_reg)
-        GPIO_ENABLE_W1TC_REG[0] |= int(ptr32(self._cs_mask))
+        cs_mask = int(ptr32(self._cs_mask))
+
+        GPIO_ENABLE_W1TC_REG[0] |= cs_mask
 
     def deinit(self):
         if self._sck_pin is not None:
@@ -173,89 +179,86 @@ class LOW_SPEED_SPI:
             self._cs_pin = None
             self.__deinit_cs()
 
-    def delay(self, t):  # NOQA
-        time.sleep_us(t)  # NOQA
-
     @micropython.viper
     def __senddata(self, data: int, num_bits: int):
         dta = int(data)
-        miso_set = ptr32(self._miso_set_reg)
-        miso_clear = ptr32(self._miso_clear_reg)
-        miso_mask = int(ptr32(self._miso_mask))
 
-        sck_set = ptr32(self._sck_set_reg)
-        sck_clear = ptr32(self._sck_clear_reg)
-        sck_mask = int(ptr32(self._sck_mask))
-
-        for i in range(0, num_bits):
+        for i in range(num_bits):
             if dta & 0x80:
-                miso_set[0] |= miso_mask
+                self.__miso_active()
             else:
-                miso_clear[0] |= miso_mask
+                self.__miso_inactive()
 
             dta = dta << 1
-            sck_clear[0] |= sck_mask
+            self.__sck_inactive()
             time.sleep_us(1)  # NOQA
-            sck_set[0] |= sck_mask
+            self.__sck_active()
             time.sleep_us(1)  # NOQA
 
     def tx_param(self, cmd, params):
         if self._cs_pin is None:
             return
 
-        self.__cs_active()
         self.__write_cmd(cmd)
-        self.__cs_inactive()
 
-        self.__cs_active()
         for param in params:
             self.__write_param(param)
-        self.__cs_inactive()
 
     @micropython.viper
     def __cs_inactive(self):
         cs_set = ptr32(self._sck_enable_reg)
         cs_mask = int(ptr32(self._cs_mask))
-
         cs_set[0] |= cs_mask
 
     @micropython.viper
     def __cs_active(self):
         cs_clear = ptr32(self._sck_enable_reg)
         cs_mask = int(ptr32(self._cs_mask))
-
         cs_clear[0] |= cs_mask
 
     @micropython.viper
-    def __write_cmd(self, cmd: int):  # 9bit
-        miso_clear = ptr32(self._miso_clear_reg)
-        miso_mask = int(ptr32(self._miso_mask))
-        sck_set = ptr32(self._sck_set_reg)
-        sck_clear = ptr32(self._sck_clear_reg)
-        sck_mask = int(ptr32(self._sck_mask))
-        cmd_bits = int(ptr8(self._cmd_bits))
-
-        miso_clear[0] |= miso_mask
-        sck_clear[0] |= sck_mask
-        time.sleep_us(1)  # NOQA
-        sck_set[0] |= sck_mask
-        time.sleep_us(1)  # NOQA
-
-        self.__senddata(cmd, cmd_bits)
-
-    @micropython.viper
-    def __write_param(self, param: int):
+    def __miso_active(self):
         miso_set = ptr32(self._miso_set_reg)
         miso_mask = int(ptr32(self._miso_mask))
+        miso_set[0] |= miso_mask
+
+    @micropython.viper
+    def __miso_inactive(self):
+        miso_clear = ptr32(self._miso_clear_reg)
+        miso_mask = int(ptr32(self._miso_mask))
+        miso_clear[0] |= miso_mask
+
+    @micropython.viper
+    def __sck_active(self):
         sck_set = ptr32(self._sck_set_reg)
+        sck_mask = int(ptr32(self._sck_mask))
+        sck_set[0] |= sck_mask
+
+    @micropython.viper
+    def __sck_inactive(self):
         sck_clear = ptr32(self._sck_clear_reg)
         sck_mask = int(ptr32(self._sck_mask))
-        param_bits = int(ptr8(self._param_bits))
-
-        miso_set[0] |= miso_mask
         sck_clear[0] |= sck_mask
+
+    def __write_cmd(self, cmd):  # 9bit
+        self.__cs_active()
+        self.__miso_inactive()
+        self.__sck_inactive()
         time.sleep_us(1)  # NOQA
-        sck_set[0] |= sck_mask
+        self.__sck_active()
         time.sleep_us(1)  # NOQA
 
-        self.__senddata(param, param_bits)
+        self.__senddata(cmd, self._cmd_bits)
+        self.__cs_inactive()
+
+    def __write_param(self, param: int):
+        self.__cs_active()
+        self.__miso_active()
+        self.__sck_inactive()
+        time.sleep_us(1)  # NOQA
+        self.__sck_active()
+        time.sleep_us(1)  # NOQA
+
+        self.__senddata(param, self._param_bits)
+        self.__cs_inactive()
+

@@ -575,3 +575,6 @@ class ST7701(display_driver_framework.DisplayDriver):
             )
         )
         self.set_params(_MADCTL, param_mv[:1])
+
+    def _madctl(self, *_, **__):
+        return 0x08
