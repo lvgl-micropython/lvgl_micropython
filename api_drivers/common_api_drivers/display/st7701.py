@@ -256,7 +256,7 @@ class ST7701(display_driver_framework.DisplayDriver):
         return -1
 
     def init(self):
-        self._spi_3wire.init(16, 8)
+        self._spi_3wire.init(8, 8)
         self._init()
         if self._bus_shared_pins:
             # shut down the spi3wire prior to initilizing the data bus.
@@ -419,11 +419,144 @@ class ST7701(display_driver_framework.DisplayDriver):
         self.set_params(_SWRESET)
         time.sleep_ms(5)  # NOQA
 
+        # Command2_BK0
+        param_buf[:5] = bytearray([0x77, 0x01, 0x00, 0x00, _Command2_BK0])
+        self.set_params(_CND2BKxSEL, param_mv[:5])
+
+        param_buf[0] = 0x3B
+        param_buf[1] = 0x00
+        self.set_params(_LNESET, param_mv[:2])
+
+        param_buf[0] = 0x0D
+        param_buf[1] = 0x02
+        self.set_params(_PORCTRL, param_mv[:2])
+
+        param_buf[0] = 0x21
+        param_buf[1] = 0x08
+        self.set_params(_INVSET, param_mv[:2])
+
+        param_buf[:16] = bytearray([
+            0x00, 0x11, 0x18, 0x0E, 0x11, 0x06, 0x07, 0x08,
+            0x07, 0x22, 0x04, 0x12, 0x0F, 0xAA, 0x31, 0x18
+        ])
+        self.set_params(_PVGAMCTRL, param_mv)
+
+        param_buf[:16] = bytearray([
+            0x00, 0x11, 0x19, 0x0E, 0x12, 0x07, 0x08, 0x08,
+            0x08, 0x22, 0x04, 0x11, 0x11, 0xA9, 0x32, 0x18
+        ])
+        self.set_params(_NVGAMCTRL, param_mv)
+
+        # param_buf[0] = 0x10
+        # self.set_params(_PROMACT, param_mv[:1])
+        #
+        # param_buf[0] = 0x08
+        # self.set_params(_COLCTRL, param_mv[:1])
+
+        # Command2_BK1
+        param_buf[:5] = bytearray([0x77, 0x01, 0x00, 0x00, _Command2_BK1])
+        self.set_params(_CND2BKxSEL, param_mv[:5])
+
+        param_buf[0] = 0x60
+        self.set_params(_VRHS, param_mv[:1])
+
+        param_buf[0] = 0x30
+        self.set_params(_VCOMS, param_mv[:1])
+
+        param_buf[0] = 0x87
+        self.set_params(_VGHSS, param_mv[:1])
+
+        param_buf[0] = 0x80
+        self.set_params(_TESTCMD, param_mv[:1])
+
+        param_buf[0] = 0x49
+        self.set_params(_VGLS, param_mv[:1])
+
+        param_buf[0] = 0x85
+        self.set_params(_PWCTRL1, param_mv[:1])
+
+        param_buf[0] = 0x21
+        self.set_params(_PWCTRL2, param_mv[:1])
+
+        param_buf[0] = 0x78
+        self.set_params(_PDR1, param_mv[:1])
+
+        param_buf[0] = 0x78
+        self.set_params(_PDR2, param_mv[:1])
+
+        param_buf[0] = 0x83
+        self.set_params(_MIPISET1, param_mv[:1])
+        time.sleep_ms(100)  # NOQA
+
+        param_buf[:3] = bytearray([0x00, 0x1B, 0x02])
+        self.set_params(_SRCTRL, param_mv[:3])
+
+        param_buf[:11] = bytearray([
+            0x08, 0xA0, 0x00, 0x00, 0x07, 0xA0,
+            0x00, 0x00, 0x00, 0x44, 0x44])
+        self.set_params(_NRCTRL, param_mv[:11])
+
+        param_buf[:13] = bytearray([
+            0xE2, 0x11, 0x11, 0x44, 0x44, 0xED, 0xA0,
+            0x00, 0x00, 0xEC, 0xA0, 0x00, 0x00])
+        self.set_params(_SECTRL, param_mv[:13])
+
+        param_buf[:4] = bytearray([0x00, 0x00, 0x11, 0x11])
+        self.set_params(_CCCTRL, param_mv[:4])
+
+        param_buf[0] = 0x44
+        param_buf[1] = 0x44
+        self.set_params(_SKCTRL, param_mv[:2])
+
+        param_buf[:16] = bytearray([
+            0x0A, 0xE9, 0xD8, 0xA0, 0x0C, 0xEB, 0xD8, 0xA0,
+            0x0E, 0xED, 0xD8, 0xA0, 0x10, 0xEF, 0xD8, 0xA0])
+        self.set_params(0xE5, param_mv)
+
+        param_buf[:4] = bytearray([0x00, 0x00, 0x11, 0x11])
+        self.set_params(0xE6, param_mv[:4])
+
+        param_buf[0] = 0x44
+        param_buf[1] = 0x44
+        self.set_params(0xE7, param_mv[:2])
+
+        param_buf[:16] = bytearray([
+            0x09, 0xE8, 0xD8, 0xA0, 0x0B, 0xEA, 0xD8, 0xA0,
+            0x0D, 0xEC, 0xD8, 0xA0, 0x0F, 0xEE, 0xD8, 0xA0])
+        self.set_params(0xE8, param_mv)
+
+        param_buf[:7] = bytearray([0x02, 0x00, 0xE4, 0xE4, 0x88, 0x00, 0x40])
+        self.set_params(0xEB, param_mv[:7])
+
+        param_buf[:2] = bytearray([0x3C, 0x00])
+        self.set_params(0xEC, param_mv[:7])
+
+        param_buf[:16] = bytearray([
+            0xAB, 0x89, 0x76, 0x54, 0x02, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xFF, 0x20, 0x45, 0x67, 0x98, 0xBA])
+        self.set_params(0xED, param_mv)
+
+        param_buf[:6] = bytearray([0x10, 0x0D, 0x04, 0x08, 0x3F, 0x1F])
+        self.set_params(0xEF, param_mv[:6])
+
+        param_buf[:5] = bytearray([0x77, 0x01, 0x00, 0x00, _Command2_BK3])
+        self.set_params(_CND2BKxSEL, param_mv[:5])
+
+        param_buf[0] = 0x08
+        self.set_params(0xEF, param_mv[:1])
+
+        # Command2 OFF
+        param_buf[:5] = bytearray([0x77, 0x01, 0x00, 0x00, _Command1])
+        self.set_params(_CND2BKxSEL, param_mv[:5])
+
+        self.set_params(_DISPON)
+        time.sleep_ms(10)  # NOQA
+
         color_size = lv.color_format_get_size(self._color_space)
         if color_size == 2:  # NOQA
-            pixel_format = 0x50
+            pixel_format = 0x55
         elif color_size == 3:
-            pixel_format = 0x70
+            pixel_format = 0x77
         else:
             raise RuntimeError(
                 'ST7701 IC only supports '
@@ -442,132 +575,3 @@ class ST7701(display_driver_framework.DisplayDriver):
             )
         )
         self.set_params(_MADCTL, param_mv[:1])
-
-        # Command2_BK3
-        param_buf[:5] = bytearray([0x77, 0x01, 0x00, 0x00, _Command2_BK3])
-        self.set_params(_CND2BKxSEL, param_mv[:5])
-
-        param_buf[0] = 0x08
-        self.set_params(0xEF, param_mv[:1])
-
-        # Command2_BK0
-        param_buf[:5] = bytearray([0x77, 0x01, 0x00, 0x00, _Command2_BK0])
-        self.set_params(_CND2BKxSEL, param_mv[:5])
-
-        param_buf[0] = 0x3B
-        param_buf[1] = 0x00
-        self.set_params(_LNESET, param_mv[:2])
-
-        param_buf[0] = 0x0B
-        param_buf[1] = 0x02
-        self.set_params(_PORCTRL, param_mv[:2])
-
-        param_buf[0] = 0x00
-        param_buf[1] = 0x02
-        self.set_params(_INVSET, param_mv[:2])
-
-        param_buf[0] = 0x10
-        self.set_params(_PROMACT, param_mv[:1])
-
-        param_buf[0] = 0x08
-        self.set_params(_COLCTRL, param_mv[:1])
-
-        param_buf[:16] = bytearray([
-            0x00, 0x13, 0x5A, 0x0F, 0x12, 0x07, 0x09, 0x08,
-            0x08, 0x24, 0x07, 0x13, 0x12, 0x6B, 0x73, 0xFF])
-        self.set_params(_PVGAMCTRL, param_mv)
-
-        param_buf[:16] = bytearray([
-            0x00, 0x13, 0x5A, 0x0F, 0x12, 0x07, 0x09, 0x08,
-            0x08, 0x24, 0x07, 0x13, 0x12, 0x6B, 0x73, 0xFF])
-        self.set_params(_NVGAMCTRL, param_mv)
-
-        # Command2_BK1
-        param_buf[:5] = bytearray([0x77, 0x01, 0x00, 0x00, _Command2_BK1])
-        self.set_params(_CND2BKxSEL, param_mv[:5])
-
-        param_buf[0] = 0x5D
-        self.set_params(_VRHS, param_mv[:1])
-
-        param_buf[0] = 0x43
-        self.set_params(_VCOMS, param_mv[:1])
-
-        param_buf[0] = 0x81
-        self.set_params(_VGHSS, param_mv[:1])
-
-        param_buf[0] = 0x80
-        self.set_params(_TESTCMD, param_mv[:1])
-
-        param_buf[0] = 0x43
-        self.set_params(_VGLS, param_mv[:1])
-
-        param_buf[0] = 0x85
-        self.set_params(_PWCTRL1, param_mv[:1])
-
-        param_buf[0] = 0x20
-        self.set_params(_PWCTRL2, param_mv[:1])
-
-        param_buf[0] = 0x78
-        self.set_params(_PDR1, param_mv[:1])
-
-        param_buf[0] = 0x78
-        self.set_params(_PDR2, param_mv[:1])
-
-        param_buf[0] = 0x88
-        self.set_params(_MIPISET1, param_mv[:1])
-        time.sleep_ms(100)  # NOQA
-
-        param_buf[:3] = bytearray([0x00, 0x00, 0x02])
-        self.set_params(_SRCTRL, param_mv[:3])
-
-        param_buf[:11] = bytearray([
-            0x03, 0xA0, 0x00, 0x00, 0x04, 0xA0,
-            0x00, 0x00, 0x00, 0x20, 0x20])
-        self.set_params(_NRCTRL, param_mv[:11])
-
-        param_buf[:13] = bytearray([
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
-        self.set_params(_SECTRL, param_mv[:13])
-
-        param_buf[:4] = bytearray([0x00, 0x00, 0x11, 0x00])
-        self.set_params(_CCCTRL, param_mv[:4])
-
-        param_buf[0] = 0x22
-        param_buf[1] = 0x00
-        self.set_params(_SKCTRL, param_mv[:2])
-
-        param_buf[:16] = bytearray([
-            0x05, 0xEC, 0xA0, 0xA0, 0x07, 0xEE, 0xA0, 0xA0,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
-        self.set_params(0xE5, param_mv)
-
-        param_buf[:4] = bytearray([0x00, 0x00, 0x11, 0x00])
-        self.set_params(0xE6, param_mv[:4])
-
-        param_buf[0] = 0x22
-        param_buf[1] = 0x00
-        self.set_params(0xE7, param_mv[:2])
-
-        param_buf[:16] = bytearray([
-            0x06, 0xED, 0xA0, 0xA0, 0x08, 0xEF, 0xA0, 0xA0,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
-        self.set_params(0xE8, param_mv)
-
-        param_buf[:7] = bytearray([0x00, 0x00, 0x40, 0x40, 0x00, 0x00, 0x00])
-        self.set_params(0xEB, param_mv[:7])
-
-        param_buf[:16] = bytearray([
-            0xFF, 0xFF, 0xFF, 0xBA, 0x0A, 0xBF, 0x45, 0xFF,
-            0xFF, 0x54, 0xFB, 0xA0, 0xAB, 0xFF, 0xFF, 0xFF])
-        self.set_params(0xED, param_mv)
-
-        param_buf[:6] = bytearray([0x10, 0x0D, 0x04, 0x08, 0x3F, 0x1F])
-        self.set_params(0xEF, param_mv[:6])
-
-        # Command2 OFF
-        param_buf[:5] = bytearray([0x77, 0x01, 0x00, 0x00, _Command1])
-        self.set_params(_CND2BKxSEL, param_mv[:5])
-
-        self.set_params(_DISPON)
-        time.sleep_ms(10)  # NOQA
