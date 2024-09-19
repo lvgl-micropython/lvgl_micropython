@@ -2,15 +2,15 @@ from micropython import const  # NOQA
 
 import lvgl as lv  # NOQA
 import lcd_bus  # NOQA
-import display_driver_framework
+import rgb_display_framework
 
 
-STATE_HIGH = display_driver_framework.STATE_HIGH
-STATE_LOW = display_driver_framework.STATE_LOW
-STATE_PWM = display_driver_framework.STATE_PWM
+STATE_HIGH = rgb_display_framework.STATE_HIGH
+STATE_LOW = rgb_display_framework.STATE_LOW
+STATE_PWM = rgb_display_framework.STATE_PWM
 
-BYTE_ORDER_RGB = display_driver_framework.BYTE_ORDER_RGB
-BYTE_ORDER_BGR = display_driver_framework.BYTE_ORDER_BGR
+BYTE_ORDER_RGB = rgb_display_framework.BYTE_ORDER_RGB
+BYTE_ORDER_BGR = rgb_display_framework.BYTE_ORDER_BGR
 
 # SET _CND2BKxSEL TO 0X00
 _Command1 = const(0x00)
@@ -157,7 +157,7 @@ TYPE_HD371001C40 = 15
 TYPE_HD458002C40 = 16
 
 
-class ST7701(display_driver_framework.DisplayDriver):
+class ST7701(rgb_display_framework.RGBDisplayDriver):
     _INVOFF = 0x20  # Color Inversion Off
     _INVON = 0x21  # Color Inversion On
 
@@ -183,9 +183,6 @@ class ST7701(display_driver_framework.DisplayDriver):
         bus_shared_pins=False
     ):
 
-        self._spi_3wire = spi_3wire
-        self._bus_shared_pins = bus_shared_pins
-
         self._wrctrld = 0x00
         self._wrcace = 0x00
 
@@ -206,43 +203,20 @@ class ST7701(display_driver_framework.DisplayDriver):
             color_byte_order=color_byte_order,
             color_space=color_space,
             rgb565_byte_swap=rgb565_byte_swap,
+            spi_3wire=spi_3wire,
+            spi_3wire_shared_pins=bus_shared_pins,
             _cmd_bits=8,
             _param_bits=8,
-            _init_bus=False
+            _init_bus=False,
         )
 
-        self._disp_drv.sw_rotate = 1
-
-    def set_params(self, cmd, params=None):
-        if (
-            not self._initilized or
-            not self._bus_shared_pins
-        ):
-            self._spi_3wire.tx_param(cmd, params)
-
-    def get_params(self, cmd, params):
-        pass
-
-    def _set_memory_location(self, x1, y1, x2, y2):  # NOQA
-        return -1
-
-    def init(self, type):  # NOQA
-        self._spi_3wire.init(8, 8)
+    def _spi_3wire_init(self, type):  # NOQA
         if type < 1 or type > 16:
             raise RuntimeError('Invalid display type')
 
         mod_name = f'_st7701_type{type}'
         mod = __import__(mod_name)
         mod.init(self)
-
-        if self._bus_shared_pins:
-            # shut down the spi3wire prior to initilizing the data bus.
-            # so we don't have a conflict between the bus and the 3wire
-            self._spi_3wire.deinit()
-
-        self._init_bus()  # NOQA
-
-        display_driver_framework.DisplayDriver.init(self)
 
     def set_noise_reduction(self, value):
         if value:

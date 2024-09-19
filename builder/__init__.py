@@ -189,25 +189,19 @@ def generate_manifest(
         manifest_files.append(entry)
 
     for file in displays:
-        if file.lower() in ('st7701', 'st7701s'):
-            file_path = f'{script_dir}/api_drivers/common_api_drivers/display/st7701'
-
-            for file_name in os.listdir(file_path):
-                print(file_name)
-                entry = f"freeze('{file_path}', '{file_name}')"
-                manifest_files.append(entry)
-
-            continue
-
         if not os.path.exists(file):
             tmp_file = (
-                f'{script_dir}/api_drivers/common_api_drivers/display/{file}.py'
+                f'{script_dir}/api_drivers/common_api_drivers/display/{file}'
             )
 
             if not os.path.exists(tmp_file):
-                raise RuntimeError(f'File not found "{file}"')
+                raise RuntimeError(f'Display not found "{file}"')
 
-            file = tmp_file
+            for file_name in os.listdir(tmp_file):
+                print(file_name)
+                entry = f"freeze('{tmp_file}', '{file_name}')"
+                manifest_files.append(entry)
+            continue
 
         print(file)
         file_path, file_name = os.path.split(file)
