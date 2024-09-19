@@ -21,6 +21,9 @@
         mp_obj_t sck;
         mp_obj_t mosi;
         mp_obj_t miso;
+        mp_obj_t data2;
+        mp_obj_t data3;
+        bool quad;
         uint8_t device_count;
         machine_hw_spi_device_obj_t **devices;
         mp_spi_state_t state;

@@ -263,6 +263,8 @@ static void machine_hw_spi_bus_deinit_internal(machine_hw_spi_bus_obj_t *self)
     int miso = (int)mp_obj_get_int(self->miso);
     int mosi = (int)mp_obj_get_int(self->mosi);
     int sck = (int)mp_obj_get_int(self->sck);
+    int data2 = (int)mp_obj_get_int(self->data2);
+    int data3 = (int)mp_obj_get_int(self->data3);
 
     if (miso != -1) {
         esp_rom_gpio_pad_select_gpio(miso);
@@ -278,6 +280,16 @@ static void machine_hw_spi_bus_deinit_internal(machine_hw_spi_bus_obj_t *self)
         esp_rom_gpio_pad_select_gpio(sck);
         esp_rom_gpio_connect_out_signal(sck, SIG_GPIO_OUT_IDX, false, false);
         gpio_set_direction(sck, GPIO_MODE_INPUT);
+    }
+    if (data2 != -1) {
+        esp_rom_gpio_pad_select_gpio(data2);
+        esp_rom_gpio_connect_out_signal(data2, SIG_GPIO_OUT_IDX, false, false);
+        gpio_set_direction(data2, GPIO_MODE_INPUT);
+    }
+    if (data3 != -1) {
+        esp_rom_gpio_pad_select_gpio(data3);
+        esp_rom_gpio_connect_out_signal(data3, SIG_GPIO_OUT_IDX, false, false);
+        gpio_set_direction(data3, GPIO_MODE_INPUT);
     }
 
     self->state = MP_SPI_STATE_STOPPED;
@@ -327,6 +339,9 @@ static void machine_hw_spi_device_transfer(mp_obj_base_t *self_in, size_t len, c
 
         transaction.flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA;
         transaction.length = bits_to_send;
+        if (self->spi_bus->quad) {
+            transaction.flags |= SPI_TRANS_MODE_QIO;
+        }
         spi_device_transmit(spi_device, &transaction);
 
         if (dest != NULL) {
@@ -361,6 +376,10 @@ static void machine_hw_spi_device_transfer(mp_obj_base_t *self_in, size_t len, c
                 transaction->flags |= SPI_TRANS_USE_RXDATA;
             }
 
+            if (self->spi_bus->quad) {
+                transaction.flags |= SPI_TRANS_MODE_QIO;
+            }
+
             spi_device_queue_trans(spi_device, transaction, portMAX_DELAY);
             bits_remaining -= transaction->length;
 
@@ -389,12 +408,14 @@ static void machine_hw_spi_device_transfer(mp_obj_base_t *self_in, size_t len, c
 
 mp_obj_t machine_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
 
-    enum { ARG_host, ARG_mosi, ARG_miso, ARG_sck };
+    enum { ARG_host, ARG_mosi, ARG_miso, ARG_sck, ARG_data2, ARG_data3 };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_host,     MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
         { MP_QSTR_mosi,     MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
         { MP_QSTR_miso,     MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-        { MP_QSTR_sck,      MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT }
+        { MP_QSTR_sck,      MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
+        { MP_QSTR_data2,    MP_ARG_KW_ONLY | MP_ARG_INT,  { .u_int = -1 } },
+        { MP_QSTR_data3,    MP_ARG_KW_ONLY | MP_ARG_INT,  { .u_int = -1 } },
     };
 
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
@@ -404,6 +425,8 @@ mp_obj_t machine_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, s
     int mosi = (int)args[ARG_mosi].u_int;
     int miso = (int)args[ARG_miso].u_int;
     int sck = (int)args[ARG_sck].u_int;
+    int data2 = (int)args[ARG_data2].u_int;
+    int data3 = (int)args[ARG_data3].u_int;
 
     machine_hw_spi_bus_obj_t *self;
 
@@ -427,6 +450,8 @@ mp_obj_t machine_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, s
         if ((int)mp_obj_get_int(self->mosi) != mosi) reconfigure = true;
         if ((int)mp_obj_get_int(self->miso) != miso) reconfigure = true;
         if ((int)mp_obj_get_int(self->sck) != sck) reconfigure = true;
+        if ((int)mp_obj_get_int(self->data2) != data2) reconfigure = true;
+        if ((int)mp_obj_get_int(self->data3) != data3) reconfigure = true;
     }
 
     if (reconfigure) {
@@ -438,6 +463,14 @@ mp_obj_t machine_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, s
         self->miso = mp_obj_new_int((mp_int_t)miso);
         self->mosi = mp_obj_new_int((mp_int_t)mosi);
         self->sck = mp_obj_new_int((mp_int_t)sck);
+        self->data2 = mp_obj_new_int((mp_int_t)data2);
+        self->data3 = mp_obj_new_int((mp_int_t)data3);
+
+        if (data2 != -1 && data3 != -1) {
+            self->quad = true;
+        } else {
+            self->quad = false;
+        }
     }
 
     return MP_OBJ_FROM_PTR(self);
@@ -448,12 +481,19 @@ void machine_hw_spi_bus_initilize(machine_hw_spi_bus_obj_t *bus)
 {
     if (bus->state != MP_SPI_STATE_STOPPED) return;
 
+    uint32_t flags = 0;
+
+    if (self->quad) {
+        flags |= SPICOMMON_BUSFLAG_QUAD;
+    }
+
     spi_bus_config_t buscfg = {
         .miso_io_num = (int)mp_obj_get_int(bus->miso),
         .mosi_io_num = (int)mp_obj_get_int(bus->mosi),
         .sclk_io_num = (int)mp_obj_get_int(bus->sck),
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
+        .data2_io_num = (int)mp_obj_get_int(bus->data2),
+        .data3_io_num = (int)mp_obj_get_int(bus->data3),
+        .flags = flags,
         .max_transfer_sz = SPI_LL_DMA_MAX_BIT_LEN / 8
     };
 
@@ -495,15 +535,15 @@ spi_host_device_t machine_hw_spi_get_host(mp_obj_t in) {
 
 mp_obj_t machine_hw_spi_device_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
 
-    enum { ARG_spi_bus, ARG_freq, ARG_cs, ARG_polarity, ARG_phase, ARG_bits, ARG_firstbit };
+    enum { ARG_spi_bus, ARG_freq, ARG_cs, ARG_polarity, ARG_phase, ARG_bits, ARG_firstbit, ARG_quad};
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_spi_bus,  MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_OBJ },
         { MP_QSTR_freq,     MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
         { MP_QSTR_cs,       MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-        { MP_QSTR_polarity, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 0} },
-        { MP_QSTR_phase,    MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 0} },
-        { MP_QSTR_bits,     MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 8} },
-        { MP_QSTR_firstbit, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = MICROPY_PY_MACHINE_SPI_MSB} },
+        { MP_QSTR_polarity, MP_ARG_KW_ONLY | MP_ARG_INT,  {.u_int = 0} },
+        { MP_QSTR_phase,    MP_ARG_KW_ONLY | MP_ARG_INT,  {.u_int = 0} },
+        { MP_QSTR_bits,     MP_ARG_KW_ONLY | MP_ARG_INT,  {.u_int = 8} },
+        { MP_QSTR_firstbit, MP_ARG_KW_ONLY | MP_ARG_INT,  {.u_int = MICROPY_PY_MACHINE_SPI_MSB} }
     };
 
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
@@ -517,7 +557,6 @@ mp_obj_t machine_hw_spi_device_make_new(const mp_obj_type_t *type, size_t n_args
     self->spi_bus = MP_OBJ_TO_PTR(args[ARG_spi_bus].u_obj);
     self->cs = mp_obj_new_int((mp_int_t)cs);
     self->bits =  (uint8_t)args[ARG_bits].u_int;
-    
     self->deinit = &machine_hw_spi_device_deinit_callback;
 
     spi_device_interface_config_t devcfg = {
