@@ -126,6 +126,10 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     self->panel_io_config.flags.cs_high_active = (unsigned int)args[ARG_cs_high_active].u_bool;
     self->panel_io_config.flags.octal_mode = 0;
 
+    if (spi_bus->quad) {
+        self->panel_io_config.flags.quad_mode = 1;
+    }
+
     self->panel_io_handle.del = &spi_del;
     self->panel_io_handle.init = &spi_init;
     self->panel_io_handle.get_lane_count = &spi_get_lane_count;
