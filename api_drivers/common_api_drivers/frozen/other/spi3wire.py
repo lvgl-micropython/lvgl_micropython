@@ -128,11 +128,14 @@ class Spi3Wire:
             self._sck_pin(1)
             time.sleep_us(1)  # NOQA
 
-    def tx_param(self, cmd, params):
+    def tx_param(self, cmd, params=None):
         if self._cs_pin is None:
             return
 
         self.__write_cmd(cmd)
+
+        if params is None:
+            return
 
         for param in params:
             self.__write_param(param)

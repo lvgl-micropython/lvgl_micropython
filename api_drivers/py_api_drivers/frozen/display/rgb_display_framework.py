@@ -1,3 +1,4 @@
+import lvgl as lv
 import display_driver_framework
 
 STATE_HIGH = display_driver_framework.STATE_HIGH
