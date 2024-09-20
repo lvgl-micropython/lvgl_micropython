@@ -23,7 +23,13 @@
         mp_obj_t miso;
         mp_obj_t data2;
         mp_obj_t data3;
+        mp_obj_t data4;
+        mp_obj_t data5;
+        mp_obj_t data6;
+        mp_obj_t data7;
+        bool dual;
         bool quad;
+        bool octal;
         uint8_t device_count;
         machine_hw_spi_device_obj_t **devices;
         mp_spi_state_t state;
@@ -38,6 +44,9 @@
         uint8_t phase;
         uint8_t bits;
         uint8_t firstbit;
+        bool dual;
+        bool quad;
+        bool octal;
         bool active;
         mp_obj_t cs;
         machine_hw_spi_bus_obj_t *spi_bus;
