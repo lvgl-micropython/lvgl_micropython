@@ -460,7 +460,6 @@ class DisplayDriver:
         mod = __import__(mod_name)
         mod.init()
         del sys.modules[mod_name]
-        # =======================================
 
         full_frame_size = (
             self.display_width *
