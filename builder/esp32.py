@@ -639,7 +639,6 @@ def setup_idf_environ():
 
     if IDF_ENVIRON_SET:
         env = os.environ
-        IDF_ENVIRON_SET = True
     elif has_correct_idf():
         idf_path = get_idf_path()
 
@@ -668,22 +667,8 @@ def setup_idf_environ():
         idf_path = 'lib/esp-idf'
 
         if not os.path.exists(os.path.join(idf_path, 'export.sh')):
-            args = sys.argv[:]
-
-            if 'submodules' not in args:
-                args.insert(2, 'submodules')
-
-            args = " ".join(args)
-
-            sys.stderr.write(
-                f'ESP-IDF version {IDF_VER} is needed to compile\n'
-            )
-            sys.stderr.write(
-                'Please rerun the build using the command below...\n'
-            )
-            sys.stderr.write(f'"{sys.executable} {args}"\n\n')
-            sys.stderr.flush()
-            sys.exit(-1)
+            submodules()
+            return setup_idf_environ()
 
         environ_helper(idf_path)
 
