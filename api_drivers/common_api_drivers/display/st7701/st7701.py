@@ -211,9 +211,6 @@ class ST7701(rgb_display_framework.RGBDisplayDriver):
         )
 
     def _spi_3wire_init(self, type):  # NOQA
-        if type < 1 or type > 16:
-            raise RuntimeError('Invalid display type')
-
         mod_name = f'_st7701_type{type}'
         mod = __import__(mod_name)
         mod.init(self)

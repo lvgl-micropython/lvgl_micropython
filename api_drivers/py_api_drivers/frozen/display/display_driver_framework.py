@@ -293,34 +293,7 @@ class DisplayDriver:
 
         self._rotation = rotation
 
-        if self._disp_drv.sw_rotate:
-            rotation *= 900
-
-            for layer in (
-                self._disp_drv.get_layer_top(),
-                self._disp_drv.get_layer_sys(),
-                self._disp_drv.layer_bottom()
-            ):
-                layer.update_layout()
-                width = layer.get_width()
-                height = layer.get_height()
-
-                layer.set_style_transform_pivot_x(int(width / 2), 0)
-                layer.set_style_transform_pivot_y(int(height / 2), 0)
-                layer.set_style_transform_rotation(rotation, 0)
-
-            for i in range(self._disp_drv.screen_cnt):
-                scrn = self._disp_drv.screens[i]
-
-                scrn.update_layout()
-                width = scrn.get_width()
-                height = scrn.get_height()
-
-                scrn.set_style_transform_pivot_x(int(width / 2), 0)
-                scrn.set_style_transform_pivot_y(int(height / 2), 0)
-                scrn.set_style_transform_rotation(rotation, 0)
-
-        elif self._initilized:
+        if self._initilized and not isinstance(self._data_bus, lcd_bus.RGBBus):
             self._param_buf[0] = (self._madctl(
                 self._color_byte_order, self._ORIENTATION_TABLE, ~rotation
             ))
