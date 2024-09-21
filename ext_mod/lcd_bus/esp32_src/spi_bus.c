@@ -73,10 +73,12 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
         ARG_freq,
         ARG_cs,
         ARG_dc_low_on_data,
-        ARG_sio_mode,
         ARG_lsb_first,
         ARG_cs_high_active,
-        ARG_spi_mode
+        ARG_spi_mode,
+        ARG_dual,
+        ARG_quad,
+        ARG_octal
     };
 
     const mp_arg_t make_new_args[] = {
@@ -85,11 +87,12 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
         { MP_QSTR_freq,             MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED      },
         { MP_QSTR_cs,               MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1       } },
         { MP_QSTR_dc_low_on_data,   MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false   } },
-        { MP_QSTR_sio_mode,         MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false   } },
         { MP_QSTR_lsb_first,        MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false   } },
         { MP_QSTR_cs_high_active,   MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false   } },
         { MP_QSTR_spi_mode,         MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 0        } },
-
+        { MP_QSTR_dual,             MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false   } },
+        { MP_QSTR_quad,             MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false   } },
+        { MP_QSTR_octal,            MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false   } },
     };
 
     mp_arg_val_t args[MP_ARRAY_SIZE(make_new_args)];
@@ -121,10 +124,15 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     self->panel_io_config.on_color_trans_done = &bus_trans_done_cb;
     self->panel_io_config.user_ctx = self;
     self->panel_io_config.flags.dc_low_on_data = (unsigned int)args[ARG_dc_low_on_data].u_bool;
-    self->panel_io_config.flags.sio_mode = (unsigned int)args[ARG_sio_mode].u_bool;
     self->panel_io_config.flags.lsb_first = (unsigned int)args[ARG_lsb_first].u_bool;
     self->panel_io_config.flags.cs_high_active = (unsigned int)args[ARG_cs_high_active].u_bool;
-    self->panel_io_config.flags.octal_mode = 0;
+    self->panel_io_config.flags.sio_mode = (unsigned int)args[ARG_dual].u_bool;
+    self->panel_io_config.flags.quad_mode = (unsigned int)args[ARG_quad].u_bool;
+    self->panel_io_config.flags.octal_mode = (unsigned int)args[ARG_octal].u_bool;
+
+    if (!spi_bus->dual) self->panel_io_config.flags.sio_mode = 0;
+    if (!spi_bus->quad) self->panel_io_config.flags.quad_mode = 0;
+    if (!spi_bus->octal) self->panel_io_config.flags.octal_mode = 0;
 
     self->panel_io_handle.del = &spi_del;
     self->panel_io_handle.init = &spi_init;
@@ -143,10 +151,11 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     printf("spi_mode=%d\n", self->panel_io_config.spi_mode);
     printf("pclk_hz=%i\n", self->panel_io_config.pclk_hz);
     printf("dc_low_on_data=%d\n", self->panel_io_config.flags.dc_low_on_data);
-    printf("sio_mode=%d\n", self->panel_io_config.flags.sio_mode);
     printf("lsb_first=%d\n", self->panel_io_config.flags.lsb_first);
     printf("cs_high_active=%d\n", self->panel_io_config.flags.cs_high_active);
-    printf("octal_mode=%d\n", self->panel_io_config.flags.octal_mode);
+    printf("dual=%d\n", self->panel_io_config.flags.sio_mode);
+    printf("quad=%d\n", self->panel_io_config.flags.quad_mode);
+    printf("octal=%d\n", self->panel_io_config.flags.octal_mode);
 #endif
 
     return MP_OBJ_FROM_PTR(self);
@@ -228,6 +237,10 @@ mp_lcd_err_t spi_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
 
     if (self->panel_io_config.flags.sio_mode) {
         *lane_count = 2;
+    } else if (self->panel_io_config.flags.quad_mode) {
+        *lane_count = 4;
+    } else if (self->panel_io_config.flags.octal_mode) {
+        *lane_count = 8;
     } else {
         *lane_count = 1;
     }

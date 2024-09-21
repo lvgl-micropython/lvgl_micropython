@@ -529,7 +529,8 @@ def build_manifest(
 
     generate_manifest(
         script_dir, lvgl_api, manifest_path,
-        displays, indevs, frozen_manifest
+        displays, indevs, frozen_manifest,
+        f'{script_dir}/api_drivers/common_api_drivers/frozen/other/spi3wire.py'
     )
 
 
@@ -737,17 +738,18 @@ def setup_idf_environ():
 
 
 def add_components():
-    port_path = f'{SCRIPT_DIR}/lib/micropython/ports/esp32'
-    for pth in ('esp32', 'esp32c3', 'esp32s2', 'esp32s3'):
-        pth = os.path.join(port_path, f'main_{pth}', 'idf_component.yml')
-        with open(pth, 'rb') as f:
-            data = f.read().decode('utf-8')
-
-        if 'espressif/esp_lcd_panel_io_additions: "~1.0.1"' not in data:
-            data += '\n  espressif/esp_io_expander: "~1.0.1"'
-            data += '\n  espressif/esp_lcd_panel_io_additions: "~1.0.1"\n'
-            with open(pth, 'wb') as f:
-                f.write(data.encode('utf-8'))
+    # port_path = f'{SCRIPT_DIR}/lib/micropython/ports/esp32'
+    # for pth in ('esp32', 'esp32c3', 'esp32s2', 'esp32s3'):
+    #     pth = os.path.join(port_path, f'main_{pth}', 'idf_component.yml')
+    #     with open(pth, 'rb') as f:
+    #         data = f.read().decode('utf-8')
+    #
+    #     if 'espressif/esp_lcd_panel_io_additions: "~1.0.1"' not in data:
+    #         data += '\n  espressif/esp_io_expander: "~1.0.1"'
+    #         data += '\n  espressif/esp_lcd_panel_io_additions: "~1.0.1"\n'
+    #         with open(pth, 'wb') as f:
+    #             f.write(data.encode('utf-8'))
+    pass
 
 
 def submodules():

@@ -1,6 +1,7 @@
 import micropython  # NOQA
 import time
 import gc
+import sys
 import machine  # NOQA
 from micropython import const  # NOQA
 
@@ -207,6 +208,8 @@ class DisplayDriver:
 
             self._frame_buffer1 = frame_buffer1
             self._frame_buffer2 = frame_buffer2
+
+            self._init_disp_bus = _init_bus
 
             if _init_bus:
                 self._init_bus()
@@ -460,7 +463,7 @@ class DisplayDriver:
     def get_vertical_resolution(self):
         return self._disp_drv.get_vertical_resolution()
 
-    def init(self):
+    def init(self, type=None):  # NOQA
         # the following code looks at the frame buffer size compared to what
         # the full frame size is. If they are the same then there is no reason
         # to set the memory address for where the data is to be written to every
@@ -471,6 +474,20 @@ class DisplayDriver:
         # if this behavior is not wanted then don't call this function at the
         # end of your init method, make sure to set self._initilized = True
         # at the end of your init method.
+
+        # this next code block is to keep the memory consumptiomn low.
+        # it allows for dynamically importing the initilization commands
+        # and then deletimng them from memory since they are a run
+        # once and done
+        if type is None:
+            mod_name = f'_{self.__class__.__name__.lower()}_init'
+        else:
+            mod_name = f'_{self.__class__.__name__.lower()}_init_type{type}'
+
+        mod = __import__(mod_name)
+        mod.init()
+        del sys.modules[mod_name]
+        # =======================================
 
         full_frame_size = (
             self.display_width *
