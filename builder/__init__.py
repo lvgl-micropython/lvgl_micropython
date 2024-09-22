@@ -116,6 +116,7 @@ def generate_manifest(
 
     frozen_manifest_files = [
         f'{api_path}/frozen/display/display_driver_framework.py',
+        f'{api_path}/frozen/display/rgb_display_framework.py',
         f'{api_path}/frozen/indev/touch_calibration/touch_cal_data.py',
         f'{api_path}/frozen/indev/touch_calibration/touch_calibrate.py',
         f'{api_path}/frozen/indev/_indev_base.py',
