@@ -26,7 +26,24 @@ class PointerDriver(_indev_base.IndevBase):
         self._set_type(lv.INDEV_TYPE.POINTER)  # NOQA
         self._cal_running = None
         self._startup_rotation = startup_rotation
+
         self._indev_drv.enable(True)
+
+    def enable_input_priority(self):
+        self._indev_drv.set_mode(lv.INDEV_MODE.EVENT)
+        self.__timer = lv.timer_create(self.__ip_callback, 33, None)  # NOQA
+        self.__timer.set_repeat_count(-1)
+
+    def __ip_callback(self, _):
+        self.read()
+        last_state = self._last_state
+
+        while self._last_state == self.PRESSED:
+            lv.refr_now(self._disp_drv)
+            self.read()
+
+        if last_state == self.PRESSED:
+            lv.refr_now(self._disp_drv)
 
     def __cal_callback(self, alphaX, betaX, deltaX, alphaY, betaY, deltaY):
         self._cal.alphaX = alphaX
