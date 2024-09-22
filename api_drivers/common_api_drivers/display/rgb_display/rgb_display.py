@@ -1,4 +1,6 @@
 import rgb_display_framework
+import lvgl as lv
+
 
 STATE_HIGH = rgb_display_framework.STATE_HIGH
 STATE_LOW = rgb_display_framework.STATE_LOW
