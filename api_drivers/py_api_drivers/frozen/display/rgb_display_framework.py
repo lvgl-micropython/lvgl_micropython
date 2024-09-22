@@ -90,6 +90,4 @@ class RGBDisplayDriver(display_driver_framework.DisplayDriver):
         if not self._init_disp_bus:
             self._init_bus()  # NOQA
 
-        self._disp_drv.sw_rotate = 1
-
         self._initilized = True

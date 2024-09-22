@@ -9,4 +9,6 @@ BYTE_ORDER_BGR = rgb_display_framework.BYTE_ORDER_BGR
 
 
 class RGBDisplay(rgb_display_framework.RGBDisplayDriver):
-    pass
+
+    def init(self):
+        rgb_display_framework.RGBDisplayDriver.init(self, None)
