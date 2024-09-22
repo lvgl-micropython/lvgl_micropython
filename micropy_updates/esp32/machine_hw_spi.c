@@ -6,6 +6,7 @@
  * Copyright (c) 2017 "Eric Poulsen" <eric@zyxod.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
@@ -370,11 +371,11 @@ static void machine_hw_spi_device_transfer(mp_obj_base_t *self_in, size_t len, c
             }
 
             if (self->dual) {
-                transaction.flags |= SPI_TRANS_MODE_DIO;
+                transaction->flags |= SPI_TRANS_MODE_DIO;
             } else if (self->quad) {
-                transaction.flags |= SPI_TRANS_MODE_QIO;
+                transaction->flags |= SPI_TRANS_MODE_QIO;
             } else if (self->octal) {
-                transaction.flags |= SPI_TRANS_MODE_OCT;
+                transaction->flags |= SPI_TRANS_MODE_OCT;
             }
 
             spi_device_queue_trans(spi_device, transaction, portMAX_DELAY);
@@ -438,12 +439,12 @@ mp_obj_t machine_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, s
     if (mosi != -1 && mosi != -1) dual = true;
 
     if (args[ARG_quad_pins].u_obj != mp_const_none) {
-        p_obj_tuple_t *quad_data_pins = MP_OBJ_TO_PTR(args[ARG_quad_pins].u_obj);
+        mp_obj_tuple_t *quad_data_pins = MP_OBJ_TO_PTR(args[ARG_quad_pins].u_obj);
 
         if (!dual) {
             mp_raise_msg(
                 &mp_type_ValueError,
-                MP_ERROR_TEXT("You MUST supply both the MISO and MOSI pins to use quad mode"),
+                MP_ERROR_TEXT("You MUST supply both the MISO and MOSI pins to use quad mode")
             );
             return mp_const_none;
         }
@@ -456,19 +457,19 @@ mp_obj_t machine_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, s
             return mp_const_none;
         }
 
-        data2 = (int)mp_obj_get_int(quad_data_pins->items[0])
-        data3 = (int)mp_obj_get_int(quad_data_pins->items[1])
+        data2 = (int)mp_obj_get_int(quad_data_pins->items[0]);
+        data3 = (int)mp_obj_get_int(quad_data_pins->items[1]);
 
         quad = true;
         octal = false;
 
-    } else if (args[ARG_data_pins].u_obj != mp_const_none) {
-        p_obj_tuple_t *octal_data_pins = MP_OBJ_TO_PTR(args[ARG_octal_pins].u_obj);
+    } else if (args[ARG_octal_pins].u_obj != mp_const_none) {
+        mp_obj_tuple_t *octal_data_pins = MP_OBJ_TO_PTR(args[ARG_octal_pins].u_obj);
 
         if (!dual) {
             mp_raise_msg(
                 &mp_type_ValueError,
-                MP_ERROR_TEXT("You MUST supply both the MISO and MOSI pins to use octal mode"),
+                MP_ERROR_TEXT("You MUST supply both the MISO and MOSI pins to use octal mode")
             );
             return mp_const_none;
         }
@@ -482,12 +483,12 @@ mp_obj_t machine_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, s
             return mp_const_none;
         }
 
-        data2 = (int)mp_obj_get_int(octal_data_pins->items[0])
-        data3 = (int)mp_obj_get_int(octal_data_pins->items[1])
-        data4 = (int)mp_obj_get_int(octal_data_pins->items[2])
-        data5 = (int)mp_obj_get_int(octal_data_pins->items[3])
-        data6 = (int)mp_obj_get_int(octal_data_pins->items[4])
-        data7 = (int)mp_obj_get_int(octal_data_pins->items[5])
+        data2 = (int)mp_obj_get_int(octal_data_pins->items[0]);
+        data3 = (int)mp_obj_get_int(octal_data_pins->items[1]);
+        data4 = (int)mp_obj_get_int(octal_data_pins->items[2]);
+        data5 = (int)mp_obj_get_int(octal_data_pins->items[3]);
+        data6 = (int)mp_obj_get_int(octal_data_pins->items[4]);
+        data7 = (int)mp_obj_get_int(octal_data_pins->items[5]);
 
         quad = true;
         octal = true;
@@ -551,9 +552,9 @@ void machine_hw_spi_bus_initilize(machine_hw_spi_bus_obj_t *bus)
 
     uint32_t flags = 0;
 
-    if (self->dual) flags |= SPICOMMON_BUSFLAG_DUAL;
-    if (self->quad) flags |= SPICOMMON_BUSFLAG_QUAD;
-    if (self->octal) flags |= SPICOMMON_BUSFLAG_OCTAL;
+    if (bus->dual) flags |= SPICOMMON_BUSFLAG_DUAL;
+    if (bus->quad) flags |= SPICOMMON_BUSFLAG_QUAD;
+    if (bus->octal) flags |= SPICOMMON_BUSFLAG_OCTAL;
 
     spi_bus_config_t buscfg = {
         .miso_io_num = (int)mp_obj_get_int(bus->miso),

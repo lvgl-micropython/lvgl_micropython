@@ -31,19 +31,8 @@ LVGL_MPY_METADATA = $(BUILD)/lv_mpy.json
 
 
 SRC_USERMOD_LIB_C += $(shell find $(LVGL_DIR)/src -type f -name "*.c")
-SRC_USERMOD_LIB_C += $(LVGL_ADDON_DIR)/src/color_addons.c
 SRC_USERMOD_LIB_C += $(CURRENT_DIR)/mem_core.c
 SRC_USERMOD_C += $(LVGL_MPY)
-
-ifneq (,$(findstring stm32, $(LV_PORT)))
-    CFLAGS_USERMOD += -DMP_SOFT_MATH=1
-    SRC_USERMOD_LIB_C += $(LVGL_ADDON_DIR)/src/soft_math.c
-endif
-
-ifneq (,$(findstring rp2, $(LV_PORT)))
-    CFLAGS_USERMOD += -DMP_SOFT_MATH=1
-    SRC_USERMOD_LIB_C += $(LVGL_ADDON_DIR)/src/soft_math.c
-endif
 
 $(LVGL_MPY): $(ALL_LVGL_SRC) $(LVGL_BINDING_DIR)/gen/$(GEN_SCRIPT)_api_gen_mpy.py
 	$(ECHO) "LVGL-GEN $@"
