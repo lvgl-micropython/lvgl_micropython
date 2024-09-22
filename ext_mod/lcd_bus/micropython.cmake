@@ -17,11 +17,7 @@ if(ESP_PLATFORM)
         ${CMAKE_CURRENT_LIST_DIR}/esp32_src/rgb_bus.c
     )
 
-    list(APPEND LCD_INCLUDES
-        ${CMAKE_CURRENT_LIST_DIR}/../../lib/micropython/ports/esp32/managed_components/espressif__esp_io_expander/include
-        ${CMAKE_CURRENT_LIST_DIR}/../../lib/micropython/ports/esp32/managed_components/espressif__esp_lcd_panel_io_additions/include
-    )
-
+    l
     # gets esp_lcd include paths
     idf_component_get_property(ESP_LCD_INCLUDES esp_lcd INCLUDE_DIRS)
     idf_component_get_property(ESP_LCD_DIR esp_lcd COMPONENT_DIR)
