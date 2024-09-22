@@ -17,7 +17,6 @@ if(ESP_PLATFORM)
         ${CMAKE_CURRENT_LIST_DIR}/esp32_src/rgb_bus.c
     )
 
-    l
     # gets esp_lcd include paths
     idf_component_get_property(ESP_LCD_INCLUDES esp_lcd INCLUDE_DIRS)
     idf_component_get_property(ESP_LCD_DIR esp_lcd COMPONENT_DIR)
