@@ -33,6 +33,7 @@ for the binding.
 _____________________________________________
 
 * Supported Display IC's
+  * ICs not listed below can often be handled with generic drivers like "rgb_display"
   * GC9A01
   * HX8357B
   * HX8357D
@@ -90,14 +91,14 @@ unaware of the bus that is being used. To do this i made the I2C driver work in 
 
 Here is a code example of how to use the I2C bus with a touch driver.
 
+```py
+from i2c import I2C
+import ft5x06
 
-    from i2c import I2C
-    import ft5x06
-
-    i2c_bus = I2C.Bus(host=1, sda=10, sdl=11)
-    touch_i2c = I2C.Device(i2c_bus, ft5x06.I2C_ADDR, ft5x06.BITS)
-    touch = ft5x06.FT5x06(touch_i2c)
-
+i2c_bus = I2C.Bus(host=1, sda=10, sdl=11)
+touch_i2c = I2C.Device(i2c_bus, ft5x06.I2C_ADDR, ft5x06.BITS)
+touch = ft5x06.FT5x06(touch_i2c)
+```
 
 If a touch driver doesn't have the variable `I2C_ADDR` or `BITS` then that driver 
 doesn't support the I2C bus.
@@ -121,38 +122,38 @@ ESP32-ALL
 * `SPI`: The `machine.SPI` class has undergone a HUGE change. It is now split into 2 pieces. `machine.SPI.Bus` and `machine.SPI.Device`
   They exactly what they seem. It is easier to show a code example then it is to explain it.
   
+```py
+from machine import SPI
 
-      from machine import SPI
+spi_bus = SPI.Bus(
+    host=1,
+    mosi=15,
+    miso=16,
+    sck=10
+)
       
-      spi_bus = SPI.Bus(
-          host=1,
-          mosi=15,
-          miso=16,
-          sck=10
-      )
+spi_device = SPI.Device(
+    spi_bus=spi_bus,
+    freq=10000000,
+    cs=3,
+    polarity=0,
+    phase=0,
+    bits=8,
+    first_bit=SPI.MSB
+)
       
-      spi_device = SPI.Device(
-          spi_bus=spi_bus,
-          freq=10000000,
-          cs=3,
-          polarity=0,
-          phase=0,
-          bits=8,
-          first_bit=SPI.MSB
-      )
+# if you want to delete a device from being used you have to deinit it first
+# and then you can delete it
+spi_device.deinit()
+del spi_device
       
-      # if you want to delete a device from being used you have to deinit it first
-      # and then you can delete it
-      spi_device.deinit()
-      del spi_device
+# if you want to stop using a bus and all devices attached to it
+del spi_bus
+del spi_device
       
-      # if you want to stop using a bus and all devices attached to it
-      del spi_bus
-      del spi_device
-      
-      # The SPI.Bus instance you need to pass to machine.SDCard, lcd_bus.SPIBus
-      # and any of the touch drivers that use SPI. 
-
+# The SPI.Bus instance you need to pass to machine.SDCard, lcd_bus.SPIBus
+# and any of the touch drivers that use SPI. 
+```
 
 All methods that existed for the original `machine.SPI` are available in 
 the `machine.SPI.Device` class. They work exactly how they did before.
@@ -206,7 +207,7 @@ installed (gcc, clang, msvc) and the necessary support libs.
 
 ### *Requirements*
 _________________
-compiling for ESP32
+Compiling for ESP32
   * Ubuntu (Linux): you can install all of these using `apt-get install` 
     * build-essential
     * cmake
@@ -336,11 +337,10 @@ ________________________
 
 The next few arguments are optional to some degree.
 
-  * submodules\*\*: collects all needed dependencies to perform the build
-  * clean: cleans the build environment
+  * submodules\*\*: collects all needed dependencies to perform the build.  Usually not needed because it is automatic.
+  * clean: cleans the build environment.  Often unnecessary.
   * mpy_cross\*\*: compiles mpy-cross 
-               this is not used for all builds. if it is not supported it will do nothing.
-
+               this is not used for all builds. if it is not supported it will do nothing.  In most cases it is automatic.
 
 **must be run only one time when the build is intially started. after that you will not need 
 to add these arguments. There is internal checking that is done to see if the argument needs to 
@@ -598,21 +598,14 @@ ___________
 ## *Build Command Examples*
 ___________________________
 
-build with submodules and mpy_cross
+Build for an ESP32-S3 processor with Octal SPIRAM and the given display and input drivers
 
-    python3 make.py esp32 submodules clean mpy_cross BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT DISPLAY=st7796 INDEV=gt911
+    python3 make.py esp32 BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT DISPLAY=st7796 INDEV=gt911
 
-build without submodules or mpy_cross
-
-    python3 make.py esp32 clean BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT DISPLAY=st7796 INDEV=gt911
-
-
-I always recommend building with the clean command, this will ensure you get a good fresh build.
-
+If you have problems on builds after the first one, you can try adding the "clean" keyword to clear out residue from previous builds.
 
 I will provide directions on how to use the driver framework and also the drivers that are included
 with the binding in the coming weeks.
-
 
 <br>
 
@@ -621,7 +614,7 @@ The build system compiles the latest version of SDL2 so the list is pretty long 
 
 To build for Unix use the following build command
 
-    python3 make.py unix mpy_cross submodules clean DISPLAY=sdl_display INDEV=sdl_pointer
+    python3 make.py unix DISPLAY=sdl_display INDEV=sdl_pointer
 
 
 Couple of notes:
@@ -634,54 +627,50 @@ Couple of notes:
 
 
 Here is some example code for the unix port
+```py
+from micropython import const  # NOQA
 
+_WIDTH = const(480)
+_HEIGHT = const(320)
 
-    from micropython import const  # NOQA
+_BUFFER_SIZE = _WIDTH * _HEIGHT * 3
 
-    _WIDTH = const(480)
-    _HEIGHT = const(320)
-    
-    _BUFFER_SIZE = _WIDTH * _HEIGHT * 3
-    
-    import lcd_bus  # NOQA
-    
-    bus = lcd_bus.SDLBus(flags=0)
-    
-    buf1 = bus.allocate_framebuffer(_BUFFER_SIZE, 0)
-    
-    import lvgl as lv  # NOQA
-    import sdl_display  # NOQA
-    
-    lv.init()
-    
-    display = sdl_display.SDLDisplay(
-        data_bus=bus,
-        display_width=_WIDTH,
-        display_height=_HEIGHT,
-        frame_buffer1=buf1,
-        color_space=lv.COLOR_FORMAT.RGB888
-    )
-    
-    display.init()
-    
-    import sdl_pointer
-    
-    mouse = sdl_pointer.SDLPointer()
-    
-    scrn = lv.screen_active()
-    scrn.set_style_bg_color(lv.color_hex(0x000000), 0)
-    
-    slider = lv.slider(scrn)
-    slider.set_size(300, 25)
-    slider.center()
-    
-    
-    import task_handler
-    # the duration needs to be set to 5 to have a good response from the mouse.
-    # There is a thread that runs that facilitates double buffering. 
-    th = task_handler.TaskHandler(duration=5)
+import lcd_bus  # NOQA
 
+bus = lcd_bus.SDLBus(flags=0)
 
+buf1 = bus.allocate_framebuffer(_BUFFER_SIZE, 0)
+
+import lvgl as lv  # NOQA
+import sdl_display  # NOQA
+
+lv.init()
+
+display = sdl_display.SDLDisplay(
+    data_bus=bus,
+    display_width=_WIDTH,
+    display_height=_HEIGHT,
+    frame_buffer1=buf1,
+    color_space=lv.COLOR_FORMAT.RGB888
+)
+display.init()
+
+import sdl_pointer
+
+mouse = sdl_pointer.SDLPointer()
+
+scrn = lv.screen_active()
+scrn.set_style_bg_color(lv.color_hex(0x000000), 0)
+
+slider = lv.slider(scrn)
+slider.set_size(300, 25)
+slider.center()
+
+import task_handler
+# the duration needs to be set to 5 to have a good response from the mouse.
+# There is a thread that runs that facilitates double buffering. 
+th = task_handler.TaskHandler(duration=5)
+```
 
 The touch screen drivers will handle the rotation that you set to the display.
 There is a single caviat to this. You MUST set up and initilize the display then 
@@ -694,106 +683,103 @@ store calibration data for the touch screen. In the exmaple below it shows how
 to properly create a display driver and touch driver and how to set the rotation 
 and also the calibration storage.
 
+```py
+import lcd_bus
+from micropython import const
 
-    import lcd_bus
-    
-    from micropython import const
-    
-    # display settings
-    _WIDTH = const(320)
-    _HEIGHT = const(480)
-    _BL = const(45)
-    _RST = const(4)
-    _DC = const(0)
-    _WR = const(47)
-    _FREQ = const(20000000)
-    _DATA0 = const(9)
-    _DATA1 = const(46)
-    _DATA2 = const(3)
-    _DATA3 = const(8)
-    _DATA4 = const(18)
-    _DATA5 = const(17)
-    _DATA6 = const(16)
-    _DATA7 = const(15)
-    _BUFFER_SIZE = const(30720)
-    
-    _SCL = const(5)
-    _SDA = const(6)
-    _TP_FREQ = const(100000)
-    
-    
-    display_bus = lcd_bus.I80Bus(
-        dc=_DC,
-        wr=_WR,
-        freq=_FREQ,
-        data0=_DATA0,
-        data1=_DATA1,
-        data2=_DATA2,
-        data3=_DATA3,
-        data4=_DATA4,
-        data5=_DATA5,
-        data6=_DATA6,
-        data7=_DATA7
-    )
-    
-    fb1 = display_bus.allocate_framebuffer(_BUFFER_SIZE, lcd_bus.MEMORY_INTERNAL | lcd_bus.MEMORY_DMA)
-    fb2 = display_bus.allocate_framebuffer(_BUFFER_SIZE, lcd_bus.MEMORY_INTERNAL | lcd_bus.MEMORY_DMA)
-    
-    
-    import st7796  # NOQA
-    import lvgl as lv  # NOQA
-    
-    lv.init()
-    
-    display = st7796.ST7796(
-        data_bus=display_bus,
-        frame_buffer1=fb1,
-        frame_buffer2=fb2,
-        display_width=_WIDTH,
-        display_height=_HEIGHT,
-        backlight_pin=_BL,
-        # reset=_RST,
-        # reset_state=st7796.STATE_LOW,
-        color_space=lv.COLOR_FORMAT.RGB565,
-        color_byte_order=st7796.BYTE_ORDER_BGR,
-        rgb565_byte_swap=True,
-    )
-    
-    import i2c  # NOQA
-    import task_handler  # NOQA
-    import ft6x36  # NOQA
-    import time  # NOQA
+# display settings
+_WIDTH = const(320)
+_HEIGHT = const(480)
+_BL = const(45)
+_RST = const(4)
+_DC = const(0)
+_WR = const(47)
+_FREQ = const(20000000)
+_DATA0 = const(9)
+_DATA1 = const(46)
+_DATA2 = const(3)
+_DATA3 = const(8)
+_DATA4 = const(18)
+_DATA5 = const(17)
+_DATA6 = const(16)
+_DATA7 = const(15)
+_BUFFER_SIZE = const(30720)
 
-    display.init()
+_SCL = const(5)
+_SDA = const(6)
+_TP_FREQ = const(100000)
 
-    i2c_bus = i2c.I2CBus(scl=_SCL, sda=_SDA, freq=_TP_FREQ, use_locks=False)
-    indev = ft6x36.FT6x36(i2c_bus)
+display_bus = lcd_bus.I80Bus(
+    dc=_DC,
+    wr=_WR,
+    freq=_FREQ,
+    data0=_DATA0,
+    data1=_DATA1,
+    data2=_DATA2,
+    data3=_DATA3,
+    data4=_DATA4,
+    data5=_DATA5,
+    data6=_DATA6,
+    data7=_DATA7
+)
 
-    display.invert_colors()
+fb1 = display_bus.allocate_framebuffer(_BUFFER_SIZE, lcd_bus.MEMORY_INTERNAL | lcd_bus.MEMORY_DMA)
+fb2 = display_bus.allocate_framebuffer(_BUFFER_SIZE, lcd_bus.MEMORY_INTERNAL | lcd_bus.MEMORY_DMA)
 
-    if not indev.is_calibrated:
-        display.set_backlight(100)
-        indev.calibrate()
+import st7796  # NOQA
+import lvgl as lv  # NOQA
 
-    # you want to rotate the display after the calibration has been done in order
-    # to keep the corners oriented properly.
-    display.set_rotation(lv.DISPLAY_ROTATION._90)
-    
+lv.init()
+
+display = st7796.ST7796(
+    data_bus=display_bus,
+    frame_buffer1=fb1,
+    frame_buffer2=fb2,
+    display_width=_WIDTH,
+    display_height=_HEIGHT,
+    backlight_pin=_BL,
+    # reset=_RST,
+    # reset_state=st7796.STATE_LOW,
+    color_space=lv.COLOR_FORMAT.RGB565,
+    color_byte_order=st7796.BYTE_ORDER_BGR,
+    rgb565_byte_swap=True,
+)
+
+import i2c  # NOQA
+import task_handler  # NOQA
+import ft6x36  # NOQA
+import time  # NOQA
+
+display.init()
+
+i2c_bus = i2c.I2CBus(scl=_SCL, sda=_SDA, freq=_TP_FREQ, use_locks=False)
+indev = ft6x36.FT6x36(i2c_bus)
+
+display.invert_colors()
+
+if not indev.is_calibrated:
     display.set_backlight(100)
-    
-    th = task_handler.TaskHandler()
+    indev.calibrate()
 
-    scrn = lv.screen_active()
-    scrn.set_style_bg_color(lv.color_hex(0x000000), 0)
-    
-    slider = lv.slider(scrn)
-    slider.set_size(300, 50)
-    slider.center()
-    
-    label = lv.label(scrn)
-    label.set_text('HELLO WORLD!')
-    label.align(lv.ALIGN.CENTER, 0, -50)
+# you want to rotate the display after the calibration has been done in order
+# to keep the corners oriented properly.
+display.set_rotation(lv.DISPLAY_ROTATION._90)
 
+display.set_backlight(100)
+
+th = task_handler.TaskHandler()
+
+scrn = lv.screen_active()
+scrn.set_style_bg_color(lv.color_hex(0x000000), 0)
+
+slider = lv.slider(scrn)
+slider.set_size(300, 50)
+slider.center()
+
+label = lv.label(scrn)
+label.set_text('HELLO WORLD!')
+label.align(lv.ALIGN.CENTER, 0, -50)
+```
 
 You are able to force the calibration at any time by calling `indev.calibrate()` 
 regardless of what `indev.is_calibrate` returns. This makes it possible to redo 
