@@ -100,7 +100,8 @@ class SDLDisplay(display_driver_framework.DisplayDriver):
             offset_y=offset_y,
             color_byte_order=display_driver_framework.BYTE_ORDER_RGB,
             color_space=color_space,
-            rgb565_byte_swap=False
+            rgb565_byte_swap=False,
+            _init_bus=False
         )
 
         self._data_bus = data_bus
