@@ -30,7 +30,7 @@ typedef struct _machine_timer_obj_t {
     struct itimerspec its;
 
     struct sigaction *action;
-    timer_t *timer_id
+    timer_t *timer_id;
 
     struct _machine_timer_obj_t *next;
 } machine_timer_obj_t;
@@ -40,7 +40,8 @@ const mp_obj_type_t machine_timer_type;
 
 
 static void machine_timer_disable(machine_timer_obj_t *self);
-static mp_obj_t machine_timer_init_helper(machine_timer_obj_t *self, mp_uint_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args);
+static void machine_timer_init_helper(machine_timer_obj_t *self, int16_t mode, mp_obj_t callback, int64_t period);
+
 
 
 
@@ -97,19 +98,8 @@ static mp_obj_t machine_timer_make_new(size_t n_args, const mp_obj_t *pos_args, 
         MP_STATE_PORT(machine_timer_obj_head) = self;
     }
 
+    machine_timer_init_helper(self, (int16_t)mode, args[ARG_callback].u_obj, (int64_t)period);
 
-    mp_obj_t table[] = {
-        MP_ROM_QSTR(MP_QSTR_mode);
-        mp_obj_new_int_from_uint((mp_uint_t)mode);
-        MP_ROM_QSTR(MP_QSTR_callback);
-        args[ARG_callback].u_obj,
-        MP_ROM_QSTR(MP_QSTR_period);
-        mp_obj_new_int_from_uint((mp_uint_t)period);
-    };
-
-    mp_map_t k_args;
-    mp_map_init_fixed_table(&k_args, n_args - 1, table);
-    machine_timer_init_helper(self, n_args - 1, pos_args + 1, &k_args);
     return self;
 }
 
@@ -159,30 +149,12 @@ static void machine_timer_enable(machine_timer_obj_t *self)
 }
 
 
-static mp_obj_t machine_timer_init_helper(machine_timer_obj_t *self, mp_uint_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
+static void machine_timer_init_helper(machine_timer_obj_t *self, int16_t mode, mp_obj_t callback, int64_t period)
 {
-    enum { ARG_mode, ARG_callback, ARG_period };
-    static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_mode,         MP_ARG_KW_ONLY | MP_ARG_INT, { .u_int = -1} },
-        { MP_QSTR_callback,     MP_ARG_KW_ONLY | MP_ARG_OBJ, { .u_obj = NULL } },
-        { MP_QSTR_period,       MP_ARG_KW_ONLY | MP_ARG_INT, { .u_int = -1 } }
-    };
 
-    machine_timer_disable(self);
-
-    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
-    mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
-
-    if (args[ARG_period].u_int != -1) {
-        self->period = ((uint64_t)args[ARG_period].u_int) * 1000000;
-    }
-    if (args[ARG_mode].u_int != -1) {
-        self->repeat = (uint8_t)args[ARG_mode].u_int;
-    }
-
-    if (args[ARG_callback].u_obj != NULL) {
-        self->callback = args[ARG_callback].u_obj;
-    }
+    if (period != -1) self->period = (uint64_t)period * 1000000;
+    if (mode != -1) self->repeat = (uint8_t)mode;
+    if (callback != NULL) self->callback = callback;
 
     machine_timer_enable(self);
 
@@ -191,15 +163,36 @@ static mp_obj_t machine_timer_init_helper(machine_timer_obj_t *self, mp_uint_t n
 
 
 static mp_obj_t machine_timer_deinit(mp_obj_t self_in) {
-    machine_timer_disable(self_in);
+    machine_timer_disable((machine_timer_obj_t *)self_in);
     return mp_const_none;
 }
 
 static MP_DEFINE_CONST_FUN_OBJ_1(machine_timer_deinit_obj, machine_timer_deinit);
 
 
-static mp_obj_t machine_timer_init(size_t n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    return machine_timer_init_helper(args[0], n_args - 1, args + 1, kw_args);
+static mp_obj_t machine_timer_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
+{
+
+    enum { ARG_self, ARG_mode, ARG_callback, ARG_period };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_self,         MP_ARG_REQUIRED | MP_ARG_OBJ },
+        { MP_QSTR_mode,         MP_ARG_KW_ONLY  | MP_ARG_INT, { .u_int = -1 } },
+        { MP_QSTR_callback,     MP_ARG_KW_ONLY  | MP_ARG_OBJ, { .u_obj = NULL } },
+        { MP_QSTR_period,       MP_ARG_KW_ONLY  | MP_ARG_INT, { .u_int = -1 } }
+    };
+
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+
+    machine_timer_init_helper(
+        (machine_timer_obj_t *)args[ARG_self].u_obj,
+        (int16_t)args[ARG_mode].u_int,
+        args[ARG_callback].u_obj,
+        (int64_t)args[ARG_period].u_int
+    );
+
+    return mp_const_none;
 }
 
 static MP_DEFINE_CONST_FUN_OBJ_KW(machine_timer_init_obj, 1, machine_timer_init);
@@ -226,3 +219,6 @@ MP_DEFINE_CONST_OBJ_TYPE(
 
 
 MP_REGISTER_ROOT_POINTER(struct _machine_timer_obj_t *machine_timer_obj_head);
+
+#define MICROPY_PY_MACHINE_EXTRA_GLOBALS { MP_ROM_QSTR(MP_QSTR_Timer), (mp_obj_t)&machine_timer_type },
+
