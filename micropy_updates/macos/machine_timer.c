@@ -59,9 +59,7 @@ static inline void _timer_handler(void *arg)
 {
     machine_timer_obj_t *self = arg;
 
-	if (self->callback != mp_const_none) {
-	    mp_sched_schedule(self->callback, self);
-	}
+	if (self->callback != mp_const_none) mp_sched_schedule(self->callback, self);
 
 	if (self->repeat) {
 	    dispatch_time_t start;
@@ -125,16 +123,14 @@ static mp_obj_t machine_timer_make_new(size_t n_args, const mp_obj_t *pos_args, 
 
 static void machine_timer_disable(machine_timer_obj_t *self)
 {
-	if (self->tim != NULL) {
-		dispatch_source_cancel(self->tim->tim_timer);
-	}
+	if (self->tim != NULL) dispatch_source_cancel(self->tim->tim_timer);
 }
 
 
 static void machine_timer_enable(machine_timer_obj_t *self)
 {
-	struct macos_timer *tim;
-	tim = (struct macos_timer *) malloc(sizeof (struct macos_timer));
+	macos_timer *tim;
+	tim = (macos_timer *) malloc(sizeof(macos_timer));
 
 	tim->tim_queue = dispatch_queue_create("org.openzfsonosx.timerqueue", 0);
 	tim->tim_timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, tim->tim_queue);
@@ -165,7 +161,8 @@ static void machine_timer_init_helper(machine_timer_obj_t *self, int16_t mode, m
 }
 
 
-static mp_obj_t machine_timer_deinit(machine_timer_obj_t *self) {
+static mp_obj_t machine_timer_deinit(machine_timer_obj_t *self)
+{
     machine_timer_disable(self);
     return mp_const_none;
 }
@@ -173,7 +170,8 @@ static mp_obj_t machine_timer_deinit(machine_timer_obj_t *self) {
 static MP_DEFINE_CONST_FUN_OBJ_1(machine_timer_deinit_obj, machine_timer_deinit);
 
 
-static mp_obj_t machine_timer_init(size_t n_args, const mp_obj_t *args, mp_map_t *kw_args) {
+static mp_obj_t machine_timer_init(size_t n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
 
     enum { ARG_self, ARG_mode, ARG_callback, ARG_period };
     static const mp_arg_t allowed_args[] = {
@@ -187,7 +185,13 @@ static mp_obj_t machine_timer_init(size_t n_args, const mp_obj_t *args, mp_map_t
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
 
-    machine_timer_init_helper((machine_timer_obj_t *)args[ARG_self].u_obj, (int16_t)args[ARG_mode].u_int, args[ARG_callback].u_obj, (int64_t)args[ARG_period].u_int);
+    machine_timer_init_helper(
+        (machine_timer_obj_t *)args[ARG_self].u_obj,
+        (int16_t)args[ARG_mode].u_int,
+        args[ARG_callback].u_obj,
+        (int64_t)args[ARG_period].u_int
+    );
+
     return mp_const_none;
 }
 
