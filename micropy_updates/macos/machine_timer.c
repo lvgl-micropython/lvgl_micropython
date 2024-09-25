@@ -231,5 +231,5 @@ MP_DEFINE_CONST_OBJ_TYPE(
 
 MP_REGISTER_ROOT_POINTER(struct _machine_timer_obj_t *machine_timer_obj_head);
 
-#define MICROPY_PY_MACHINE_EXTRA_GLOBALS { MP_ROM_QSTR(MP_QSTR_Timer), (mp_obj_t)&machine_timer_type }, \
+#define MICROPY_PY_MACHINE_EXTRA_GLOBALS { MP_ROM_QSTR(MP_QSTR_Timer), (mp_obj_t)&machine_timer_type },
 
