@@ -161,8 +161,9 @@ static void machine_timer_init_helper(machine_timer_obj_t *self, int16_t mode, m
 }
 
 
-static mp_obj_t machine_timer_deinit(machine_timer_obj_t *self)
+static mp_obj_t machine_timer_deinit(mp_obj_t self_in)
 {
+    machine_timer_obj_t *self = (machine_timer_obj_t *)self_in;
     machine_timer_disable(self);
     return mp_const_none;
 }
@@ -170,7 +171,7 @@ static mp_obj_t machine_timer_deinit(machine_timer_obj_t *self)
 static MP_DEFINE_CONST_FUN_OBJ_1(machine_timer_deinit_obj, machine_timer_deinit);
 
 
-static mp_obj_t machine_timer_init(size_t n_args, const mp_obj_t *args, mp_map_t *kw_args)
+static mp_obj_t machine_timer_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
 
     enum { ARG_self, ARG_mode, ARG_callback, ARG_period };
