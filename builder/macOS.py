@@ -202,7 +202,7 @@ def submodules():
 
 
 def add_timer():
-    modmachine_path = 'lib/micropython/ports/unix/modmachin.c'
+    modmachine_path = 'lib/micropython/ports/unix/modmachine.c'
 
     with open(modmachine_path, 'rb') as f:
         data = f.read().decode('utf-8')
@@ -215,7 +215,7 @@ def add_timer():
         with open(modmachine_path, 'wb') as f:
             f.write(data.encode('utf-8'))
 
-    src_path = '/micropy_updates/macos/machine_timer.c'
+    src_path = 'micropy_updates/macos/machine_timer.c'
     dst_path = 'lib/micropython/ports/unix/machine_timer.c'
     shutil.copyfile(src_path, dst_path)
 
