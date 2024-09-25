@@ -85,7 +85,9 @@ static mp_obj_t machine_timer_make_new(size_t n_args, const mp_obj_t *pos_args, 
     }
     // The timer does not exist, create it.
     if (self == NULL) {
-        self = mp_obj_malloc(machine_timer_obj_t, &machine_timer_type);
+        self = m_new_obj(machine_timer_obj_t);
+        self->base.type = &machine_timer_type;
+
         self->group = group;
         self->index = index;
         self->id = (int)id;

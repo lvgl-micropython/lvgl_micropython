@@ -106,7 +106,9 @@ static mp_obj_t machine_timer_make_new(size_t n_args, const mp_obj_t *pos_args, 
     }
     // The timer does not exist, create it.
     if (self == NULL) {
-        self = mp_obj_malloc(machine_timer_obj_t, &machine_timer_type);
+        self = m_new_obj(machine_timer_obj_t);
+        self->base.type = &machine_timer_type;
+
         self->group = group;
         self->index = index;
 
@@ -114,7 +116,6 @@ static mp_obj_t machine_timer_make_new(size_t n_args, const mp_obj_t *pos_args, 
         self->next = MP_STATE_PORT(machine_timer_obj_head);
         MP_STATE_PORT(machine_timer_obj_head) = self;
     }
-
 
     mp_obj_t table[] = {
         MP_ROM_QSTR(MP_QSTR_mode);
@@ -229,3 +230,6 @@ MP_DEFINE_CONST_OBJ_TYPE(
 
 
 MP_REGISTER_ROOT_POINTER(struct _machine_timer_obj_t *machine_timer_obj_head);
+
+#define MICROPY_PY_MACHINE_EXTRA_GLOBALS { MP_ROM_QSTR(MP_QSTR_Timer), (mp_obj_t)&machine_timer_type }, \
+

@@ -294,7 +294,7 @@ def compile(*args):  # NOQA
             f.write(mpconfigvariant_common)
 
     add_timer()
-    
+
     build_sdl()
 
     cmd_ = compile_cmd[:]
