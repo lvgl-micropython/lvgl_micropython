@@ -202,6 +202,39 @@ def submodules():
         sys.exit(return_code)
 
 
+def add_timer():
+    modmachine_path = 'lib/micropython/ports/unix/modmachine.c'
+
+    with open(modmachine_path, 'rb') as f:
+        data = f.read().decode('utf-8')
+
+    if 'MICROPY_PY_MACHINE_EXTRA_GLOBALS' not in data:
+        data += (
+            '\n#define MICROPY_PY_MACHINE_EXTRA_GLOBALS { '
+            'MP_ROM_QSTR(MP_QSTR_Timer), MP_ROM_PTR(&machine_timer_type) }, \\'
+        )
+        with open(modmachine_path, 'wb') as f:
+            f.write(data.encode('utf-8'))
+
+    src_path = 'micropy_updates/unix/machine_timer.c'
+    dst_path = 'lib/micropython/ports/unix/machine_timer.c'
+    shutil.copyfile(src_path, dst_path)
+
+    makefile_path = 'lib/micropython/ports/unix/Makefile'
+
+    with open(makefile_path, 'rb') as f:
+        data = f.read().decode('utf-8')
+
+    if 'machine_timer.c' not in data:
+        data = data.replace(
+            'SRC_C += \\\n',
+            'SRC_C += \\\n\tmachine_timer.c\\\n'
+        )
+
+        with open(makefile_path, 'wb') as f:
+            f.write(data.encode('utf-8'))
+
+
 def compile(*args):  # NOQA
     main_path = 'lib/micropython/ports/unix/main.c'
 
@@ -260,6 +293,8 @@ def compile(*args):  # NOQA
         with open(mpconfigvariant_common_path, 'w') as f:
             f.write(mpconfigvariant_common)
 
+    add_timer()
+    
     build_sdl()
 
     cmd_ = compile_cmd[:]
