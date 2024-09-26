@@ -209,9 +209,8 @@ def add_timer():
 
     if 'MICROPY_PY_MACHINE_EXTRA_GLOBALS' not in data:
         data += (
-            '\n#define MICROPY_PY_MACHINE_EXTRA_GLOBALS { '
-            'MP_ROM_QSTR(MP_QSTR_Timer), (mp_obj_t)&machine_timer_type }, '
-            '\\\n\n'
+            '\n#define MICROPY_PY_MACHINE_EXTRA_GLOBALS \\\n'
+            '    { MP_ROM_QSTR(MP_QSTR_Timer), MP_ROM_PTR(&machine_timer_type) }, \\\n'
         )
         with open(modmachine_path, 'wb') as f:
             f.write(data.encode('utf-8'))

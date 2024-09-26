@@ -203,6 +203,19 @@ def submodules():
 
 
 def add_timer():
+    modmachine_path = 'lib/micropython/ports/unix/modmachine.c'
+
+    with open(modmachine_path, 'rb') as f:
+        data = f.read().decode('utf-8')
+
+    if 'MICROPY_PY_MACHINE_EXTRA_GLOBALS' not in data:
+        data += (
+            '\n#define MICROPY_PY_MACHINE_EXTRA_GLOBALS \\\n'
+            '    { MP_ROM_QSTR(MP_QSTR_Timer), MP_ROM_PTR(&machine_timer_type) }, \\\n'
+        )
+        with open(modmachine_path, 'wb') as f:
+            f.write(data.encode('utf-8'))
+
     src_path = 'micropy_updates/unix/machine_timer.c'
     dst_path = 'lib/micropython/ports/unix/machine_timer.c'
     shutil.copyfile(src_path, dst_path)
