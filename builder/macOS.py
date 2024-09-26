@@ -316,7 +316,13 @@ def compile(*args):  # NOQA
     dst = f'build/lvgl_micropy_macos'
     shutil.copyfile(src, dst)
 
-    print(f'compiled binary is {os.path.abspath(dst)}')
+    src = f'lib/micropython/ports/unix/build-{variant}/SDL/libSDL2-2.0.0.dylib'
+    dst = f'build/libSDL2-2.0.0.dylib'
+    shutil.copyfile(src, dst)
+
+    print(f'compiled binary is {os.path.abspath(os.path.split(dst)[0])}')
+    print('You need to make the binary executable by running')
+    print('"sudo chmod +x lvgl_micropy_macos"')
 
 
 def mpy_cross():
