@@ -65,13 +65,13 @@ static mp_obj_t machine_timer_make_new(const mp_obj_type_t *type, size_t n_args,
         { MP_QSTR_period,       MP_ARG_KW_ONLY | MP_ARG_INT, { .u_int = 0 } }
     };
 
-    mp_arg_val_t args[MP_ARRAY_SIZE(make_new_args)];
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all_kw_array(
         n_args,
         n_kw,
         all_args,
-        MP_ARRAY_SIZE(make_new_args),
-        make_new_args,
+        MP_ARRAY_SIZE(allowed_args),
+        allowed_args,
         args
     );
 
