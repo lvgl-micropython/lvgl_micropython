@@ -3,13 +3,7 @@ import micropython  # NOQA
 import sys
 import time
 
-try:
-    from machine import Timer  # NOQA
-except:
-    try:
-        from lv_timer import Timer  # NOQA
-    except:
-        raise RuntimeError("Missing machine.Timer implementation!")
+from machine import Timer  # NOQA
 
 
 TASK_HANDLER_STARTED = 0x00
@@ -103,7 +97,6 @@ class TaskHandler(object):
         return cls._current_instance is not None
 
     def _task_handler(self, _):
-        print('task handler called')
         try:
             self._scheduled -= 1
 
@@ -160,8 +153,6 @@ class TaskHandler(object):
                 self.exception_hook(e)
 
     def _timer_cb(self, _):
-        print('timer callback called')
-
         lv.tick_inc(self.duration)
         if self._scheduled < self.max_scheduled:
             try:

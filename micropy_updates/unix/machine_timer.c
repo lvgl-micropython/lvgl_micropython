@@ -7,11 +7,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <signal.h>
-#include <time.h>
-
-
-#define SIGRTMIN() __libc_current_sigrtmin()
+#include <stdlib.h>
+#include "SDL_timer.h"
 
 
 typedef struct _machine_timer_obj_t {
@@ -19,18 +16,13 @@ typedef struct _machine_timer_obj_t {
 
     mp_uint_t group;
     mp_uint_t index;
-    int id;
 
     uint8_t repeat;
-    uint64_t period;
+    uint32_t period;
 
     mp_obj_t callback;
 
-    struct sigevent sev;
-    struct itimerspec its;
-
-    struct sigaction *action;
-    timer_t *timer_id;
+    SDL_TimerID timer_id;
 
     struct _machine_timer_obj_t *next;
 } machine_timer_obj_t;
@@ -43,15 +35,26 @@ static void machine_timer_disable(machine_timer_obj_t *self);
 static void machine_timer_init_helper(machine_timer_obj_t *self, int16_t mode, mp_obj_t callback, int64_t period);
 
 
-
-
-static inline void _timer_handler(union sigval sigev_value)
+static uint32_t _timer_handler(uint32_t interval, void *arg)
 {
-    machine_timer_obj_t *self = sigev_value.sival_ptr;
+    machine_timer_obj_t *self = (machine_timer_obj_t *)arg;
+    if (self->callback == mp_const_none) {
+        self->timer_id = 0;
+        return 0;
+    }
 
-	if (self->callback != mp_const_none) {
-	    mp_sched_schedule(self->callback, self);
+    if (self->timer_id == 0) {
+        return 0;
+    }
+
+	mp_sched_schedule(self->callback, MP_OBJ_FROM_PTR(self));
+
+	if (!self->repeat) {
+	    self->timer_id = 0;
+	    return 0;
 	}
+
+	return interval;
 }
 
 
@@ -98,7 +101,7 @@ static mp_obj_t machine_timer_make_new(const mp_obj_type_t *type, size_t n_args,
 
         self->group = group;
         self->index = index;
-        self->id = (int)id;
+        self->timer_id = 0;
 
         // Add the timer to the linked-list of timers
         self->next = MP_STATE_PORT(machine_timer_obj_head);
@@ -113,64 +116,34 @@ static mp_obj_t machine_timer_make_new(const mp_obj_type_t *type, size_t n_args,
 
 static void machine_timer_disable(machine_timer_obj_t *self)
 {
-    int64_t period_ns = self->period % 1000000000;
-    time_t period_sec = self->period / 1000000000;
-
-    itimerspec_t *new_val = (itimerspec_t *)malloc(sizeof(itimerspec_t));
-
-    new_val->it_value.tv_sec = period_sec;
-    new_val->it_value.tv_nsec = period_ns;
-
-    if (self->repeat) {
-        new_val->it_interval.tv_sec = period_sec;
-        new_val->it_interval.tv_nsec = period_ns;
+    if (self->timer_id != 0) {
+        SDL_RemoveTimer(self->timer_id);
+        self->timer_id = 0;
     }
-
-    timer_settime_(self->timer_id, 0, (itimerspec_t)(*new_val), self->its);
-    self->its = (itimerspec_t)(*new_val);
 }
 
 
 static void machine_timer_enable(machine_timer_obj_t *self)
 {
-    int64_t period_ns = self->period % 1000000000;
-    time_t period_sec = self->period / 1000000000;
-
-    self->sev.sigev_notify = SIGEV_THREAD;
-    self->sev.sigev_signo = SIGRTMIN() + self->id;
-    self->sev.sigev_value.sival_ptr = self;
-    self->sev.sigev_notify_function = &_timer_handler;
-    self->sev.sigev_notify_attributes = 0;
-
-    timer_create(CLOCK_MONOTONIC, &self->sev, &self->timer_id);
-
-    self->its.it_value.tv_sec = period_sec;
-    self->its.it_value.tv_nsec = period_ns;
-
-    if (self->repeat) {
-        self->its.it_interval.tv_sec = period_sec;
-        self->its.it_interval.tv_nsec = period_ns;
-    }
-
-    timer_settime(self->timer_id, 0, &self->its, NULL);
+	self->timer_id = SDL_AddTimer(self->period, &_timer_handler, self);
 }
 
 
 static void machine_timer_init_helper(machine_timer_obj_t *self, int16_t mode, mp_obj_t callback, int64_t period)
 {
+    machine_timer_disable(self);
 
-    if (period != -1) self->period = (uint64_t)period * 1000000;
+    if (period != -1) self->period = (uint32_t)period;
     if (mode != -1) self->repeat = (uint8_t)mode;
     if (callback != NULL) self->callback = callback;
 
     machine_timer_enable(self);
-
-    return mp_const_none;
 }
 
 
-static mp_obj_t machine_timer_deinit(mp_obj_t self_in) {
-    machine_timer_disable((machine_timer_obj_t *)self_in);
+static mp_obj_t machine_timer_deinit(mp_obj_t self_in)
+{
+    machine_timer_disable(self);
     return mp_const_none;
 }
 
@@ -190,7 +163,6 @@ static mp_obj_t machine_timer_init(size_t n_args, const mp_obj_t *pos_args, mp_m
 
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
-
 
     machine_timer_init_helper(
         (machine_timer_obj_t *)args[ARG_self].u_obj,
@@ -226,6 +198,3 @@ MP_DEFINE_CONST_OBJ_TYPE(
 
 
 MP_REGISTER_ROOT_POINTER(struct _machine_timer_obj_t *machine_timer_obj_head);
-
-#define MICROPY_PY_MACHINE_EXTRA_GLOBALS { MP_ROM_QSTR(MP_QSTR_Timer), (mp_obj_t)&machine_timer_type },
-

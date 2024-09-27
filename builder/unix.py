@@ -112,12 +112,9 @@ def build_manifest(
 
     manifest_path = 'lib/micropython/ports/unix/variants/manifest.py'
 
-    manifest_files = [
-        f'{script_dir}/api_drivers/common_api_drivers/linux/lv_timer.py'
-    ]
     generate_manifest(
         script_dir, lvgl_api, manifest_path, displays,
-        indevs, frozen_manifest, *manifest_files
+        indevs, frozen_manifest
     )
 
 

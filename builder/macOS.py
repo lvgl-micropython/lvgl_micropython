@@ -113,12 +113,9 @@ def build_manifest(_, script_dir, lvgl_api, displays, indevs, frozen_manifest):
 
     manifest_path = 'lib/micropython/ports/unix/variants/manifest.py'
 
-    manifest_files = [
-        f'{script_dir}/api_drivers/common_api_drivers/linux/lv_timer.py'
-    ]
     generate_manifest(
         script_dir, lvgl_api, manifest_path,  displays,
-        indevs, frozen_manifest, *manifest_files
+        indevs, frozen_manifest
     )
 
 
@@ -215,7 +212,7 @@ def add_timer():
         with open(modmachine_path, 'wb') as f:
             f.write(data.encode('utf-8'))
 
-    src_path = 'micropy_updates/macos/machine_timer.c'
+    src_path = 'micropy_updates/unix/machine_timer.c'
     dst_path = 'lib/micropython/ports/unix/machine_timer.c'
     shutil.copyfile(src_path, dst_path)
 
