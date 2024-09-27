@@ -59,6 +59,7 @@ class TaskHandler(object):
             self._task_handler_ref = self._task_handler
             self.max_scheduled = max_scheduled
 
+            self._start_time = time.ticks_ms()  # NOQA
             self._timer.init(
                 mode=Timer.PERIODIC,
                 period=self.duration,
@@ -107,8 +108,6 @@ class TaskHandler(object):
             self._scheduled -= 1
 
             if lv._nesting.value == 0:
-                start_time = time.ticks_ms()
-
                 run_update = True
                 for cb, evt, data in self._callbacks:
                     if not evt ^ TASK_HANDLER_STARTED:
@@ -129,7 +128,8 @@ class TaskHandler(object):
 
                 stop_time = time.ticks_ms()
 
-                ticks_diff = time.ticks_diff(stop_time, start_time)
+                ticks_diff = time.ticks_diff(stop_time, self._start_time)
+                self._start_time = stop_time
                 lv.tick_inc(ticks_diff)
 
                 if run_update:

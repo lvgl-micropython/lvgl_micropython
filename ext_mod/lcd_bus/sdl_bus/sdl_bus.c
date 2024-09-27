@@ -36,6 +36,16 @@
     int flush_thread(void *self_in);
     int process_event(mp_lcd_sdl_bus_obj_t *self, SDL_Event *event);
 
+    static mp_obj_t quit_sdl(void) {
+        SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
+        SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
+        SDL_QuitSubSystem(SDL_INIT_EVENTS);
+        SDL_QuitSubSystem(SDL_INIT_TIMER);
+    }
+
+    static MP_DEFINE_CONST_FUN_OBJ_0(quit_sdl_obj, quit_sdl);
+
+
     static mp_obj_t mp_lcd_sdl_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
         enum { ARG_flags };
@@ -216,6 +226,10 @@
             SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER);
             SDL_InitSubSystem(SDL_INIT_JOYSTICK);
             SDL_InitSubSystem(SDL_INIT_EVENTS);
+            SDL_InitSubSystem(SDL_INIT_TIMER);
+
+            MP_STATE_VM(sys_exitfunc) = quit_sdl_obj;
+
             sdl_inited = true;
         }
 
@@ -230,12 +244,6 @@
                 }
             }
         }
-
-        //if (exit_thread) {
-        //    SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
-        //    SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
-        //    SDL_QuitSubSystem(SDL_INIT_EVENTS);
-        //}
 
         return mp_const_none;
     }

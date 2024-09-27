@@ -7,11 +7,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <mach/boolean.h>
 #include <stdlib.h>
-
-#include <dispatch/dispatch.h>
-
+#include "SDL_timer.h"
 
 
 typedef struct _machine_timer_obj_t {
@@ -21,11 +18,11 @@ typedef struct _machine_timer_obj_t {
     mp_uint_t index;
 
     uint8_t repeat;
-    uint64_t period;
+    uint32_t period;
 
     mp_obj_t callback;
 
-    dispatch_source_t tim;
+    SDL_TimerID timer_id;
 
     struct _machine_timer_obj_t *next;
 } machine_timer_obj_t;
@@ -38,35 +35,26 @@ static void machine_timer_disable(machine_timer_obj_t *self);
 static void machine_timer_init_helper(machine_timer_obj_t *self, int16_t mode, mp_obj_t callback, int64_t period);
 
 
-static mp_obj_t _run_scheduled_task(mp_obj_t self_in)
-{
-    printf("_run_scheduled_task\n");
-
-    machine_timer_obj_t *self = (machine_timer_obj_t *)self_in;
-	if (self->callback != mp_const_none) {
-	    printf("_run_scheduled_task mp_call_function_1\n");
-        mp_call_function_1(self->callback, self_in);
-    }
-
-    if (!self->repeat) {
-	    printf("_run_scheduled_task machine_timer_disable\n");
-	    machine_timer_disable(self);
-	}
-
-    return mp_const_none;
-}
-
-static MP_DEFINE_CONST_FUN_OBJ_1(_run_scheduled_task_obj, _run_scheduled_task);
-
-
-static inline void _timer_handler(void *arg)
+static uint32_t _timer_handler(uint32_t interval, void *arg)
 {
     machine_timer_obj_t *self = (machine_timer_obj_t *)arg;
-    printf("_timer_handler\n");
-    if (self->tim != NULL) {
-	   printf("_timer_handler mp_sched_schedule\n");
-	   mp_sched_schedule(_run_scheduled_task, MP_OBJ_FROM_PTR(self));
+    if (self->callback == mp_const_none) {
+        self->timer_id = 0;
+        return 0;
+    }
+
+    if (self->timer_id == 0) {
+        return 0;
+    }
+
+	mp_sched_schedule(self->callback, MP_OBJ_FROM_PTR(self));
+
+	if (!self->repeat) {
+	    self->timer_id = 0;
+	    return 0;
 	}
+
+	return interval;
 }
 
 
@@ -116,6 +104,7 @@ static mp_obj_t machine_timer_make_new(const mp_obj_type_t *type, size_t n_args,
 
         self->group = group;
         self->index = index;
+        self->timer_id = 0;
 
         // Add the timer to the linked-list of timers
         self->next = MP_STATE_PORT(machine_timer_obj_head);
@@ -130,37 +119,24 @@ static mp_obj_t machine_timer_make_new(const mp_obj_type_t *type, size_t n_args,
 
 static void machine_timer_disable(machine_timer_obj_t *self)
 {
-    printf("machine_timer_disable\n");
-	if (self->tim != NULL) {
-	    printf("machine_timer_disable dispatch_suspend\n");
-	    dispatch_suspend(self->tim);
-	}
+    if (self->timer_id != 0) {
+        SDL_RemoveTimer(self->timer_id);
+        self->timer_id = 0;
+    }
 }
 
 
 static void machine_timer_enable(machine_timer_obj_t *self)
 {
-    printf("machine_timer_enable\n");
-
-    if (self->tim == NULL) {
-	    self->tim = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_main_queue());
-	    dispatch_set_context(self->tim, self);
-	    dispatch_source_set_event_handler_f(self->tim, &_timer_handler);
-	    // dispatch_source_set_cancel_handler_f(self->tim, &_timer_cancel);
-	} else {
-	    machine_timer_disable(self);
-	}
-
-	dispatch_source_set_timer(self->tim, DISPATCH_TIME_NOW, self->period, 0);
-	dispatch_resume(self->tim);
+	self->timer_id = SDL_AddTimer(self->period, &_timer_handler, self);
 }
 
 
 static void machine_timer_init_helper(machine_timer_obj_t *self, int16_t mode, mp_obj_t callback, int64_t period)
 {
-    printf("machine_timer_init_helper\n");
+    machine_timer_disable(self);
 
-    if (period != -1) self->period = ((uint64_t)period) * 1000000;
+    if (period != -1) self->period = (uint32_t)period;
     if (mode != -1) self->repeat = (uint8_t)mode;
     if (callback != NULL) self->callback = callback;
 
@@ -170,14 +146,7 @@ static void machine_timer_init_helper(machine_timer_obj_t *self, int16_t mode, m
 
 static mp_obj_t machine_timer_deinit(mp_obj_t self_in)
 {
-    printf("machine_timer_deinit\n");
-    machine_timer_obj_t *self = (machine_timer_obj_t *)self_in;
-    if (self->tim != NULL) {
-        machine_timer_disable(self);
-        dispatch_source_cancel(self->tim);
-        dispatch_release(self->tim);
-        self->tim = NULL;
-    }
+    machine_timer_disable(self);
     return mp_const_none;
 }
 
