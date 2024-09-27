@@ -485,7 +485,7 @@ class DisplayDriver:
             mod_name = f'_{self.__class__.__name__.lower()}_init_type{type}'
 
         mod = __import__(mod_name)
-        mod.init()
+        mod.init(self)
         del sys.modules[mod_name]
         # =======================================
 
