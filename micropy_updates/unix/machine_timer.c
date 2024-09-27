@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include "SDL_timer.h"
+#include "modmachine.h"
 
 
 typedef struct _machine_timer_obj_t {
@@ -33,6 +34,17 @@ const mp_obj_type_t machine_timer_type;
 
 static void machine_timer_disable(machine_timer_obj_t *self);
 static void machine_timer_init_helper(machine_timer_obj_t *self, int16_t mode, mp_obj_t callback, int64_t period);
+
+void machine_timer_deinit_all(void) {
+    // Disable, deallocate and remove all timers from list
+    machine_timer_obj_t **t = &MP_STATE_PORT(machine_timer_obj_head);
+    while (*t != NULL) {
+        machine_timer_disable(*t);
+        machine_timer_obj_t *next = (*t)->next;
+        m_del_obj(machine_timer_obj_t, *t);
+        *t = next;
+    }
+}
 
 
 static uint32_t _timer_handler(uint32_t interval, void *arg)

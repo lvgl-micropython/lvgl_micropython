@@ -199,28 +199,31 @@ def submodules():
         sys.exit(return_code)
 
 
-def add_timer():
-    modmachine_path = 'lib/micropython/ports/unix/modmachine.c'
+def copy_updated_files():
+    src_path = 'micropy_updates/unix'
+    dst_path = 'lib/micropython/ports/unix'
 
-    with open(modmachine_path, 'rb') as f:
-        data = f.read().decode('utf-8')
+    for file in os.listdir(src_path):
+        src = os.path.join(src_path, file)
+        dst = os.path.join(dst_path, file)
 
-    if 'MICROPY_PY_MACHINE_EXTRA_GLOBALS' not in data:
-        data += (
-            '\n#define MICROPY_PY_MACHINE_EXTRA_GLOBALS \\\n'
-            '    { MP_ROM_QSTR(MP_QSTR_Timer), MP_ROM_PTR(&machine_timer_type) }, \\\n'
-        )
-        with open(modmachine_path, 'wb') as f:
-            f.write(data.encode('utf-8'))
+        shutil.copyfile(src, dst)
 
-    src_path = 'micropy_updates/unix/machine_timer.c'
-    dst_path = 'lib/micropython/ports/unix/machine_timer.c'
-    shutil.copyfile(src_path, dst_path)
 
+def read_file(path):
+    with open(path, 'rb') as f:
+        return f.read().decode('utf-8')
+
+
+def write_file(path, data):
+    with open(path, 'wb') as f:
+        f.write(data.encode('utf-8'))
+
+
+def update_makefile():
     makefile_path = 'lib/micropython/ports/unix/Makefile'
 
-    with open(makefile_path, 'rb') as f:
-        data = f.read().decode('utf-8')
+    data = read_file(makefile_path)
 
     if 'machine_timer.c' not in data:
         data = data.replace(
@@ -228,69 +231,105 @@ def add_timer():
             'SRC_C += \\\n\tmachine_timer.c\\\n'
         )
 
-        with open(makefile_path, 'wb') as f:
-            f.write(data.encode('utf-8'))
+        write_file(makefile_path, data)
 
 
-def compile(*args):  # NOQA
+def update_modmachine():
+    modmachine_path = 'lib/micropython/ports/unix/modmachine.c'
+
+    data = read_file(modmachine_path)
+
+    if 'MICROPY_PY_MACHINE_EXTRA_GLOBALS' not in data:
+        data += (
+            '\n#define MICROPY_PY_MACHINE_EXTRA_GLOBALS \\\n'
+            '    { MP_ROM_QSTR(MP_QSTR_Timer), MP_ROM_PTR(&machine_timer_type) }, \\\n'  # NOQA
+        )
+
+        write_file(modmachine_path, data)
+
+
+def update_main():
     main_path = 'lib/micropython/ports/unix/main.c'
 
-    with open(main_path, 'rb') as f:
-        main = f.read().decode('utf-8').split('\n')
+    data = read_file(main_path)
 
-    for i, line in enumerate(main):
+    if 'modmachine.h' not in data:
+        data = data.replace(
+            '#include "input.h"',
+            '#include "input.h"\n#include "modmachine.h"'
+        )
+
+    if 'machine_timer_deinit_all()' not in data:
+        data = data.replace(
+            '#if MICROPY_PY_SYS_ATEXIT',
+            'machine_timer_deinit_all();\n    #if MICROPY_PY_SYS_ATEXIT'
+        )
+
+    if 'lcd_bus_deinit_sdl()' not in data:
+        data = data.replace(
+            '#if MICROPY_PY_SYS_ATEXIT',
+            'lcd_bus_deinit_sdl();\n    #if MICROPY_PY_SYS_ATEXIT'
+        )
+
+    if 'lcd_bus_init_sdl()' not in data:
+        data = data.replace(
+            'mp_init();',
+            'mp_init();\n    lcd_bus_init_sdl();'
+        )
+
+    data = data.split('\n')
+
+    for i, line in enumerate(data):
         if line.startswith('long heap_size ='):
-            main[i] = f'long heap_size = {heap_size};'
+            data[i] = f'long heap_size = {heap_size};'
             break
 
-    with open(main_path, 'wb') as f:
-        f.write('\n'.join(main).encode('utf-8'))
+    data = '\n'.join(data)
 
+    write_file(main_path, data)
+
+
+def update_mpconfigvariant_common():
     mpconfigvariant_common_path = (
         'lib/micropython/ports/unix/variants/mpconfigvariant_common.h'
     )
-
-    with open(mpconfigvariant_common_path, 'r') as f:
-        mpconfigvariant_common = f.read()
+    data = read_file(mpconfigvariant_common_path)
 
     if (
         '#define MICROPY_MALLOC_USES_ALLOCATED_SIZE (1)' in
-        mpconfigvariant_common
+        data
     ):
-        mpconfigvariant_common = mpconfigvariant_common.replace(
+        data = data.replace(
             '#define MICROPY_MALLOC_USES_ALLOCATED_SIZE (1)',
             '#define MICROPY_MALLOC_USES_ALLOCATED_SIZE (0)'
         )
 
-        with open(mpconfigvariant_common_path, 'w') as f:
-            f.write(mpconfigvariant_common)
-
-    if '#define MICROPY_MEM_STATS              (1)' in mpconfigvariant_common:
-        mpconfigvariant_common = mpconfigvariant_common.replace(
+    if '#define MICROPY_MEM_STATS              (1)' in data:
+        data = data.replace(
             '#define MICROPY_MEM_STATS              (1)',
             '#define MICROPY_MEM_STATS              (0)'
         )
 
-        with open(mpconfigvariant_common_path, 'w') as f:
-            f.write(mpconfigvariant_common)
+    macros = (
+        '#define MICROPY_SCHEDULER_DEPTH              (128)'
+        '#define MICROPY_STACK_CHECK              (0)'
+    )
 
-    macro = '#define MICROPY_SCHEDULER_DEPTH              (128)'
-    if macro not in mpconfigvariant_common:
-        mpconfigvariant_common += '\n\n'
-        mpconfigvariant_common += macro + '\n'
+    for macro in macros:
+        if macro not in data:
+            data += '\n\n'
+            data += macro + '\n'
 
-        with open(mpconfigvariant_common_path, 'w') as f:
-            f.write(mpconfigvariant_common)
+    write_file(mpconfigvariant_common_path, data)
 
-    macro = '#define MICROPY_STACK_CHECK              (0)'
-    if macro not in mpconfigvariant_common:
-        mpconfigvariant_common += '\n'
-        mpconfigvariant_common += macro + '\n'
 
-        with open(mpconfigvariant_common_path, 'w') as f:
-            f.write(mpconfigvariant_common)
+def compile(*args):  # NOQA
 
-    add_timer()
+    update_makefile()
+    update_modmachine()
+    update_main()
+    update_mpconfigvariant_common()
+    copy_updated_files()
 
     build_sdl()
 
@@ -307,7 +346,11 @@ def compile(*args):  # NOQA
         if f.startswith('lvgl'):
             continue
 
-        os.remove(os.path.join('build', f))
+        if f.startswith('SDLPointer'):
+            continue
+
+        if f == 'manifest.py' or not f.endswith('.py'):
+            os.remove(os.path.join('build', f))
 
     src = f'lib/micropython/ports/unix/build-{variant}/micropython'
     dst = f'build/lvgl_micropy_unix'

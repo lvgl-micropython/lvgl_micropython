@@ -4,6 +4,14 @@ import shutil
 from . import spawn
 from . import generate_manifest
 from . import update_mphalport
+from .unix import (
+    update_makefile,
+    update_modmachine,
+    update_main,
+    update_mpconfigvariant_common,
+    copy_updated_files
+)
+
 from argparse import ArgumentParser
 
 
@@ -198,99 +206,12 @@ def submodules():
         sys.exit(return_code)
 
 
-def add_timer():
-    modmachine_path = 'lib/micropython/ports/unix/modmachine.c'
-
-    with open(modmachine_path, 'rb') as f:
-        data = f.read().decode('utf-8')
-
-    if 'MICROPY_PY_MACHINE_EXTRA_GLOBALS' not in data:
-        data += (
-            '\n#define MICROPY_PY_MACHINE_EXTRA_GLOBALS \\\n'
-            '    { MP_ROM_QSTR(MP_QSTR_Timer), MP_ROM_PTR(&machine_timer_type) }, \\\n'
-        )
-        with open(modmachine_path, 'wb') as f:
-            f.write(data.encode('utf-8'))
-
-    src_path = 'micropy_updates/unix/machine_timer.c'
-    dst_path = 'lib/micropython/ports/unix/machine_timer.c'
-    shutil.copyfile(src_path, dst_path)
-
-    makefile_path = 'lib/micropython/ports/unix/Makefile'
-
-    with open(makefile_path, 'rb') as f:
-        data = f.read().decode('utf-8')
-
-    if 'machine_timer.c' not in data:
-        data = data.replace(
-            'SRC_C += \\\n',
-            'SRC_C += \\\n\tmachine_timer.c\\\n'
-        )
-
-        with open(makefile_path, 'wb') as f:
-            f.write(data.encode('utf-8'))
-
-
 def compile(*args):  # NOQA
-    main_path = 'lib/micropython/ports/unix/main.c'
-
-    with open(main_path, 'rb') as f:
-        main = f.read().decode('utf-8').split('\n')
-
-    for i, line in enumerate(main):
-        if line.startswith('long heap_size ='):
-            main[i] = f'long heap_size = {heap_size};'
-            break
-
-    with open(main_path, 'wb') as f:
-        f.write('\n'.join(main).encode('utf-8'))
-
-    mpconfigvariant_common_path = (
-        'lib/micropython/ports/unix/variants/mpconfigvariant_common.h'
-    )
-
-    with open(mpconfigvariant_common_path, 'r') as f:
-        mpconfigvariant_common = f.read()
-
-    if (
-        '#define MICROPY_MALLOC_USES_ALLOCATED_SIZE (1)' in
-        mpconfigvariant_common
-    ):
-        mpconfigvariant_common = mpconfigvariant_common.replace(
-            '#define MICROPY_MALLOC_USES_ALLOCATED_SIZE (1)',
-            '#define MICROPY_MALLOC_USES_ALLOCATED_SIZE (0)'
-        )
-
-        with open(mpconfigvariant_common_path, 'w') as f:
-            f.write(mpconfigvariant_common)
-
-    if '#define MICROPY_MEM_STATS              (1)' in mpconfigvariant_common:
-        mpconfigvariant_common = mpconfigvariant_common.replace(
-            '#define MICROPY_MEM_STATS              (1)',
-            '#define MICROPY_MEM_STATS              (0)'
-        )
-
-        with open(mpconfigvariant_common_path, 'w') as f:
-            f.write(mpconfigvariant_common)
-
-    macro = '#define MICROPY_SCHEDULER_DEPTH              (128)'
-
-    if macro not in mpconfigvariant_common:
-        mpconfigvariant_common += '\n\n'
-        mpconfigvariant_common += macro + '\n'
-
-        with open(mpconfigvariant_common_path, 'w') as f:
-            f.write(mpconfigvariant_common)
-
-    macro = '#define MICROPY_STACK_CHECK              (0)'
-    if macro not in mpconfigvariant_common:
-        mpconfigvariant_common += '\n'
-        mpconfigvariant_common += macro + '\n'
-
-        with open(mpconfigvariant_common_path, 'w') as f:
-            f.write(mpconfigvariant_common)
-
-    add_timer()
+    update_makefile()
+    update_modmachine()
+    update_main()
+    update_mpconfigvariant_common()
+    copy_updated_files()
 
     build_sdl()
 
@@ -307,7 +228,11 @@ def compile(*args):  # NOQA
         if f.startswith('lvgl'):
             continue
 
-        os.remove(os.path.join('build', f))
+        if f.startswith('SDLPointer'):
+            continue
+
+        if f == 'manifest.py' or not f.endswith('.py'):
+            os.remove(os.path.join('build', f))
 
     src = f'lib/micropython/ports/unix/build-{variant}/micropython'
     dst = f'build/lvgl_micropy_macos'
