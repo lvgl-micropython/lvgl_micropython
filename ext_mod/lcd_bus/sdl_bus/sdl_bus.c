@@ -228,7 +228,7 @@
             SDL_InitSubSystem(SDL_INIT_EVENTS);
             SDL_InitSubSystem(SDL_INIT_TIMER);
 
-            MP_STATE_VM(sys_exitfunc) = quit_sdl_obj;
+            // MP_STATE_VM(sys_exitfunc) = quit_sdl_obj;
 
             sdl_inited = true;
         }
