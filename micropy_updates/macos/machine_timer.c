@@ -13,11 +13,6 @@
 #include <dispatch/dispatch.h>
 
 
-typedef struct {
-	dispatch_queue_t tim_queue;
-	dispatch_source_t tim_timer;
-} macos_timer;
-
 
 typedef struct _machine_timer_obj_t {
     mp_obj_base_t base;
@@ -30,7 +25,7 @@ typedef struct _machine_timer_obj_t {
 
     mp_obj_t callback;
 
-    macos_timer *tim;
+    dispatch_source_t tim;
 
     struct _machine_timer_obj_t *next;
 } machine_timer_obj_t;
@@ -43,37 +38,20 @@ static void machine_timer_disable(machine_timer_obj_t *self);
 static void machine_timer_init_helper(machine_timer_obj_t *self, int16_t mode, mp_obj_t callback, int64_t period);
 
 
-static inline void _timer_cancel(void *arg)
-{
-    machine_timer_obj_t *self = arg;
-	dispatch_release(self->tim->tim_timer);
-	dispatch_release(self->tim->tim_queue);
-	self->tim->tim_timer = NULL;
-	self->tim->tim_queue = NULL;
-	free(self->tim);
-	self->tim = NULL;
-}
-
-
 static inline void _timer_handler(void *arg)
 {
     machine_timer_obj_t *self = arg;
     printf("_timer_handler\n");
-	if (self->callback != mp_const_none) {
-	    printf("_timer_handler mp_sched_schedule\n");
-	    mp_sched_schedule(self->callback, self);
-	}
+    if (self->tim != NULL) {
+	    if (self->callback != mp_const_none) {
+	        printf("_timer_handler mp_sched_schedule\n");
+	        mp_sched_schedule(self->callback, self);
+	    }
 
-	if (self->repeat) {
-	    printf("_timer_handler dispatch_time\n");
-	    dispatch_time_t start;
-        start = dispatch_time(DISPATCH_TIME_NOW, self->period);
-
-	    dispatch_source_set_timer(self->tim->tim_timer, start, self->period, 0);
-	    dispatch_resume(self->tim->tim_timer);
-	} else {
-	    printf("_timer_handler machine_timer_disable\n");
-	    machine_timer_disable(self);
+	    if (!self->repeat) {
+	        printf("_timer_handler machine_timer_disable\n");
+	        machine_timer_disable(self);
+	    }
 	}
 }
 
@@ -140,8 +118,8 @@ static void machine_timer_disable(machine_timer_obj_t *self)
 {
     printf("machine_timer_disable\n");
 	if (self->tim != NULL) {
-	    printf("machine_timer_disable dispatch_source_cancel\n");
-	    dispatch_source_cancel(self->tim->tim_timer);
+	    printf("machine_timer_disable dispatch_suspend\n");
+	    dispatch_suspend(self->tim);
 	}
 }
 
@@ -149,30 +127,24 @@ static void machine_timer_disable(machine_timer_obj_t *self)
 static void machine_timer_enable(machine_timer_obj_t *self)
 {
     printf("machine_timer_enable\n");
-	macos_timer *tim;
-	tim = (macos_timer *) malloc(sizeof(macos_timer));
 
-	tim->tim_queue = dispatch_queue_create("org.openzfsonosx.timerqueue", 0);
-	tim->tim_timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, tim->tim_queue);
+    if (self->tim == NULL) {
+	    self->tim = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_main_queue());
+	    dispatch_set_context(self->tim, self);
+	    dispatch_source_set_event_handler_f(self->tim, &_timer_handler);
+	    // dispatch_source_set_cancel_handler_f(self->tim, &_timer_cancel);
+	} else {
+	    machine_timer_disable(self);
+	}
 
-	self->tim = tim;
-
-	/* Opting to use pure C instead of Block versions */
-	dispatch_set_context(tim->tim_timer, self);
-	dispatch_source_set_event_handler_f(tim->tim_timer, _timer_handler);
-	dispatch_source_set_cancel_handler_f(tim->tim_timer, _timer_cancel);
-
-	dispatch_time_t start;
-    start = dispatch_time(DISPATCH_TIME_NOW, self->period);
-	dispatch_source_set_timer(tim->tim_timer, start, self->period, 0);
-	dispatch_resume(tim->tim_timer);
+	dispatch_source_set_timer(self->tim, DISPATCH_TIME_NOW, self->period, 0);
+	dispatch_resume(self->tim);
 }
 
 
 static void machine_timer_init_helper(machine_timer_obj_t *self, int16_t mode, mp_obj_t callback, int64_t period)
 {
     printf("machine_timer_init_helper\n");
-    machine_timer_disable(self);
 
     if (period != -1) self->period = ((uint64_t)period) * 1000000;
     if (mode != -1) self->repeat = (uint8_t)mode;
@@ -186,7 +158,12 @@ static mp_obj_t machine_timer_deinit(mp_obj_t self_in)
 {
     printf("machine_timer_deinit\n");
     machine_timer_obj_t *self = (machine_timer_obj_t *)self_in;
-    machine_timer_disable(self);
+    if (self->tim != NULL) {
+        machine_timer_disable(self);
+        dispatch_source_cancel(self->tim);
+        dispatch_release(self->tim);
+        self->tim = NULL;
+    }
     return mp_const_none;
 }
 
