@@ -102,6 +102,7 @@ class TaskHandler(object):
         return cls._current_instance is not None
 
     def _task_handler(self, _):
+        print('task handler called')
         try:
             self._scheduled -= 1
 
@@ -159,6 +160,8 @@ class TaskHandler(object):
                 self.exception_hook(e)
 
     def _timer_cb(self, _):
+        print('timer callback called')
+
         lv.tick_inc(self.duration)
         if self._scheduled < self.max_scheduled:
             try:

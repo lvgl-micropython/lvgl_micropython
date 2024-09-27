@@ -58,16 +58,21 @@ static inline void _timer_cancel(void *arg)
 static inline void _timer_handler(void *arg)
 {
     machine_timer_obj_t *self = arg;
-
-	if (self->callback != mp_const_none) mp_sched_schedule(self->callback, self);
+    printf("_timer_handler\n");
+	if (self->callback != mp_const_none) {
+	    printf("_timer_handler mp_sched_schedule\n");
+	    mp_sched_schedule(self->callback, self);
+	}
 
 	if (self->repeat) {
+	    printf("_timer_handler dispatch_time\n");
 	    dispatch_time_t start;
         start = dispatch_time(DISPATCH_TIME_NOW, self->period);
 
 	    dispatch_source_set_timer(self->tim->tim_timer, start, self->period, 0);
 	    dispatch_resume(self->tim->tim_timer);
 	} else {
+	    printf("_timer_handler machine_timer_disable\n");
 	    machine_timer_disable(self);
 	}
 }
@@ -82,6 +87,7 @@ static mp_obj_t machine_timer_make_new(const mp_obj_type_t *type, size_t n_args,
         { MP_QSTR_callback,     MP_ARG_KW_ONLY | MP_ARG_OBJ, { .u_obj = mp_const_none } },
         { MP_QSTR_period,       MP_ARG_KW_ONLY | MP_ARG_INT, { .u_int = 0 } }
     };
+    printf("machine_timer_make_new\n");
 
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all_kw_array(
@@ -111,6 +117,8 @@ static mp_obj_t machine_timer_make_new(const mp_obj_type_t *type, size_t n_args,
     }
     // The timer does not exist, create it.
     if (self == NULL) {
+        printf("machine_timer_make_new m_new_obj\n");
+
         self = m_new_obj(machine_timer_obj_t);
         self->base.type = &machine_timer_type;
 
@@ -130,12 +138,17 @@ static mp_obj_t machine_timer_make_new(const mp_obj_type_t *type, size_t n_args,
 
 static void machine_timer_disable(machine_timer_obj_t *self)
 {
-	if (self->tim != NULL) dispatch_source_cancel(self->tim->tim_timer);
+    printf("machine_timer_disable\n");
+	if (self->tim != NULL) {
+	    printf("machine_timer_disable dispatch_source_cancel\n");
+	    dispatch_source_cancel(self->tim->tim_timer);
+	}
 }
 
 
 static void machine_timer_enable(machine_timer_obj_t *self)
 {
+    printf("machine_timer_enable\n");
 	macos_timer *tim;
 	tim = (macos_timer *) malloc(sizeof(macos_timer));
 
@@ -158,6 +171,7 @@ static void machine_timer_enable(machine_timer_obj_t *self)
 
 static void machine_timer_init_helper(machine_timer_obj_t *self, int16_t mode, mp_obj_t callback, int64_t period)
 {
+    printf("machine_timer_init_helper\n");
     machine_timer_disable(self);
 
     if (period != -1) self->period = ((uint64_t)period) * 1000000;
@@ -170,6 +184,7 @@ static void machine_timer_init_helper(machine_timer_obj_t *self, int16_t mode, m
 
 static mp_obj_t machine_timer_deinit(mp_obj_t self_in)
 {
+    printf("machine_timer_deinit\n");
     machine_timer_obj_t *self = (machine_timer_obj_t *)self_in;
     machine_timer_disable(self);
     return mp_const_none;
@@ -191,7 +206,7 @@ static mp_obj_t machine_timer_init(size_t n_args, const mp_obj_t *pos_args, mp_m
 
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
-
+    printf("machine_timer_init\n");
 
     machine_timer_init_helper(
         (machine_timer_obj_t *)args[ARG_self].u_obj,
