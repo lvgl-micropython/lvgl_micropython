@@ -38,20 +38,34 @@ static void machine_timer_disable(machine_timer_obj_t *self);
 static void machine_timer_init_helper(machine_timer_obj_t *self, int16_t mode, mp_obj_t callback, int64_t period);
 
 
+static mp_obj_t _run_scheduled_task(mp_obj_t self_in)
+{
+    printf("_run_scheduled_task\n");
+
+    machine_timer_obj_t *self = (machine_timer_obj_t *)self_in;
+	if (self->callback != mp_const_none) {
+	    printf("_run_scheduled_task mp_call_function_1\n");
+        mp_call_function_1(self->callback, self_in);
+    }
+
+    if (!self->repeat) {
+	    printf("_run_scheduled_task machine_timer_disable\n");
+	    machine_timer_disable(self);
+	}
+
+    return mp_const_none;
+}
+
+static MP_DEFINE_CONST_FUN_OBJ_1(_run_scheduled_task_obj, _run_scheduled_task);
+
+
 static inline void _timer_handler(void *arg)
 {
-    machine_timer_obj_t *self = arg;
+    machine_timer_obj_t *self = (machine_timer_obj_t *)arg;
     printf("_timer_handler\n");
     if (self->tim != NULL) {
-	    if (self->callback != mp_const_none) {
-	        printf("_timer_handler mp_sched_schedule\n");
-	        mp_sched_schedule(self->callback, self);
-	    }
-
-	    if (!self->repeat) {
-	        printf("_timer_handler machine_timer_disable\n");
-	        machine_timer_disable(self);
-	    }
+	   printf("_timer_handler mp_sched_schedule\n");
+	   mp_sched_schedule(_run_scheduled_task, MP_OBJ_FROM_PTR(self));
 	}
 }
 
