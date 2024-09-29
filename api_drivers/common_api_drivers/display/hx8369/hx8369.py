@@ -46,19 +46,15 @@ class HX8369(display_driver_framework.DisplayDriver):
 
         return 0x2C
 
-    def get_backlight(self):
-        raise NotImplementedError
-
-    def set_backlight(self, value):
+    def set_brightness(self, value):
         value = int(value / 100.0 * 255)
 
-        if value > 255:
-            mapped_level = 255
-
-        if 255 > value >= 102:
+        if 255 >= value >= 102:
             mapped_level = 52 + (value - 102) * (255 - 52) / (255 - 102)
         elif value < 102:
             mapped_level = 52 - (102 - value) * 52 / 102
+        else:
+            mapped_level = 255
 
         self._param_buf[0] = mapped_level
         self.set_params(0x51, self._param_mv[:1])
