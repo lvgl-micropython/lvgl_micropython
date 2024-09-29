@@ -9,11 +9,13 @@
     #include "py/obj.h"
     #include "py/objarray.h"
 
+    // esp-idf includes
+    #include "soc/soc_caps.h"
 
     #if SOC_LCD_I80_SUPPORTED
         // esp-idf includes
         #include "esp_lcd_panel_io.h"
-        #include "soc/soc_caps.h"
+
 
         typedef struct _mp_lcd_i80_bus_obj_t {
             mp_obj_base_t base;

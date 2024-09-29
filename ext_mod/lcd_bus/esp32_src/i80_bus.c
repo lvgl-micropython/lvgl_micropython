@@ -11,9 +11,11 @@
 // stdlib includes
 #include <string.h>
 
+// esp-idf includes
+#include "soc/soc_caps.h"
+
 #if SOC_LCD_I80_SUPPORTED
     // esp-idf includes
-    #include "soc/soc_caps.h"
     #include "esp_lcd_panel_io.h"
     #include "esp_heap_caps.h"
     #include "hal/lcd_types.h"
