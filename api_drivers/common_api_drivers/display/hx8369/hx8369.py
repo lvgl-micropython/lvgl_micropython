@@ -13,7 +13,7 @@ BYTE_ORDER_RGB = display_driver_framework.BYTE_ORDER_RGB
 BYTE_ORDER_BGR = display_driver_framework.BYTE_ORDER_BGR
 
 
-class NT35510(display_driver_framework.DisplayDriver):
+class HX8369(display_driver_framework.DisplayDriver):
 
     def reset(self):
         if self._reset_pin is None:
