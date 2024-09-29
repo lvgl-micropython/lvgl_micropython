@@ -1,6 +1,5 @@
-import sys
 import display_driver_framework
-
+import lvgl as lv
 
 STATE_HIGH = display_driver_framework.STATE_HIGH
 STATE_LOW = display_driver_framework.STATE_LOW
@@ -10,8 +9,5 @@ BYTE_ORDER_RGB = display_driver_framework.BYTE_ORDER_RGB
 BYTE_ORDER_BGR = display_driver_framework.BYTE_ORDER_BGR
 
 
-class ILI9341(display_driver_framework.DisplayDriver):
+class ili9341(display_driver_framework.DisplayDriver):
     pass
-
-
-

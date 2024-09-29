@@ -15,6 +15,8 @@ if(ESP_PLATFORM)
         ${CMAKE_CURRENT_LIST_DIR}/esp32_src/spi_bus.c
         ${CMAKE_CURRENT_LIST_DIR}/esp32_src/i80_bus.c
         ${CMAKE_CURRENT_LIST_DIR}/esp32_src/rgb_bus.c
+        ${CMAKE_CURRENT_LIST_DIR}/esp32_src/esp_rgb_bus.c
+
     )
 
     # gets esp_lcd include paths
@@ -25,6 +27,15 @@ if(ESP_PLATFORM)
     if(ESP_LCD_INCLUDES)
         list(TRANSFORM ESP_LCD_INCLUDES PREPEND ${ESP_LCD_DIR}/)
         list(APPEND LCD_INCLUDES ${ESP_LCD_INCLUDES})
+        list(APPEND LCD_INCLUDES ${ESP_LCD_DIR}/src)
+    endif()
+
+    idf_component_get_property(ESP_MM_INCLUDES esp_mm INCLUDE_DIRS)
+    idf_component_get_property(ESP_MM_DIR esp_mm COMPONENT_DIR)
+
+    if(ESP_MM_INCLUDES)
+        list(TRANSFORM ESP_MM_INCLUDES PREPEND ${ESP_MM_DIR}/)
+        list(APPEND LCD_INCLUDES ${ESP_MM_INCLUDES})
     endif()
 
 else()

@@ -1,6 +1,9 @@
 from typing import Optional, Tuple, Union, ClassVar, Callable, List, Any
 from typing import TYPE_CHECKING
 
+import spi3wire
+
+
 if TYPE_CHECKING:
     import micropython  # NOQA
     import machine  # NOQA
@@ -57,7 +60,9 @@ class DisplayDriver:
     _frame_buffer2: Optional[_BufferType] = ...
     _backup_set_memory_location: Optional[Callable] = ...
     _rotation: int = ...
-    _spi_3wire: lcd_bus.SPI3Wire = None
+    _cmd_bits: int = ...
+    _param_bits: int = ...
+    _init_disp_bus: bool = ...
 
     # Default values of "power" and "backlight" are reversed logic! 0 means ON.
     # You can change this by setting backlight_on and power_on arguments.
