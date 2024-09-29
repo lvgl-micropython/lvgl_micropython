@@ -30,7 +30,6 @@ target = args1.target[0]
 
 argParser = ArgumentParser(prefix_chars='mscLBFDIV')
 
-
 argParser.add_argument(
     'clean',
     dest='clean',
