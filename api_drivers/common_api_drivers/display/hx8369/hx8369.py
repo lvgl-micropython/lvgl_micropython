@@ -25,28 +25,6 @@ class HX8369(display_driver_framework.DisplayDriver):
         self._reset_pin.value(not self._reset_state)
         time.sleep_ms(50)  # NOQA
 
-    def _set_memory_location(self, x1, y1, x2, y2):
-        # Column addresses
-        param_buf = self._param_buf  # NOQA
-
-        param_buf[0] = (x1 >> 8) & 0xFF
-        param_buf[1] = x1 & 0xFF
-        param_buf[2] = (x2 >> 8) & 0xFF
-        param_buf[3] = x2 & 0xFF
-
-        self._data_bus.tx_param(0x2A, self._param_mv)
-
-        # Page addresses
-        param_buf[0] = (y1 >> 8) & 0xFF
-        param_buf[1] = y1 & 0xFF
-        param_buf[2] = (y2 >> 8) & 0xFF
-        param_buf[3] = y2 & 0xFF
-
-        self._data_bus.tx_param(0x2B, self._param_mv)
-        self._data_bus.tx_param(0x29, self._param_mv)
-
-        return 0x2C
-
     def set_brightness(self, value):
         value = int(value / 100.0 * 255)
 
