@@ -8,6 +8,7 @@ _MADCTL = const(0x36)
 _SLPOUT = const(0x11)
 _DISPON = const(0x29)
 
+
 def init(self):
     param_buf = bytearray(192)
     param_mv = memoryview(param_buf)
