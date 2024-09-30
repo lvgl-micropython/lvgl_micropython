@@ -6,7 +6,7 @@ from micropython import const  # NOQA
 _COLMOD = const(0x3A)
 _MADCTL = const(0x36)
 _SLPOUT = const(0x11)
-
+_DISPON = const(0x29)
 
 def init(self):
     param_buf = bytearray(192)
@@ -107,3 +107,5 @@ def init(self):
         raise RuntimeError('unsupported color format')
 
     self.set_params(_COLMOD, param_mv[:1])
+    self.set_params(_DISPON)
+
