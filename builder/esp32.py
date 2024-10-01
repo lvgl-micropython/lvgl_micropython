@@ -844,19 +844,12 @@ def set_thread_core():
             data = data.replace(pattern, text)
             break
 
-    if '#ifdef MICROPY_TASK_STACK_SIZE' not in data:
-        new_lines = [
-            '#ifdef MICROPY_TASK_STACK_SIZE',
-            '    #undef MICROPY_TASK_STACK_SIZE'
-            '#endif'
-            ''
-            f'#define MICROPY_TASK_STACK_SIZE           ({task_stack_size})'
-            ''
-            '#ifndef MICROPY_CONFIG_ROM_LEVEL'
-        ]
+    if data.count('#define MICROPY_TASK_STACK_SIZE') == 1:
         data = data.replace(
             '#ifndef MICROPY_CONFIG_ROM_LEVEL',
-            '\n'.join(new_lines), 1)
+            f'#define MICROPY_TASK_STACK_SIZE           '
+            f'({task_stack_size})\n\n#ifndef MICROPY_CONFIG_ROM_LEVEL'
+        )
     else:
         data = data.split('\n')
         for i, line in enumerate(data):
