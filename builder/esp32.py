@@ -519,6 +519,9 @@ def has_correct_idf():
     )
 
 
+set_displays = []
+
+
 def build_manifest(
     target, script_dir, lvgl_api, displays, indevs, frozen_manifest
 ):
@@ -538,11 +541,11 @@ def build_manifest(
 
     manifest_path = 'lib/micropython/ports/esp32/boards/manifest.py'
 
-    generate_manifest(
+    set_displays.extend(generate_manifest(
         script_dir, lvgl_api, manifest_path,
         displays, indevs, frozen_manifest,
         f'{script_dir}/api_drivers/common_api_drivers/frozen/other/spi3wire.py'
-    )
+    ))
 
 
 def force_clean(clean_mpy_cross):
@@ -1090,6 +1093,13 @@ def build_sdkconfig(*args):
 
     if oct_flash:
         base_config.append('CONFIG_ESPTOOLPY_OCT_FLASH=y')
+
+    for display_path in set_displays:
+        display_path = os.path.join(display_path, 'sdkconfig')
+        if not os.path.exists(display_path):
+            continue
+
+        base_config.extend(read_file(display_path).split('\n'))
 
     with open(SDKCONFIG_PATH, 'w') as f:
         f.write('\n'.join(base_config))
