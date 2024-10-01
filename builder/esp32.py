@@ -162,7 +162,7 @@ optimize_size = False
 ota = False
 
 dual_core_threads = False
-task_stack_size = 16 * 1024
+task_stack_size = 6 * 1024 + 512
 
 
 def common_args(extra_args):
@@ -271,18 +271,11 @@ def common_args(extra_args):
         action='store_true'
     )
 
-    def multiple_of_16(value):
-        value = int(value)
-        if value % 1024:
-            raise ValueError('task stack size must be a multiple of 1024')
-
-        return value
-
     esp_argParser.add_argument(
         '--task-stack-size',
         dest='task_stack_size',
         default=task_stack_size,
-        type=multiple_of_16,
+        type=int,
         action='store'
     )
 
@@ -851,23 +844,29 @@ def set_thread_core():
             data = data.replace(pattern, text)
             break
 
-    data = data.split('\n')
-    for i, line in enumerate(data[:]):
-        if line.startswith('#ifndef MICROPY_CONFIG_ROM_LEVEL'):
-            last_line = data[i - 2]
-
-            if not last_line.startswith('#define MICROPY_TASK_STACK_SIZE'):
-                data.insert(i - 1, '')
-
-            multiple = int(task_stack_size / 1024)
-
-            data[i - 2] = (
-                f'#define MICROPY_TASK_STACK_SIZE           ({multiple} * 1024)'
-            )
-
-            break
-
-    data = '\n'.join(data)
+    if '#ifdef MICROPY_TASK_STACK_SIZE' not in data:
+        new_lines = [
+            '#ifdef MICROPY_TASK_STACK_SIZE',
+            '    #undef MICROPY_TASK_STACK_SIZE'
+            '#endif'
+            ''
+            f'#define MICROPY_TASK_STACK_SIZE           ({task_stack_size})'
+            ''
+            '#ifndef MICROPY_CONFIG_ROM_LEVEL'
+        ]
+        data = data.replace(
+            '#ifndef MICROPY_CONFIG_ROM_LEVEL',
+            '\n'.join(new_lines), 1)
+    else:
+        data = data.split('\n')
+        for i, line in enumerate(data):
+            if line.startswith('#define MICROPY_TASK_STACK_SIZE'):
+                data[i] = (
+                    f'#define MICROPY_TASK_STACK_SIZE'
+                    f'           ({task_stack_size})'
+                )
+                break
+        data = '\n'.join(data)
 
     with open(MPCONFIGPORT_PATH, 'wb') as f:
         f.write(data.encode('utf-8'))

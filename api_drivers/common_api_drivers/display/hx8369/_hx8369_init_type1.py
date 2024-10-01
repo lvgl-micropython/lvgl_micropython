@@ -3,6 +3,16 @@ import lvgl as lv
 from micropython import const  # NOQA
 
 
+_SETEXTC = const(0xB9)
+_SETPOWER = const(0xB1)
+_SETDISP = const(0xB2)
+_SETCYC = const(0xB4)
+_SETVCOM = const(0xB6)
+_SETGIP = const(0xD5)
+_SETGAMMA = const(0xE0)
+_SETDGCLUT = const(0xC1)
+_SETCOLOR = const(0x2D)
+
 _COLMOD = const(0x3A)
 _MADCTL = const(0x36)
 _SLPOUT = const(0x11)
@@ -17,7 +27,7 @@ def init(self):
 
     # SET password
     param_buf[:3] = bytearray([0xFF, 0x83, 0x69])
-    self.set_params(0xB9, param_mv[:3])
+    self.set_params(_SETEXTC, param_mv[:3])
 
     # # SET Freq for fps
     # param_buf[:2] = bytearray([0x01, 0x08])
@@ -28,22 +38,22 @@ def init(self):
         0x01, 0x00, 0x34, 0x06, 0x00, 0x0f, 0x0f, 0x2a, 0x32, 0x3f,
         0x3f, 0x07, 0x23, 0x01, 0xe6, 0xe6, 0xe6, 0xe6, 0xe6])
 
-    self.set_params(0xB1, param_mv[:19])
+    self.set_params(_SETPOWER, param_mv[:19])
 
     # SET Display  480x800
     param_buf[:15] = bytearray([
         0x00, 0x20, 0x03, 0x03, 0x70, 0x00, 0xff, 0x00,
         0x00, 0x00, 0x00, 0x03, 0x03, 0x00, 0x01])
 
-    self.set_params(0xB2, param_mv[:15])
+    self.set_params(_SETDISP, param_mv[:15])
 
     # SET Display  column inversion
     param_buf[:5] = bytearray([0x00, 0x0C, 0xA0, 0x0E, 0x06])
-    self.set_params(0xB4, param_mv[:5])
+    self.set_params(_SETCYC, param_mv[:5])
 
     # SET VCOM
     param_buf[:2] = bytearray([0x2C, 0x2C])
-    self.set_params(0xB6, param_mv[:2])
+    self.set_params(_SETVCOM, param_mv[:2])
 
     # SET GIP
     param_buf[:26] = bytearray([
@@ -51,7 +61,7 @@ def init(self):
         0x37, 0x20, 0x31, 0x46, 0x8a, 0x57, 0x9b, 0x20, 0x31,
         0x46, 0x8a, 0x57, 0x9b, 0x07, 0x0f, 0x02, 0x00])
 
-    self.set_params(0xD5, param_mv[:26])
+    self.set_params(_SETGIP, param_mv[:26])
 
     # Set Gamma
     param_buf[:34] = bytearray([
@@ -60,7 +70,7 @@ def init(self):
         0x08, 0x0d, 0x2d, 0x34, 0x3f, 0x19, 0x38, 0x09, 0x0e,
         0x0e, 0x12, 0x14, 0x12, 0x14, 0x13, 0x19])
 
-    self.set_params(0xE0, param_mv[:34])
+    self.set_params(_SETGAMMA, param_mv[:34])
 
     # Set DGC
     param_buf[:127] = bytearray([
@@ -79,7 +89,7 @@ def init(self):
         0xb6, 0xbe, 0xc7, 0xce, 0xd6, 0xde, 0xe6, 0xef, 0xf5,
         0xfb, 0xfc, 0xfe, 0x8c, 0xa4, 0x19, 0xec, 0x1b, 0x4c, 0x40])
 
-    self.set_params(0xC1, param_mv[:127])
+    self.set_params(_SETDGCLUT, param_mv[:127])
 
     #  Colour Set
     for i in range(64):
@@ -91,7 +101,7 @@ def init(self):
     for i in range(128, 192, 1):
         param_buf[i] = i * 8
 
-    self.set_params(0x2D, param_mv[:192])
+    self.set_params(_SETCOLOR, param_mv[:192])
 
     # LCD goes into sleep mode and display will be turned off after 
     # power on reset, exit sleep mode first
@@ -113,4 +123,3 @@ def init(self):
 
     self.set_params(_COLMOD, param_mv[:1])
     self.set_params(_DISPON)
-
