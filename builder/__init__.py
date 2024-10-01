@@ -189,6 +189,8 @@ def generate_manifest(
         entry = f"freeze('{file_path}', '{file_name}')"
         manifest_files.append(entry)
 
+    display_paths = []
+
     for file in displays:
         if not os.path.exists(file):
             tmp_file = (
@@ -198,11 +200,15 @@ def generate_manifest(
             if not os.path.exists(tmp_file):
                 raise RuntimeError(f'Display not found "{file}"')
 
+            display_paths.append(tmp_file)
             for file_name in os.listdir(tmp_file):
+                if not file_name.endswith('.py'):
+                    continue
+
                 print(file_name)
+
                 entry = f"freeze('{tmp_file}', '{file_name}')"
                 manifest_files.append(entry)
-            continue
 
         print(file)
         file_path, file_name = os.path.split(file)
@@ -213,6 +219,8 @@ def generate_manifest(
 
     with open('build/manifest.py', 'w') as f:
         f.write(manifest_files)
+
+    return display_paths
 
 
 def get_lvgl():
