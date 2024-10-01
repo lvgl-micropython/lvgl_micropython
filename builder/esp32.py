@@ -844,22 +844,14 @@ def set_thread_core():
             data = data.replace(pattern, text)
             break
 
-    if data.count('#define MICROPY_TASK_STACK_SIZE') == 1:
-        data = data.replace(
-            '#ifndef MICROPY_CONFIG_ROM_LEVEL',
-            f'#define MICROPY_TASK_STACK_SIZE           '
-            f'({task_stack_size})\n\n#ifndef MICROPY_CONFIG_ROM_LEVEL'
-        )
-    else:
-        data = data.split('\n')
-        for i, line in enumerate(data):
-            if line.startswith('#define MICROPY_TASK_STACK_SIZE'):
-                data[i] = (
-                    f'#define MICROPY_TASK_STACK_SIZE'
-                    f'           ({task_stack_size})'
-                )
-                break
-        data = '\n'.join(data)
+    data = data.split('\n')
+    for i, line in enumerate(data):
+        if line.startswith('#define MICROPY_TASK_STACK_SIZE'):
+            data[i] = (
+                f'#define MICROPY_TASK_STACK_SIZE           ({task_stack_size})'
+            )
+            break
+    data = '\n'.join(data)
 
     with open(MPCONFIGPORT_PATH, 'wb') as f:
         f.write(data.encode('utf-8'))
