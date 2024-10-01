@@ -1,10 +1,10 @@
 
-#ifndef __MACHINE_TIMER_H__
-    #define __MACHINE_TIMER_H__
+#ifndef __MODMACHINE_H__
+    #define __MODMACHINE_H__
+
     #define SDL_MAIN_HANDLED /*To fix SDL's "undefined reference to WinMain" issue*/
 
     #include "SDL.h"
-
 
     void machine_timer_deinit_all(void);
 
@@ -23,4 +23,4 @@
         SDL_QuitSubSystem(SDL_INIT_TIMER);
     }
 
-#endif /* __MACHINE_TIMER_H__ */
+#endif /* __MODMACHINE_H__ */
