@@ -162,6 +162,7 @@ optimize_size = False
 ota = False
 
 dual_core_threads = False
+task_stack_size = 16 * 1024
 
 
 def common_args(extra_args):
@@ -177,6 +178,7 @@ def common_args(extra_args):
     global optimize_size
     global ota
     global dual_core_threads
+    global task_stack_size
 
     if board == 'ARDUINO_NANO_ESP32':
         raise RuntimeError('Board is not currently supported')
@@ -269,6 +271,21 @@ def common_args(extra_args):
         action='store_true'
     )
 
+    def multiple_of_16(value):
+        value = int(value)
+        if value % 1024:
+            raise ValueError('task stack size must be a multiple of 1024')
+
+        return value
+
+    esp_argParser.add_argument(
+        '--task-stack-size',
+        dest='task_stack_size',
+        default=task_stack_size,
+        type=multiple_of_16,
+        action='store'
+    )
+
     esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
 
     BAUD = esp_args.baud
@@ -282,6 +299,7 @@ def common_args(extra_args):
     optimize_size = esp_args.optimize_size
     ota = esp_args.ota
     dual_core_threads = esp_args.dual_core_threads
+    task_stack_size = esp_args.task_stack_size
 
     return extra_args
 
@@ -832,6 +850,24 @@ def set_thread_core():
         if pattern in data:
             data = data.replace(pattern, text)
             break
+
+    data = data.split('\n')
+    for i, line in enumerate(data[:]):
+        if line.startswith('#ifndef MICROPY_CONFIG_ROM_LEVEL'):
+            last_line = data[i - 2]
+
+            if not last_line.startswith('#define MICROPY_TASK_STACK_SIZE'):
+                data.insert(i - 1, '')
+
+            multiple = int(task_stack_size / 1024)
+
+            data[i - 2] = (
+                f'#define MICROPY_TASK_STACK_SIZE           ({multiple} * 1024)'
+            )
+
+            break
+
+    data = '\n'.join(data)
 
     with open(MPCONFIGPORT_PATH, 'wb') as f:
         f.write(data.encode('utf-8'))
