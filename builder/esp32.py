@@ -162,7 +162,7 @@ optimize_size = False
 ota = False
 
 dual_core_threads = False
-task_stack_size = 6 * 1024 + 512
+task_stack_size = 16 * 1024
 
 
 def common_args(extra_args):
