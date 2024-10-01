@@ -311,7 +311,7 @@ def update_mpconfigvariant_common():
         )
 
     macros = (
-        '#define MICROPY_SCHEDULER_DEPTH              (128)'
+        '#define MICROPY_SCHEDULER_DEPTH              (128)',
         '#define MICROPY_STACK_CHECK              (0)'
     )
 
