@@ -1,8 +1,8 @@
 #ifndef _FAKE_TYPEDEFS_H
 #define _FAKE_TYPEDEFS_H
 
-typedef int size_t;
-typedef int __builtin_va_list;
+typedef unsigned long long size_t;
+typedef char * __builtin_va_list;
 typedef int __gnuc_va_list;
 typedef int va_list;
 typedef int __int8_t;

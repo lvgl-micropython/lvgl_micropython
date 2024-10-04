@@ -209,11 +209,11 @@ def generate_manifest(
 
                 entry = f"freeze('{tmp_file}', '{file_name}')"
                 manifest_files.append(entry)
-
-        print(file)
-        file_path, file_name = os.path.split(file)
-        entry = f"freeze('{file_path}', '{file_name}')"
-        manifest_files.append(entry)
+        else:
+            print(file)
+            file_path, file_name = os.path.split(file)
+            entry = f"freeze('{file_path}', '{file_name}')"
+            manifest_files.append(entry)
 
     manifest_files = '\n'.join(manifest_files)
 
