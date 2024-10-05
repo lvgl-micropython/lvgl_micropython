@@ -55,7 +55,6 @@
             ARG_dc_data_high,
             ARG_cs_active_high,
             ARG_reverse_color_bits,
-            ARG_swap_color_bytes,
             ARG_pclk_active_low,
             ARG_pclk_idle_low,
         };
@@ -87,7 +86,6 @@
             { MP_QSTR_dc_data_high,       MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = true   } },
             { MP_QSTR_cs_active_high,     MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false   } },
             { MP_QSTR_reverse_color_bits, MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false   } },
-            { MP_QSTR_swap_color_bytes,   MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false   } },
             { MP_QSTR_pclk_active_low,    MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false   } },
             { MP_QSTR_pclk_idle_low,      MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false   } }
         };
@@ -148,7 +146,6 @@
         self->panel_io_config.dc_levels.dc_data_level = (unsigned int)args[ARG_dc_data_high].u_bool;
         self->panel_io_config.flags.cs_active_high = (unsigned int)args[ARG_cs_active_high].u_bool;
         self->panel_io_config.flags.reverse_color_bits = (unsigned int)args[ARG_reverse_color_bits].u_bool;
-        self->panel_io_config.flags.swap_color_bytes = (unsigned int)args[ARG_swap_color_bytes].u_bool;
         self->panel_io_config.flags.pclk_active_neg = (unsigned int)args[ARG_pclk_active_low].u_bool;
         self->panel_io_config.flags.pclk_idle_low = (unsigned int)args[ARG_pclk_idle_low].u_bool;
 
@@ -182,7 +179,6 @@
         printf("dc_data_level=%d\n", self->panel_io_config.dc_levels.dc_data_level);
         printf("cs_active_high=%d\n", self->panel_io_config.flags.cs_active_high);
         printf("reverse_color_bits=%d\n", self->panel_io_config.flags.reverse_color_bits);
-        printf("swap_color_bytes=%d\n", self->panel_io_config.flags.swap_color_bytes);
         printf("pclk_active_neg=%d\n", self->panel_io_config.flags.pclk_active_neg);
         printf("pclk_idle_low=%d\n", self->panel_io_config.flags.pclk_idle_low);
     #endif
@@ -202,11 +198,10 @@
     #endif
 
         mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)obj;
+        self->rgb565_byte_swap = false;
 
-        if (bpp == 16) {
-            self->rgb565_byte_swap = rgb565_byte_swap;
-        } else {
-            self->rgb565_byte_swap = false;
+        if (rgb565_byte_swap && bpp == 16) {
+            self->panel_io_config.flags.swap_color_bytes = 1;
         }
 
         self->panel_io_config.lcd_cmd_bits = (int)cmd_bits;

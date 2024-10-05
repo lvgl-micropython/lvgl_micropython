@@ -40,8 +40,8 @@ class ST7796(display_driver_framework.DisplayDriver):
     # We just have to tell lvgl that we want to use
 
     _ORIENTATION_TABLE = (
-        _MADCTL_MX,
-        _MADCTL_MV | _MADCTL_MY | _MADCTL_MX,
-        _MADCTL_MY,
-        _MADCTL_MV
+        0x0,
+        _MADCTL_MV | _MADCTL_MX,
+        _MADCTL_MY | _MADCTL_MX,
+        _MADCTL_MV | _MADCTL_MY
     )

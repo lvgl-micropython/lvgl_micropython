@@ -2,13 +2,13 @@ import time
 from micropython import const  # NOQA
 
 import lvgl as lv  # NOQA
+import lcd_bus
 
 
 _SWRESET = const(0x01)
 _SLPOUT = const(0x11)
 _MADCTL = const(0x36)
 _COLMOD = const(0x3A)
-_IFMODE = const(0xB0)
 _PORCTRL = const(0xB2)
 _GCTRL = const(0xB7)
 _VCOMS = const(0xBB)
@@ -25,6 +25,9 @@ _PGC = const(0xE0)
 _NGC = const(0xE1)
 _DISPON = const(0x29)
 _NORON = const(0x13)
+
+_RAMCTRL = const(0xB0)
+_RGB565SWAP = const(0x08)
 
 
 def init(self):
@@ -53,9 +56,16 @@ def init(self):
     param_buf[1] = 0x82
     self.set_params(0xB6, param_mv[:2])
 
-    # param_buf[0] = 0x00
-    # param_buf[1] = 0xE0
-    # self.set_params(_IFMODE, param_mv[:2])
+    # sets swapping the bytes at the hardware level.
+
+    if (
+        self._rgb565_byte_swap and
+        isinstance(self._data_bus, lcd_bus.I80Bus) and
+        self._data_bus.get_lane_count() == 8
+    ):
+        param_buf[0] = 0x00
+        param_buf[1] = 0xF0 | _RGB565SWAP
+        self.set_params(_RAMCTRL, param_mv[:2])
 
     color_size = lv.color_format_get_size(self._color_space)
     if color_size == 2:  # NOQA
