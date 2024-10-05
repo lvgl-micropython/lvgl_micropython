@@ -31,22 +31,7 @@
         enum {
             ARG_dc,
             ARG_wr,
-            ARG_data0,
-            ARG_data1,
-            ARG_data2,
-            ARG_data3,
-            ARG_data4,
-            ARG_data5,
-            ARG_data6,
-            ARG_data7,
-            ARG_data8,
-            ARG_data9,
-            ARG_data10,
-            ARG_data11,
-            ARG_data12,
-            ARG_data13,
-            ARG_data14,
-            ARG_data15,
+            ARG_data_pins,
             ARG_cs,
             ARG_freq,
             ARG_dc_idle_high,
@@ -62,22 +47,7 @@
         const mp_arg_t make_new_args[] = {
             { MP_QSTR_dc,                 MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
             { MP_QSTR_wr,                 MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
-            { MP_QSTR_data0,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
-            { MP_QSTR_data1,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
-            { MP_QSTR_data2,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
-            { MP_QSTR_data3,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
-            { MP_QSTR_data4,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
-            { MP_QSTR_data5,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
-            { MP_QSTR_data6,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
-            { MP_QSTR_data7,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
-            { MP_QSTR_data8,              MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = -1       } },
-            { MP_QSTR_data9,              MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = -1       } },
-            { MP_QSTR_data10,             MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = -1       } },
-            { MP_QSTR_data11,             MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = -1       } },
-            { MP_QSTR_data12,             MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = -1       } },
-            { MP_QSTR_data13,             MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = -1       } },
-            { MP_QSTR_data14,             MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = -1       } },
-            { MP_QSTR_data15,             MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = -1       } },
+            { MP_QSTR_data_pins,          MP_ARG_OBJ  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
             { MP_QSTR_cs,                 MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = -1       } },
             { MP_QSTR_freq,               MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = 10000000 } },
             { MP_QSTR_dc_idle_high,       MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false  } },
@@ -109,31 +79,18 @@
         self->bus_config.dc_gpio_num = (int)args[ARG_dc].u_int;
         self->bus_config.wr_gpio_num = (int)args[ARG_wr].u_int;
         self->bus_config.clk_src = LCD_CLK_SRC_PLL160M;
-        self->bus_config.data_gpio_nums[0] = args[ARG_data0].u_int;
-        self->bus_config.data_gpio_nums[1] = args[ARG_data1].u_int;
-        self->bus_config.data_gpio_nums[2] = args[ARG_data2].u_int;
-        self->bus_config.data_gpio_nums[3] = args[ARG_data3].u_int;
-        self->bus_config.data_gpio_nums[4] = args[ARG_data4].u_int;
-        self->bus_config.data_gpio_nums[5] = args[ARG_data5].u_int;
-        self->bus_config.data_gpio_nums[6] = args[ARG_data6].u_int;
-        self->bus_config.data_gpio_nums[7] = args[ARG_data7].u_int;
-        self->bus_config.data_gpio_nums[8] = args[ARG_data8].u_int;
-        self->bus_config.data_gpio_nums[9] = args[ARG_data9].u_int;
-        self->bus_config.data_gpio_nums[10] = args[ARG_data10].u_int;
-        self->bus_config.data_gpio_nums[11] = args[ARG_data11].u_int;
-        self->bus_config.data_gpio_nums[12] = args[ARG_data12].u_int;
-        self->bus_config.data_gpio_nums[13] = args[ARG_data13].u_int;
-        self->bus_config.data_gpio_nums[14] = args[ARG_data14].u_int;
-        self->bus_config.data_gpio_nums[15] = args[ARG_data15].u_int;
 
-        uint8_t i = 0;
-        for (; i < SOC_LCD_I80_BUS_WIDTH; i++) {
-            if (self->bus_config.data_gpio_nums[i] == -1) {
-                break;
-            }
+        mp_obj_tuple_t *data_pins = MP_OBJ_TO_PTR(args[ARG_data_pins].u_obj);
+
+        for (size_t i = 0; i < data_pins->len; i++) {
+            self->bus_config.data_gpio_nums[i] = (int)mp_obj_get_int(data_pins->items[i]);
         }
 
-        self->bus_config.bus_width = (size_t) i;
+        for (size_t i = data_pins->len; i < SOC_LCD_I80_BUS_WIDTH; i++) {
+            self->bus_config.data_gpio_nums[i] = -1;
+        }
+
+        self->bus_config.bus_width = (size_t)data_pins->len;
 
         self->panel_io_config.cs_gpio_num = (int)args[ARG_cs].u_int;
         self->panel_io_config.pclk_hz = (uint32_t)args[ARG_freq].u_int;

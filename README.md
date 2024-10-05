@@ -1,6 +1,14 @@
 # ***IMPORTANT PLEASE READ***
 _____________________________
 
+***API Breaking Change***
+`lcd_bus.RGBBus` and `lcd_bus.I80Bus` have had the data pins consilidated into a single parameter.
+The parameter name is `data_pins` and it is a tuple of the pin numbers that needs to be passed.
+
+`lcd_bus.RGBBus` had 2 parameters removed. The `disp` and `disp_active_high` parameters. The "disp" 
+pin is the power pin and it should be set as such with the display driver and not the bus
+
+----------------------------------------------
 
 The `mpy_cross` build command has been removed. It will be compiled automatically if it has not been compiled yet.
 
