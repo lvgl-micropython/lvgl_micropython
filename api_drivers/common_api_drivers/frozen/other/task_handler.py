@@ -60,6 +60,7 @@ class TaskHandler(object):
                 callback=self._timer_cb
             )
             self._scheduled = 0
+            self._running = False
 
     def add_event_cb(self, callback, event, user_data=_DefaultUserData):
         for i, (cb, evt, data) in enumerate(self._callbacks):
@@ -101,6 +102,8 @@ class TaskHandler(object):
             self._scheduled -= 1
 
             if lv._nesting.value == 0:
+                self._running = True
+
                 run_update = True
                 for cb, evt, data in self._callbacks:
                     if not evt ^ TASK_HANDLER_STARTED:
@@ -148,12 +151,19 @@ class TaskHandler(object):
                     ticks_diff = time.ticks_diff(stop_time, start_time)
                     lv.tick_inc(ticks_diff)
 
+                self._running = False
+
         except Exception as e:
+            self._running = False
+            
             if self.exception_hook:
                 self.exception_hook(e)
 
     def _timer_cb(self, _):
         lv.tick_inc(self.duration)
+        if self._running:
+            return
+
         if self._scheduled < self.max_scheduled:
             try:
                 micropython.schedule(self._task_handler_ref, 0)
