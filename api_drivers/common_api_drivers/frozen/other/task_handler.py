@@ -155,7 +155,7 @@ class TaskHandler(object):
 
         except Exception as e:
             self._running = False
-
+            
             if self.exception_hook:
                 self.exception_hook(e)
 

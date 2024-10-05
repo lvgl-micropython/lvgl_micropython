@@ -84,7 +84,22 @@
             ARG_vsync,
             ARG_de,
             ARG_pclk,
-            ARG_data_pins,
+            ARG_data0,
+            ARG_data1,
+            ARG_data2,
+            ARG_data3,
+            ARG_data4,
+            ARG_data5,
+            ARG_data6,
+            ARG_data7,
+            ARG_data8,
+            ARG_data9,
+            ARG_data10,
+            ARG_data11,
+            ARG_data12,
+            ARG_data13,
+            ARG_data14,
+            ARG_data15,
             ARG_freq,
             ARG_hsync_front_porch,
             ARG_hsync_back_porch,
@@ -105,7 +120,22 @@
             { MP_QSTR_vsync,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
             { MP_QSTR_de,                 MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
             { MP_QSTR_pclk,               MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
-            { MP_QSTR_data_pins,          MP_ARG_OBJ  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
+            { MP_QSTR_data0,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
+            { MP_QSTR_data1,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
+            { MP_QSTR_data2,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
+            { MP_QSTR_data3,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
+            { MP_QSTR_data4,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
+            { MP_QSTR_data5,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
+            { MP_QSTR_data6,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
+            { MP_QSTR_data7,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
+            { MP_QSTR_data8,              MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
+            { MP_QSTR_data9,              MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
+            { MP_QSTR_data10,             MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
+            { MP_QSTR_data11,             MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
+            { MP_QSTR_data12,             MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
+            { MP_QSTR_data13,             MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
+            { MP_QSTR_data14,             MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
+            { MP_QSTR_data15,             MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
             { MP_QSTR_freq,               MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 8000000 } },
             { MP_QSTR_hsync_front_porch,  MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 0       } },
             { MP_QSTR_hsync_back_porch,   MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 0       } },
@@ -149,26 +179,37 @@
         self->panel_io_config.vsync_gpio_num = (int)args[ARG_vsync].u_int;
         self->panel_io_config.de_gpio_num = (int)args[ARG_de].u_int;
         self->panel_io_config.pclk_gpio_num = (int)args[ARG_pclk].u_int;
-
-        mp_obj_tuple_t *data_pins = MP_OBJ_TO_PTR(args[ARG_data_pins].u_obj);
-
-        for (size_t i = 0; i < data_pins->len; i++) {
-            self->panel_io_config.data_gpio_nums[i] = (int)mp_obj_get_int(data_pins->items[i]);
-        }
-
-        for (size_t i = data_pins->len; i < 16; i++) {
-            self->panel_io_config.data_gpio_nums[i] = -1;
-        }
-
-        self->panel_io_config.data_width = (size_t)data_pins->len;
-
+        self->panel_io_config.data_gpio_nums[0] = (int)args[ARG_data0].u_int;
+        self->panel_io_config.data_gpio_nums[1] = (int)args[ARG_data1].u_int;
+        self->panel_io_config.data_gpio_nums[2] = (int)args[ARG_data2].u_int;
+        self->panel_io_config.data_gpio_nums[3] = (int)args[ARG_data3].u_int;
+        self->panel_io_config.data_gpio_nums[4] = (int)args[ARG_data4].u_int;
+        self->panel_io_config.data_gpio_nums[5] = (int)args[ARG_data5].u_int;
+        self->panel_io_config.data_gpio_nums[6] = (int)args[ARG_data6].u_int;
+        self->panel_io_config.data_gpio_nums[7] = (int)args[ARG_data7].u_int;
+        self->panel_io_config.data_gpio_nums[8] = (int)args[ARG_data8].u_int;
+        self->panel_io_config.data_gpio_nums[9] = (int)args[ARG_data9].u_int;
+        self->panel_io_config.data_gpio_nums[10] = (int)args[ARG_data10].u_int;
+        self->panel_io_config.data_gpio_nums[11] = (int)args[ARG_data11].u_int;
+        self->panel_io_config.data_gpio_nums[12] = (int)args[ARG_data12].u_int;
+        self->panel_io_config.data_gpio_nums[13] = (int)args[ARG_data13].u_int;
+        self->panel_io_config.data_gpio_nums[14] = (int)args[ARG_data14].u_int;
+        self->panel_io_config.data_gpio_nums[15] = (int)args[ARG_data15].u_int;
+        self->panel_io_config.disp_gpio_num = (int)args[ARG_disp].u_int;
         self->panel_io_config.sram_trans_align = 8;
         self->panel_io_config.psram_trans_align = 64;
         self->panel_io_config.flags.refresh_on_demand = (uint32_t)args[ARG_refresh_on_demand].u_bool;
         self->panel_io_config.flags.fb_in_psram = 0;
         self->panel_io_config.flags.double_fb = 0;
 
+        int i = 0;
+        for (; i < 16; i++) {
+            if (self->panel_io_config.data_gpio_nums[i] == -1) {
+                break;
+            }
+        }
 
+        self->panel_io_config.data_width = (size_t) i;
 
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
         printf("pclk_hz=%lu\n", self->bus_config.pclk_hz);
