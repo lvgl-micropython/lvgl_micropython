@@ -76,6 +76,7 @@
     /* forward declarations */
     mp_lcd_err_t s_spi_del(mp_obj_t obj);
     mp_lcd_err_t s_spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
+    mp_lcd_err_t s_spi_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
     mp_lcd_err_t s_spi_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
     mp_lcd_err_t s_spi_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
     mp_lcd_err_t s_spi_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end);
@@ -142,7 +143,7 @@
         }
 
         self->callback = mp_const_none;
-        self->lane_count = 1;
+
         self->host = (int)self->spi_bus->spi_bus->host;
 
         self->panel_io_config.cs_gpio = args[ARG_cs].u_obj;
@@ -164,6 +165,7 @@
         self->panel_io_handle.tx_param = s_spi_tx_param;
         self->panel_io_handle.rx_param = s_spi_rx_param;
         self->panel_io_handle.tx_color = s_spi_tx_color;
+        self->panel_io_handle.get_lane_count = s_spi_get_lane_count;
 
     #endif /* !defined(IDF_VER) */
 
@@ -224,6 +226,14 @@
         self->bus_handle = spi;
         self->panel_io_config.spi_transfer = ((mp_machine_spi_p_t *)MP_OBJ_TYPE_GET_SLOT(spi->type, protocol))->transfer;
 
+        return LCD_OK;
+    }
+
+
+    mp_lcd_err_t s_spi_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
+    {
+        LCD_UNUSED(obj);
+        *lane_count = 1;
         return LCD_OK;
     }
 

@@ -36,6 +36,7 @@
 
     mp_lcd_err_t dsi_del(mp_obj_t obj);
     mp_lcd_err_t dsi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
+    mp_lcd_err_t dsi_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
     mp_lcd_err_t dsi_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end);
     mp_obj_t dsi_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps);
     mp_obj_t dsi_free_framebuffer(mp_obj_t obj, mp_obj_t buf);
@@ -126,8 +127,6 @@
 
         self->bus_config.pclk_hz = (uint32_t)args[ARG_freq].u_int;
 
-        self->lane_count = (uint8_t)self->bus_config.num_data_lanes;
-
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
         printf("bus_id=%d\n", self->bus_config.bus_id);
         printf("num_data_lanes=%d\n", self->bus_config.num_data_lanes);
@@ -145,6 +144,7 @@
         printf("pclk_hz[10]=%d\n", self->bus_config.pclk_hz);
     #endif
 
+        self->panel_io_handle.get_lane_count = &dsi_get_lane_count;
         self->panel_io_handle.del = &dsi_del;
         self->panel_io_handle.tx_color = &dsi_tx_color;
         self->panel_io_handle.allocate_framebuffer = &dsi_allocate_framebuffer;
@@ -280,6 +280,19 @@
 
         return ret;
     }
+
+    mp_lcd_err_t dsi_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
+    {
+        mp_lcd_dsi_bus_obj_t *self = (mp_lcd_dsi_bus_obj_t *)obj;
+        *lane_count = (uint8_t)self->bus_config.num_data_lanes;
+
+    #if CONFIG_LCD_ENABLE_DEBUG_LOG
+        printf("dsi_get_lane_count(self)-> %d\n", (uint8_t)self->bus_config.num_data_lanes);
+    #endif
+
+        return LCD_OK;
+    }
+
 
     mp_obj_t dsi_free_framebuffer(mp_obj_t obj, mp_obj_t buf)
     {

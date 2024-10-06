@@ -75,6 +75,7 @@ void led_spi_deinit_callback(machine_hw_spi_device_obj_t *device);
 
 mp_lcd_err_t led_del(mp_obj_t obj);
 mp_lcd_err_t led_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
+mp_lcd_err_t led_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
 mp_lcd_err_t led_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
 mp_lcd_err_t led_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
 mp_lcd_err_t led_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end);
@@ -187,7 +188,6 @@ static mp_obj_t mp_lcd_led_bus_make_new(const mp_obj_type_t *type, size_t n_args
     self->base.type = &mp_lcd_led_bus_type;
 
     self->callback = mp_const_none;
-    self->lane_count = 1;
 
     self->leds_per_pixel = (uint8_t)args[ARG_leds_per_pixel].u_int;
     self->color_temp.blue_correct = (bool)args[ARG_blue_correct].u_bool;
@@ -264,6 +264,7 @@ static mp_obj_t mp_lcd_led_bus_make_new(const mp_obj_type_t *type, size_t n_args
             return mp_const_none;
     }
 
+    self->panel_io_handle.get_lane_count = &led_get_lane_count;
     self->panel_io_handle.del = &led_del;
     self->panel_io_handle.rx_param = &led_rx_param;
     self->panel_io_handle.tx_param = &led_tx_param;
@@ -472,6 +473,14 @@ mp_lcd_err_t led_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
         self->view2->len = self->buffer_size;
         heap_caps_free(buf2);
     }
+
+    return LCD_OK;
+}
+
+mp_lcd_err_t led_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
+{
+    mp_lcd_led_bus_obj_t *self = (mp_lcd_led_bus_obj_t *)obj;
+    *lane_count = 1;
 
     return LCD_OK;
 }

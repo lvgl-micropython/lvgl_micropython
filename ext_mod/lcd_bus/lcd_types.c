@@ -318,3 +318,11 @@ mp_lcd_err_t lcd_panel_io_init(mp_obj_t obj, uint16_t width, uint16_t height, ui
 
     return self->panel_io_handle.init(obj, width, height, bpp, buffer_size, rgb565_byte_swap, cmd_bits, param_bits);
 }
+
+
+mp_lcd_err_t lcd_panel_io_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
+{
+    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
+
+    return self->panel_io_handle.get_lane_count(obj, lane_count);
+}

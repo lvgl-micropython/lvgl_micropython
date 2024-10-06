@@ -11,6 +11,7 @@ if(ESP_PLATFORM)
     set(LCD_SOURCES
         ${CMAKE_CURRENT_LIST_DIR}/modlcd_bus.c
         ${CMAKE_CURRENT_LIST_DIR}/lcd_types.c
+        ${CMAKE_CURRENT_LIST_DIR}/esp32_src/i2c_bus.c
         ${CMAKE_CURRENT_LIST_DIR}/esp32_src/spi_bus.c
         ${CMAKE_CURRENT_LIST_DIR}/esp32_src/i80_bus.c
         ${CMAKE_CURRENT_LIST_DIR}/esp32_src/rgb_bus.c

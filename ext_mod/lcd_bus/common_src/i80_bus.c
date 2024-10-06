@@ -79,6 +79,7 @@
     mp_lcd_err_t i80_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end);
     mp_lcd_err_t i80_del(mp_obj_t obj);
     mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
+    mp_lcd_err_t i80_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
 
     void write_color8(mp_lcd_i80_bus_obj_t *self, void *color, size_t color_size);
     void write_color16(mp_lcd_i80_bus_obj_t *self, void *color, size_t color_size);
@@ -102,7 +103,22 @@
         enum {
             ARG_dc,
             ARG_wr,
-            ARG_data_pins,
+            ARG_data0,
+            ARG_data1,
+            ARG_data2,
+            ARG_data3,
+            ARG_data4,
+            ARG_data5,
+            ARG_data6,
+            ARG_data7,
+            ARG_data8,
+            ARG_data9,
+            ARG_data10,
+            ARG_data11,
+            ARG_data12,
+            ARG_data13,
+            ARG_data14,
+            ARG_data15,
             ARG_cs,
             ARG_freq,
             ARG_dc_idle_high,
@@ -113,6 +129,7 @@
             ARG_param_bits,
             ARG_cs_active_high,
             ARG_reverse_color_bits,
+            ARG_swap_color_bytes,
             ARG_pclk_active_low,
             ARG_pclk_idle_low,
         };
@@ -134,7 +151,22 @@
         const mp_arg_t make_new_args[] = {
             { MP_QSTR_dc,                 MP_ARG_OBJ  | MP_ARG_REQUIRED },
             { MP_QSTR_wr,                 MP_ARG_OBJ  | MP_ARG_REQUIRED },
-            { MP_QSTR_data_pins,          MP_ARG_OBJ  | MP_ARG_REQUIRED },
+            { MP_QSTR_data0,              MP_ARG_OBJ  | MP_ARG_REQUIRED },
+            { MP_QSTR_data1,              MP_ARG_OBJ  | MP_ARG_REQUIRED },
+            { MP_QSTR_data2,              MP_ARG_OBJ  | MP_ARG_REQUIRED },
+            { MP_QSTR_data3,              MP_ARG_OBJ  | MP_ARG_REQUIRED },
+            { MP_QSTR_data4,              MP_ARG_OBJ  | MP_ARG_REQUIRED },
+            { MP_QSTR_data5,              MP_ARG_OBJ  | MP_ARG_REQUIRED },
+            { MP_QSTR_data6,              MP_ARG_OBJ  | MP_ARG_REQUIRED },
+            { MP_QSTR_data7,              MP_ARG_OBJ  | MP_ARG_REQUIRED },
+            { MP_QSTR_data8,              MP_ARG_OBJ  | MP_ARG_KW_ONLY,  { .u_obj = mp_const_none } },
+            { MP_QSTR_data9,              MP_ARG_OBJ  | MP_ARG_KW_ONLY,  { .u_obj = mp_const_none } },
+            { MP_QSTR_data10,             MP_ARG_OBJ  | MP_ARG_KW_ONLY,  { .u_obj = mp_const_none } },
+            { MP_QSTR_data11,             MP_ARG_OBJ  | MP_ARG_KW_ONLY,  { .u_obj = mp_const_none } },
+            { MP_QSTR_data12,             MP_ARG_OBJ  | MP_ARG_KW_ONLY,  { .u_obj = mp_const_none } },
+            { MP_QSTR_data13,             MP_ARG_OBJ  | MP_ARG_KW_ONLY,  { .u_obj = mp_const_none } },
+            { MP_QSTR_data14,             MP_ARG_OBJ  | MP_ARG_KW_ONLY,  { .u_obj = mp_const_none } },
+            { MP_QSTR_data15,             MP_ARG_OBJ  | MP_ARG_KW_ONLY,  { .u_obj = mp_const_none } },
             { MP_QSTR_cs,                 MP_ARG_OBJ  | MP_ARG_KW_ONLY,  { .u_obj = mp_const_none } },
             { MP_QSTR_freq,               MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = 10000000 } },
             { MP_QSTR_dc_idle_high,       MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false  } },
@@ -143,6 +175,7 @@
             { MP_QSTR_dc_data_high,       MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = true   } },
             { MP_QSTR_cs_active_high,     MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false   } },
             { MP_QSTR_reverse_color_bits, MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false   } },
+            { MP_QSTR_swap_color_bytes,   MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false   } },
             { MP_QSTR_pclk_active_low,    MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false   } },
             { MP_QSTR_pclk_idle_low,      MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false   } }
         };
@@ -186,14 +219,27 @@
             mp_hal_pin_write(self->bus_config.dc_gpio_num, self->panel_io_config.dc_levels.dc_data_level);
             mp_hal_pin_write(self->bus_config.wr_gpio_num, 0);
 
-            mp_obj_tuple_t *data_pins = (mp_obj_tuple_t *)MP_OBJ_TO_PTR(args[ARG_data_pins].u_obj);
-
-            for (size_t i = 0; i < data_pins->len; i++) {
-                self->bus_config.data_gpio_nums[i] = (mp_hal_pin_obj_t)mp_hal_get_pin_obj(data_pins->items[i]);
+            self->bus_config.data_gpio_nums[0] = (mp_hal_pin_obj_t)mp_hal_get_pin_obj(args[ARG_data0].u_obj);
+            self->bus_config.data_gpio_nums[1] = (mp_hal_pin_obj_t)mp_hal_get_pin_obj(args[ARG_data1].u_obj);
+            self->bus_config.data_gpio_nums[2] = (mp_hal_pin_obj_t)mp_hal_get_pin_obj(args[ARG_data2].u_obj);
+            self->bus_config.data_gpio_nums[3] = (mp_hal_pin_obj_t)mp_hal_get_pin_obj(args[ARG_data3].u_obj);
+            self->bus_config.data_gpio_nums[4] = (mp_hal_pin_obj_t)mp_hal_get_pin_obj(args[ARG_data4].u_obj);
+            self->bus_config.data_gpio_nums[5] = (mp_hal_pin_obj_t)mp_hal_get_pin_obj(args[ARG_data5].u_obj);
+            self->bus_config.data_gpio_nums[6] = (mp_hal_pin_obj_t)mp_hal_get_pin_obj(args[ARG_data6].u_obj);
+            self->bus_config.data_gpio_nums[7] = (mp_hal_pin_obj_t)mp_hal_get_pin_obj(args[ARG_data7].u_obj);
+            if (args[ARG_data8].u_obj == mp_const_none) {
+                self->bus_config.bus_width = 8;
+            } else {
+                self->bus_config.data_gpio_nums[8] = (mp_hal_pin_obj_t)mp_hal_get_pin_obj(args[ARG_data8].u_obj);
+                self->bus_config.data_gpio_nums[9] = (mp_hal_pin_obj_t)mp_hal_get_pin_obj(args[ARG_data9].u_obj);
+                self->bus_config.data_gpio_nums[10] = (mp_hal_pin_obj_t)mp_hal_get_pin_obj(args[ARG_data10].u_obj);
+                self->bus_config.data_gpio_nums[11] = (mp_hal_pin_obj_t)mp_hal_get_pin_obj(args[ARG_data11].u_obj);
+                self->bus_config.data_gpio_nums[12] = (mp_hal_pin_obj_t)mp_hal_get_pin_obj(args[ARG_data12].u_obj);
+                self->bus_config.data_gpio_nums[13] = (mp_hal_pin_obj_t)mp_hal_get_pin_obj(args[ARG_data13].u_obj);
+                self->bus_config.data_gpio_nums[14] = (mp_hal_pin_obj_t)mp_hal_get_pin_obj(args[ARG_data14].u_obj);
+                self->bus_config.data_gpio_nums[15] = (mp_hal_pin_obj_t)mp_hal_get_pin_obj(args[ARG_data15].u_obj);
+                self->bus_config.bus_width = 16;
             }
-
-            self->bus_config.bus_width = (size_t)data_pins->len;
-            self->lane_count = (uint8_t)self->bus_config.bus_width;
 
             mp_hal_pin_obj_t pin;
 
@@ -223,6 +269,7 @@
             self->panel_io_handle.rx_param = i80_rx_param;
             self->panel_io_handle.del = i80_del;
             self->panel_io_handle.init = i80_init;
+            self->panel_io_handle.get_lane_count = i80_get_lane_count;
         #endif /* defined(mp_hal_pin_output) || defined(IDF_VER) */
 
         return MP_OBJ_FROM_PTR(self);
@@ -389,6 +436,15 @@
 
         return LCD_OK;
     }
+
+
+    mp_lcd_err_t i80_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
+    {
+        mp_lcd_i80_bus_obj_t *self = MP_OBJ_TO_PTR(obj);
+        *lane_count = (uint8_t)self->bus_config.bus_width;
+        return LCD_OK;
+    }
+
 
     /* transfer functions */
     void write_color8(mp_lcd_i80_bus_obj_t *self, void *color, size_t color_size)

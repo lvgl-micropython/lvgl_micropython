@@ -61,6 +61,7 @@ typedef struct _machine_hw_spi_obj_t {
 
 mp_lcd_err_t spi_del(mp_obj_t obj);
 mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
+mp_lcd_err_t spi_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
 void spi_deinit_callback(machine_hw_spi_device_obj_t *device);
 
 
@@ -110,35 +111,32 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
 
     machine_hw_spi_bus_obj_t *spi_bus = MP_OBJ_TO_PTR(args[ARG_spi_bus].u_obj);
 
-
-    self->panel_io_config = (esp_lcd_panel_io_spi_config_t *)heap_caps_malloc(sizeof(esp_lcd_panel_io_spi_config_t), MALLOC_CAP_INTERNAL);
-    esp_lcd_panel_io_spi_config_t panel_io_config = (esp_lcd_panel_io_spi_config_t) *self->panel_io_config;
-
     self->callback = mp_const_none;
 
     self->host = (spi_host_device_t)spi_bus->host;
     self->panel_io_handle.panel_io = NULL;
     self->bus_handle = (esp_lcd_spi_bus_handle_t)self->host;
 
-    panel_io_config.cs_gpio_num = (int)args[ARG_cs].u_int;
-    panel_io_config.dc_gpio_num = (int)args[ARG_dc].u_int;
-    panel_io_config.spi_mode = (int)args[ARG_spi_mode].u_int;
-    panel_io_config.pclk_hz = (unsigned int)args[ARG_freq].u_int;
-    panel_io_config.on_color_trans_done = &bus_trans_done_cb;
-    panel_io_config.user_ctx = self;
-    panel_io_config.flags.dc_low_on_data = (unsigned int)args[ARG_dc_low_on_data].u_bool;
-    panel_io_config.flags.lsb_first = (unsigned int)args[ARG_lsb_first].u_bool;
-    panel_io_config.flags.cs_high_active = (unsigned int)args[ARG_cs_high_active].u_bool;
-    panel_io_config.flags.sio_mode = (unsigned int)args[ARG_dual].u_bool;
-    panel_io_config.flags.quad_mode = (unsigned int)args[ARG_quad].u_bool;
-    panel_io_config.flags.octal_mode = (unsigned int)args[ARG_octal].u_bool;
+    self->panel_io_config.cs_gpio_num = (int)args[ARG_cs].u_int;
+    self->panel_io_config.dc_gpio_num = (int)args[ARG_dc].u_int;
+    self->panel_io_config.spi_mode = (int)args[ARG_spi_mode].u_int;
+    self->panel_io_config.pclk_hz = (unsigned int)args[ARG_freq].u_int;
+    self->panel_io_config.on_color_trans_done = &bus_trans_done_cb;
+    self->panel_io_config.user_ctx = self;
+    self->panel_io_config.flags.dc_low_on_data = (unsigned int)args[ARG_dc_low_on_data].u_bool;
+    self->panel_io_config.flags.lsb_first = (unsigned int)args[ARG_lsb_first].u_bool;
+    self->panel_io_config.flags.cs_high_active = (unsigned int)args[ARG_cs_high_active].u_bool;
+    self->panel_io_config.flags.sio_mode = (unsigned int)args[ARG_dual].u_bool;
+    self->panel_io_config.flags.quad_mode = (unsigned int)args[ARG_quad].u_bool;
+    self->panel_io_config.flags.octal_mode = (unsigned int)args[ARG_octal].u_bool;
 
-    if (!spi_bus->dual) panel_io_config.flags.sio_mode = 0;
-    if (!spi_bus->quad) panel_io_config.flags.quad_mode = 0;
-    if (!spi_bus->octal) panel_io_config.flags.octal_mode = 0;
+    if (!spi_bus->dual) self->panel_io_config.flags.sio_mode = 0;
+    if (!spi_bus->quad) self->panel_io_config.flags.quad_mode = 0;
+    if (!spi_bus->octal) self->panel_io_config.flags.octal_mode = 0;
 
     self->panel_io_handle.del = &spi_del;
     self->panel_io_handle.init = &spi_init;
+    self->panel_io_handle.get_lane_count = &spi_get_lane_count;
 
     self->spi_device.active = true;
     self->spi_device.base.type = &machine_hw_spi_device_type;
@@ -146,28 +144,18 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     self->spi_device.deinit = &spi_deinit_callback;
     self->spi_device.user_data = self;
 
-    if (panel_io_config.flags.sio_mode) {
-        self->lane_count = 2;
-    } else if (panel_io_config.flags.quad_mode) {
-        self->lane_count = 4;
-    } else if (panel_io_config.flags.octal_mode) {
-        self->lane_count = 8;
-    } else {
-        self->lane_count = 1;
-    }
-
 #if CONFIG_LCD_ENABLE_DEBUG_LOG
     printf("host=%d\n", self->host);
-    printf("cs_gpio_num=%d\n", panel_io_config.cs_gpio_num);
-    printf("dc_gpio_num=%d\n", panel_io_config.dc_gpio_num);
-    printf("spi_mode=%d\n", panel_io_config.spi_mode);
-    printf("pclk_hz=%i\n", panel_io_config.pclk_hz);
-    printf("dc_low_on_data=%d\n", panel_io_config.flags.dc_low_on_data);
-    printf("lsb_first=%d\n", panel_io_config.flags.lsb_first);
-    printf("cs_high_active=%d\n", panel_io_config.flags.cs_high_active);
-    printf("dual=%d\n", panel_io_config.flags.sio_mode);
-    printf("quad=%d\n", panel_io_config.flags.quad_mode);
-    printf("octal=%d\n", panel_io_config.flags.octal_mode);
+    printf("cs_gpio_num=%d\n", self->panel_io_config.cs_gpio_num);
+    printf("dc_gpio_num=%d\n", self->panel_io_config.dc_gpio_num);
+    printf("spi_mode=%d\n", self->panel_io_config.spi_mode);
+    printf("pclk_hz=%i\n", self->panel_io_config.pclk_hz);
+    printf("dc_low_on_data=%d\n", self->panel_io_config.flags.dc_low_on_data);
+    printf("lsb_first=%d\n", self->panel_io_config.flags.lsb_first);
+    printf("cs_high_active=%d\n", self->panel_io_config.flags.cs_high_active);
+    printf("dual=%d\n", self->panel_io_config.flags.sio_mode);
+    printf("quad=%d\n", self->panel_io_config.flags.quad_mode);
+    printf("octal=%d\n", self->panel_io_config.flags.octal_mode);
 #endif
 
     return MP_OBJ_FROM_PTR(self);
@@ -222,28 +210,46 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
         self->rgb565_byte_swap = false;
     }
 
-    self->panel_io_config->trans_queue_depth = 10;
-    self->panel_io_config->lcd_cmd_bits = (int)cmd_bits;
-    self->panel_io_config->lcd_param_bits = (int)param_bits;
+    self->panel_io_config.trans_queue_depth = 10;
+    self->panel_io_config.lcd_cmd_bits = (int)cmd_bits;
+    self->panel_io_config.lcd_param_bits = (int)param_bits;
 
 #if CONFIG_LCD_ENABLE_DEBUG_LOG
-    printf("lcd_cmd_bits=%d\n", self->panel_io_config->lcd_cmd_bits);
-    printf("lcd_param_bits=%d\n", self->panel_io_config->lcd_param_bits);
+    printf("lcd_cmd_bits=%d\n", self->panel_io_config.lcd_cmd_bits);
+    printf("lcd_param_bits=%d\n", self->panel_io_config.lcd_param_bits);
     printf("rgb565_byte_swap=%i\n",  (uint8_t)self->rgb565_byte_swap);
     printf("trans_queue_depth=%i\n", (uint8_t)self->panel_io_config.trans_queue_depth);
 #endif
 
-    mp_lcd_err_t ret = esp_lcd_new_panel_io_spi(self->bus_handle, self->panel_io_config, &self->panel_io_handle.panel_io);
+    mp_lcd_err_t ret = esp_lcd_new_panel_io_spi(self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io);
     if (ret != ESP_OK) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_spi)"), ret);
     }
 
     machine_hw_spi_bus_add_device(&self->spi_device);
-
-    heap_caps_free(self->panel_io_config);
-    self->panel_io_config = NULL;
-
     return ret;
+}
+
+
+mp_lcd_err_t spi_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
+{
+    mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
+
+    if (self->panel_io_config.flags.sio_mode) {
+        *lane_count = 2;
+    } else if (self->panel_io_config.flags.quad_mode) {
+        *lane_count = 4;
+    } else if (self->panel_io_config.flags.octal_mode) {
+        *lane_count = 8;
+    } else {
+        *lane_count = 1;
+    }
+
+#if CONFIG_LCD_ENABLE_DEBUG_LOG
+    printf("spi_get_lane_count(self) -> %i\n", (uint8_t)(*lane_count));
+#endif
+
+    return LCD_OK;
 }
 
 

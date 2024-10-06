@@ -33,8 +33,6 @@
             bool trans_done;
             bool rgb565_byte_swap;
 
-            uint8_t lane_count;
-
             lcd_panel_io_t panel_io_handle;
 
             esp_lcd_dbi_io_config_t panel_io_config;

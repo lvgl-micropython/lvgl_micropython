@@ -70,6 +70,7 @@
 
     mp_lcd_err_t rgb_del(mp_obj_t obj);
     mp_lcd_err_t rgb_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
+    mp_lcd_err_t rgb_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
     mp_lcd_err_t rgb_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
     mp_lcd_err_t rgb_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
     mp_lcd_err_t rgb_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end);
@@ -129,94 +130,89 @@
 
         self->callback = mp_const_none;
 
-        self->panel_io_config = (esp_lcd_rgb_panel_config_t *)heap_caps_malloc(sizeof(esp_lcd_rgb_panel_config_t), MALLOC_CAP_INTERNAL);
-        esp_lcd_rgb_panel_config_t panel_io_config = (esp_lcd_rgb_panel_config_t) *self->panel_io_config;
+        self->bus_config.pclk_hz = (uint32_t)args[ARG_freq].u_int;
+        self->bus_config.hsync_pulse_width = (uint32_t)args[ARG_hsync_pulse_width].u_int;
+        self->bus_config.hsync_back_porch = (uint32_t)args[ARG_hsync_back_porch].u_int;
+        self->bus_config.hsync_front_porch = (uint32_t)args[ARG_hsync_front_porch].u_int;
+        self->bus_config.vsync_pulse_width = (uint32_t)args[ARG_vsync_pulse_width].u_int;
+        self->bus_config.vsync_back_porch = (uint32_t)args[ARG_vsync_back_porch].u_int;
+        self->bus_config.vsync_front_porch = (uint32_t)args[ARG_vsync_front_porch].u_int;
+        self->bus_config.flags.hsync_idle_low = (uint32_t)args[ARG_hsync_idle_low].u_bool;
+        self->bus_config.flags.vsync_idle_low = (uint32_t)args[ARG_vsync_idle_low].u_bool;
+        self->bus_config.flags.de_idle_high = (uint32_t)args[ARG_de_idle_high].u_bool;
+        self->bus_config.flags.pclk_active_neg = (uint32_t)args[ARG_pclk_active_low].u_bool;
+        self->bus_config.flags.pclk_idle_high = (uint32_t)args[ARG_pclk_idle_high].u_bool;
 
-        self->bus_config = (esp_lcd_rgb_timing_t *)heap_caps_malloc(sizeof(esp_lcd_rgb_timing_t), MALLOC_CAP_INTERNAL);
-        esp_lcd_rgb_timing_t bus_config = (esp_lcd_rgb_timing_t) *self->bus_config;
-
-
-        bus_config.pclk_hz = (uint32_t)args[ARG_freq].u_int;
-        bus_config.hsync_pulse_width = (uint32_t)args[ARG_hsync_pulse_width].u_int;
-        bus_config.hsync_back_porch = (uint32_t)args[ARG_hsync_back_porch].u_int;
-        bus_config.hsync_front_porch = (uint32_t)args[ARG_hsync_front_porch].u_int;
-        bus_config.vsync_pulse_width = (uint32_t)args[ARG_vsync_pulse_width].u_int;
-        bus_config.vsync_back_porch = (uint32_t)args[ARG_vsync_back_porch].u_int;
-        bus_config.vsync_front_porch = (uint32_t)args[ARG_vsync_front_porch].u_int;
-        bus_config.flags.hsync_idle_low = (uint32_t)args[ARG_hsync_idle_low].u_bool;
-        bus_config.flags.vsync_idle_low = (uint32_t)args[ARG_vsync_idle_low].u_bool;
-        bus_config.flags.de_idle_high = (uint32_t)args[ARG_de_idle_high].u_bool;
-        bus_config.flags.pclk_active_neg = (uint32_t)args[ARG_pclk_active_low].u_bool;
-        bus_config.flags.pclk_idle_high = (uint32_t)args[ARG_pclk_idle_high].u_bool;
-
-        panel_io_config.clk_src = LCD_CLK_SRC_PLL160M;
-        panel_io_config.timings = self->bus_config;
-        panel_io_config.hsync_gpio_num = (int)args[ARG_hsync].u_int;
-        panel_io_config.vsync_gpio_num = (int)args[ARG_vsync].u_int;
-        panel_io_config.de_gpio_num = (int)args[ARG_de].u_int;
-        panel_io_config.pclk_gpio_num = (int)args[ARG_pclk].u_int;
+        self->panel_io_config.clk_src = LCD_CLK_SRC_PLL160M;
+        self->panel_io_config.timings = self->bus_config;
+        self->panel_io_config.hsync_gpio_num = (int)args[ARG_hsync].u_int;
+        self->panel_io_config.vsync_gpio_num = (int)args[ARG_vsync].u_int;
+        self->panel_io_config.de_gpio_num = (int)args[ARG_de].u_int;
+        self->panel_io_config.pclk_gpio_num = (int)args[ARG_pclk].u_int;
 
         mp_obj_tuple_t *data_pins = MP_OBJ_TO_PTR(args[ARG_data_pins].u_obj);
 
         for (size_t i = 0; i < data_pins->len; i++) {
-            panel_io_config.data_gpio_nums[i] = mp_obj_get_int(data_pins->items[i]);
+            self->panel_io_config.data_gpio_nums[i] = (int)mp_obj_get_int(data_pins->items[i]);
         }
 
         for (size_t i = data_pins->len; i < 16; i++) {
-            panel_io_config.data_gpio_nums[i] = -1;
+            self->panel_io_config.data_gpio_nums[i] = -1;
         }
 
-        panel_io_config.data_width = (size_t)data_pins->len;
-        self->lane_count = (uint8_t)panel_io_config.data_width;
+        self->panel_io_config.data_width = (size_t)data_pins->len;
 
-        panel_io_config.sram_trans_align = 8;
-        panel_io_config.psram_trans_align = 64;
-        panel_io_config.flags.refresh_on_demand = (uint32_t)args[ARG_refresh_on_demand].u_bool;
-        panel_io_config.flags.fb_in_psram = 0;
-        panel_io_config.flags.double_fb = 0;
+        self->panel_io_config.sram_trans_align = 8;
+        self->panel_io_config.psram_trans_align = 64;
+        self->panel_io_config.flags.refresh_on_demand = (uint32_t)args[ARG_refresh_on_demand].u_bool;
+        self->panel_io_config.flags.fb_in_psram = 0;
+        self->panel_io_config.flags.double_fb = 0;
+
+
 
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("pclk_hz=%lu\n", bus_config.pclk_hz);
-        printf("hsync_pulse_width=%lu\n", bus_config.hsync_pulse_width);
-        printf("hsync_back_porch=%lu\n", bus_config.hsync_back_porch);
-        printf("hsync_front_porch=%lu\n", bus_config.hsync_front_porch);
-        printf("vsync_pulse_width=%lu\n", bus_config.vsync_pulse_width);
-        printf("vsync_back_porch=%lu\n", bus_config.vsync_back_porch);
-        printf("vsync_front_porch=%lu\n", bus_config.vsync_front_porch);
-        printf("hsync_idle_low=%d\n", bus_config.flags.hsync_idle_low);
-        printf("vsync_idle_low=%d\n", bus_config.flags.vsync_idle_low);
-        printf("de_idle_high=%d\n", bus_config.flags.de_idle_high);
-        printf("pclk_active_neg=%d\n", bus_config.flags.pclk_active_neg);
-        printf("pclk_idle_high=%d\n", bus_config.flags.pclk_idle_high);
-        printf("clk_src=%d\n", panel_io_config.clk_src);
-        printf("hsync_gpio_num=%d\n", panel_io_config.hsync_gpio_num);
-        printf("vsync_gpio_num=%d\n", panel_io_config.vsync_gpio_num);
-        printf("de_gpio_num=%d\n", panel_io_config.de_gpio_num);
-        printf("pclk_gpio_num=%d\n", panel_io_config.pclk_gpio_num);
-        printf("data_gpio_nums[0]=%d\n", panel_io_config.data_gpio_nums[0]);
-        printf("data_gpio_nums[1]=%d\n", panel_io_config.data_gpio_nums[1]);
-        printf("data_gpio_nums[2]=%d\n", panel_io_config.data_gpio_nums[2]);
-        printf("data_gpio_nums[3]=%d\n", panel_io_config.data_gpio_nums[3]);
-        printf("data_gpio_nums[4]=%d\n", panel_io_config.data_gpio_nums[4]);
-        printf("data_gpio_nums[5]=%d\n", panel_io_config.data_gpio_nums[5]);
-        printf("data_gpio_nums[6]=%d\n", panel_io_config.data_gpio_nums[6]);
-        printf("data_gpio_nums[7]=%d\n", panel_io_config.data_gpio_nums[7]);
-        printf("data_gpio_nums[8]=%d\n", panel_io_config.data_gpio_nums[8]);
-        printf("data_gpio_nums[9]=%d\n", panel_io_config.data_gpio_nums[9]);
-        printf("data_gpio_nums[10]=%d\n", panel_io_config.data_gpio_nums[10]);
-        printf("data_gpio_nums[11]=%d\n", panel_io_config.data_gpio_nums[11]);
-        printf("data_gpio_nums[12]=%d\n", panel_io_config.data_gpio_nums[12]);
-        printf("data_gpio_nums[13]=%d\n", panel_io_config.data_gpio_nums[13]);
-        printf("data_gpio_nums[14]=%d\n", panel_io_config.data_gpio_nums[14]);
-        printf("data_gpio_nums[15]=%d\n", panel_io_config.data_gpio_nums[15]);
-        printf("sram_trans_align=%d\n", panel_io_config.sram_trans_align);
-        printf("psram_trans_align=%d\n", panel_io_config.psram_trans_align);
-        printf("refresh_on_demand=%d\n", panel_io_config.flags.refresh_on_demand);
-        printf("fb_in_psram=%d\n", panel_io_config.flags.fb_in_psram);
-        printf("double_fb=%d\n", panel_io_config.flags.double_fb);
-        printf("data_width=%d\n", panel_io_config.data_width);
+        printf("pclk_hz=%lu\n", self->bus_config.pclk_hz);
+        printf("hsync_pulse_width=%lu\n", self->bus_config.hsync_pulse_width);
+        printf("hsync_back_porch=%lu\n", self->bus_config.hsync_back_porch);
+        printf("hsync_front_porch=%lu\n", self->bus_config.hsync_front_porch);
+        printf("vsync_pulse_width=%lu\n", self->bus_config.vsync_pulse_width);
+        printf("vsync_back_porch=%lu\n", self->bus_config.vsync_back_porch);
+        printf("vsync_front_porch=%lu\n", self->bus_config.vsync_front_porch);
+        printf("hsync_idle_low=%d\n", self->bus_config.flags.hsync_idle_low);
+        printf("vsync_idle_low=%d\n", self->bus_config.flags.vsync_idle_low);
+        printf("de_idle_high=%d\n", self->bus_config.flags.de_idle_high);
+        printf("pclk_active_neg=%d\n", self->bus_config.flags.pclk_active_neg);
+        printf("pclk_idle_high=%d\n", self->bus_config.flags.pclk_idle_high);
+        printf("clk_src=%d\n", self->panel_io_config.clk_src);
+        printf("hsync_gpio_num=%d\n", self->panel_io_config.hsync_gpio_num);
+        printf("vsync_gpio_num=%d\n", self->panel_io_config.vsync_gpio_num);
+        printf("de_gpio_num=%d\n", self->panel_io_config.de_gpio_num);
+        printf("pclk_gpio_num=%d\n", self->panel_io_config.pclk_gpio_num);
+        printf("data_gpio_nums[0]=%d\n", self->panel_io_config.data_gpio_nums[0]);
+        printf("data_gpio_nums[1]=%d\n", self->panel_io_config.data_gpio_nums[1]);
+        printf("data_gpio_nums[2]=%d\n", self->panel_io_config.data_gpio_nums[2]);
+        printf("data_gpio_nums[3]=%d\n", self->panel_io_config.data_gpio_nums[3]);
+        printf("data_gpio_nums[4]=%d\n", self->panel_io_config.data_gpio_nums[4]);
+        printf("data_gpio_nums[5]=%d\n", self->panel_io_config.data_gpio_nums[5]);
+        printf("data_gpio_nums[6]=%d\n", self->panel_io_config.data_gpio_nums[6]);
+        printf("data_gpio_nums[7]=%d\n", self->panel_io_config.data_gpio_nums[7]);
+        printf("data_gpio_nums[8]=%d\n", self->panel_io_config.data_gpio_nums[8]);
+        printf("data_gpio_nums[9]=%d\n", self->panel_io_config.data_gpio_nums[9]);
+        printf("data_gpio_nums[10]=%d\n", self->panel_io_config.data_gpio_nums[10]);
+        printf("data_gpio_nums[11]=%d\n", self->panel_io_config.data_gpio_nums[11]);
+        printf("data_gpio_nums[12]=%d\n", self->panel_io_config.data_gpio_nums[12]);
+        printf("data_gpio_nums[13]=%d\n", self->panel_io_config.data_gpio_nums[13]);
+        printf("data_gpio_nums[14]=%d\n", self->panel_io_config.data_gpio_nums[14]);
+        printf("data_gpio_nums[15]=%d\n", self->panel_io_config.data_gpio_nums[15]);
+        printf("sram_trans_align=%d\n", self->panel_io_config.sram_trans_align);
+        printf("psram_trans_align=%d\n", self->panel_io_config.psram_trans_align);
+        printf("refresh_on_demand=%d\n", self->panel_io_config.flags.refresh_on_demand);
+        printf("fb_in_psram=%d\n", self->panel_io_config.flags.fb_in_psram);
+        printf("double_fb=%d\n", self->panel_io_config.flags.double_fb);
+        printf("data_width=%d\n", self->panel_io_config.data_width);
     #endif
 
+        self->panel_io_handle.get_lane_count = &rgb_get_lane_count;
         self->panel_io_handle.del = &rgb_del;
         self->panel_io_handle.rx_param = &rgb_rx_param;
         self->panel_io_handle.tx_param = &rgb_tx_param;
@@ -323,7 +319,7 @@
                 );
                 return mp_const_none;
             }
-            self->panel_io_config->flags.fb_in_psram = 1;
+            self->panel_io_config.flags.fb_in_psram = 1;
 
             if (self->view1 == NULL) {
                 self->buffer_size = size;
@@ -338,7 +334,7 @@
                 return mp_const_none;
             } else if (self->view2 == NULL) {
                 self->view2 = view;
-                self->panel_io_config->flags.double_fb = 1;
+                self->panel_io_config.flags.double_fb = 1;
             } else {
                 heap_caps_free(buf);
                 mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("There is a maximum of 2 frame buffers allowed"));
@@ -363,8 +359,8 @@
                 );
                 return mp_const_none;
             }
-            self->panel_io_config->flags.bb_invalidate_cache = true;
-            self->panel_io_config->bounce_buffer_size_px = size;
+            self->panel_io_config.flags.bb_invalidate_cache = true;
+            self->panel_io_config.bounce_buffer_size_px = size;
             return MP_OBJ_FROM_PTR(view);
         }
     }
@@ -395,13 +391,13 @@
             has a serious performance impact on the speed. Moving the pins
             eliminates the need to do that.
             */
-            if (self->panel_io_config->data_width == 16) {
+            if (self->panel_io_config.data_width == 16) {
                 int temp_pin;
 
                 for (uint8_t i = 0; i < 8; i++) {
-                    temp_pin = self->panel_io_config->data_gpio_nums[i];
-                    self->panel_io_config->data_gpio_nums[i] = self->panel_io_config->data_gpio_nums[i + 8];
-                    self->panel_io_config->data_gpio_nums[i + 8] = temp_pin;
+                    temp_pin = self->panel_io_config.data_gpio_nums[i];
+                    self->panel_io_config.data_gpio_nums[i] = self->panel_io_config.data_gpio_nums[i + 8];
+                    self->panel_io_config.data_gpio_nums[i + 8] = temp_pin;
                 }
 
                 self->rgb565_byte_swap = false;
@@ -412,33 +408,33 @@
             self->rgb565_byte_swap = false;
         }
 
-        self->panel_io_config->timings.h_res = (uint32_t)width;
-        self->panel_io_config->timings.v_res = (uint32_t)height;
-        self->panel_io_config->bits_per_pixel = (size_t)bpp;
+        self->panel_io_config.timings.h_res = (uint32_t)width;
+        self->panel_io_config.timings.v_res = (uint32_t)height;
+        self->panel_io_config.bits_per_pixel = (size_t)bpp;
 
-        if (self->panel_io_config->bounce_buffer_size_px) {
-            size_t bb_size = self->panel_io_config->bounce_buffer_size_px;
+        if (self->panel_io_config.bounce_buffer_size_px) {
+            size_t bb_size = self->panel_io_config.bounce_buffer_size_px;
             if (buffer_size % bb_size == 0) {
-                self->panel_io_config->bounce_buffer_size_px = bb_size / 2;
+                self->panel_io_config.bounce_buffer_size_px = bb_size / 2;
             } else {
                 mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("frame buffer size needs to be a multiple of the bounce buffer size"));
             }
         }
 
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("h_res=%lu\n", self->panel_io_config->timings.h_res);
-        printf("v_res=%lu\n", self->panel_io_config->timings.v_res);
-        printf("bits_per_pixel=%d\n", self->panel_io_config->bits_per_pixel);
-        printf("bounce_buffer_size_px=%d\n", self->panel_io_config->bounce_buffer_size_px);
+        printf("h_res=%lu\n", self->panel_io_config.timings.h_res);
+        printf("v_res=%lu\n", self->panel_io_config.timings.v_res);
+        printf("bits_per_pixel=%d\n", self->panel_io_config.bits_per_pixel);
+        printf("bounce_buffer_size_px=%d\n", self->panel_io_config.bounce_buffer_size_px);
         printf("rgb565_byte_swap=%d\n", self->rgb565_byte_swap);
     #endif
-        mp_lcd_err_t ret = esp_lcd_new_rgb_panel(self->panel_io_config, &self->panel_handle);
+        mp_lcd_err_t ret = esp_lcd_new_rgb_panel(&self->panel_io_config, &self->panel_handle);
         if (ret != 0) {
             mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_rgb_panel)"), ret);
             return ret;
         }
 
-        if (self->panel_io_config->flags.double_fb) {
+        if (self->panel_io_config.flags.double_fb) {
             ret = esp_lcd_rgb_panel_register_event_callbacks(self->panel_handle, &callbacks, self);
             if (ret != 0) {
                 mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_rgb_panel_register_event_callbacks)"), ret);
@@ -465,21 +461,28 @@
         self->view1->len = buffer_size;
         heap_caps_free(buf1);
 
-        if (self->view2 != NULL) {
+        if (self->panel_io_config.flags.double_fb) {
             void *buf2 = self->view2->items;
             self->view2->items = (void *)rgb_panel->fbs[1];
             self->view2->len = buffer_size;
             heap_caps_free(buf2);
         }
 
-        heap_caps_free(self->panel_io_config);
-        self->panel_io_config = NULL;
+        return LCD_OK;
+    }
 
-        heap_caps_free(self->bus_config);
-        self->bus_config = NULL;
+
+    mp_lcd_err_t rgb_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
+    {
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
+        *lane_count = (uint8_t)self->panel_io_config.data_width;
+    #if CONFIG_LCD_ENABLE_DEBUG_LOG
+        printf("rgb_get_lane_count(self)-> %d\n", (uint8_t)self->panel_io_config.data_width);
+    #endif
 
         return LCD_OK;
     }
+
 
     mp_lcd_err_t rgb_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end)
     {
@@ -506,7 +509,7 @@
             return LCD_OK;
         }
 
-        if (self->callback == mp_const_none || self->view2 == NULL) {
+        if (self->callback == mp_const_none || !self->panel_io_config.flags.double_fb) {
             while (!self->trans_done) {}
             self->trans_done = false;
         }

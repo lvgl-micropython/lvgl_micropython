@@ -29,10 +29,9 @@
         bool trans_done;
         bool rgb565_byte_swap;
 
-        uint8_t lane_count;
-
         lcd_panel_io_t panel_io_handle;
-        esp_lcd_panel_io_spi_config_t *panel_io_config;
+        esp_lcd_panel_io_spi_config_t panel_io_config;
+        spi_bus_config_t bus_config;
         esp_lcd_spi_bus_handle_t bus_handle;
 
         spi_host_device_t host;

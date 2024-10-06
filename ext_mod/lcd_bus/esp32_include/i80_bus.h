@@ -29,12 +29,10 @@
             bool trans_done;
             bool rgb565_byte_swap;
 
-            uint8_t lane_count;
-
             lcd_panel_io_t panel_io_handle;
 
-            esp_lcd_panel_io_i80_config_t *panel_io_config;
-            esp_lcd_i80_bus_config_t *bus_config;
+            esp_lcd_panel_io_i80_config_t panel_io_config;
+            esp_lcd_i80_bus_config_t bus_config;
             esp_lcd_i80_bus_handle_t bus_handle;
         } mp_lcd_i80_bus_obj_t;
 
