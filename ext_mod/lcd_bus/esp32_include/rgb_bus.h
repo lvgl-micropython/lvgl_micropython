@@ -22,22 +22,23 @@
 
             mp_obj_t callback;
 
-            void *buf1;
-            void *buf2;
+            mp_obj_array_t *view1;
+            mp_obj_array_t *view2;
+
             uint32_t buffer_flags;
 
             bool trans_done;
             bool rgb565_byte_swap;
 
+            uint8_t lane_count;
+
             lcd_panel_io_t panel_io_handle;
 
-            esp_lcd_rgb_panel_config_t panel_io_config;
-            esp_lcd_rgb_timing_t bus_config;
+            esp_lcd_rgb_panel_config_t *panel_io_config;
+            esp_lcd_rgb_timing_t *bus_config;
 
             esp_lcd_panel_handle_t panel_handle;
             uint32_t buffer_size;
-            mp_obj_array_t *view1;
-            mp_obj_array_t *view2;
 
             void *transmitting_buf;
 

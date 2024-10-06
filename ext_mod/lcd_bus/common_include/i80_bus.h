@@ -26,6 +26,8 @@
             bool trans_done;
             bool rgb565_byte_swap;
 
+            uint8_t lane_count;
+
             lcd_panel_io_t panel_io_handle;
 
             void *panel_io_config;

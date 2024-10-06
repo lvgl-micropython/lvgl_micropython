@@ -1,7 +1,6 @@
 // local includes
 #include "modlcd_bus.h"
 #include "spi_bus.h"
-#include "i2c_bus.h"
 #include "i80_bus.h"
 #include "rgb_bus.h"
 
@@ -29,14 +28,8 @@
 
 mp_obj_t mp_lcd_bus_get_lane_count(size_t n_args, const mp_obj_t *args)
 {
-    uint8_t lane_count;
-    mp_lcd_err_t ret = lcd_panel_io_get_lane_count(MP_OBJ_TO_PTR(args[0]), &lane_count);
-
-    if (ret != 0) {
-        mp_raise_msg_varg(&mp_type_OSError, MP_ERROR_TEXT("%d(lcd_panel_io_init)"), ret);
-    }
-
-    return mp_obj_new_int(lane_count);
+    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)MP_OBJ_TO_PTR(args[0])
+    return mp_obj_new_int(self->lane_count);
 }
 
 MP_DEFINE_CONST_FUN_OBJ_VAR(mp_lcd_bus_get_lane_count_obj, 1, mp_lcd_bus_get_lane_count);
@@ -272,7 +265,6 @@ static const mp_map_elem_t mp_module_lcd_bus_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),           MP_OBJ_NEW_QSTR(MP_QSTR_lcd_bus)      },
     { MP_ROM_QSTR(MP_QSTR_RGBBus),             (mp_obj_t)&mp_lcd_rgb_bus_type        },
     { MP_ROM_QSTR(MP_QSTR_SPIBus),             (mp_obj_t)&mp_lcd_spi_bus_type        },
-    { MP_ROM_QSTR(MP_QSTR_I2CBus),             (mp_obj_t)&mp_lcd_i2c_bus_type        },
     { MP_ROM_QSTR(MP_QSTR_I80Bus),             (mp_obj_t)&mp_lcd_i80_bus_type        },
 
     #ifdef MP_PORT_UNIX
