@@ -97,7 +97,6 @@
             ARG_de_idle_high,
             ARG_pclk_idle_high,
             ARG_pclk_active_low,
-            ARG_disp_active_low,
             ARG_refresh_on_demand,
         };
 
@@ -163,10 +162,8 @@
 
         self->panel_io_config.data_width = (size_t)data_pins->len;
 
-        self->panel_io_config.disp_gpio_num = (int)args[ARG_disp].u_int;
         self->panel_io_config.sram_trans_align = 8;
         self->panel_io_config.psram_trans_align = 64;
-        self->panel_io_config.flags.disp_active_low = (uint32_t)args[ARG_disp_active_low].u_bool;
         self->panel_io_config.flags.refresh_on_demand = (uint32_t)args[ARG_refresh_on_demand].u_bool;
         self->panel_io_config.flags.fb_in_psram = 0;
         self->panel_io_config.flags.double_fb = 0;
@@ -207,10 +204,8 @@
         printf("data_gpio_nums[13]=%d\n", self->panel_io_config.data_gpio_nums[13]);
         printf("data_gpio_nums[14]=%d\n", self->panel_io_config.data_gpio_nums[14]);
         printf("data_gpio_nums[15]=%d\n", self->panel_io_config.data_gpio_nums[15]);
-        printf("disp_gpio_num=%d\n", self->panel_io_config.disp_gpio_num);
         printf("sram_trans_align=%d\n", self->panel_io_config.sram_trans_align);
         printf("psram_trans_align=%d\n", self->panel_io_config.psram_trans_align);
-        printf("disp_active_low=%d\n", self->panel_io_config.flags.disp_active_low);
         printf("refresh_on_demand=%d\n", self->panel_io_config.flags.refresh_on_demand);
         printf("fb_in_psram=%d\n", self->panel_io_config.flags.fb_in_psram);
         printf("double_fb=%d\n", self->panel_io_config.flags.double_fb);
