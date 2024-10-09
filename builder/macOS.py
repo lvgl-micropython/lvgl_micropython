@@ -9,7 +9,9 @@ from .unix import (
     update_modmachine,
     update_main,
     update_mpconfigvariant_common,
-    copy_updated_files
+    copy_updated_files,
+    update_input,
+    update_mpconfigport_mk
 )
 
 from argparse import ArgumentParser
@@ -211,8 +213,9 @@ def compile(*args):  # NOQA
     update_modmachine()
     update_main()
     update_mpconfigvariant_common()
+    update_input()
+    update_mpconfigport_mk()
     copy_updated_files()
-
     build_sdl()
 
     cmd_ = compile_cmd[:]

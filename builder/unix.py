@@ -3,7 +3,7 @@ import sys
 import shutil
 from . import spawn
 from . import generate_manifest
-from . import update_mphalport
+from . import update_mphalport as _update_mphalport
 from argparse import ArgumentParser
 
 
@@ -73,20 +73,22 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
     if board:
         unix_cmd.append(f'VARIANT={board}')
 
-    unix_cmd.extend([
-        f'LV_CFLAGS="{lv_cflags}"',
-        f'LV_PORT=unix',
-        f'USER_C_MODULES="{script_dir}/ext_mod"',
-        (
-            '"CFLAGS_EXTRA='
-            '-Wno-sign-compare '
-            '-Wno-unused-function '
-            '-Wno-double-promotion '
-            '-Wno-unused-command-line-argument '
-            '-Wno-missing-field-initializers"'
-            # 'export CPPFLAGS="-I/opt/homebrew/opt/libffi/include"'
-        )
-    ])
+    unix_cmd.extend(
+        [
+            f'LV_CFLAGS="{lv_cflags}"',
+            f'LV_PORT=unix',
+            f'USER_C_MODULES="{script_dir}/ext_mod"',
+            (
+                '"CFLAGS_EXTRA='
+                '-Wno-sign-compare '
+                '-Wno-unused-function '
+                '-Wno-double-promotion '
+                '-Wno-unused-command-line-argument '
+                '-Wno-missing-field-initializers"'
+                # 'export CPPFLAGS="-I/opt/homebrew/opt/libffi/include"'
+            )
+        ]
+    )
 
     # unix_cmd.extend(extra_args)
 
@@ -108,7 +110,7 @@ def build_manifest(
 
     SCRIPT_PATH = script_dir
 
-    update_mphalport(target)
+    _update_mphalport(target)
 
     manifest_path = 'lib/micropython/ports/unix/variants/manifest.py'
 
@@ -226,10 +228,13 @@ def update_makefile():
     data = read_file(makefile_path)
 
     if 'machine_timer.c' not in data:
-        data = data.replace(
-            'SRC_C += \\\n',
-            'SRC_C += \\\n\tmachine_timer.c\\\n'
-        )
+        code = [
+            'modjni.c \\',
+            '\tmachine_timer.c \\',
+            '\tmachine_sdl.c \\',
+            ''
+        ]
+        data = data.replace('modjni.c \\\n', '\n'.join(code))
 
         write_file(makefile_path, data)
 
@@ -241,8 +246,9 @@ def update_modmachine():
 
     if 'MICROPY_PY_MACHINE_EXTRA_GLOBALS' not in data:
         data += (
-            '\n#define MICROPY_PY_MACHINE_EXTRA_GLOBALS \\\n'
-            '    { MP_ROM_QSTR(MP_QSTR_Timer), MP_ROM_PTR(&machine_timer_type) }, \\\n'  # NOQA
+            '\n#define MICROPY_PY_MACHINE_EXTRA_GLOBALS    '
+            '    { MP_ROM_QSTR(MP_QSTR_Timer), MP_ROM_PTR(&machine_timer_type) }, \n\n'
+        # NOQA
         )
 
         write_file(modmachine_path, data)
@@ -253,11 +259,19 @@ def update_main():
 
     data = read_file(main_path)
 
-    if 'modmachine.h' not in data:
-        data = data.replace(
+    if 'machine_timer.h' not in data:
+        code = [
             '#include "input.h"',
-            '#include "input.h"\n#include "modmachine.h"'
-        )
+            '#include "machine_timer.h"'
+        ]
+        data = data.replace('#include "input.h"', '\n'.join(code))
+
+    if 'machine_sdl.h' not in data:
+        code = [
+            '#include "input.h"',
+            '#include "machine_sdl.h"'
+        ]
+        data = data.replace('#include "input.h"', '\n'.join(code))
 
     if 'machine_timer_deinit_all()' not in data:
         data = data.replace(
@@ -265,17 +279,46 @@ def update_main():
             'machine_timer_deinit_all();\n    #if MICROPY_PY_SYS_ATEXIT'
         )
 
-    if 'lcd_bus_deinit_sdl()' not in data:
+    if 'deinit_sdl()' not in data:
         data = data.replace(
             '#if MICROPY_PY_SYS_ATEXIT',
-            'lcd_bus_deinit_sdl();\n    #if MICROPY_PY_SYS_ATEXIT'
+            'deinit_sdl();\n    #if MICROPY_PY_SYS_ATEXIT'
         )
 
-    if 'lcd_bus_init_sdl()' not in data:
+    if 'init_sdl()' not in data:
         data = data.replace(
             'mp_init();',
-            'mp_init();\n    lcd_bus_init_sdl();'
+            'mp_init();\n    init_sdl();'
         )
+
+    if '*mp_repl_get_ps3' not in data:
+        code = [
+            'char *mp_repl_get_ps3(void)',
+            '{',
+            '    return "";',
+            '}',
+            '',
+            '',
+            'static int do_repl(void) {'
+        ]
+
+        data = data.replace('static int do_repl(void) {', '\n'.join(code))
+
+    if 'EWOULDBLOCK' not in data:
+        code = [
+            'if (errno != EWOULDBLOCK) {',
+            '                return 0;',
+            '            } else {',
+            '                while (line == NULL && errno == EWOULDBLOCK) {',
+            '                    mp_handle_pending(true);',
+            '                    usleep(1000);',
+            '                    line = prompt(mp_repl_get_ps3());',
+            '                }',
+            '                if (line == NULL) return 0;',
+            '            }',
+        ]
+
+        data = data.replace('// EOF\n            return 0;', '\n'.join(code))
 
     data = data.split('\n')
 
@@ -287,6 +330,24 @@ def update_main():
     data = '\n'.join(data)
 
     write_file(main_path, data)
+
+
+def update_input():
+    input_path = 'lib/micropython/ports/unix/input.c'
+
+    data = read_file(input_path)
+    if 'O_NONBLOCK' not in data:
+        code = [
+            'char *prompt(char *p) {',
+            '    int stdin_fd = fileno(stdin);',
+            '    int flags = fcntl(stdin_fd, F_GETFL);',
+            '    flags |= O_NONBLOCK;',
+            '    fcntl(stdin_fd, F_SETFL, flags);',
+            ''
+        ]
+
+        data = data.replace('char *prompt(char *p) {', '\n'.join(code))
+        write_file(input_path, data)
 
 
 def update_mpconfigvariant_common():
@@ -311,7 +372,7 @@ def update_mpconfigvariant_common():
         )
 
     macros = (
-        '#define MICROPY_SCHEDULER_DEPTH              (128)'
+        '#define MICROPY_SCHEDULER_DEPTH              (128)',
         '#define MICROPY_STACK_CHECK              (0)'
     )
 
@@ -323,12 +384,27 @@ def update_mpconfigvariant_common():
     write_file(mpconfigvariant_common_path, data)
 
 
+def update_mpconfigport_mk():
+    mpconfigport_path = 'lib/micropython/ports/unix/mpconfigport.mk'
+
+    data = read_file(mpconfigport_path)
+    if 'MICROPY_USE_READLINE = 1' in data:
+        data = data.replace(
+            'MICROPY_USE_READLINE = 1',
+            'MICROPY_USE_READLINE = 0'
+        )
+
+        write_file(mpconfigport_path, data)
+
+
 def compile(*args):  # NOQA
 
     update_makefile()
     update_modmachine()
     update_main()
     update_mpconfigvariant_common()
+    update_input()
+    update_mpconfigport_mk()
     copy_updated_files()
 
     build_sdl()

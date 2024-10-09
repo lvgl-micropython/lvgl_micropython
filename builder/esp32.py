@@ -944,40 +944,36 @@ def update_mpconfigport():
                       'IRAM_ATTR f\n'
         )
 
-    for i in range(2):
-        pattern = f'#define MP_USE_DUAL_CORE                    ({i})'
-        if pattern in data:
-            text = (
-                f'#define MP_USE_DUAL_CORE                    '
-                f'({int(dual_core_threads)})'
-            )
-            break
-    else:
-        pattern = '#define MICROPY_PY_THREAD_GIL'
-        text = (
-            f'#define MP_USE_DUAL_CORE                    '
-            f'({int(dual_core_threads)})\n{pattern}'
-        )
-
-    data = data.replace(pattern, text)
-    text = (
-        f'#define MICROPY_PY_THREAD_GIL               '
-        f'({int(not dual_core_threads)})'
-    )
-    for i in range(2):
-        pattern = f'#define MICROPY_PY_THREAD_GIL               ({i})'
-
-        if pattern in data:
-            data = data.replace(pattern, text)
-            break
+    has_dual_core = 'MP_USE_DUAL_CORE' in data
 
     data = data.split('\n')
+
     for i, line in enumerate(data):
+        if has_dual_core and line.startswith('#define MP_USE_DUAL_CORE'):
+            data[i] = (
+                '#define MP_USE_DUAL_CORE                    '
+                f'({int(dual_core_threads)})'
+            )
+            continue
+
+        if line.startswith('#define MICROPY_PY_THREAD_GIL'):
+            data[i] = (
+                f'#define MICROPY_PY_THREAD_GIL               '
+                f'({int(not dual_core_threads)})'
+            )
+            if not has_dual_core:
+                data[i] += (
+                    '\n#define MP_USE_DUAL_CORE                    '
+                    f'({int(dual_core_threads)})'
+                )
+            continue
+
         if line.startswith('#define MICROPY_TASK_STACK_SIZE'):
             data[i] = (
                 f'#define MICROPY_TASK_STACK_SIZE           ({task_stack_size})'
             )
-            break
+            continue
+
     data = '\n'.join(data)
 
     write_file(MPCONFIGPORT_PATH, data)
