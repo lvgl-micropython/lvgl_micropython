@@ -242,7 +242,7 @@ def update_modmachine():
     if 'MICROPY_PY_MACHINE_EXTRA_GLOBALS' not in data:
         data += (
             '\n#define MICROPY_PY_MACHINE_EXTRA_GLOBALS \\\n'
-            '    { MP_ROM_QSTR(MP_QSTR_Timer), MP_ROM_PTR(&machine_timer_type) }, \\\n'  # NOQA
+            '    { MP_ROM_QSTR(MP_QSTR_Timer), MP_ROM_PTR(&machine_timer_type) }\n'  # NOQA
         )
 
         write_file(modmachine_path, data)
@@ -311,7 +311,7 @@ def update_mpconfigvariant_common():
         )
 
     macros = (
-        '#define MICROPY_SCHEDULER_DEPTH              (128)'
+        '#define MICROPY_SCHEDULER_DEPTH              (128)',
         '#define MICROPY_STACK_CHECK              (0)'
     )
 

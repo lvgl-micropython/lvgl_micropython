@@ -153,7 +153,7 @@ static void machine_timer_init_helper(machine_timer_obj_t *self, int16_t mode, m
 }
 
 
-static mp_obj_t machine_timer_deinit(mp_obj_t self_in)
+static mp_obj_t machine_timer_deinit(mp_obj_t self)
 {
     machine_timer_disable(self);
     return mp_const_none;
