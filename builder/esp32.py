@@ -845,6 +845,14 @@ def read_file(file):
 def update_mpthreadport():
     data = read_file(MPTHREADPORT_PATH)
 
+    '''
+    #else
+
+void FREERTOS_TASK_DELETE_HOOK(void *tcb) {
+}
+
+    '''
+
     if '_CORE_ID' not in data:
         data = data.replace('MP_TASK_COREID', '_CORE_ID')
 
@@ -899,6 +907,19 @@ def update_mpconfigboard():
 
 def update_mpconfigport():
     data = read_file(MPCONFIGPORT_PATH)
+
+    '''
+#if MICROPY_PY_THREAD
+#define MICROPY_EVENT_POLL_HOOK \
+    do { \
+        extern void mp_handle_pending(bool); \
+        mp_handle_pending(true); \
+        MICROPY_PY_SOCKET_EVENTS_HANDLER \
+        MP_THREAD_GIL_EXIT(); \
+        ulTaskNotifyTake(pdFALSE, 1); \
+        MP_THREAD_GIL_ENTER(); \
+    } while (0);
+    '''
 
     if 'MP_USB_OTG' in data:
         data = data.rsplit('\n\n#define MP_USB_OTG', 1)[0]
@@ -997,8 +1018,51 @@ def update_mphalport():
     write_file(MPHALPORT_PATH, data)
 
 
+def update_gc():
+    gc_path = 'lib/micropython/py/gc.c'
+
+    data = read_file(gc_path)
+
+    '''
+    #if MICROPY_PY_THREAD && !MICROPY_PY_THREAD_GIL
+    mp_thread_mutex_init(&MP_STATE_MEM(gc_mutex));
+    #endif
+    '''
+    write_file(gc_path, data)
+
+
+def update_gccollect():
+
+    gccollect_path = 'lib/micropython/ports/esp32/gccollect.c'
+
+    data = read_file(gccollect_path)
+
+    '''
+    #if MICROPY_PY_THREAD
+    mp_thread_gc_others();
+    #endif
+    '''
+    write_file(gccollect_path, data)
+
+
 def update_main():
     data = read_file(MAIN_PATH)
+
+
+    '''
+    #if MICROPY_PY_THREAD
+    mp_thread_init(pxTaskGetStackStart(NULL), MICROPY_TASK_STACK_SIZE / sizeof(uintptr_t));
+    #endif
+    
+    
+    
+    #if MICROPY_PY_THREAD
+    mp_thread_deinit();
+    #endif
+    
+    '''
+
+
     data = data.replace(
         '#if CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG',
         '#if MP_USB_SERIAL_JTAG'

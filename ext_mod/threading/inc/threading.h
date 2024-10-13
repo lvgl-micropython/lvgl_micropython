@@ -26,47 +26,32 @@
 #ifndef __THREADING_H__
     #define __THREADING_H__
 
+    #define THREAD_MIN_STACK_SIZE                        (4 * 1024)
+    #define THREAD_DEFAULT_STACK_SIZE                    (THREADING_MIN_STACK_SIZE + 1024)
+    #define THREAD_PRIORITY                              (ESP_TASK_PRIO_MIN + 1)
+
+    #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0) && !CONFIG_FREERTOS_ENABLE_STATIC_TASK_CLEAN_UP
+        #define FREERTOS_TASK_DELETE_HOOK                       vTaskPreDeletionHook
+    #else
+        #define FREERTOS_TASK_DELETE_HOOK                       vPortCleanUpTCB
+    #endif
+
+    #include "freertos/FreeRTOS.h"
+    #include "freertos/task.h"
+    #include "freertos/semphr.h"
+    #include "freertos/queue.h"
+
     #include "py/mpconfig.h"
 
-    #if MICROPY_PY_THREAD
+    #include "threading_thread.h"
 
-        struct _mp_state_thread_t;
+    typedef void *(*threading_thread_entry_cb_t)(mp_obj_threading_thread_t *);
+    extern size_t thread_stack_size;
 
-        #include "freertos/FreeRTOS.h"
-        #include "freertos/task.h"
-        #include "freertos/semphr.h"
-        #include "freertos/queue.h"
+    mp_uint_t threading_thread_create(threading_thread_entry_cb_t entry, mp_obj_threading_thread_t *th);
 
-        typedef struct _mp_thread_mutex_t {
-            SemaphoreHandle_t handle;
-            StaticSemaphore_t buffer;
-        } mp_thread_mutex_t;
-
-        void mp_thread_init(void *stack, uint32_t stack_len);
-        void mp_thread_gc_others(void);
-        void mp_thread_deinit(void);
-
-
-        struct _mp_state_thread_t *mp_thread_get_state(void);
-        void mp_thread_set_state(struct _mp_state_thread_t *state);
-        mp_uint_t mp_thread_create(void *(*entry)(void *), void *arg, size_t *stack_size);
-        mp_uint_t mp_thread_get_id(void);
-        void mp_thread_start(void);
-        void mp_thread_finish(void);
-        void mp_thread_mutex_init(mp_thread_mutex_t *mutex);
-        int mp_thread_mutex_lock(mp_thread_mutex_t *mutex, int wait);
-        void mp_thread_mutex_unlock(mp_thread_mutex_t *mutex);
-
-    #endif // MICROPY_PY_THREAD
-
-    #if MICROPY_PY_THREAD && MICROPY_PY_THREAD_GIL
-        #include "py/mpstate.h"
-
-        #define MP_THREAD_GIL_ENTER() mp_thread_mutex_lock(&MP_STATE_VM(gil_mutex), 1)
-        #define MP_THREAD_GIL_EXIT() mp_thread_mutex_unlock(&MP_STATE_VM(gil_mutex))
-    #else
-        #define MP_THREAD_GIL_ENTER()
-        #define MP_THREAD_GIL_EXIT()
-    #endif
+    void threading_init(void *stack, uint32_t stack_len);
+    void threading_gc_others(void);
+    void threading_deinit(void);
 
 #endif // __THREADING_H__
