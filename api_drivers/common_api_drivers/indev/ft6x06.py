@@ -8,6 +8,7 @@ I2C_ADDR = 0x38
 BITS = 8
 
 _FT6206_CHIPID = const(0x06)
+_FT6x06_CHIPID = const(0x11)
 
 
 class FT6x06(focaltech_touch.FocalTechTouch):
@@ -26,5 +27,6 @@ class FT6x06(focaltech_touch.FocalTechTouch):
             startup_rotation,
             debug,
             None,
-            _FT6206_CHIPID
+            _FT6206_CHIPID,
+            _FT6x06_CHIPID
         )
