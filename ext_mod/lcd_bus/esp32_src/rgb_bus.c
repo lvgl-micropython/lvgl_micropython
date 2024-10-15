@@ -195,7 +195,7 @@
         self->panel_io_config.data_gpio_nums[13] = (int)args[ARG_data13].u_int;
         self->panel_io_config.data_gpio_nums[14] = (int)args[ARG_data14].u_int;
         self->panel_io_config.data_gpio_nums[15] = (int)args[ARG_data15].u_int;
-        self->panel_io_config.disp_gpio_num = (int)args[ARG_disp].u_int;
+        self->panel_io_config.disp_gpio_num = -1;
         self->panel_io_config.sram_trans_align = 8;
         self->panel_io_config.psram_trans_align = 64;
         self->panel_io_config.flags.refresh_on_demand = (uint32_t)args[ARG_refresh_on_demand].u_bool;

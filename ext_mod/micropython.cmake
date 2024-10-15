@@ -4,8 +4,8 @@ include(${CMAKE_CURRENT_LIST_DIR}/lcd_utils/micropython.cmake)
 
 set(MICROPY_MULTICORE_THREAD $ENV{MICROPY_MULTICORE_THREADING})
 
-if(ESP_PLATFORM)
-    if(MICROPY_MULTICORE_THREAD)
-        include(${CMAKE_CURRENT_LIST_DIR}/threading/micropython.cmake)
-    endif(MICROPY_MULTICORE_THREAD)
-endif(ESP_PLATFORM)
+# if(ESP_PLATFORM)
+#     if(MICROPY_MULTICORE_THREAD)
+#         include(${CMAKE_CURRENT_LIST_DIR}/threading/micropython.cmake)
+#     endif(MICROPY_MULTICORE_THREAD)
+# endif(ESP_PLATFORM)
