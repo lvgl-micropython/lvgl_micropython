@@ -8,11 +8,13 @@
 #include "freertos/semphr.h"
 
 #include "thread_common.h"
-#include "../inc/threading_thread.h"
-#include "../inc/threading.h"
+#include "thread_thread.h"
+
+#include "../inc/multiprocessing_process.h"
+#include "../inc/multiprocessing.h"
 
 
-static mp_obj_t threading_thread_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
+static mp_obj_t multiprocessing_process_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
 {
     enum { ARG_target, ARG_name, ARG_args, ARG_kwargs };
     const mp_arg_t make_new_args[] = {
@@ -32,9 +34,27 @@ static mp_obj_t threading_thread_make_new(const mp_obj_type_t *type, size_t n_ar
         args
     );
 
+    uint16_t core_id = (uint16_t)xTaskGetCoreID(xTaskGetCurrentTaskHandle());
+    int16_t new_core_id = -1;
+
+    for (uint16_t i=0;i<2;i++) {
+        if (core_id == i) {
+            continue;
+        }
+        if (processes[i] == NULL) {
+            new_core_id = (int16_t)i;
+            break;
+        }
+    }
+
+    if (new_core_id == -1) {
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("All cores have processes running on them."));
+        return mp_const_none;
+    }
+
     // create new object
-    mp_obj_threading_boundedsemaphore_t *self = m_new_obj(mp_obj_threading_boundedsemaphore_t);
-    self->base.type = &mp_type_threading_boundedsemaphore_t;
+    mp_obj_thread_thread_t *self = m_new_obj(mp_obj_thread_thread_t);
+    self->base.type = &mp_type_multiprocessing_process_t;
 
     self->name = args[ARG_name].u_obj;
     mp_obj_tuple_t args = (mp_obj_tuple_t)args[ARG_args].u_obj;
@@ -76,28 +96,30 @@ static mp_obj_t threading_thread_make_new(const mp_obj_type_t *type, size_t n_ar
     // set the function for thread entry
     call_args->fun = args[ARG_target].u_obj;
 
-    return MP_OBJ_FROM_PTR(self);
+    mp_obj_t res = MP_OBJ_FROM_PTR(self);
+    processes[new_core_id] = res;
+    return res;
 }
 
 
-static const mp_rom_map_elem_t threading_thread_locals_dict_table[] = {
+static const mp_rom_map_elem_t multiprocessing_process_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_start), MP_ROM_PTR(&thread_start_obj) },
     { MP_ROM_QSTR(MP_QSTR_is_alive), MP_ROM_PTR(&thread_is_alive_obj) },
 };
 
-static MP_DEFINE_CONST_DICT(threading_thread_locals_dict, threading_thread_locals_dict_table);
+static MP_DEFINE_CONST_DICT(multiprocessing_process_locals_dict, multiprocessing_process_locals_dict_table);
 
 
 static MP_DEFINE_CONST_OBJ_TYPE(
-    mp_type_threading_thread_t,
+    mp_type_multiprocessing_process_t,
     MP_QSTR_Thread,
     MP_TYPE_FLAG_NONE,
     // print, mp_lv_grad_t_print,
-    make_new, threading_thread_make_new,
+    make_new, multiprocessing_process_make_new,
     // binary_op, lv_struct_binary_op,
     // subscr, lv_struct_subscr,
     attr, thread_attr_func,
-    locals_dict, &threading_thread_locals_dict,
+    locals_dict, &multiprocessing_process_locals_dict,
     // buffer, mp_blob_get_buffer,
     // parent, &mp_lv_base_struct_type
 );

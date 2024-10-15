@@ -45,13 +45,10 @@
 
     #include "threading_thread.h"
 
-    typedef void *(*threading_thread_entry_cb_t)(mp_obj_threading_thread_t *);
+    mp_obj_t threading_main_thread(void);
+    mp_obj_t threading_enumerate(void);
+
     extern size_t thread_stack_size;
 
-    mp_uint_t threading_thread_create(threading_thread_entry_cb_t entry, mp_obj_threading_thread_t *th);
-
-    void threading_init(void *stack, uint32_t stack_len);
-    void threading_gc_others(void);
-    void threading_deinit(void);
 
 #endif // __THREADING_H__

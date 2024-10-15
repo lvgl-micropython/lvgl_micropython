@@ -8,6 +8,6 @@
 #ifndef __THREADING_THREAD_H__
     #define __THREADING_THREAD_H__
 
-    extern const mp_obj_type_t mp_type_threading_thread_t;
+    extern const mp_obj_type_t mp_type_multiprocessing_process_t;
 
 #endif

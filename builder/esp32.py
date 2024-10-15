@@ -822,12 +822,27 @@ def find_esp32_ports(chip):
     return found_ports
 
 
-MPTHREADPORT_PATH = 'lib/micropython/ports/esp32/mpthreadport.c'
-MPCONFIGPORT_PATH = 'lib/micropython/ports/esp32/mpconfigport.h'
-PANICHANDLER_PATH = 'lib/micropython/ports/esp32/panichandler.c'
+if not os.path.exists('micropy_updates/originals/esp32'):
+    os.mkdir('micropy_updates/originals/esp32')
+
+
+
 SDKCONFIG_PATH = f'build/sdkconfig.board'
+
+MPTHREADPORT_PATH = 'lib/micropython/ports/esp32/mpthreadport.c'
+MPTHREADPORT_SAVE_PATH = 'micropy_updates/originals/esp32/mpthreadport.c'
+
+MPCONFIGPORT_PATH = 'lib/micropython/ports/esp32/mpconfigport.h'
+MPCONFIGPORT_SAVE_PATH = 'micropy_updates/originals/esp32/mpconfigport.h'
+
+PANICHANDLER_PATH = 'lib/micropython/ports/esp32/panichandler.c'
+PANICHANDLER_SAVE_PATH = 'micropy_updates/originals/esp32/panichandler.c'
+
 MPHALPORT_PATH = 'lib/micropython/ports/esp32/mphalport.c'
+MPHALPORT_SAVE_PATH = 'micropy_updates/originals/esp32/mphalport.c'
+
 MAIN_PATH = 'lib/micropython/ports/esp32/main.c'
+MAIN_SAVE_PATH = 'micropy_updates/originals/esp32/main.c'
 
 
 def write_file(file, data):
@@ -835,23 +850,37 @@ def write_file(file, data):
         f.write(data.encode('utf-8'))
 
 
-def read_file(file):
-    with open(file, 'rb') as f:
-        data = f.read().decode('utf-8')
+def read_file(file, save_file):
+    with open(file, 'rb') as f1:
+        data = f1.read()
 
-    return data
+    with open(save_file, 'wb') as f2:
+        f2.write(data)
+
+    return data.decode('utf-8')
+
+
+def revert_files():
+    src_path = 'micropy_updates/originals/esp32'
+    dst_path = 'lib/micropython/ports/esp32'
+
+    def iter_path(src_p, dst_p):
+        for file in os.listdir(src_p):
+            src_file = os.path.join(src_p, file)
+            dst_file = os.path.join(dst_p, file)
+
+            if os.path.isdir(src_file):
+                iter_path(src_file, dst_file)
+                os.rmdir(src_file)
+            else:
+                read_file(src_file, dst_file)
+                os.remove(src_file)
+
+    iter_path(src_path, dst_path)
 
 
 def update_mpthreadport():
-    data = read_file(MPTHREADPORT_PATH)
-
-    '''
-    #else
-
-void FREERTOS_TASK_DELETE_HOOK(void *tcb) {
-}
-
-    '''
+    data = read_file(MPTHREADPORT_PATH, MPTHREADPORT_SAVE_PATH)
 
     if '_CORE_ID' not in data:
         data = data.replace('MP_TASK_COREID', '_CORE_ID')
@@ -873,7 +902,7 @@ void FREERTOS_TASK_DELETE_HOOK(void *tcb) {
 
 
 def update_panic_handler():
-    data = read_file(PANICHANDLER_PATH)
+    data = read_file(PANICHANDLER_PATH, PANICHANDLER_SAVE_PATH)
 
     if '"MPY version : "' in data:
         beg, end = data.split('"MPY version : "', 1)
@@ -886,13 +915,27 @@ def update_panic_handler():
         write_file(PANICHANDLER_PATH, data)
 
 
+MPCONFIGBOARD_CMAKE_PATH = None
+MPCONFIGBOARD_CMAKE_SAVE_PATH = None
+
+
 def update_mpconfigboard():
-    mpconfigboard_cmake_path = (
+    global MPCONFIGBOARD_CMAKE_PATH
+    global MPCONFIGBOARD_CMAKE_SAVE_PATH
+
+    board_save_path = f'micropy_updates/esp32/boards/{board}'
+
+    if not os.path.exists(board_save_path):
+        os.makedirs(board_save_path)
+
+    MPCONFIGBOARD_CMAKE_PATH = (
         'lib/micropython/ports/esp32/boards/'
         f'{board}/mpconfigboard.cmake'
     )
 
-    data = read_file(mpconfigboard_cmake_path)
+    MPCONFIGBOARD_CMAKE_SAVE_PATH = os.path.join(board_save_path, 'mpconfigboard.cmake')
+
+    data = read_file(MPCONFIGBOARD_CMAKE_PATH, MPCONFIGBOARD_CMAKE_SAVE_PATH)
 
     sdkconfig = (
         'set(SDKCONFIG_DEFAULTS ${SDKCONFIG_DEFAULTS} '
@@ -902,24 +945,11 @@ def update_mpconfigboard():
     if sdkconfig not in data:
         data += '\n' + sdkconfig + '\n'
 
-        write_file(mpconfigboard_cmake_path, data)
+        write_file(MPCONFIGBOARD_CMAKE_PATH, data)
 
 
 def update_mpconfigport():
-    data = read_file(MPCONFIGPORT_PATH)
-
-    '''
-#if MICROPY_PY_THREAD
-#define MICROPY_EVENT_POLL_HOOK \
-    do { \
-        extern void mp_handle_pending(bool); \
-        mp_handle_pending(true); \
-        MICROPY_PY_SOCKET_EVENTS_HANDLER \
-        MP_THREAD_GIL_EXIT(); \
-        ulTaskNotifyTake(pdFALSE, 1); \
-        MP_THREAD_GIL_ENTER(); \
-    } while (0);
-    '''
+    data = read_file(MPCONFIGPORT_PATH, MPCONFIGPORT_SAVE_PATH)
 
     if 'MP_USB_OTG' in data:
         data = data.rsplit('\n\n#define MP_USB_OTG', 1)[0]
@@ -1005,7 +1035,7 @@ def update_mpconfigport():
 
 
 def update_mphalport():
-    data = read_file(MPHALPORT_PATH)
+    data = read_file(MPHALPORT_PATH, MPHALPORT_SAVE_PATH)
     data = data.replace(
         '#if CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG',
         '#if MP_USB_SERIAL_JTAG'
@@ -1018,50 +1048,8 @@ def update_mphalport():
     write_file(MPHALPORT_PATH, data)
 
 
-def update_gc():
-    gc_path = 'lib/micropython/py/gc.c'
-
-    data = read_file(gc_path)
-
-    '''
-    #if MICROPY_PY_THREAD && !MICROPY_PY_THREAD_GIL
-    mp_thread_mutex_init(&MP_STATE_MEM(gc_mutex));
-    #endif
-    '''
-    write_file(gc_path, data)
-
-
-def update_gccollect():
-
-    gccollect_path = 'lib/micropython/ports/esp32/gccollect.c'
-
-    data = read_file(gccollect_path)
-
-    '''
-    #if MICROPY_PY_THREAD
-    mp_thread_gc_others();
-    #endif
-    '''
-    write_file(gccollect_path, data)
-
-
 def update_main():
-    data = read_file(MAIN_PATH)
-
-
-    '''
-    #if MICROPY_PY_THREAD
-    mp_thread_init(pxTaskGetStackStart(NULL), MICROPY_TASK_STACK_SIZE / sizeof(uintptr_t));
-    #endif
-    
-    
-    
-    #if MICROPY_PY_THREAD
-    mp_thread_deinit();
-    #endif
-    
-    '''
-
+    data = read_file(MAIN_PATH, MAIN_SAVE_PATH)
 
     data = data.replace(
         '#if CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG',
@@ -1173,242 +1161,263 @@ def compile(*args):  # NOQA
     global PORT
     global flash_size
 
-    add_components()
+    try:
 
-    env, cmds = setup_idf_environ()
+        add_components()
 
-    if ccache:
-        env['IDF_CCACHE_ENABLE'] = '1'
+        env, cmds = setup_idf_environ()
 
-    build_sdkconfig(*args)
+        if ccache:
+            env['IDF_CCACHE_ENABLE'] = '1'
 
-    if partition_size == -1:
-        p_size = 0x25A000
-    else:
-        p_size = partition_size
+        build_sdkconfig(*args)
 
-    partition = Partition(p_size)
-    partition.save()
+        if partition_size == -1:
+            p_size = 0x25A000
+        else:
+            p_size = partition_size
 
-    update_main()
-    update_mphalport()
-    update_mpthreadport()
-    update_panic_handler()
-    update_mpconfigboard()
-    update_mpconfigport()
+        partition = Partition(p_size)
+        partition.save()
 
-    src_path = 'micropy_updates/esp32'
-    dst_path = 'lib/micropython/ports/esp32'
+        update_main()
+        update_mphalport()
+        update_mpthreadport()
+        update_panic_handler()
+        update_mpconfigboard()
+        update_mpconfigport()
 
-    for file in os.listdir(src_path):
-        src_file = os.path.join(src_path, file)
-        dst_file = os.path.join(dst_path, file)
-        shutil.copyfile(src_file, dst_file)
+        if dual_core_threads:
+            compile_cmd.append('MICROPY_MULTICORE_THREAD=1')
 
-    cmd_ = compile_cmd[:]
-    cmd_.extend(list(args))
+        src_path = 'micropy_updates/esp32'
+        dst_path = 'lib/micropython/ports/esp32'
+        originals_path = 'micropy_updates/originals/esp32'
 
-    ret_code, output = spawn(cmd_, env=env, cmpl=True)
-    if ret_code != 0:
-        if skip_partition_resize:
-            sys.exit(ret_code)
+        for file in os.listdir(src_path):
+            if file == 'mpthreadport.c' and not dual_core_threads:
+                continue
 
-        if partition_size != -1:
-            sys.exit(ret_code)
+            src_file = os.path.join(dst_path, file)
+            dst_file = os.path.join(originals_path, file)
 
-    if not skip_partition_resize and partition_size == -1:
-        if 'Error: app partition is too small' in output:
-            sys.stdout.write(
-                '\n\033[31;1m***** Resizing Partition *****\033[0m\n'
-            )
-            sys.stdout.flush()
+            read_file(src_file, dst_file)
 
-            app_size = output.rsplit('Error: app partition is too small', 1)[1]
-            app_size = app_size.split('micropython.bin size', 1)[1]
-            app_size = int(app_size.split(':', 1)[0].strip(), 16)
+            src_file = os.path.join(src_path, file)
+            dst_file = os.path.join(dst_path, file)
 
-            partition.set_app_size(app_size)
-            partition.save()
+            read_file(src_file, dst_file)
 
-            sys.stdout.write(
-                '\n\033[31;1m***** Running build again *****\033[0m\n\n'
-            )
-            sys.stdout.flush()
+        cmd_ = compile_cmd[:]
+        cmd_.extend(list(args))
 
-            cmd_[4] = 'SECOND_BUILD=1'
-            ret_code, output = spawn(cmd_, env=env, cmpl=True)
-
-            if ret_code != 0:
+        ret_code, output = spawn(cmd_, env=env, cmpl=True)
+        if ret_code != 0:
+            if skip_partition_resize:
+                revert_files()
                 sys.exit(ret_code)
 
-        if 'Project build complete.' in output:
-            app_size = output.rsplit('Project build complete.', 1)[0]
+            if partition_size != -1:
+                revert_files()
+                sys.exit(ret_code)
 
-            app_size = app_size.rsplit('micropython.bin binary size', 1)[1]
-            app_size = int(
-                app_size.split('bytes', 1)[0].strip(),
-                16
-            )
-
-            if partition.set_app_size(app_size):
-                partition.save()
-
+        if not skip_partition_resize and partition_size == -1:
+            if 'Error: app partition is too small' in output:
                 sys.stdout.write(
                     '\n\033[31;1m***** Resizing Partition *****\033[0m\n'
                 )
                 sys.stdout.flush()
+
+                app_size = output.rsplit('Error: app partition is too small', 1)[1]
+                app_size = app_size.split('micropython.bin size', 1)[1]
+                app_size = int(app_size.split(':', 1)[0].strip(), 16)
+
+                partition.set_app_size(app_size)
+                partition.save()
+
                 sys.stdout.write(
                     '\n\033[31;1m***** Running build again *****\033[0m\n\n'
                 )
                 sys.stdout.flush()
 
                 cmd_[4] = 'SECOND_BUILD=1'
-
                 ret_code, output = spawn(cmd_, env=env, cmpl=True)
 
                 if ret_code != 0:
+                    revert_files()
                     sys.exit(ret_code)
 
-    if 'Project build complete.' in output:
-        output = output.rsplit('To flash, run:')[-1].strip()
+            if 'Project build complete.' in output:
+                app_size = output.rsplit('Project build complete.', 1)[0]
 
-        espressif_path = os.path.expanduser('~/.espressif')
+                app_size = app_size.rsplit('micropython.bin binary size', 1)[1]
+                app_size = int(
+                    app_size.split('bytes', 1)[0].strip(),
+                    16
+                )
 
-        for ver in ('3.8', '3.9', '3.10', '3.11', '3.12'):
-            python_path = (
-                f'{espressif_path}/python_env/idf{IDF_VER[:-2]}_py{ver}_env/bin'
+                if partition.set_app_size(app_size):
+                    partition.save()
+
+                    sys.stdout.write(
+                        '\n\033[31;1m***** Resizing Partition *****\033[0m\n'
+                    )
+                    sys.stdout.flush()
+                    sys.stdout.write(
+                        '\n\033[31;1m***** Running build again *****\033[0m\n\n'
+                    )
+                    sys.stdout.flush()
+
+                    cmd_[4] = 'SECOND_BUILD=1'
+
+                    ret_code, output = spawn(cmd_, env=env, cmpl=True)
+
+                    if ret_code != 0:
+                        revert_files()
+                        sys.exit(ret_code)
+
+        if 'Project build complete.' in output:
+            output = output.rsplit('To flash, run:')[-1].strip()
+
+            espressif_path = os.path.expanduser('~/.espressif')
+
+            for ver in ('3.8', '3.9', '3.10', '3.11', '3.12'):
+                python_path = (
+                    f'{espressif_path}/python_env/idf{IDF_VER[:-2]}_py{ver}_env/bin'
+                )
+                if os.path.exists(python_path):
+                    break
+            else:
+                raise RuntimeError(
+                    'unable to locate python version used in the ESP-IDF'
+                )
+
+            python_path += '/python'
+
+            output = output.split('python ', 1)[-1]
+            output = output.split('\n', 1)[0]
+
+            build_name = f'build-{board}'
+
+            if board_variant:
+                build_name += f'-{board_variant}'
+
+            full_file_path = (
+                f'{SCRIPT_DIR}/lib/micropython/ports/esp32/{build_name}'
             )
-            if os.path.exists(python_path):
-                break
-        else:
-            raise RuntimeError(
-                'unable to locate python version used in the ESP-IDF'
+            bin_files = []
+            for item in output.split('0x')[1:]:
+                item, bf = item.split(build_name, 1)
+                bf = f'{full_file_path}{bf.strip()}'
+                bin_files.extend([f'0x{item.strip()}', bf])
+
+            old_bin_files = ['0x' + item.strip() for item in output.split('0x')[1:]]
+            old_bin_files = ' '.join(old_bin_files)
+
+            os.remove('build/lvgl_header.h')
+
+            for f in os.listdir('build'):
+                if f.startswith('lvgl'):
+                    continue
+
+                os.remove(os.path.join('build', f))
+
+            build_bin_file = f'build/lvgl_micropy_{build_name[6:]}-{flash_size}'
+            if oct_flash:
+                build_bin_file += '_OCTFLASH'
+
+            build_bin_file += '.bin'
+            build_bin_file = os.path.abspath(build_bin_file)
+
+            chip = output.split('--chip ', 1)[-1].split(' ', 1)[0]
+
+            result, tool_path = spawn(
+                [[
+                    python_path,
+                    '-c "import esptool;print(esptool.__file__);"'
+                ]],
+                out_to_screen=False
             )
 
-        python_path += '/python'
+            if result != 0:
+                raise RuntimeError('ERROR collecting esptool path')
 
-        output = output.split('python ', 1)[-1]
-        output = output.split('\n', 1)[0]
+            tool_path = os.path.split(os.path.split(tool_path.strip())[0])[0]
+            sys.path.insert(0, tool_path)
 
-        build_name = f'build-{board}'
+            import esptool
 
-        if board_variant:
-            build_name += f'-{board_variant}'
-
-        full_file_path = (
-            f'{SCRIPT_DIR}/lib/micropython/ports/esp32/{build_name}'
-        )
-        bin_files = []
-        for item in output.split('0x')[1:]:
-            item, bf = item.split(build_name, 1)
-            bf = f'{full_file_path}{bf.strip()}'
-            bin_files.extend([f'0x{item.strip()}', bf])
-
-        old_bin_files = ['0x' + item.strip() for item in output.split('0x')[1:]]
-        old_bin_files = ' '.join(old_bin_files)
-
-        os.remove('build/lvgl_header.h')
-
-        for f in os.listdir('build'):
-            if f.startswith('lvgl'):
-                continue
-
-            os.remove(os.path.join('build', f))
-
-        build_bin_file = f'build/lvgl_micropy_{build_name[6:]}-{flash_size}'
-        if oct_flash:
-            build_bin_file += '_OCTFLASH'
-
-        build_bin_file += '.bin'
-        build_bin_file = os.path.abspath(build_bin_file)
-
-        chip = output.split('--chip ', 1)[-1].split(' ', 1)[0]
-
-        result, tool_path = spawn(
-            [[
-                python_path,
-                '-c "import esptool;print(esptool.__file__);"'
-            ]],
-            out_to_screen=False
-        )
-
-        if result != 0:
-            raise RuntimeError('ERROR collecting esptool path')
-
-        tool_path = os.path.split(os.path.split(tool_path.strip())[0])[0]
-        sys.path.insert(0, tool_path)
-
-        import esptool
-
-        args = ['--chip', chip, 'merge_bin', '-o', build_bin_file]
-        args.extend(bin_files)
-
-        esptool.main(args)
-
-        output = output.replace(old_bin_files, '').strip()
-
-        if PORT is None:
-            PORT = '(PORT)'
-
-        output = output.replace('-b 460800', f'-p {PORT} -b {BAUD}')
-        output = output.replace('no_reset', 'hard_reset')
-
-        args = output.split(' ')
-        args.extend(['--erase-all', '0x0', build_bin_file])
-        output = python_path + ' ' + (' '.join(args))
-
-        if deploy:
-            if PORT == '(PORT)':
-                ports = find_esp32_ports(chip)
-
-                if len(ports) > 1:
-                    query = []
-                    for i, port in enumerate(ports):
-                        query.append(str(i + 1) + ': ' + port)
-
-                    query.append('')
-                    query.append('Which ESP32? :')
-
-                    res = input('\n'.join(query))
-                    res = int(res) - 1
-                else:
-                    res = 0
-
-                PORT = ports[res]
-
-                for i, arg in args:
-                    if arg == '(PORT)':
-                        args[i] = f'{PORT}'
-                        break
-
-                output = output.replace('(PORT)', PORT)
+            args = ['--chip', chip, 'merge_bin', '-o', build_bin_file]
+            args.extend(bin_files)
 
             esptool.main(args)
-            print()
-            print('firmware flashed')
-            print()
-            print(
-                'If you need to reflash your '
-                'ESP32 run the following command.'
-            )
-            print()
-        else:
-            print()
-            print()
-            print('To flash firmware:')
 
-        if PORT == '(PORT)':
-            print(
-                'Replace `(PORT)` with the serial port for '
-                'your esp32 and run the following command.'
-            )
-        else:
-            print(
-                'Run the following command to flash your ESP32.'
-            )
-        print()
-        print(output)
-        print()
+            output = output.replace(old_bin_files, '').strip()
+
+            if PORT is None:
+                PORT = '(PORT)'
+
+            output = output.replace('-b 460800', f'-p {PORT} -b {BAUD}')
+            output = output.replace('no_reset', 'hard_reset')
+
+            args = output.split(' ')
+            args.extend(['--erase-all', '0x0', build_bin_file])
+            output = python_path + ' ' + (' '.join(args))
+
+            if deploy:
+                if PORT == '(PORT)':
+                    ports = find_esp32_ports(chip)
+
+                    if len(ports) > 1:
+                        query = []
+                        for i, port in enumerate(ports):
+                            query.append(str(i + 1) + ': ' + port)
+
+                        query.append('')
+                        query.append('Which ESP32? :')
+
+                        res = input('\n'.join(query))
+                        res = int(res) - 1
+                    else:
+                        res = 0
+
+                    PORT = ports[res]
+
+                    for i, arg in args:
+                        if arg == '(PORT)':
+                            args[i] = f'{PORT}'
+                            break
+
+                    output = output.replace('(PORT)', PORT)
+
+                esptool.main(args)
+                print()
+                print('firmware flashed')
+                print()
+                print(
+                    'If you need to reflash your '
+                    'ESP32 run the following command.'
+                )
+                print()
+            else:
+                print()
+                print()
+                print('To flash firmware:')
+
+            if PORT == '(PORT)':
+                print(
+                    'Replace `(PORT)` with the serial port for '
+                    'your esp32 and run the following command.'
+                )
+            else:
+                print(
+                    'Run the following command to flash your ESP32.'
+                )
+            print()
+            print(output)
+            print()
+    finally:
+        revert_files()
 
 
 def mpy_cross():

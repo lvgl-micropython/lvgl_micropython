@@ -10,6 +10,7 @@ BITS = 8
 
 _FT6x36_CHIPID_1 = const(0x36)
 _FT6x36_CHIPID_2 = const(0x64)
+_FT6x36_CHIPID_3 = const(0xCD)
 
 
 class FT6x36(focaltech_touch.FocalTechTouch):
@@ -29,5 +30,6 @@ class FT6x36(focaltech_touch.FocalTechTouch):
             debug,
             None,
             _FT6x36_CHIPID_1,
-            _FT6x36_CHIPID_2
+            _FT6x36_CHIPID_2,
+            _FT6x36_CHIPID_3
         )
