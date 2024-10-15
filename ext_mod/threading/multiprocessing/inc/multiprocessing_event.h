@@ -9,8 +9,8 @@
 #include "thread_event.h"
 
 
-#ifndef __THREADING_EVENT_H__
-    #define __THREADING_EVENT_H__
+#ifndef __MULTIPROCESSING_EVENT_H__
+    #define __MULTIPROCESSING_EVENT_H__
 
     extern const mp_obj_type_t mp_type_multiprocessing_event_t;
 

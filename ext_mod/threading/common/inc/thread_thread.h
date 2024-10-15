@@ -19,7 +19,6 @@
         size_t n_args;
         size_t n_kw;
         mp_obj_t args[];
-        bool is_alive;
     } thread_entry_args_t;
 
     typedef struct _mp_obj_thread_thread_t {
@@ -29,10 +28,11 @@
 
         mp_obj_t name;
 
-        thread_entry_args_t *th_args;
+        thread_entry_args_t *call_args;
 
         int ready;              // whether the thread is ready and running
         int is_alive;
+        uint8_t core_id;
         void *arg;              // thread Python args, a GC root pointer
         void *stack;            // pointer to the stack
         size_t stack_len;       // number of words in the stack
@@ -44,7 +44,7 @@
     extern const mp_obj_fun_builtin_fixed_t thread_start_obj;
     extern const mp_obj_fun_builtin_fixed_t thread_is_alive_obj;
 
-    void *thread_entry_cb(threading_thread_entry_args_t *th);
+    void *thread_entry_cb(mp_obj_thread_thread_t *th);
     void thread_attr_func(mp_obj_t self_in, qstr attr, mp_obj_t *dest);
 
 #endif

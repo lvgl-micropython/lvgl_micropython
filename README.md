@@ -2,6 +2,456 @@
 _____________________________
 
 
+***NEW FEATURE***
+
+Adds `multiprocessing` and `threading` modules. These modules are close to what CPython has. This is what the API is...
+
+threading
+
+```py
+from typing import Optional, Union, Callable
+
+
+class Event:
+    
+    def __init__(self):
+        ...
+    
+    def wait(self, timeout: Optional[Union[int, float]] = None) -> None:
+        ...
+    
+    def is_set(self) -> bool:
+        ...
+    
+    def set(self) -> None:
+        ...
+    
+    def clear(self) -> None:
+        ...
+    
+    def __del__(self) -> None:
+        ...
+
+
+class RLock:
+    
+    def __init__(self):
+        ...
+    
+    def acquire(self) -> bool:
+        ...
+    
+    def release(self) -> None:
+        ...
+    
+    def __enter__(self) -> None:
+        ...
+    
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        ...
+    
+
+class Lock:
+    def __init__(self):
+        ...
+    
+    def acquire(self) -> bool:
+        ...
+    
+    def release(self) -> None:
+        ...
+    
+    def locked(self) -> bool:
+        ...
+    
+    def __enter__(self) -> None:
+        ...
+    
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        ...
+
+
+class Semaphore:
+    
+    _value: int = ...
+
+    def __init__(self, value=1):
+        self._value = 0
+
+    def acquire(self, blocking: bool = True, timeout: Optional[Union[int, float]] = None) -> bool:
+        ...
+
+    def release(self, n: int = 1) -> None:
+        ...
+    
+    def __enter__(self) -> None:
+        ...
+    
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        ...
+    
+    def __del__(self) -> None:
+        ...
+
+    
+class Thread:
+    
+    name: Union[str, None] = ...
+    ident: int = ...
+    
+    def __init__(self, target: Callable, name: Optional[str] = None, args: tuple = (), kwargs: dict = {}):
+        ...
+    
+    def start(self) -> None:
+        ...
+    
+    def is_alive(self) -> bool:
+        ...
+
+
+def get_ident() -> int:
+    ...
+
+
+def enumerate() -> list[Thread]:
+    ...
+
+
+def main_thread() -> Thread:
+    ...
+
+
+def stack_size(size: Optional[int] = None, /) -> int:
+    ...
+
+```
+
+
+multiprocessing
+
+```py
+from typing import Optional, Union, Callable
+import threading
+
+
+class Event:
+    
+    def __init__(self):
+        ...
+    
+    def wait(self, timeout: Optional[Union[int, float]] = None) -> None:
+        ...
+    
+    def is_set(self) -> bool:
+        ...
+    
+    def set(self) -> None:
+        ...
+    
+    def clear(self) -> None:
+        ...
+    
+    def __del__(self) -> None:
+        ...
+
+
+class RLock:
+    
+    def __init__(self):
+        ...
+    
+    def acquire(self) -> bool:
+        ...
+    
+    def release(self) -> None:
+        ...
+    
+    def __enter__(self) -> None:
+        ...
+    
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        ...
+    
+
+class Lock:
+    def __init__(self):
+        ...
+    
+    def acquire(self) -> bool:
+        ...
+    
+    def release(self) -> None:
+        ...
+    
+    def locked(self) -> bool:
+        ...
+    
+    def __enter__(self) -> None:
+        ...
+    
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        ...
+
+
+class Semaphore:
+    
+    _value: int = ...
+
+    def __init__(self, value=1):
+        self._value = 0
+
+    def acquire(self, blocking: bool = True, timeout: Optional[Union[int, float]] = None) -> bool:
+        ...
+
+    def release(self, n: int = 1) -> None:
+        ...
+    
+    def __enter__(self) -> None:
+        ...
+    
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        ...
+    
+    def __del__(self) -> None:
+        ...
+
+    
+class Process:
+    
+    name: Union[str, None] = ...
+    ident: int = ...
+    
+    def __init__(self, target: Callable, name: Optional[str] = None, args: tuple = (), kwargs: dict = {}):
+        ...
+    
+    def start(self) -> None:
+        ...
+    
+    def is_alive(self) -> bool:
+        ...
+
+
+def active_children() -> list[Union[threading.Thread, Process]]:
+    ...
+
+
+def current_process() -> Process:
+    ...
+
+
+def cpu_count() -> int:
+    ...
+    
+
+def parent_process() -> Union[None, Process]:
+    ...
+
+```
+
+
+So that's the API. Threads and Processes work a slight bit differently when subclassing.
+
+
+```py
+
+import threading
+
+
+class SomeThread(threading.Thread):
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(target=self.run, args=args, kwargs=kwargs)       
+
+    def run(self, *args, **kwargs):
+        ...
+```
+
+In the example above you must use `super` to initilize the parent class.
+You must also provide a target. In CPython you could override the `run` method and not supply a target. 
+This will not work in MicroPython. so always supply a target.
+
+with multiprocessing.Process is you are using an ESP32 that has 2 cores you will only be able to create a single additional process.
+by default core 1 is what is used for the main thread so core 0 is what gets used when creating a second process. threads you create 
+from the main thread will run on core 1 and threads you create from a process will run on core 0. if you create a thread from a thread
+the new thread is mgoing to run on the same core the parent thread is running on.
+
+Try to avoid using sleep in a thread if possible as this is a spinning wheels and it will cause a core to run at 100%. This is not an ideal
+thing to do. the better way to do it is to use an `Event` object with a `wait`.
+
+
+```py
+
+import threading
+
+event = threading.Event()
+
+def run_thread():
+    
+    while not event.is_set():
+        # your code here...
+        event.wait()
+
+        
+t = threading.Thread(run_thread)
+t.start()
+
+# user code here...
+
+
+# to have the thread exit
+event.set()
+```
+
+
+You have to be exceedingly careful using the `threading` and `processing` modules, this is because the "GIL"(Global Interpreter Lock)
+has been disabled. This is done so that you can have true parallel processing. The ESP32 shares the memory between both cores so any 
+code running on either core has the ability to access the same memory location at the same time. You need to be very diligent about synchronizing
+access to objects that are shared. You use the `Lock`, `RLock`, `Semaphore` and `Event` classes to do this.
+
+---
+*** ***ATTENTION*** ***
+<br>
+LVGL is ***NOT*** thread safe!!!
+---
+
+What that means is anything and everything that you do with LVGL must be either done in the same thread/process or 
+locks must be used to manage access to anything and everything in LVGL. What I do to mamnage this kind of thing is I 
+use a threadworker that is able to push functions into a different thread...
+
+Here is an example of hot to run the GUI using core 0
+```py
+import lvgl as lv
+import multiprocessing
+
+
+class LVGLWorker:
+
+    def __init__(self, func, args, kwargs):
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+        self.exception = None
+        self.ret = None
+        self.ret_lock = None
+
+    def __call__(self):
+        try:
+            self.ret = self.func(*self.args, **self.kwargs)
+        except Exception as e:
+            self.exception = e
+
+        if self.ret_lock is not None:
+            self.ret_lock.release()
+
+
+class LVGLThreadworker(multiprocessing.Process):
+
+    def __init__(self):
+        self._queue = []
+        self._queue_lock = multiprocessing.Lock()
+        self._run_lock = multiprocessing.Lock()
+        self._exit_event = multiprocessing.Event()
+        self._return_event = multiprocessing.Event()
+        super().__init__(target=self.run)
+
+    def call(self, func, *args, **kwargs):
+        worker = LVGLWorker(func, args, kwargs)
+        with self._queue_lock:
+            self._queue.append(worker)
+
+        if self._run_lock.locked():
+            self._run_lock.release()
+
+    def call_wait(self, func, *args, **kwargs):
+        worker = LVGLWorker(func, args, kwargs)
+        self._return_event.acquire()
+
+        worker.ret_lock = self._return_event
+
+        with self._queue_lock:
+            self._queue.append(worker)
+
+        if self._run_lock.locked():
+            self._run_lock.release()
+
+        self._return_event.acquire()
+        self._return_event.release()
+
+        if worker.exception is not None:
+            raise worker.exception
+
+        return worker.ret
+    
+    def run(self):
+        self._run_lock.acquire()
+
+        while not self._exit_event.is_set():
+            self._run_lock.acquire()
+
+            with self._queue_lock:
+                while self._queue:
+                    worker = self._queue.pop(0)
+                    worker()
+                    
+                    if worker.ret_lock is None and worker.exception:
+                        import sys
+                        
+                        sys.print_exception(worker.exception)
+
+        self._exit_event.clear()
+                        
+    def stop(self):
+        self._exit_event.set()
+        
+        with self._queue_lock:
+            self._queue.clear()
+            
+        if self._return_event.locked():
+            self._return_event.release()
+        
+        if self._run_lock.locked():
+            self._run_lock.release()
+            
+        # wait for thread to exit.
+        while self._exit_event.is_set():
+            pass
+
+
+lvgl_threadworker = LVGLThreadworker()
+
+
+def task_handler_override(*_):
+    # have the threasdworker call task_handler
+    lvgl_threadworker.call(lv.task_handler)
+    
+    # we return False because we do not want the 
+    # task handler making the call to lv.task_handler
+    return False
+    
+    
+# we want to continue using the task handler because it is able to 
+# increment the ticks from an ISR. However what it does is it then schedules 
+# calling lv.task_handler in the main thread. We don't want it to make that 
+# call in the main thread. we instead want it to make that call on 
+# core 0 instead. Remember the main thread runs on core 1.
+
+import task_handler
+
+th = task_handler.TaskHandler()
+th.add_event_cb(task_handler_override, th.TASK_HANDLER_STARTED)
+
+# an example of how to collect an LVGL object..
+scrn = lvgl_threadworker.call_wait(lv.screen_active)
+
+# Now remember we cannot make any updates to the object directly. we need 
+# to have the thread worker do it
+lvgl_threadworker.call(scrn.set_style_bg_color, lv.color_hex(0x000000), 0)
+
+```
+
+
+--------------------------------------------------
+
 The `mpy_cross` build command has been removed. It will be compiled automatically if it has not been compiled yet.
 
 The `submodules` build command has been removed. The build script takes care of this for you automatically.

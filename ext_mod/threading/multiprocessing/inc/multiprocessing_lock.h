@@ -8,8 +8,8 @@
 #include "thread_common.h"
 #include "thread_lock.h"
 
-#ifndef __THREADING_LOCK_H__
-    #define __THREADING_LOCK_H__
+#ifndef __MULTIPROCESSING_LOCK_H__
+    #define __MULTIPROCESSING_LOCK_H__
 
     extern const mp_obj_type_t mp_type_multiprocessing_lock_t;
 

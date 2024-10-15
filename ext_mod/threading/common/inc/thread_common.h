@@ -7,12 +7,17 @@
 #include "freertos/semphr.h"
 #include "freertos/queue.h"
 
-#ifndef __COMMON_H__
-    #define __COMMON_H__
+#ifndef __THREAD_COMMON_H__
+    #define __THREAD_COMMON_H__
+
+    #include "esp_task.h"
 
     #define THREAD_UNUSED(x) ((void)x)
+    #define THREADING_MIN_STACK_SIZE                        (4 * 1024)
+    #define THREADING_DEFAULT_STACK_SIZE                    (THREADING_MIN_STACK_SIZE + 1024)
+    #define THREADING_PRIORITY                              (ESP_TASK_PRIO_MIN + 1)
 
-    #include "../../threading/threading_thread.h"
+    #include "threading_thread.h"
 
     typedef struct _threading_mutex_t {
         SemaphoreHandle_t handle;
@@ -27,15 +32,18 @@
     void rlock_release(threading_mutex_t *mutex);
     void rlock_init(threading_mutex_t *mutex);
 
-    typedef void *(*threading_thread_entry_cb_t)(mp_obj_thread_thread_t *);
+    typedef void *(*threading_thread_entry_cb_t)(mp_obj_thread_thread_t *self);
 
-    mp_uint_t thread_create(threading_thread_entry_cb_t entry, mp_obj_thread_thread_t *th);
+    mp_uint_t thread_create(threading_thread_entry_cb_t entry, mp_obj_thread_thread_t *self);
 
     void threading_init(void *stack, uint32_t stack_len);
     void threading_deinit(void);
     void threading_gc_others(void);
 
-    estern size_t thread_stack_size;
+    extern size_t thread_stack_size;
+    extern mp_obj_thread_thread_t *t_thread;
+    extern threading_mutex_t t_mutex;
+    extern mp_obj_thread_thread_t _main_thread;
 
     void THREADING_FREERTOS_TASK_DELETE_HOOK(void *tcb);
 

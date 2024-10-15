@@ -7,14 +7,14 @@
 #include "thread_common.h"
 #include "thread_thread.h"
 
-#include "../../threading/threading.h"
+#include "threading.h"
 
-#include "../inc/multiprocess.h"
-#include "../inc/multiprocess_event.h"
-#include "../inc/multiprocess_lock.h"
-#include "../inc/multiprocess_process.h"
-#include "../inc/multiprocess_rlock.h"
-#include "../inc/multiprocess_semaphore.h"
+#include "multiprocessing.h"
+#include "multiprocessing_event.h"
+#include "multiprocessing_lock.h"
+#include "multiprocessing_process.h"
+#include "multiprocessing_rlock.h"
+#include "multiprocessing_semaphore.h"
 
 
 mp_obj_t processes[2];
@@ -35,9 +35,9 @@ static mp_obj_t multiprocessing_active_children(void)
     uint16_t core_id = (uint16_t)xTaskGetCoreID(xTaskGetCurrentTaskHandle());
     uint16_t task_core_id;
 
-    mutex_lock(&thread_mutex, 1);
+    lock_acquire(&t_mutex, 1);
 
-    for (mp_obj_thread_thread_t *th = thread; th != NULL; th = th->next) {
+    for (mp_obj_thread_thread_t *th = t_thread; th != NULL; th = th->next) {
         if (!th->is_alive) {
             continue;
         }
@@ -48,7 +48,7 @@ static mp_obj_t multiprocessing_active_children(void)
         }
     }
 
-    mutex_unlock(&thread_mutex);
+    lock_release(&t_mutex);
     return list;
 }
 
@@ -80,7 +80,7 @@ static mp_obj_t multiprocessing_parent_process(void)
     if (processes[core_id] == main_thread) {
         return mp_const_none;
     } else {
-        return main_thread
+        return main_thread;
     }
 }
 
@@ -89,11 +89,11 @@ static MP_DEFINE_CONST_FUN_OBJ_0(multiprocessing_parent_process_obj, multiproces
 
 static const mp_rom_map_elem_t mp_module_multiprocessing_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_multiprocessing) },
-    { MP_ROM_QSTR(MP_QSTR_RLock), MP_ROM_PTR(&mp_type_multiprocessing_rlock_t) },
-    { MP_ROM_QSTR(MP_QSTR_Lock), MP_ROM_PTR(&mp_type_multiprocessing_lock_t) },
-    { MP_ROM_QSTR(MP_QSTR_Event), MP_ROM_PTR(&mp_type_multiprocessing_event_t) },
-    { MP_ROM_QSTR(MP_QSTR_Process), MP_ROM_PTR(&mp_type_multiprocessing_process_t) },
-    { MP_ROM_QSTR(MP_QSTR_Semaphore), MP_ROM_PTR(&mp_type_multiprocessing_semaphore_t) },
+    { MP_ROM_QSTR(MP_QSTR_RLock), (mp_obj_t)&mp_type_multiprocessing_rlock_t },
+    { MP_ROM_QSTR(MP_QSTR_Lock), (mp_obj_t)&mp_type_multiprocessing_lock_t },
+    { MP_ROM_QSTR(MP_QSTR_Event), (mp_obj_t)&mp_type_multiprocessing_event_t },
+    { MP_ROM_QSTR(MP_QSTR_Process), (mp_obj_t)&mp_type_multiprocessing_process_t },
+    { MP_ROM_QSTR(MP_QSTR_Semaphore), (mp_obj_t)&mp_type_multiprocessing_semaphore_t },
     { MP_ROM_QSTR(MP_QSTR_cpu_count), MP_ROM_PTR(&multiprocessing_cpu_count_obj) },
     { MP_ROM_QSTR(MP_QSTR_active_children), MP_ROM_PTR(&multiprocessing_active_children_obj) },
     { MP_ROM_QSTR(MP_QSTR_current_process), MP_ROM_PTR(&multiprocessing_current_process_obj) },

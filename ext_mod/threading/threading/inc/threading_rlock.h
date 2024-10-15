@@ -2,9 +2,6 @@
 #include "py/obj.h"
 #include "py/runtime.h"
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
-
 #include "thread_common.h"
 #include "thread_rlock.h"
 

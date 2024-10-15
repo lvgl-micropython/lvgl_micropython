@@ -8,14 +8,14 @@
 #include "freertos/semphr.h"
 
 #include "thread_common.h"
-#include "../inc/thread_thread.h"
+#include "thread_thread.h"
 
 
 void *thread_entry_cb(mp_obj_thread_thread_t *self) {
     // Execution begins here for a new thread.  We do not have the GIL.
 
-    state_thread_t ts;
-    threading_init_state(&ts, self->call_args->stack_size, self->call_args->dict_locals, self->call_args->dict_globals);
+    mp_state_thread_t ts;
+    mp_thread_init_state(&ts, self->call_args->stack_size, self->call_args->dict_locals, self->call_args->dict_globals);
 
     #if MICROPY_ENABLE_PYSTACK
     // TODO threading and pystack is not fully supported, for now just make a small stack
@@ -60,7 +60,7 @@ void *thread_entry_cb(mp_obj_thread_thread_t *self) {
 static mp_obj_t thread_start(mp_obj_t self_in)
 {
     mp_obj_thread_thread_t *self = MP_OBJ_TO_PTR(self_in);
-    self->ident = mp_obj_new_int_from_uint(threading_thread_entry(thread_entry_cb, self));
+    self->ident = mp_obj_new_int_from_uint(thread_create(thread_entry_cb, self));
 
     return mp_const_none;
 }
@@ -84,7 +84,7 @@ void thread_attr_func(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
         if (attr == MP_QSTR_name) {
-            dest[0] =self->name;
+            dest[0] = self->name;
         }
         if (attr == MP_QSTR_ident) {
             dest[0] = self->ident;

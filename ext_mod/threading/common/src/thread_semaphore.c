@@ -7,13 +7,14 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
-#include "thread_semaphore.h"
 
+
+#include "thread_semaphore.h"
 
 
 void semaphore_attr_func(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_obj_threading_semaphore_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_obj_thread_semaphore_t *self = MP_OBJ_TO_PTR(self_in);
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
@@ -24,7 +25,7 @@ void semaphore_attr_func(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 }
 
 
-static mp_obj_t semaphore_acquire(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
+static mp_obj_t thread_semaphore_acquire(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
     enum { ARG_self, ARG_blocking, ARG_timeout };
     static const mp_arg_t allowed_args[] = {
@@ -36,14 +37,12 @@ static mp_obj_t semaphore_acquire(size_t n_args, const mp_obj_t *pos_args, mp_ma
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    mp_obj_threading_semaphore_t *self = (mp_obj_threading_semaphore_t *)args[ARG_self].u_obj;
+    mp_obj_thread_semaphore_t *self = (mp_obj_thread_semaphore_t *)args[ARG_self].u_obj;
 
     bool blocking = (bool)args[ARG_blocking].u_bool;
 
     bool res;
     uint16_t count = uxSemaphoreGetCount(self->mutex.handle);
-
-    lowers count
 
     if (!blocking) {
         if (count >= self->start_value) {
@@ -81,18 +80,18 @@ static mp_obj_t semaphore_acquire(size_t n_args, const mp_obj_t *pos_args, mp_ma
     return mp_obj_new_bool(res);
 }
 
-MP_DEFINE_CONST_FUN_OBJ_KW(semaphore_acquire_obj, 1, semaphore_acquire);
+MP_DEFINE_CONST_FUN_OBJ_KW(thread_semaphore_acquire_obj, 1, thread_semaphore_acquire);
 
 
-static mp_obj_t semaphore__enter__(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
+static mp_obj_t thread_semaphore__enter__(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
-    return threading_semaphore_acquire(n_args, pos_args, kw_args);
+    return thread_semaphore_acquire(n_args, pos_args, kw_args);
 }
 
-MP_DEFINE_CONST_FUN_OBJ_KW(semaphore__enter__obj, 1, semaphore__enter__);
+MP_DEFINE_CONST_FUN_OBJ_KW(thread_semaphore__enter__obj, 1, thread_semaphore__enter__);
 
 
-static mp_obj_t semaphore_release(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
+static mp_obj_t thread_semaphore_release(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
     enum { ARG_self, ARG_n };
     static const mp_arg_t allowed_args[] = {
@@ -103,7 +102,7 @@ static mp_obj_t semaphore_release(size_t n_args, const mp_obj_t *pos_args, mp_ma
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    mp_obj_threading_semaphore_t *self = (mp_obj_threading_semaphore_t *)args[ARG_self].u_obj;
+    mp_obj_thread_semaphore_t *self = (mp_obj_thread_semaphore_t *)args[ARG_self].u_obj;
 
     uint16_t n = (uint16_t)args[ARG_n].u_int;
 
@@ -111,7 +110,7 @@ static mp_obj_t semaphore_release(size_t n_args, const mp_obj_t *pos_args, mp_ma
         if (self->value == 0 && self->waiting == 0) {
             mp_raise_msg(
                 &mp_type_ValueError,
-                MP_ERROR_TEXT("Unable to release a bounded semaphore that is not acquired"),
+                MP_ERROR_TEXT("Unable to release a bounded semaphore that is not acquired")
             );
             return mp_const_none;
         }
@@ -123,26 +122,24 @@ static mp_obj_t semaphore_release(size_t n_args, const mp_obj_t *pos_args, mp_ma
     return mp_const_none;
 }
 
-MP_DEFINE_CONST_FUN_OBJ_KW(semaphore_release_obj, 1, semaphore_release);
+MP_DEFINE_CONST_FUN_OBJ_KW(thread_semaphore_release_obj, 1, thread_semaphore_release);
 
 
-static mp_obj_t semaphore__exit__(size_t n_args, const mp_obj_t *args)
+static mp_obj_t thread_semaphore__exit__(size_t n_args, const mp_obj_t *args)
 {
     (void)n_args; // unused
     
     mp_map_t *kw_args = NULL;
-    const mp_obj_t pos_args[1];
-    pos_args[0] = args[0];
-    
-    return threading_semaphore_release(1, pos_args, kw_args);
+    const mp_obj_t pos_args[1] = { args[0], };
+    return thread_semaphore_release(1, pos_args, kw_args);
 }
 
-MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(semaphore__exit__obj, 4, 4, semaphore__exit__);
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(thread_semaphore__exit__obj, 4, 4, thread_semaphore__exit__);
 
 
-static mp_obj_t semaphore__del__(mp_obj_t self_in)
+static mp_obj_t thread_semaphore__del__(mp_obj_t self_in)
 {
-    mp_obj_threading_semaphore_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_obj_thread_semaphore_t *self = MP_OBJ_TO_PTR(self_in);
 
     for (uint16_t i=self->value;i<self->start_value;i++) {
         xSemaphoreGive(self->mutex.handle);
@@ -153,5 +150,5 @@ static mp_obj_t semaphore__del__(mp_obj_t self_in)
     return mp_const_none;
 }
 
-MP_DEFINE_CONST_FUN_OBJ_1(semaphore__del__obj, semaphore__del__);
+MP_DEFINE_CONST_FUN_OBJ_1(thread_semaphore__del__obj, thread_semaphore__del__);
 

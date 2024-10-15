@@ -17,10 +17,10 @@
         volatile int count;
     } mp_obj_thread_rlock_t;
 
-    extern const mp_obj_fun_builtin_fixed_t rlock_locked_obj;
-    extern const mp_obj_fun_builtin_fixed_t rlock_release_obj;
-    extern const mp_obj_fun_builtin_var_t rlock__exit__obj;
-    extern const mp_obj_fun_builtin_var_t rlock_acquire_obj;
-    extern const mp_obj_fun_builtin_var_t rlock__enter__obj;
+    extern const mp_obj_fun_builtin_fixed_t thread_rlock_locked_obj;
+    extern const mp_obj_fun_builtin_fixed_t thread_rlock_release_obj;
+    extern const mp_obj_fun_builtin_var_t thread_rlock__exit__obj;
+    extern const mp_obj_fun_builtin_var_t thread_rlock_acquire_obj;
+    extern const mp_obj_fun_builtin_var_t thread_rlock__enter__obj;
 
 #endif

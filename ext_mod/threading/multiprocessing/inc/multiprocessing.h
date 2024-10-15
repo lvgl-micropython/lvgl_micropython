@@ -9,8 +9,8 @@
 
 #include "thread_common.h"
 
-#ifndef __MULTIPROCESS_H__
-    #define __MULTIPROCESS_H__
+#ifndef __MULTIPROCESSING_H__
+    #define __MULTIPROCESSING_H__
 
     void multiprocessing_init(void);
     extern mp_obj_t processes[2];

@@ -17,10 +17,11 @@
     } mp_obj_thread_lock_t;
 
 
-    extern const mp_obj_fun_builtin_fixed_t threading_lock_locked_obj;
-    extern const mp_obj_fun_builtin_fixed_t threading_lock_release_obj;
-    extern const mp_obj_fun_builtin_var_t threading_lock__exit__obj;
-    extern const mp_obj_fun_builtin_var_t threading_lock_acquire_obj;
-    extern const mp_obj_fun_builtin_var_t threading_lock__enter__obj;
+    extern const mp_obj_fun_builtin_fixed_t thread_lock_locked_obj;
+    extern const mp_obj_fun_builtin_fixed_t thread_lock_release_obj;
+    extern const mp_obj_fun_builtin_var_t thread_lock__exit__obj;
+    extern const mp_obj_fun_builtin_var_t thread_lock_acquire_obj;
+    extern const mp_obj_fun_builtin_var_t thread_lock__enter__obj;
+
 
 #endif

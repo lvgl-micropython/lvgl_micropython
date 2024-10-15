@@ -9,8 +9,8 @@
 #include "thread_rlock.h"
 
 
-#ifndef __THREADING_RLOCK_H__
-    #define __THREADING_RLOCK_H__
+#ifndef __MULTIPROCESSING_RLOCK_H__
+    #define __MULTIPROCESSING_RLOCK_H__
 
     extern const mp_obj_type_t mp_type_multiprocessing_rlock_t;
 

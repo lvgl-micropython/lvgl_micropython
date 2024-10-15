@@ -8,7 +8,7 @@
 
 #include "thread_common.h"
 #include "thread_event.h"
-#include "../inc/multiprocessing_event.h"
+#include "multiprocessing_event.h"
 
 
 static mp_obj_t multiprocessing_event_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
@@ -37,7 +37,7 @@ static const mp_rom_map_elem_t multiprocessing_event_locals_dict_table[] = {
 static MP_DEFINE_CONST_DICT(multiprocessing_event_locals_dict, multiprocessing_event_locals_dict_table);
 
 
-static MP_DEFINE_CONST_OBJ_TYPE(
+MP_DEFINE_CONST_OBJ_TYPE(
     mp_type_multiprocessing_event_t,
     MP_QSTR_Event,
     MP_TYPE_FLAG_NONE,
@@ -46,7 +46,7 @@ static MP_DEFINE_CONST_OBJ_TYPE(
     // binary_op, lv_struct_binary_op,
     // subscr, lv_struct_subscr,
     // attr, mp_threading_semaphore_attr,
-    locals_dict, &multiprocessing_event_locals_dict,
+    locals_dict, &multiprocessing_event_locals_dict
     // buffer, mp_blob_get_buffer,
     // parent, &mp_lv_base_struct_type
 );

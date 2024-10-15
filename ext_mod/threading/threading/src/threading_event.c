@@ -8,7 +8,7 @@
 
 #include "thread_common.h"
 #include "thread_event.h"
-#include "../inc/threading_event.h"
+#include "threading_event.h"
 
 
 static mp_obj_t threading_event_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
@@ -19,7 +19,7 @@ static mp_obj_t threading_event_make_new(const mp_obj_type_t *type, size_t n_arg
     THREAD_UNUSED(all_args);
 
     // create new object
-    mp_obj_threading_event_t *self = m_new_obj(mp_obj_threading_event_t);
+    mp_obj_thread_event_t *self = m_new_obj(mp_obj_thread_event_t);
     self->base.type = &mp_type_threading_event_t;
 
     self->event.handle = xEventGroupCreateStatic(&self->event.buffer);
@@ -46,7 +46,7 @@ MP_DEFINE_CONST_OBJ_TYPE(
     // binary_op, lv_struct_binary_op,
     // subscr, lv_struct_subscr,
     // attr, mp_threading_semaphore_attr,
-    locals_dict, &threading_event_locals_dict,
+    locals_dict, &threading_event_locals_dict
     // buffer, mp_blob_get_buffer,
     // parent, &mp_lv_base_struct_type
 );
