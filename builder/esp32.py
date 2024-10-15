@@ -826,7 +826,6 @@ if not os.path.exists('micropy_updates/originals/esp32'):
     os.mkdir('micropy_updates/originals/esp32')
 
 
-
 SDKCONFIG_PATH = f'build/sdkconfig.board'
 
 MPTHREADPORT_PATH = 'lib/micropython/ports/esp32/mpthreadport.c'
@@ -843,6 +842,9 @@ MPHALPORT_SAVE_PATH = 'micropy_updates/originals/esp32/mphalport.c'
 
 MAIN_PATH = 'lib/micropython/ports/esp32/main.c'
 MAIN_SAVE_PATH = 'micropy_updates/originals/esp32/main.c'
+
+COMMON_CMAKE_PATH = 'lib/micropython/ports/esp32/esp32_common.cmake'
+COMMON_CMAKE_SAVE_PATH = 'micropy_updates/originals/esp32/esp32_common.cmake'
 
 
 def write_file(file, data):
@@ -923,7 +925,7 @@ def update_mpconfigboard():
     global MPCONFIGBOARD_CMAKE_PATH
     global MPCONFIGBOARD_CMAKE_SAVE_PATH
 
-    board_save_path = f'micropy_updates/esp32/boards/{board}'
+    board_save_path = f'micropy_updates/originals/esp32/boards/{board}'
 
     if not os.path.exists(board_save_path):
         os.makedirs(board_save_path)
@@ -1188,7 +1190,53 @@ def compile(*args):  # NOQA
         update_mpconfigport()
 
         if dual_core_threads:
-            compile_cmd.append('MICROPY_MULTICORE_THREAD=1')
+            cwd = os.getcwd()
+
+            ext_mod_path = os.path.abspath('ext_mod/threading')
+            os.chdir('lib/micropython/ports/esp32')
+            threading_includes = set()
+
+            threading_sources = []
+            for root, dirs, files in os.walk(ext_mod_path):
+                if root.endswith('inc'):
+                    threading_includes.add(root)
+
+                for file in files:
+                    if not file.endswith('.c'):
+                        continue
+
+                    threading_sources.append(
+                        os.path.join(root, file)
+                    )
+
+            os.chdir(cwd)
+
+            # compile_cmd.append('MICROPY_MULTICORE_THREAD=1')
+
+
+            data = read_file(COMMON_CMAKE_PATH, COMMON_CMAKE_SAVE_PATH)
+
+            if data.count('list(APPEND MICROPY_SOURCE_PORT') == 2:
+                threading_sources = '\n'.join('    ' + item for item in threading_sources)
+
+                code = [
+                    'list(APPEND MICROPY_SOURCE_PORT',
+                    threading_sources,
+                    ')',
+                    '',
+                    'list(APPEND MICROPY_SOURCE_QSTR'
+                ]
+                data = data.replace('list(APPEND MICROPY_SOURCE_QSTR', '\n'.join(code))
+
+                threading_includes = '\n'.join('        ' + item for item in threading_includes)
+
+                code = [
+                    'INCLUDE_DIRS',
+                    threading_includes
+                ]
+                data = data.replace('INCLUDE_DIRS', '\n'.join(code))
+
+                write_file(COMMON_CMAKE_PATH, data)
 
         src_path = 'micropy_updates/esp32'
         dst_path = 'lib/micropython/ports/esp32'

@@ -33,6 +33,7 @@
 #include "py/mphal.h"
 #include "mpthreadport.h"
 
+#if MICROPY_PY_THREAD
 #include "esp_task.h"
 #include "../../../../ext_mod/threading/common/inc/thread_common.h"
 
@@ -82,7 +83,7 @@ void mp_thread_init(void *stack, uint32_t stack_len) {
     // FREERTOS_TASK_DELETE_HOOK needs the thread ready after thread_mutex is ready
     thread = &thread_entry0;
 
-    void threading_init(stack, stack_len);
+    threading_init(stack, stack_len);
 }
 
 void mp_thread_gc_others(void) {
