@@ -154,7 +154,7 @@ def _run(c, spinner=False, cmpl=False):
         sys.exit(res)
 
 
-def build_sdl():
+def build_sdl(addl_commands):
     dst = f'lib/micropython/ports/unix/build-{variant}/SDL'
 
     if not os.path.exists(dst):
@@ -167,7 +167,7 @@ def build_sdl():
     cmd_ = [
         [
             f'cmake -DSDL_STATIC=ON -DSDL_SHARED=OFF '
-            f'-DCMAKE_BUILD_TYPE=Release {sdl_flags} {SCRIPT_PATH}/lib/SDL'
+            f'-DCMAKE_BUILD_TYPE=Release {addl_commands} {SCRIPT_PATH}/lib/SDL'
         ],
         [f'cmake --build . --config Release --parallel {os.cpu_count()}']
     ]
@@ -407,7 +407,7 @@ def compile(*args):  # NOQA
     update_mpconfigport_mk()
     copy_updated_files()
 
-    build_sdl()
+    build_sdl(sdl_flags)
 
     cmd_ = compile_cmd[:]
     cmd_.extend(list(args))
