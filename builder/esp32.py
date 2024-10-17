@@ -40,6 +40,18 @@ PARTITION_HEADER = '''\
 # SIL_WESP32
 
 
+'''
+# Name,   Type, SubType,  Offset,  Size, Flags
+nvs,      data,     nvs,  0x9000,0x6000
+otadata,  data,     ota,  0xF000,0x2000
+phy_init, data,     phy, 0x11000,0x1000
+ota_0,     app,   ota_0, 0x12000,0x25A000
+ota_1,     app,   ota_1,0x26C000,0x25A000
+vfs,      data,     fat,0x4C6000,0x33A000
+'''
+
+0x10000
+
 class Partition:
 
     def __init__(self, size):
@@ -87,8 +99,20 @@ class Partition:
         offset += self.phy_init
 
         if ota:
+            value = offset % 0x10000
+
+            if value:
+                self.nvs += 0x10000 - value
+                self.save()
+                return
+
             data.append(f'ota_0,app,ota_0,0x{offset:X},0x{self.factory:X}')
             offset += self.factory
+
+            value = offset % 0x10000
+            if value:
+                offset += 0x10000 - value
+
             data.append(f'ota_1,app,ota_1,0x{offset:X},0x{self.factory:X}')
             offset += self.factory
         else:
