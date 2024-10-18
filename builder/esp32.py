@@ -1173,13 +1173,23 @@ def compile(*args):  # NOQA
             sys.exit(ret_code)
 
     if not skip_partition_resize and partition_size == -1:
-        if 'Error: app partition is too small' in output:
+
+        for pattern in (
+            'Error: app partition is too small',
+            'Error: All app partitions are too small'
+        ):
+            if pattern in output:
+                break
+        else:
+            pattern = None
+
+        if pattern is not None:
             sys.stdout.write(
                 '\n\033[31;1m***** Resizing Partition *****\033[0m\n'
             )
             sys.stdout.flush()
 
-            app_size = output.rsplit('Error: app partition is too small', 1)[1]
+            app_size = output.rsplit(pattern, 1)[1]
             app_size = app_size.split('micropython.bin size', 1)[1]
             app_size = int(app_size.split(':', 1)[0].strip(), 16)
 
