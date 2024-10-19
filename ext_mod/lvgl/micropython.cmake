@@ -4,18 +4,34 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 get_filename_component(BINDING_DIR ${CMAKE_CURRENT_LIST_DIR}/../.. ABSOLUTE)
 
+set(LVGL_HEADER "${BINDING_DIR}/build/lvgl_header.h")
+set(FAKE_LIBC_PATH "${BINDING_DIR}/gen/fake_libc")
+
 separate_arguments(LV_CFLAGS_ENV UNIX_COMMAND $ENV{LV_CFLAGS})
+separate_arguments(SECOND_BUILD_ENV UNIX_COMMAND $ENV{SECOND_BUILD})
+
+list(APPEND LV_CFLAGS_ENV
+    -std=c11
+    -Wno-incompatible-pointer-types
+    -I${BINDING_DIR}/lib
+    -I${BINDING_DIR}/lib/lvgl
+)
+
+list(APPEND LV_CFLAGS ${LV_CFLAGS_ENV})
 list(APPEND LV_CFLAGS
-    ${LV_CFLAGS_ENV}
-    -Wno-unused-function
     -DMICROPY_FLOAT=1
 )
 
-separate_arguments(SECOND_BUILD_ENV UNIX_COMMAND $ENV{SECOND_BUILD})
+list(APPEND LV_PP_CFLAGS ${LV_CFLAGS_ENV})
+list(APPEND LV_PP_CFLAGS
+    -E
+    -I{FAKE_LIBC_PATH}
+    -Wno-unused-function
+    -DPYCPARSER
+)
 
-set(LVGL_HEADER "${BINDING_DIR}/build/lvgl_header.h")
 
-file(GLOB_RECURSE LVGL_HEADERS ${BINDING_DIR}/lib/lvgl/src/*.h ${BINDING_DIR}/lib/lv_conf.h)
+# file(GLOB_RECURSE LVGL_HEADERS ${BINDING_DIR}/lib/lvgl/src/*.h ${BINDING_DIR}/lib/lv_conf.h)
 
 # this MUST be an execute_process because of the order in which cmake does things
 # if add_custom_command is used it errors becasue add_custom_command doesn't
@@ -27,7 +43,22 @@ file(GLOB_RECURSE LVGL_HEADERS ${BINDING_DIR}/lib/lvgl/src/*.h ${BINDING_DIR}/li
 if(${SECOND_BUILD_ENV} EQUAL "0")
     execute_process(
         COMMAND
-            ${Python3_EXECUTABLE} ${BINDING_DIR}/gen/$ENV{GEN_SCRIPT}_api_gen_mpy.py ${LV_CFLAGS} --output=${CMAKE_BINARY_DIR}/lv_mp.c --include=${BINDING_DIR}/lib --include=${BINDING_DIR}/lib/lvgl --board=$ENV{LV_PORT} --module_name=lvgl --module_prefix=lv --metadata=${CMAKE_BINARY_DIR}/lv_mp.c.json --header_file=${LVGL_HEADER}
+            ${CMAKE_C_COMPILER} ${LV_PP_CFLAGS} ${LVGL_HEADER}  >> ${CMAKE_BINARY_DIR}/lv_mp.pp
+        WORKING_DIRECTORY 
+            ${CMAKE_CURRENT_LIST_DIR}
+        RESULT_VARIABLE mpy_pp_result
+        OUTPUT_VARIABLE mpy_pp_output
+    )
+    
+    if(${mpy_pp_result} GREATER "0")
+        message("OUTPUT: ${mpy_pp_output}")
+        message("RESULT: ${mpy_pp_result}")
+        message(FATAL_ERROR "Failed to generate ${CMAKE_BINARY_DIR}/lv_mp.pp")
+    endif()
+
+    execute_process(
+        COMMAND
+            ${Python3_EXECUTABLE} ${BINDING_DIR}/gen/$ENV{GEN_SCRIPT}_api_gen_mpy.py --cflags="${LV_PP_CFLAGS}" --output=${CMAKE_BINARY_DIR}/lv_mp.c --pp_file=${CMAKE_BINARY_DIR}/lv_mp.pp --board=$ENV{LV_PORT} --module_name=lvgl --module_prefix=lv --metadata=${CMAKE_BINARY_DIR}/lv_mp.c.json --header_file=${LVGL_HEADER}
         WORKING_DIRECTORY
             ${CMAKE_CURRENT_LIST_DIR}
 
@@ -38,7 +69,7 @@ if(${SECOND_BUILD_ENV} EQUAL "0")
     if(${mpy_result} GREATER "0")
         message("OUTPUT: ${mpy_output}")
         message("RESULT: ${mpy_result}")
-        message( FATAL_ERROR "Failed to generate ${CMAKE_BINARY_DIR}/lv_mp.c" )
+       message(FATAL_ERROR "Failed to generate ${CMAKE_BINARY_DIR}/lv_mp.c")
     endif()
 endif()
 

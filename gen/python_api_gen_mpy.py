@@ -102,24 +102,28 @@ setattr(c_ast.Node, '__repr__', Node__repr__)
 #
 
 argParser = ArgumentParser()
-argParser.add_argument('-I', '--include', dest='include', help='Preprocesor include path', metavar='<Include Path>', action='append', default=[])
-argParser.add_argument('-D', '--define', dest='define', help='Define preprocessor macro', metavar='<Macro Name>', action='append', default=[])
-argParser.add_argument('--module_name', dest='module_name', help='Module name', metavar='<Module name string>', action='store')
-argParser.add_argument('--module_prefix', dest='module_prefix', help='Module prefix that starts every function name', metavar='<Prefix string>', action='store')
-argParser.add_argument('--metadata', dest='metadata', help='Optional file to emit metadata (introspection)', metavar='<MetaData File Name>', action='store')
-argParser.add_argument('--board', dest='board', help='Board or OS', metavar='<Board or OS>', action='store', default='')
-argParser.add_argument('--output', dest='output', help='Output file path', metavar='<Output path>', action='store')
-argParser.add_argument('--debug', dest='debug', help='enable debugging output', action='store_true')
-argParser.add_argument('--header_file', dest='input', action='append', default=[])
 
-args, unknownargs = argParser.parse_known_args()
+argParser.add_argument('--pp_file', dest='pp_file', help='Preprocessor output file', action='store', required=True)
+argParser.add_argument('--cflags', dest='cflags', help='cflags used to create pp file', action='store', required=True)
+argParser.add_argument('--module_name', dest='module_name', help='Module name', action='store', required=True)
+argParser.add_argument('--module_prefix', dest='module_prefix', help='Module prefix that starts every function name', action='store', required=True)
+argParser.add_argument('--metadata', dest='metadata', help='Optional file to emit metadata (introspection)', action='store')
+argParser.add_argument('--board', dest='board', help='Board or OS', action='store', default='')
+argParser.add_argument('--output', dest='output', help='Output file path', action='store', required=True)
+argParser.add_argument('--debug', dest='debug', help='enable debugging output', action='store_true')
+argParser.add_argument('--header_file', dest='header_file', help="header file used to create pp file", action='store', required=True)
+
+args = argParser.parse_args()
 
 module_name = args.module_name
-module_prefix = args.module_prefix if args.module_prefix else args.module_name
-input_headers = args.input[:]
+module_prefix = args.module_prefix
+header_file = args.header_file
 DEBUG = args.debug
+pp_file = args.pp_file
+cflags = args.cflags
+board = args.board
+output = args.output
 
-pp_file = args.output.rsplit('.', 1)[0] + '.pp'
 
 if DEBUG:
     log_file = open(os.path.join(os.path.dirname(__file__), 'log.txt'), 'w')
@@ -132,174 +136,281 @@ def LOG(*ags):
         log_file.flush()
 
 
-# this block of code is used to handle the generation of the preprocessor
-# output. Since pycparser has the ability to call the compiler internally
-# there is no need to do it from cmake. Data doesn't need to be going in
-# and out of cmake like that when it can all be done in a single location.
-# it makes things easier.
-
-# This function only gets used when compiling under Windows for Windows.
-# It collects SDL2 and reorganizes the folder structure so the SDK include path
-# will be in alignment with what is used in Unix. The include macro for SDL2
-# will not need to be changed if compiling under Windows.
-def get_sdl2():
-    import zipfile
-    import io
-    import os
-    import sys
-    
-    path = os.getcwd()
-    url = 'https://github.com/libsdl-org/SDL/releases/download/release-2.26.5/SDL2-devel-2.26.5-VC.zip'  # NOQA
-
-    def get_path(name: str, p: str) -> str:
-        for file in os.listdir(p):
-            file = os.path.join(p, file)
-
-            if file.endswith(name):
-                return file
-
-            if os.path.isdir(file):
-                res = get_path(name, file)
-                if res:
-                    return res
-
-    import requests  # NOQA
-
-    stream = io.BytesIO()
-
-    with requests.get(url, stream=True) as r:
-        r.raise_for_status()
-
-        content_length = int(r.headers['Content-Length'])
-        chunks = 0
-        print()
-        sys.stdout.write('\r' + str(chunks) + '/' + str(content_length))
-        sys.stdout.flush()
-
-        for chunk in r.iter_content(chunk_size=1024):
-            stream.write(chunk)
-            chunks += len(chunk)
-            sys.stdout.write('\r' + str(chunks) + '/' + str(content_length))
-            sys.stdout.flush()
-
-    print()
-    stream.seek(0)
-    zf = zipfile.ZipFile(stream)
-
-    for z_item in zf.infolist():
-        for ext in ('.h', '.dll', '.lib'):
-            if not z_item.filename.endswith(ext):
-                continue
-
-            zf.extract(z_item, path=path)
-            break
-
-    include_path = get_path('include', path)
-    lib_path = get_path('lib\\x64', path)
-    dll_path = get_path('SDL2.dll', lib_path)
-
-    sdl_include_path = os.path.split(include_path)[0]
-    if not os.path.exists(os.path.join(sdl_include_path, 'SDL2')):
-        os.rename(include_path, os.path.join(sdl_include_path, 'SDL2'))
-
-    zf.close()
-    stream.close()
-
-    return os.path.abspath(sdl_include_path), dll_path
-    
-
-# when compiling under Windows we want to set up a build system that
-# points to all the right things to allow pycparser to work correctly
-# when generating the preprocessor output. I have not yet fully determined
-# the best way to handle the pyMSVC dependency as it is not needed for
-# folks running any other OS except Windows.
-if sys.platform.startswith('win'):
-    try:
-        import pyMSVC  # NOQA
-    except ImportError:
-        sys.stderr.write(
-            '\nThe pyMSVC library is missing, '
-            'please run "pip install pyMSVC" to install it.\n'
-        )
-        sys.stderr.flush()
-        sys.exit(-500)
-
-    env = pyMSVC.setup_environment()  # NOQA
-    cpp_cmd = ['cl', '/std:c11', '/nologo', '/P']
-    output_pp = f'/Fi"{pp_file}"'
-    include_path_env_key = 'INCLUDE'
-
-# elif sys.platform.startswith('darwin'):
-#     include_path_env_key = 'C_INCLUDE_PATH'
-#     cpp_cmd = [
-#         'clang', '-std=c11', '-E', '-DINT32_MIN=0x80000000',
-#     ]
-#     output_pp = f' >> "{pp_file}"'
-else:
-    include_path_env_key = 'C_INCLUDE_PATH'
-    cpp_cmd = [
-        'gcc', '-std=c11', '-E', '-Wno-incompatible-pointer-types',
-    ]
-    output_pp = f' >> "{pp_file}"'
-
-
-if include_path_env_key not in os.environ:
-    os.environ[include_path_env_key] = ''
-
-os.environ[include_path_env_key] = (
-    f'{fake_libc_path}{os.pathsep}{os.environ[include_path_env_key]}'
-)
-
-if 'PATH' not in os.environ:
-    os.environ['PATH'] = ''
-
-os.environ['PATH'] = (
-    f'{fake_libc_path}{os.pathsep}{os.environ["PATH"]}'
-)
-
-# cpp_cmd.extend(
-#     [
-#         '-DLV_LVGL_H_INCLUDE_SIMPLE',
-#         '-DLV_CONF_INCLUDE_SIMPLE',
-#         '-DLV_USE_DEV_VERSION'
-#     ]
-# )
-
-
-cpp_cmd.extend([f'-D{define}' for define in args.define])
-cpp_cmd.extend(['-DPYCPARSER', '-E', f'-I{fake_libc_path}'])
-cpp_cmd.extend([f'-I{include}' for include in args.include])
-cpp_cmd.append(f'"{input_headers[0]}"')
-
-
-if sys.platform.startswith('win'):
-    cpp_cmd.insert(len(cpp_cmd) - 2, output_pp)
-else:
-    cpp_cmd.append(output_pp)
-
-
-cpp_cmd.extend(unknownargs)
-
-cpp_cmd = ' '.join(cpp_cmd)
-
-p = subprocess.Popen(
-    cpp_cmd,
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE,
-    env=os.environ,
-    shell=True
-)
-out, err = p.communicate()
-exit_code = p.returncode
-
 if not os.path.exists(pp_file):
-    sys.stdout.write(out.decode('utf-8').strip() + '\n')
-    sys.stdout.write('EXIT CODE: ' + str(exit_code) + '\n')
-    sys.stderr.write(err.decode('utf-8').strip() + '\n')
-    sys.stdout.flush()
-    sys.stderr.flush()
+    raise RuntimeError(f'pp file "{pp_file}" does not exist')
 
-    raise RuntimeError('Unknown Failure')
+
+# process pp_file
+parser = c_parser.CParser()
+gen = c_generator.CGenerator()
+
+with open(pp_file, 'r') as f:
+    pp_data = f.read()
+
+cparser = pycparser.CParser()
+
+ast = cparser.parse(pp_data, header_file)
+
+
+func_prototypes = {}
+private_objects = []
+private_headers = set()
+
+
+def is_stdlib(n):
+    if hasattr(n, 'coord') and n.coord is not None:
+        if 'fake_libc' in n.coord.file:
+            return True
+    return False
+
+
+def is_private(n):
+    if hasattr(n, 'coord') and n.coord is not None:
+        if 'private' in n.coord.file:
+            return True
+    return False
+
+
+for item in ast.ext[:]:
+    if is_stdlib(item):
+        ast.ext.remove(item)
+        continue
+
+    if is_private(item):
+        private_headers.add(item.coord.file)
+
+#
+# private_forward_decls = {}
+#
+# for item in private_objects[:]:
+#     if (
+#         isinstance(item, c_ast.Decl) and
+#         isinstance(item.type, (c_ast.Union, c_ast.Struct)) and
+#         item.type.decls is not None and
+#         item.name is None
+#     ):
+#         private_forward_decls[item.type.name] = item.type
+#         private_objects.remove(item)
+#     elif (
+#         isinstance(item, c_ast.Typedef) and
+#         isinstance(item.type, c_ast.TypeDecl) and
+#         isinstance(item.type.type, (c_ast.Union, c_ast.Struct)) and
+#         item.type.type.decls is not None and
+#         item.type.type.name is None
+#     ):
+#         private_forward_decls[item.type.declname] = item.type.type
+#         item.type.type.name = item.type.declname
+#         private_objects.remove(item)
+#
+# for item in private_objects[:]:
+#     if (
+#         isinstance(item, c_ast.Typedef) and
+#         isinstance(item.type, c_ast.TypeDecl) and
+#         isinstance(item.type.type, (c_ast.Union, c_ast.Struct)) and
+#         item.type.type.decls is None
+#     ):
+#         if item.type.type.name in private_forward_decls:
+#             private_forward_decls[item.name] = private_forward_decls[item.type.type.name]
+#             private_objects.remove(item)
+#         else:
+#             ast.ext.append(item)
+#             private_objects.remove(item)
+#
+#
+# for item in private_objects[:]:
+#     if (
+#         isinstance(item, c_ast.Decl) and
+#         isinstance(item.type, (c_ast.Union, c_ast.Struct)) and
+#         item.type.decls is None
+#     ):
+#         if item.type.name in private_forward_decls:
+#             private_objects.remove(item)
+#         else:
+#             ast.ext.append(item)
+#             private_objects.remove(item)
+#
+#
+# LOG('\nPRIVATE_OBJS\n')
+#
+# for item in private_objects:
+#     LOG(item)
+#
+#
+# LOG('\nPRIVATE_DECLS\n')
+#
+# for name, item in private_forward_decls.items():
+#     LOG(name, item)
+#
+#
+# public_forward_decls = {}
+#
+# for item in ast.ext[:]:
+#     if (
+#         isinstance(item, c_ast.Typedef) and
+#         isinstance(item.type, c_ast.TypeDecl) and
+#         isinstance(item.type.type, (c_ast.Union, c_ast.Struct)) and
+#         item.type.type.decls is None
+#     ):
+#         if item.type.type.name in private_forward_decls:
+#             private_forward_decls[item.name] = private_forward_decls[item.type.type.name]
+#             ast.ext.remove(item)
+#     elif (
+#         isinstance(item, c_ast.Decl) and
+#         isinstance(item.type, (c_ast.Union, c_ast.Struct)) and
+#         item.type.decls is not None and
+#         item.name is None
+#     ):
+#         public_forward_decls[item.type.name] = item.type
+#
+#     elif (
+#         isinstance(item, c_ast.Typedef) and
+#         isinstance(item.type, c_ast.TypeDecl) and
+#         isinstance(item.type.type, (c_ast.Union, c_ast.Struct)) and
+#         item.type.type.decls is not None and
+#         item.type.type.name is None
+#     ):
+#         public_forward_decls[item.type.declname] = item.type.type
+#
+#
+# for item in ast.ext[:]:
+#     if (
+#         isinstance(item, c_ast.Typedef) and
+#         isinstance(item.type, c_ast.TypeDecl) and
+#         isinstance(item.type.type, (c_ast.Union, c_ast.Struct)) and
+#         item.type.type.decls is None
+#     ):
+#         if item.type.type.name in public_forward_decls:
+#             item.type.type = public_forward_decls[item.type.type.name]
+#     elif (
+#         isinstance(item, c_ast.Decl) and
+#         isinstance(item.type, (c_ast.Union, c_ast.Struct)) and
+#         item.type.decls is None
+#     ):
+#         if item.name is not None and item.name in public_forward_decls:
+#             item.type = public_forward_decls[item.name]
+#         elif (
+#             item.name is None and
+#             item.type.name is not None and
+#             item.type.name in public_forward_decls
+#         ):
+#             item.type = public_forward_decls[item.type.name]
+#
+#
+# ast.ext.extend(private_objects)
+
+forward_struct_decls = {}
+
+forward_struct_decls = {}
+
+for item in ast.ext[:]:
+    if (
+        isinstance(item, c_ast.Decl) and
+        item.name is None and
+        isinstance(item.type, c_ast.Struct) and
+        item.type.name is not None and
+        item.type.decls is None
+    ):
+        if item.type.name in forward_struct_decls:
+            forward_struct_decls[item.type.name][0] = item
+        else:
+            forward_struct_decls[item.type.name] = [item]
+
+    elif (
+        isinstance(item, c_ast.Typedef) and
+        isinstance(item.type, c_ast.TypeDecl) and
+        item.name and item.type.declname and item.name == item.type.declname and
+        isinstance(item.type.type, c_ast.Struct) and
+        item.type.type.decls is None
+    ):
+        if item.type.type.name in forward_struct_decls:
+            forward_struct_decls[item.type.type.name].append(item)
+        else:
+            forward_struct_decls[item.type.type.name] = [None, item]
+
+
+for item in ast.ext[:]:
+    if (
+        isinstance(item, c_ast.Decl) and
+        item.name is None and
+        isinstance(item.type, c_ast.Struct) and
+        item.type.name is not None and
+        item.type.decls is not None
+    ):
+        if item.type.name in forward_struct_decls:
+            decs = forward_struct_decls[item.type.name]
+            if len(decs) == 2:
+                decl, td = decs
+
+                td.type.type.decls = item.type.decls[:]
+                if decl is not None:
+                    ast.ext.remove(decl)
+
+                ast.ext.remove(item)
+
+
+# ast_file = open(os.path.join(os.path.dirname(__file__), 'ast.txt'), 'w')
+# ast_file.write(str(ast))
+# ast_file.close()
+
+pp_cmd = cflags
+
+# the stdout code below is to override output to stdout from the print
+# statements. This will output to a file instead of stdout. This is done
+# because of how cmake works and it removing all of the semicolons when the
+# output gets stored in a cmake variable and then written to a file using cmake
+
+import sys  # NOQA
+
+
+class STDOut:
+
+    def __init__(self):
+        self._stdout = sys.stdout
+        self._file = open(args.output, 'w')
+
+        sys.stdout = self  # NOQA
+        self._write_to_file = None
+
+    def set_out_file(self, file):
+        self._write_to_file = file
+
+    def write(self, data):
+        self._file.write(data)
+
+        if self._write_to_file is not None:
+            self._write_to_file.write(data)
+            self._write_to_file.flush()
+
+    def flush(self):
+        self._file.flush()
+
+    def close(self):
+        try:
+            self._file.close()
+        except:  # NOQA
+            pass
+        else:
+            sys.stdout = self._stdout  # NOQA
+
+    def __getattr__(self, item):
+        if item in self.__dict__:
+            return self.__dict__[item]
+
+        return getattr(self._stdout, item)
+
+
+stdout = STDOut()
+
+_old_excepthook = sys.excepthook
+
+
+def my_excepthook(exc_type, exc_value, tb):
+    stdout.close()
+    return _old_excepthook(exc_type, exc_value, tb)
+
+
+sys.excepthook = my_excepthook
+
 
 #
 # AST parsing helper functions
@@ -611,113 +722,6 @@ struct_metadata = collections.OrderedDict()
 variable_metadata = collections.OrderedDict()
 constant_metadata = collections.OrderedDict()
 
-func_prototypes = {}
-
-parser = c_parser.CParser()
-gen = c_generator.CGenerator()
-
-with open(pp_file, 'r') as f:
-    pp_data = f.read()
-
-cparser = pycparser.CParser()
-ast = cparser.parse(pp_data, input_headers[0])
-
-forward_struct_decls = {}
-
-for item in ast.ext[:]:
-    if (
-        isinstance(item, c_ast.Decl) and
-        item.name is None and
-        isinstance(item.type, c_ast.Struct) and
-        item.type.name is not None
-    ):
-        if item.type.decls is None:
-            forward_struct_decls[item.type.name] = [item]
-        else:
-            if item.type.name in forward_struct_decls:
-                decs = forward_struct_decls[item.type.name]
-                if len(decs) == 2:
-                    decl, td = decs
-
-                    td.type.type.decls = item.type.decls[:]
-
-                    ast.ext.remove(decl)
-                    ast.ext.remove(item)
-    elif (
-        isinstance(item, c_ast.Typedef) and
-        isinstance(item.type, c_ast.TypeDecl) and
-        item.name and item.type.declname and item.name == item.type.declname and
-        isinstance(item.type.type, c_ast.Struct) and
-        item.type.type.decls is None
-    ):
-        if item.type.type.name in forward_struct_decls:
-            forward_struct_decls[item.type.type.name].append(item)
-
-
-
-# ast_file = open(os.path.join(os.path.dirname(__file__), 'ast.txt'), 'w')
-# ast_file.write(str(ast))
-# ast_file.close()
-
-pp_cmd = cpp_cmd
-
-# the stdout code below is to override output to stdout from the print
-# statements. This will output to a file instead of stdout. This is done
-# because of how cmake works and it removing all of the semicolons when the
-# output gets stored in a cmake variable and then written to a file using cmake
-
-import sys  # NOQA
-
-
-class STDOut:
-
-    def __init__(self):
-        self._stdout = sys.stdout
-        self._file = open(args.output, 'w')
-
-        sys.stdout = self  # NOQA
-        self._write_to_file = None
-
-    def set_out_file(self, file):
-        self._write_to_file = file
-
-    def write(self, data):
-        self._file.write(data)
-
-        if self._write_to_file is not None:
-            self._write_to_file.write(data)
-            self._write_to_file.flush()
-
-    def flush(self):
-        self._file.flush()
-
-    def close(self):
-        try:
-            self._file.close()
-        except:  # NOQA
-            pass
-        else:
-            sys.stdout = self._stdout  # NOQA
-
-    def __getattr__(self, item):
-        if item in self.__dict__:
-            return self.__dict__[item]
-
-        return getattr(self._stdout, item)
-
-
-stdout = STDOut()
-
-_old_excepthook = sys.excepthook
-
-
-def my_excepthook(exc_type, exc_value, tb):
-    stdout.close()
-    return _old_excepthook(exc_type, exc_value, tb)
-
-
-sys.excepthook = my_excepthook
-
 # Types and structs
 
 typedefs = [x.type for x in ast.ext if isinstance(x, c_ast.Typedef)] # and not (hasattr(x.type, 'declname') and lv_base_obj_pattern.match(x.type.declname))]
@@ -743,7 +747,7 @@ structs_without_typedef = collections.OrderedDict((decl.type.name, decl.type) fo
 #         # check if it's found in `structs_without_typedef`. It actually has the typedef. Replace type with it.
 #         if typedef.type.name in structs_without_typedef:
 #             typedef.type = structs_without_typedef[struct_name]
-# 
+#
 # structs = collections.OrderedDict((typedef.declname, typedef.type) for typedef in struct_typedefs if typedef.declname and typedef.type.decls) # and not lv_base_obj_pattern.match(typedef.declname))
 structs.update(structs_without_typedef) # This is for struct without typedef
 explicit_structs = collections.OrderedDict((typedef.type.name, typedef.declname) for typedef in struct_typedefs if typedef.type.name) # and not lv_base_obj_pattern.match(typedef.type.name))
@@ -1234,13 +1238,15 @@ print ("""
  * {module_name} includes
  */
 
+#include "lvgl.h"
+#include "src/core/lv_global.h"
 {lv_headers}
 """.format(
         module_name = module_name,
         cmd_line=' '.join(argv),
         pp_cmd=pp_cmd,
         objs=", ".join(['%s(%s)' % (objname, parent_obj_names[objname]) for objname in obj_names]),
-        lv_headers='\n'.join('#include "%s"' % header for header in input_headers)))
+        lv_headers='\n'.join('#include "%s"' % header for header in private_headers)))
 
 #
 # Enable objects, if supported
@@ -3703,7 +3709,7 @@ if args.metadata:
     metadata['int_constants'] = {get_enum_name(int_constant): constant_metadata[get_enum_name(int_constant)] for int_constant in int_constants}
 
     # TODO: struct functions
-    
+
     _iter_metadata(metadata)
 
     with open(args.metadata, 'w') as metadata_file:
