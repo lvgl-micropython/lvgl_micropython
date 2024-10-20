@@ -125,7 +125,7 @@ class Partition:
             )
 
         if not os.path.exists(f'{SCRIPT_DIR}/build'):
-            os.makedirs(f'{SCRIPT_DIR}/build')
+            os.mkdir(f'{SCRIPT_DIR}/build')
 
         with open(self.save_file_path, 'w') as f:
             f.write(PARTITION_HEADER)
@@ -850,7 +850,7 @@ MAIN_PATH = 'lib/micropython/ports/esp32/main.c'
 
 
 if not os.path.exists('micropy_updates/originals/esp32'):
-    os.mkdir('micropy_updates/originals/esp32')
+    os.makedirs('micropy_updates/originals/esp32')
 
 
 def update_mpthreadport():
