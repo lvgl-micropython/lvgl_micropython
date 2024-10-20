@@ -7,7 +7,7 @@ from . import update_mphalport as _update_mphalport
 from . import (
     read_file,
     write_file,
-    copy_updated_files,
+    copy_micropy_updates,
     revert_files,
     scrub_build_folder
 )
@@ -113,13 +113,13 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
 
 
 def build_manifest(
-    target, script_dir, lvgl_api, displays, indevs, frozen_manifest
+    _, script_dir, lvgl_api, displays, indevs, frozen_manifest
 ):
     global SCRIPT_PATH
 
     SCRIPT_PATH = script_dir
 
-    _update_mphalport(target)
+    _update_mphalport(REAL_PORT)
 
     manifest_path = 'lib/micropython/ports/unix/variants/manifest.py'
 
@@ -215,28 +215,17 @@ if not os.path.exists('micropy_updates/originals/unix'):
 
 
 UNIX_MPHAL_PATH = 'lib/micropython/ports/unix/unix_mphal.c'
-UNIX_MPHAL_SAVE_PATH = 'micropy_updates/originals/unix/unix_mphal.c'
-
-MPCONFIGVARIANT_COMMON_PATH = 'lib/micropython/ports/unix/variants/mpconfigvariant_common.h'
-MPCONFIGVARIANT_COMMON_SAVE_PATH = 'micropy_updates/originals/unix/variants/mpconfigvariant_common.h'
-
+MPCONFIGVARIANT_COMMON_PATH = (
+    'lib/micropython/ports/unix/variants/mpconfigvariant_common.h'
+)
 INPUT_PATH = 'lib/micropython/ports/unix/input.c'
-INPUT_SAVE_PATH = 'micropy_updates/originals/unix/input.c'
-
 MODMACHINE_PATH = 'lib/micropython/ports/unix/modmachine.c'
-MODMACHINE_SAVE_PATH = 'micropy_updates/originals/unix/modmachine.c'
-
 MAIN_PATH = 'lib/micropython/ports/unix/main.c'
-MAIN_SAVE_PATH = 'micropy_updates/originals/unix/main.c'
-
 MAKEFILE_PATH = 'lib/micropython/ports/unix/Makefile'
-MAKEFILE_SAVE_PATH = 'micropy_updates/originals/unix/Makefile'
 
 
 def update_makefile():
-    makefile_path = ''
-
-    data = read_file(MAKEFILE_PATH, MAKEFILE_SAVE_PATH)
+    data = read_file(REAL_PORT, MAKEFILE_PATH)
 
     if 'machine_timer.c' not in data:
         code = [
@@ -251,13 +240,12 @@ def update_makefile():
 
 
 def update_modmachine():
-
-    data = read_file(MODMACHINE_PATH, MODMACHINE_SAVE_PATH)
+    data = read_file(REAL_PORT, MODMACHINE_PATH)
 
     if 'MICROPY_PY_MACHINE_EXTRA_GLOBALS' not in data:
         data += (
             '\n#define MICROPY_PY_MACHINE_EXTRA_GLOBALS    '
-            '    { MP_ROM_QSTR(MP_QSTR_Timer), MP_ROM_PTR(&machine_timer_type) }, \n\n'
+            '    { MP_ROM_QSTR(MP_QSTR_Timer), MP_ROM_PTR(&machine_timer_type) }, \n\n'  # NOQA
         # NOQA
         )
 
@@ -266,7 +254,7 @@ def update_modmachine():
 
 def update_main():
 
-    data = read_file(MAIN_PATH, MAIN_SAVE_PATH)
+    data = read_file(REAL_PORT, MAIN_PATH)
 
     if 'machine_timer.h' not in data:
         code = [
@@ -342,7 +330,7 @@ def update_main():
 
 
 def update_input():
-    data = read_file(INPUT_PATH, INPUT_SAVE_PATH)
+    data = read_file(REAL_PORT, INPUT_PATH)
     if 'O_NONBLOCK' not in data:
         code = [
             'char *prompt(char *p) {',
@@ -359,7 +347,7 @@ def update_input():
 
 def update_unix_mphal():
 
-    data = read_file(UNIX_MPHAL_PATH, UNIX_MPHAL_SAVE_PATH)
+    data = read_file(REAL_PORT, UNIX_MPHAL_PATH)
 
     if 'EWOULDBLOCK' not in data:
         code = [
@@ -403,7 +391,7 @@ def update_unix_mphal():
 
 def update_mpconfigvariant_common():
 
-    data = read_file(MPCONFIGVARIANT_COMMON_PATH, MPCONFIGVARIANT_COMMON_SAVE_PATH)
+    data = read_file(REAL_PORT, MPCONFIGVARIANT_COMMON_PATH)
 
     if (
         '#define MICROPY_MALLOC_USES_ALLOCATED_SIZE (1)' in
@@ -440,7 +428,7 @@ def compile(*args):  # NOQA
     update_mpconfigvariant_common()
     update_input()
     update_unix_mphal()
-    copy_updated_files(REAL_PORT)
+    copy_micropy_updates(REAL_PORT)
 
     build_sdl(sdl_flags)
 

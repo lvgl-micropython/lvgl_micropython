@@ -1,3 +1,4 @@
+import shutil
 import sys
 import os
 import subprocess
@@ -39,33 +40,38 @@ def revert_files(port):
                 iter_path(src_file, dst_file)
                 os.rmdir(src_file)
             else:
-                read_file(src_file, dst_file)
+                shutil.copyfile(src_file, dst_file)
                 os.remove(src_file)
 
     iter_path(src_path, dst_path)
 
 
-def copy_updated_files(port):
+def copy_micropy_updates(port):
 
     src_path = f'micropy_updates/{port}'
-    originals_path = f'micropy_updates/originals/{port}'
+    org_path = f'micropy_updates/originals/{port}'
 
     if port in ('raspberry_pi', 'macOS'):
         port = 'unix'
 
     dst_path = f'lib/micropython/ports/{port}'
 
-    for file in os.listdir(src_path):
+    def iter_files(s_path, d_path, o_path):
+        for file in os.listdir(s_path):
+            src_file = os.path.join(s_path, file)
+            dst_file = os.path.join(d_path, file)
+            org_file = os.path.join(o_path, file)
 
-        src_file = os.path.join(dst_path, file)
-        dst_file = os.path.join(originals_path, file)
+            if os.path.isdir(src_file):
+                if not os.path.exists(org_file):
+                    os.makedirs(org_file)
 
-        read_file(src_file, dst_file)
+                iter_files(src_file, dst_file, org_file)
+            else:
+                shutil.copyfile(dst_file, org_file)
+                shutil.copyfile(src_file, dst_file)
 
-        src_file = os.path.join(src_path, file)
-        dst_file = os.path.join(dst_path, file)
-
-        read_file(src_file, dst_file)
+    iter_files(src_path, dst_path, org_path)
 
 
 def write_file(file, data):
@@ -73,16 +79,32 @@ def write_file(file, data):
         f.write(data.encode('utf-8'))
 
 
-def read_file(file, save_file):
-    with open(file, 'rb') as f1:
-        data = f1.read()
+def read_file(port, file):
+    org_path = f'micropy_updates/originals/{port}'
 
-    save_path = os.path.split(save_file)[0]
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
+    filepath, filename = os.path.split(file)
 
-    with open(save_file, 'wb') as f2:
-        f2.write(data)
+    if port in ('raspberry_pi', 'macOS'):
+        port = 'unix'
+
+    head, tail = os.path.split(filepath)
+    save_path = []
+    while tail != port:
+        save_path.insert(0, tail)
+        head, tail = os.path.split(head)
+
+    if save_path:
+        org_path = os.path.join(org_path, *save_path)
+
+    if not os.path.exists(org_path):
+        os.makedirs(org_path)
+
+    org_file = os.path.join(org_path, filename)
+    if not os.path.exists(org_file):
+        shutil.copyfile(file, org_file)
+
+    with open(file, 'rb') as f:
+        data = f.read()
 
     return data.decode('utf-8')
 
@@ -142,13 +164,7 @@ def set_mp_version(port):
 
 
 def update_mphalport(target):
-    if target == 'esp8266':
-        mphalport_path = f'lib/micropython/ports/{target}/esp_mphal.h'
-    elif target == 'pic16bit':
-        mphalport_path = f'lib/micropython/ports/{target}/pic16bit_mphal.h'
-    elif target == 'teensy':
-        mphalport_path = f'lib/micropython/ports/{target}/teensy_hal.h'
-    elif target == 'macOS':
+    if target in ('macOS', 'raspberry_pi'):
         mphalport_path = f'lib/micropython/ports/unix/mphalport.h'
     elif target == 'windows':
         mphalport_path = f'lib/micropython/ports/{target}/windows_mphal.h'
@@ -158,18 +174,17 @@ def update_mphalport(target):
     if not os.path.exists(mphalport_path):
         raise RuntimeError(mphalport_path)
 
-    with open(mphalport_path, 'rb') as f:
-        data = f.read().decode('utf-8')
+    data = read_file(target, mphalport_path)
 
-    if '#ifndef _MPHALPORT_H_' not in data:
+    if '__MPHALPORT_H__' not in data:
         data = (
-            f'#ifndef _MPHALPORT_H_\n'
-            f'#define _MPHALPORT_H_\n'
+            f'#ifndef __MPHALPORT_H__\n'
+            f'#define __MPHALPORT_H__\n'
             f'{data}\n'
-            f'#endif /* _MPHALPORT_H_ */\n'
+            f'#endif /* __MPHALPORT_H__ */\n'
         )
-        with open(mphalport_path, 'wb') as f:
-            f.write(data.encode('utf-8'))
+
+        write_file(mphalport_path, data)
 
 
 def generate_manifest(
@@ -236,7 +251,7 @@ def generate_manifest(
     for file in indevs:
         if not os.path.exists(file):
             tmp_file = (
-                f'{script_dir}/api_drivers/common_api_drivers/indev/{file}.py'
+                f'{script_dir}/api_drivers/common_api_drivers/indev/{file.lower()}.py'
             )
 
             if not os.path.exists(tmp_file):
@@ -255,11 +270,11 @@ def generate_manifest(
             file = tmp_file
 
         directory, file_name = os.path.split(file)
-        extension_file = file_name.rsplit('.')[0] + '_extension.py'
+        extension_file = file_name.rsplit('.', 1)[0] + '_extension.py'
         extension = os.path.join(directory, extension_file)
 
         if os.path.exists(extension):
-            print(extension_file)
+            print(extension)
             entry = f"freeze('{directory}', '{extension_file}')"
             manifest_files.append(entry)
 
@@ -273,7 +288,7 @@ def generate_manifest(
     for file in displays:
         if not os.path.exists(file):
             tmp_file = (
-                f'{script_dir}/api_drivers/common_api_drivers/display/{file}'
+                f'{script_dir}/api_drivers/common_api_drivers/display/{file.lower()}'
             )
 
             if not os.path.exists(tmp_file):
@@ -284,7 +299,7 @@ def generate_manifest(
                 if not file_name.endswith('.py'):
                     continue
 
-                print(file_name)
+                print(os.path.join(tmp_file, file_name))
 
                 entry = f"freeze('{tmp_file}', '{file_name}')"
                 manifest_files.append(entry)

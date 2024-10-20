@@ -843,19 +843,10 @@ def find_esp32_ports(chip):
 SDKCONFIG_PATH = f'build/sdkconfig.board'
 
 MPTHREADPORT_PATH = 'lib/micropython/ports/esp32/mpthreadport.c'
-MPTHREADPORT_SAVE_PATH = 'micropy_updates/originals/esp32/mpthreadport.c'
-
 MPCONFIGPORT_PATH = 'lib/micropython/ports/esp32/mpconfigport.h'
-MPCONFIGPORT_SAVE_PATH = 'micropy_updates/originals/esp32/mpconfigport.h'
-
 PANICHANDLER_PATH = 'lib/micropython/ports/esp32/panichandler.c'
-PANICHANDLER_SAVE_PATH = 'micropy_updates/originals/esp32/panichandler.c'
-
 MPHALPORT_PATH = 'lib/micropython/ports/esp32/mphalport.c'
-MPHALPORT_SAVE_PATH = 'micropy_updates/originals/esp32/mphalport.c'
-
 MAIN_PATH = 'lib/micropython/ports/esp32/main.c'
-MAIN_SAVE_PATH = 'micropy_updates/originals/esp32/main.c'
 
 
 if not os.path.exists('micropy_updates/originals/esp32'):
@@ -863,7 +854,7 @@ if not os.path.exists('micropy_updates/originals/esp32'):
 
 
 def update_mpthreadport():
-    data = read_file(MPTHREADPORT_PATH, MPTHREADPORT_SAVE_PATH)
+    data = read_file('esp32', MPTHREADPORT_PATH)
 
     if '_CORE_ID' not in data:
         data = data.replace('MP_TASK_COREID', '_CORE_ID')
@@ -885,7 +876,7 @@ def update_mpthreadport():
 
 
 def update_panic_handler():
-    data = read_file(PANICHANDLER_PATH, PANICHANDLER_SAVE_PATH)
+    data = read_file('esp32', PANICHANDLER_PATH)
 
     if '"MPY version : "' in data:
         beg, end = data.split('"MPY version : "', 1)
@@ -903,11 +894,8 @@ def update_mpconfigboard():
         'lib/micropython/ports/esp32/boards/'
         f'{board}/mpconfigboard.cmake'
     )
-    mpconfigboard_cmake_save_path = (
-        'micropy_updates/originals/esp32/boards/'
-        f'{board}/mpconfigboard.cmake'
-    )
-    data = read_file(mpconfigboard_cmake_path, mpconfigboard_cmake_save_path)
+
+    data = read_file('esp32', mpconfigboard_cmake_path)
 
     sdkconfig = (
         'set(SDKCONFIG_DEFAULTS ${SDKCONFIG_DEFAULTS} '
@@ -921,7 +909,7 @@ def update_mpconfigboard():
 
 
 def update_mpconfigport():
-    data = read_file(MPCONFIGPORT_PATH, MPCONFIGPORT_SAVE_PATH)
+    data = read_file('esp32', MPCONFIGPORT_PATH)
 
     if 'MP_USB_OTG' in data:
         data = data.rsplit('\n\n#define MP_USB_OTG', 1)[0]
@@ -1003,7 +991,7 @@ def update_mpconfigport():
 
 
 def update_mphalport():
-    data = read_file(MPHALPORT_PATH, MPHALPORT_SAVE_PATH)
+    data = read_file('esp32', MPHALPORT_PATH)
     data = data.replace(
         '#if CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG',
         '#if MP_USB_SERIAL_JTAG'
@@ -1017,7 +1005,7 @@ def update_mphalport():
 
 
 def update_main():
-    data = read_file(MAIN_PATH, MAIN_SAVE_PATH)
+    data = read_file('esp32', MAIN_PATH)
     data = data.replace(
         '#if CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG',
         '#if MP_USB_SERIAL_JTAG'

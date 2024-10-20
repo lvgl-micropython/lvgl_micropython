@@ -18,26 +18,6 @@ from . import unix
 
 unix.REAL_PORT = 'macOS'
 
-unix.INPUT_SAVE_PATH = (
-    unix.INPUT_SAVE_PATH.replace('/unix/', '/macOS/')
-)
-unix.MAIN_SAVE_PATH = (
-    unix.MAIN_SAVE_PATH.replace('/unix/', '/macOS/')
-)
-unix.UNIX_MPHAL_SAVE_PATH = (
-    unix.UNIX_MPHAL_SAVE_PATH.replace('/unix/', '/macOS/')
-)
-unix.MAKEFILE_SAVE_PATH = (
-    unix.MAKEFILE_SAVE_PATH.replace('/unix/', '/macOS/')
-)
-unix.MODMACHINE_SAVE_PATH = (
-    unix.MODMACHINE_SAVE_PATH.replace('/unix/', '/macOS/')
-)
-unix.MPCONFIGVARIANT_COMMON_SAVE_PATH = (
-    unix.MPCONFIGVARIANT_COMMON_SAVE_PATH.replace('/unix/', '/macOS/')
-)
-
-
 if not os.path.exists('micropy_updates/originals/macOS'):
     os.mkdir('micropy_updates/originals/macOS')
 
@@ -83,7 +63,8 @@ def compile(*args):  # NOQA
 
     src = f'lib/micropython/ports/unix/build-{unix.variant}/SDL/libSDL2-2.0.0.dylib'
     dst = f'build/libSDL2-2.0.0.dylib'
-    shutil.copyfile(src, dst)
+    if os.path.exists(src):
+        shutil.copyfile(src, dst)
 
 
 def mpy_cross():
