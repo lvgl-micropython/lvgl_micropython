@@ -19,7 +19,7 @@ from . import unix
 unix.REAL_PORT = 'macOS'
 
 if not os.path.exists('micropy_updates/originals/macOS'):
-    os.mkdir('micropy_updates/originals/macOS')
+    os.makedirs('micropy_updates/originals/macOS')
 
 
 def parse_args(extra_args, lv_cflags, board):
