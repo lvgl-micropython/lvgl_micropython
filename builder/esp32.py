@@ -8,7 +8,7 @@ from . import update_mphalport as _update_mphalport
 from . import (
     read_file,
     write_file,
-    copy_updated_files,
+    copy_micropy_updates,
     revert_files,
     scrub_build_folder
 )
@@ -125,7 +125,7 @@ class Partition:
             )
 
         if not os.path.exists(f'{SCRIPT_DIR}/build'):
-            os.mkdir(f'{SCRIPT_DIR}/build')
+            os.makedirs(f'{SCRIPT_DIR}/build')
 
         with open(self.save_file_path, 'w') as f:
             f.write(PARTITION_HEADER)
@@ -1140,7 +1140,7 @@ def compile(*args):  # NOQA
     update_mpconfigboard()
     update_mpconfigport()
 
-    copy_updated_files('esp32')
+    copy_micropy_updates('esp32')
 
     try:
         cmd_ = compile_cmd[:]
