@@ -16,6 +16,32 @@ from .unix import (
 from . import unix
 
 
+if not os.path.exists('micropy_updates/originals/raspberry_pi'):
+    os.mkdir('micropy_updates/originals/raspberry_pi')
+
+
+unix.REAL_PORT = 'raspberry_pi'
+
+unix.INPUT_SAVE_PATH = (
+    unix.INPUT_SAVE_PATH.replace('/unix/', '/raspberry_pi/')
+)
+unix.MAIN_SAVE_PATH = (
+    unix.MAIN_SAVE_PATH.replace('/unix/', '/raspberry_pi/')
+)
+unix.UNIX_MPHAL_SAVE_PATH = (
+    unix.UNIX_MPHAL_SAVE_PATH.replace('/unix/', '/raspberry_pi/')
+)
+unix.MAKEFILE_SAVE_PATH = (
+    unix.MAKEFILE_SAVE_PATH.replace('/unix/', '/raspberry_pi/')
+)
+unix.MODMACHINE_SAVE_PATH = (
+    unix.MODMACHINE_SAVE_PATH.replace('/unix/', '/raspberry_pi/')
+)
+unix.MPCONFIGVARIANT_COMMON_SAVE_PATH = (
+    unix.MPCONFIGVARIANT_COMMON_SAVE_PATH.replace('/unix/', '/raspberry_pi/')
+)
+
+
 def parse_args(extra_args, lv_cflags, board):
     return _parse_args(extra_args, lv_cflags, board)
 

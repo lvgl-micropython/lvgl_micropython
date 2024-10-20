@@ -4,6 +4,13 @@ import shutil
 from . import spawn
 from . import generate_manifest
 from . import update_mphalport as _update_mphalport
+from . import (
+    read_file,
+    write_file,
+    copy_updated_files,
+    revert_files,
+    scrub_build_folder
+)
 from argparse import ArgumentParser
 
 
@@ -20,6 +27,8 @@ compile_cmd = []
 submodules_cmd = []
 heap_size = 4194304
 sdl_flags = ''
+
+REAL_PORT = 'unix'
 
 
 def parse_args(extra_args, lv_cflags, board):
@@ -201,31 +210,33 @@ def submodules():
         sys.exit(return_code)
 
 
-def copy_updated_files():
-    src_path = 'micropy_updates/unix'
-    dst_path = 'lib/micropython/ports/unix'
-
-    for file in os.listdir(src_path):
-        src = os.path.join(src_path, file)
-        dst = os.path.join(dst_path, file)
-
-        shutil.copyfile(src, dst)
+if not os.path.exists('micropy_updates/originals/unix'):
+    os.mkdir('micropy_updates/originals/unix')
 
 
-def read_file(path):
-    with open(path, 'rb') as f:
-        return f.read().decode('utf-8')
+UNIX_MPHAL_PATH = 'lib/micropython/ports/unix/unix_mphal.c'
+UNIX_MPHAL_SAVE_PATH = 'micropy_updates/originals/unix/unix_mphal.c'
 
+MPCONFIGVARIANT_COMMON_PATH = 'lib/micropython/ports/unix/variants/mpconfigvariant_common.h'
+MPCONFIGVARIANT_COMMON_SAVE_PATH = 'micropy_updates/originals/unix/variants/mpconfigvariant_common.h'
 
-def write_file(path, data):
-    with open(path, 'wb') as f:
-        f.write(data.encode('utf-8'))
+INPUT_PATH = 'lib/micropython/ports/unix/input.c'
+INPUT_SAVE_PATH = 'micropy_updates/originals/unix/input.c'
+
+MODMACHINE_PATH = 'lib/micropython/ports/unix/modmachine.c'
+MODMACHINE_SAVE_PATH = 'micropy_updates/originals/unix/modmachine.c'
+
+MAIN_PATH = 'lib/micropython/ports/unix/main.c'
+MAIN_SAVE_PATH = 'micropy_updates/originals/unix/main.c'
+
+MAKEFILE_PATH = 'lib/micropython/ports/unix/Makefile'
+MAKEFILE_SAVE_PATH = 'micropy_updates/originals/unix/Makefile'
 
 
 def update_makefile():
-    makefile_path = 'lib/micropython/ports/unix/Makefile'
+    makefile_path = ''
 
-    data = read_file(makefile_path)
+    data = read_file(MAKEFILE_PATH, MAKEFILE_SAVE_PATH)
 
     if 'machine_timer.c' not in data:
         code = [
@@ -236,13 +247,12 @@ def update_makefile():
         ]
         data = data.replace('modjni.c \\\n', '\n'.join(code))
 
-        write_file(makefile_path, data)
+        write_file(MAKEFILE_PATH, data)
 
 
 def update_modmachine():
-    modmachine_path = 'lib/micropython/ports/unix/modmachine.c'
 
-    data = read_file(modmachine_path)
+    data = read_file(MODMACHINE_PATH, MODMACHINE_SAVE_PATH)
 
     if 'MICROPY_PY_MACHINE_EXTRA_GLOBALS' not in data:
         data += (
@@ -251,13 +261,12 @@ def update_modmachine():
         # NOQA
         )
 
-        write_file(modmachine_path, data)
+        write_file(MODMACHINE_PATH, data)
 
 
 def update_main():
-    main_path = 'lib/micropython/ports/unix/main.c'
 
-    data = read_file(main_path)
+    data = read_file(MAIN_PATH, MAIN_SAVE_PATH)
 
     if 'machine_timer.h' not in data:
         code = [
@@ -329,13 +338,11 @@ def update_main():
 
     data = '\n'.join(data)
 
-    write_file(main_path, data)
+    write_file(MAIN_PATH, data)
 
 
 def update_input():
-    input_path = 'lib/micropython/ports/unix/input.c'
-
-    data = read_file(input_path)
+    data = read_file(INPUT_PATH, INPUT_SAVE_PATH)
     if 'O_NONBLOCK' not in data:
         code = [
             'char *prompt(char *p) {',
@@ -347,14 +354,56 @@ def update_input():
         ]
 
         data = data.replace('char *prompt(char *p) {', '\n'.join(code))
-        write_file(input_path, data)
+        write_file(INPUT_PATH, data)
+
+
+def update_unix_mphal():
+
+    data = read_file(UNIX_MPHAL_PATH, UNIX_MPHAL_SAVE_PATH)
+
+    if 'EWOULDBLOCK' not in data:
+        code = [
+            'int flags = fcntl(STDIN_FILENO, F_GETFL);',
+            '    flags |= O_NONBLOCK;',
+            '    fcntl(STDIN_FILENO, F_SETFL, flags);',
+            '',
+            '    for (;;) {',
+            '        MP_THREAD_GIL_EXIT();',
+            '        ret = read(STDIN_FILENO, &c, 1);',
+            '        MP_THREAD_GIL_ENTER();',
+            '        if (ret == -1) {',
+            '            int err = errno;',
+            '',
+            '            if (err == EINTR) {',
+            '                mp_handle_pending(true);',
+            '                continue;',
+            '            } else {',
+            '                while (ret == -1 && err == EWOULDBLOCK) {',
+            '                    mp_handle_pending(true);',
+            '                    usleep(1000);',
+            '                    ret = read(STDIN_FILENO, &c, 1);',
+            '                    if (ret == -1) err = errno;',
+            '                }',
+            '                if (ret == -1) continue;',
+            '                break;',
+            '            }',
+            '        }',
+            '        break;',
+            '    }',
+            ''
+        ]
+
+        data = data.replace(
+            'MP_HAL_RETRY_SYSCALL(ret, read(STDIN_FILENO, &c, 1), {});',
+            '\n'.join(code)
+        )
+
+        write_file(UNIX_MPHAL_PATH, data)
 
 
 def update_mpconfigvariant_common():
-    mpconfigvariant_common_path = (
-        'lib/micropython/ports/unix/variants/mpconfigvariant_common.h'
-    )
-    data = read_file(mpconfigvariant_common_path)
+
+    data = read_file(MPCONFIGVARIANT_COMMON_PATH, MPCONFIGVARIANT_COMMON_SAVE_PATH)
 
     if (
         '#define MICROPY_MALLOC_USES_ALLOCATED_SIZE (1)' in
@@ -381,31 +430,17 @@ def update_mpconfigvariant_common():
             data += '\n\n'
             data += macro + '\n'
 
-    write_file(mpconfigvariant_common_path, data)
-
-
-def update_mpconfigport_mk():
-    mpconfigport_path = 'lib/micropython/ports/unix/mpconfigport.mk'
-
-    data = read_file(mpconfigport_path)
-    if 'MICROPY_USE_READLINE = 1' in data:
-        data = data.replace(
-            'MICROPY_USE_READLINE = 1',
-            'MICROPY_USE_READLINE = 0'
-        )
-
-        write_file(mpconfigport_path, data)
+    write_file(MPCONFIGVARIANT_COMMON_PATH, data)
 
 
 def compile(*args):  # NOQA
-
     update_makefile()
     update_modmachine()
     update_main()
     update_mpconfigvariant_common()
     update_input()
-    update_mpconfigport_mk()
-    copy_updated_files()
+    update_unix_mphal()
+    copy_updated_files(REAL_PORT)
 
     build_sdl(sdl_flags)
 
@@ -414,25 +449,18 @@ def compile(*args):  # NOQA
 
     return_code, _ = spawn(cmd_)
     if return_code != 0:
+        revert_files(REAL_PORT)
         sys.exit(return_code)
 
-    os.remove('build/lvgl_header.h')
-
-    for f in os.listdir('build'):
-        if f.startswith('lvgl'):
-            continue
-
-        if f.startswith('SDLPointer'):
-            continue
-
-        if f == 'manifest.py' or not f.endswith('.py'):
-            os.remove(os.path.join('build', f))
+    scrub_build_folder()
 
     src = f'lib/micropython/ports/unix/build-{variant}/micropython'
-    dst = f'build/lvgl_micropy_unix'
+    dst = f'build/lvgl_micropy_{REAL_PORT}'
     shutil.copyfile(src, dst)
 
-    print(f'compiled binary is {os.path.abspath(dst)}')
+    print(f'compiled binary is {os.path.abspath(os.path.split(dst)[0])}')
+    print('You need to make the binary executable by running')
+    print(f'"sudo chmod +x lvgl_micropy_{REAL_PORT}"')
 
 
 def mpy_cross():

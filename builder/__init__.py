@@ -8,6 +8,85 @@ import queue
 _windows_env = None
 
 
+def scrub_build_folder():
+    for f in os.listdir('build'):
+        f = os.path.join('build', f)
+        for pattern in ('.h', 'manifest.py', '.board'):
+            if f.endswith(pattern):
+                os.remove(f)
+
+
+def revert_files(port):
+    if port in ('macOS', 'raspberry_pi'):
+        revert_files('unix')
+
+    src_path = f'micropy_updates/originals/{port}'
+
+    if port in ('raspberry_pi', 'macOS'):
+        port = 'unix'
+
+    dst_path = f'lib/micropython/ports/{port}'
+
+    if not os.path.exists(src_path) or not os.listdir(src_path):
+        return
+
+    def iter_path(src_p, dst_p):
+        for file in os.listdir(src_p):
+            src_file = os.path.join(src_p, file)
+            dst_file = os.path.join(dst_p, file)
+
+            if os.path.isdir(src_file):
+                iter_path(src_file, dst_file)
+                os.rmdir(src_file)
+            else:
+                read_file(src_file, dst_file)
+                os.remove(src_file)
+
+    iter_path(src_path, dst_path)
+
+
+def copy_updated_files(port):
+
+    src_path = f'micropy_updates/{port}'
+    originals_path = f'micropy_updates/originals/{port}'
+
+    if port in ('raspberry_pi', 'macOS'):
+        port = 'unix'
+
+    dst_path = f'lib/micropython/ports/{port}'
+
+    for file in os.listdir(src_path):
+
+        src_file = os.path.join(dst_path, file)
+        dst_file = os.path.join(originals_path, file)
+
+        read_file(src_file, dst_file)
+
+        src_file = os.path.join(src_path, file)
+        dst_file = os.path.join(dst_path, file)
+
+        read_file(src_file, dst_file)
+
+
+def write_file(file, data):
+    with open(file, 'wb') as f:
+        f.write(data.encode('utf-8'))
+
+
+def read_file(file, save_file):
+    with open(file, 'rb') as f1:
+        data = f1.read()
+
+    save_path = os.path.split(save_file)[0]
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+
+    with open(save_file, 'wb') as f2:
+        f2.write(data)
+
+    return data.decode('utf-8')
+
+
 def setup_windows_build():
 
     global _windows_env
