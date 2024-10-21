@@ -17,7 +17,7 @@ from . import unix
 
 
 if not os.path.exists('micropy_updates/originals/raspberry_pi'):
-    os.mkdir('micropy_updates/originals/raspberry_pi')
+    os.makedirs('micropy_updates/originals/raspberry_pi')
 
 
 unix.REAL_PORT = 'raspberry_pi'

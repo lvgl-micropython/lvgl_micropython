@@ -8,7 +8,7 @@ from . import update_mphalport as _update_mphalport
 from . import (
     read_file,
     write_file,
-    copy_updated_files,
+    copy_micropy_updates,
     revert_files,
     scrub_build_folder
 )
@@ -850,7 +850,7 @@ MAIN_PATH = 'lib/micropython/ports/esp32/main.c'
 
 
 if not os.path.exists('micropy_updates/originals/esp32'):
-    os.mkdir('micropy_updates/originals/esp32')
+    os.makedirs('micropy_updates/originals/esp32')
 
 
 def update_mpthreadport():
@@ -1140,7 +1140,7 @@ def compile(*args):  # NOQA
     update_mpconfigboard()
     update_mpconfigport()
 
-    copy_updated_files('esp32')
+    copy_micropy_updates('esp32')
 
     try:
         cmd_ = compile_cmd[:]

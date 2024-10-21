@@ -211,7 +211,7 @@ def submodules():
 
 
 if not os.path.exists('micropy_updates/originals/unix'):
-    os.mkdir('micropy_updates/originals/unix')
+    os.makedirs('micropy_updates/originals/unix')
 
 
 UNIX_MPHAL_PATH = 'lib/micropython/ports/unix/unix_mphal.c'
