@@ -16,7 +16,7 @@
     #include "driver/spi_master.h"
     #include "freertos/FreeRTOS.h"
     #include "freertos/task.h"
-    #include "esp_check.h
+    #include "esp_check.h"
     
     static void _reset_gpios(int64_t gpio_mask) 
     {
@@ -46,20 +46,20 @@
             ARG_sda,
             ARG_cs,
             ARG_freq,
-            ARG_polarity
-            ARG_phase
-            ARG_use_dc_bit
-            ARG_dc_data_high
-            ARG_lsb_first
-            ARG_cs_active_high
-            ARG_del_keep_cs_active
+            ARG_polarity,
+            ARG_phase,
+            ARG_use_dc_bit,
+            ARG_dc_data_high,
+            ARG_lsb_first,
+            ARG_cs_active_high,
+            ARG_del_keep_cs_active,
         };
 
         const mp_arg_t make_new_args[] = {
             { MP_QSTR_scl,                MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
             { MP_QSTR_sda,                MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
             { MP_QSTR_cs,                 MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
-            { MP_QSTR_freq,               MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = LCD_SPI_3WIRE_CLK_MAX } },
+            { MP_QSTR_freq,               MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = SPI_3WIRE_CLK_MAX } },
             { MP_QSTR_polarity,           MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = 0       } },
             { MP_QSTR_phase,              MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = 0       } },
             { MP_QSTR_use_dc_bit,         MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false  } },
@@ -86,15 +86,15 @@
         self->scl_half_period_us = 1000000 / ((uint32_t)args[ARG_freq].u_int * 2);
 
         if ((bool)args[ARG_use_dc_bit].u_bool) {
-            self->param_dc_bit = (bool)args[ARG_dc_data_high].u_bool ? LCD_SPI_3WIRE_DATA_DC_BIT_1 : LCD_SPI_3WIRE_DATA_DC_BIT_0;
-            self->cmd_dc_bit = (bool)args[ARG_dc_data_high].u_bool ? LCD_SPI_3WIRE_DATA_DC_BIT_0 : LCD_SPI_3WIRE_DATA_DC_BIT_1;
+            self->param_dc_bit = (bool)args[ARG_dc_data_high].u_bool ? SPI_3WIRE_DATA_DC_BIT_1 : SPI_3WIRE_DATA_DC_BIT_0;
+            self->cmd_dc_bit = (bool)args[ARG_dc_data_high].u_bool ? SPI_3WIRE_DATA_DC_BIT_0 : SPI_3WIRE_DATA_DC_BIT_1;
         } else {
-            self->param_dc_bit = LCD_SPI_3WIRE_DATA_NO_DC_BIT;
-            self->cmd_dc_bit = LCD_SPI_3WIRE_DATA_NO_DC_BIT;
+            self->param_dc_bit = SPI_3WIRE_DATA_NO_DC_BIT;
+            self->cmd_dc_bit = SPI_3WIRE_DATA_NO_DC_BIT;
         }
         
-        self->write_order_mask = (bool)args[ARG_lsb_first].u_bool ? LCD_SPI_3WIRE_WRITE_ORDER_LSB_MASK : LCD_SPI_3WIRE_WRITE_ORDER_MSB_MASK;
-        self->cs_high_active = (int)args[ARG_cs_active_high].u_bool
+        self->write_order_mask = (bool)args[ARG_lsb_first].u_bool ? SPI_3WIRE_WRITE_ORDER_LSB_MASK : SPI_3WIRE_WRITE_ORDER_MSB_MASK;
+        self->cs_high_active = (int)args[ARG_cs_active_high].u_bool;
         self->del_keep_cs_inactive = (bool)args[ARG_del_keep_cs_active].u_bool ? 0 : 1;
         
         uint32_t spi_mode = (uint32_t)args[ARG_phase].u_int | ((uint32_t)args[ARG_polarity].u_int << 1);
@@ -184,7 +184,7 @@
     }
     
     
-    static mp_obj_t lcd_spi_3wire_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
+    static mp_obj_t spi_3wire_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
     {
         enum { ARG_self, ARG_cmd_bits, ARG_param_bits };
         const mp_arg_t allowed_args[] = {
@@ -201,11 +201,11 @@
             self, 
             (uint8_t)args[ARG_cmd_bits].u_int,
             (uint8_t)args[ARG_param_bits].u_int
-        )
+        );
         return mp_const_none;
     }
     
-    static MP_DEFINE_CONST_FUN_OBJ_KW(lcd_spi_3wire_init_obj, 3, lcd_spi_3wire_init);
+    static MP_DEFINE_CONST_FUN_OBJ_KW(spi_3wire_init_obj, 3, spi_3wire_init);
     
     
     void mp_spi_3wire_tx_param(mp_spi_3wire_obj_t *self, int lcd_cmd, const void *param, size_t param_size)
@@ -287,7 +287,7 @@
     static esp_err_t spi_3wire_write_byte(mp_spi_3wire_obj_t *self, int dc_bit, uint8_t data)
     {
         uint16_t data_temp = data;
-        uint8_t data_bits = (dc_bit != DATA_NO_DC_BIT) ? 9 : 8;
+        uint8_t data_bits = (dc_bit != SPI_3WIRE_DATA_NO_DC_BIT) ? 9 : 8;
         uint16_t write_order_mask = self->write_order_mask;
         uint32_t scl_active_before_level = self->scl_active_rising_edge ? 0 : 1;
         uint32_t scl_active_after_level = !scl_active_before_level;
@@ -301,7 +301,7 @@
                 // SDA set to data bit
                 gpio_set_level(self->sda, data_temp & write_order_mask);
                 // Get next bit
-                data_temp = (write_order_mask == WRITE_ORDER_LSB_MASK) ? data_temp >> 1 : data_temp << 1;
+                data_temp = (write_order_mask == SPI_3WIRE_WRITE_ORDER_LSB_MASK) ? data_temp >> 1 : data_temp << 1;
             }
             // Generate SCL active edge
             gpio_set_level(self->scl, scl_active_before_level);
@@ -337,7 +337,7 @@
             if (i == 0) {
                 spi_3wire_write_byte(self, data_dc_bit, swap_data & 0xff);
             } else {
-                spi_3wire_write_byte(self, DATA_NO_DC_BIT, swap_data & 0xff);
+                spi_3wire_write_byte(self, SPI_3WIRE_DATA_NO_DC_BIT, swap_data & 0xff);
             }
             swap_data >>= 8;
         }

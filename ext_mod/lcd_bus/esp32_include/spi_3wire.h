@@ -14,15 +14,15 @@
 
     #if SOC_LCD_I80_SUPPORTED || SOC_LCD_RGB_SUPPORTED
     
-        #define LCD_SPI_3WIRE_CMD_BITS_MAX       (sizeof(uint32_t) * 8)  // Maximum number of bytes for LCD command
-        #define LCD_SPI_3WIRE_PARAM_BITS_MAX     (sizeof(uint32_t) * 8)  // Maximum number of bytes for LCD parameter
-        #define LCD_SPI_3WIRE_CLK_MAX      (500 * 1000UL)
+        #define SPI_3WIRE_CMD_BITS_MAX       (sizeof(uint32_t) * 8)  // Maximum number of bytes for LCD command
+        #define SPI_3WIRE_PARAM_BITS_MAX     (sizeof(uint32_t) * 8)  // Maximum number of bytes for LCD parameter
+        #define SPI_3WIRE_CLK_MAX      (500 * 1000UL)
         
-        #define LCD_SPI_3WIRE_DATA_DC_BIT_0           (0)     // DC bit = 0
-        #define LCD_SPI_3WIRE_DATA_DC_BIT_1           (1)     // DC bit = 1
-        #define LCD_SPI_3WIRE_DATA_NO_DC_BIT          (2)     // No DC bit
-        #define LCD_SPI_3WIRE_WRITE_ORDER_LSB_MASK    (0x01)  // Bit mask for LSB first write order
-        #define LCD_SPI_3WIRE_WRITE_ORDER_MSB_MASK    (0x80)  // Bit mask for MSB first write order
+        #define SPI_3WIRE_DATA_DC_BIT_0           (0)     // DC bit = 0
+        #define SPI_3WIRE_DATA_DC_BIT_1           (1)     // DC bit = 1
+        #define SPI_3WIRE_DATA_NO_DC_BIT          (2)     // No DC bit
+        #define SPI_3WIRE_WRITE_ORDER_LSB_MASK    (0x01)  // Bit mask for LSB first write order
+        #define SPI_3WIRE_WRITE_ORDER_MSB_MASK    (0x80)  // Bit mask for MSB first write order
         
         
         typedef struct _mp_spi_3wire_obj_t {
@@ -46,8 +46,8 @@
 
         extern const mp_obj_type_t mp_spi_3wire_type;
 
-        mp_lcd_err_t mp_spi_3wire_init(mp_spi_3wire_obj_t *self, uint8_t cmd_bits, uint8_t param_bits);
-        esp_err_t mp_spi_3wire_tx_param(mp_spi_3wire_obj_t *self, int lcd_cmd, const void *param, size_t param_size);
+        void mp_spi_3wire_init(mp_spi_3wire_obj_t *self, uint8_t cmd_bits, uint8_t param_bits);
+        void mp_spi_3wire_tx_param(mp_spi_3wire_obj_t *self, int lcd_cmd, const void *param, size_t param_size);
         void mp_spi_3wire_deinit(mp_spi_3wire_obj_t *self);
 
     #endif /* SOC_LCD_I80_SUPPORTED */

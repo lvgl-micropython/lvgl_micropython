@@ -256,7 +256,7 @@
 
         if (self->spi_3wire != NULL) {
             mp_spi_3wire_tx_param(self->spi_3wire, lcd_cmd, param, param_size);
-            ret = LCD_OK
+            ret = LCD_OK;
         } else {
             ret = esp_lcd_panel_io_tx_param(self->panel_io_handle.panel_io, lcd_cmd, param, param_size);
         }
