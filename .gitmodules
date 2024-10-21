@@ -7,3 +7,10 @@
 [submodule "lib/esp-idf"]
 	path = lib/esp-idf
 	url = https://github.com/espressif/esp-idf
+[submodule "lib/lvgl"]
+	path = lib/lvgl
+	url = https://github.com/lvgl/lvgl.git
+	branch = release/v9.1
+[submodule "lib/micropython"]
+	path = lib/micropython
+	url = https://github.com/micropython/micropython
