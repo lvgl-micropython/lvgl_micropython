@@ -319,13 +319,8 @@ def generate_manifest(
 
 def get_lvgl():
     cmd_ = [
-        'git',
-        'submodule',
-        'update',
-        '--init',
-        '--depth=1',
-        '--',
-        f'lib/lvgl'
+        ['git submodule update --init --depth=1 -- lib/lvgl'],
+        ['git -C lib/lvgl checkout -b release/v9.1']
     ]
     print()
     print('collecting LVGL')
@@ -338,13 +333,8 @@ def get_lvgl():
 def get_micropython():
 
     cmd_ = [
-        'git',
-        'submodule',
-        'update',
-        '--init',
-        '--depth=1',
-        '--',
-        f'lib/micropython'
+        ['git submodule updatem --init --depth=1 -- lib/micropython'],
+        ['git -C lib/micropython checkout v1.23.0']
     ]
     print()
     print('collecting MicroPython 1.23.0')
