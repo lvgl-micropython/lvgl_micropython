@@ -6,6 +6,7 @@
     #include "lcd_types.h"
     #include "modlcd_bus.h"
     #include "rgb_bus.h"
+    #include "spi_3wire.h"
 
     // esp-idf includes
     #include "hal/lcd_hal.h"
@@ -113,6 +114,7 @@
             ARG_pclk_idle_high,
             ARG_pclk_active_low,
             ARG_refresh_on_demand,
+            ARG_spi_3wire,
         };
 
         const mp_arg_t allowed_args[] = {
@@ -149,6 +151,7 @@
             { MP_QSTR_pclk_idle_high,     MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
             { MP_QSTR_pclk_active_low,    MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
             { MP_QSTR_refresh_on_demand,  MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
+            { MP_QSTR_spi_3wire,          MP_ARG_OBJ  | MP_ARG_KW_ONLY,  { .u_obj  = mp_const_none } },
         };
 
         mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
@@ -209,6 +212,12 @@
         }
 
         self->panel_io_config.data_width = (size_t) i;
+
+        if (args[ARG_spi_3wire].u_obj == mp_const_none) {
+            self->spi_3wire = NULL;
+        } else {
+            self->spi_3wire = (mp_spi_3wire_obj_t *)MP_OBJ_TO_PTR(args[ARG_spi_3wire].u_obj);
+        }
 
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
         printf("pclk_hz=%lu\n", self->bus_config.pclk_hz);
@@ -272,6 +281,11 @@
         printf("rgb_del(self)\n");
     #endif
 
+        if (self->spi_3wire != NULL) {
+            mp_spi_3wire_deinit(self->spi_3wire);
+            self->spi_3wire = NULL;
+        }
+
         mp_lcd_err_t ret = esp_lcd_panel_del(self->panel_handle);
         return ret;
     }
@@ -293,14 +307,22 @@
 
     mp_lcd_err_t rgb_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
     {
-        LCD_UNUSED(obj);
-        LCD_UNUSED(param);
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
+
+        if (self->spi_3wire != NULL) {
+            mp_spi_3wire_tx_param(self->spi_3wire, lcd_cmd, param, param_size);
+        } else {
+            LCD_UNUSED(param);
+
+    #if !CONFIG_LCD_ENABLE_DEBUG_LOG
+            LCD_UNUSED(lcd_cmd);
+            LCD_UNUSED(param_size);
+    #endif
+
+        }
 
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
         printf("rgb_tx_param(self, lcd_cmd=%d, param, param_size=%d)\n", lcd_cmd, param_size);
-    #else
-        LCD_UNUSED(lcd_cmd);
-        LCD_UNUSED(param_size);
     #endif
 
         return LCD_OK;

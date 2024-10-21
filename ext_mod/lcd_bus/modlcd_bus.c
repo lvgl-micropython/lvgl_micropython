@@ -18,6 +18,8 @@
 
 #ifdef ESP_IDF_VERSION
     #include "esp_heap_caps.h"
+    #include "soc/soc_caps.h"
+    #include "spi_3wire.h"
 #endif
 
 #if CONFIG_LCD_ENABLE_DEBUG_LOG
@@ -278,6 +280,13 @@ static const mp_map_elem_t mp_module_lcd_bus_globals_table[] = {
     #ifdef MP_PORT_UNIX
         { MP_ROM_QSTR(MP_QSTR_SDLBus),         (mp_obj_t)&mp_lcd_sdl_bus_type        },
     #endif
+
+#ifdef ESP_IDF_VERSION
+    #if SOC_LCD_I80_SUPPORTED || SOC_LCD_RGB_SUPPORTED
+        { MP_ROM_QSTR(MP_QSTR_SPI3Wire),         (mp_obj_t)&mp_spi_3wire_type        },
+    #endif
+#endif
+
     { MP_ROM_QSTR(MP_QSTR_DEBUG_ENABLED),    MP_ROM_INT(LCD_DEBUG) },
 
     #ifdef ESP_IDF_VERSION

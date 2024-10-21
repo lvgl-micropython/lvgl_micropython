@@ -15,6 +15,7 @@
     #if SOC_LCD_I80_SUPPORTED
         // esp-idf includes
         #include "esp_lcd_panel_io.h"
+        #include "spi_3wire.h"
 
 
         typedef struct _mp_lcd_i80_bus_obj_t {
@@ -34,6 +35,9 @@
             esp_lcd_panel_io_i80_config_t panel_io_config;
             esp_lcd_i80_bus_config_t bus_config;
             esp_lcd_i80_bus_handle_t bus_handle;
+
+            mp_spi_3wire_obj_t *spi_3wire;
+
         } mp_lcd_i80_bus_obj_t;
 
         extern const mp_obj_type_t mp_lcd_i80_bus_type;

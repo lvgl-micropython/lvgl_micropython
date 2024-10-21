@@ -19,11 +19,13 @@
     #include "esp_lcd_panel_io.h"
     #include "esp_heap_caps.h"
     #include "hal/lcd_types.h"
+    #include "spi_3wire.h"
 
 
     mp_lcd_err_t i80_del(mp_obj_t obj);
     mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
     mp_lcd_err_t i80_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
+    mp_lcd_err_t i80_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
 
     static mp_obj_t mp_lcd_i80_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
@@ -57,6 +59,7 @@
             ARG_reverse_color_bits,
             ARG_pclk_active_low,
             ARG_pclk_idle_low,
+            ARG_spi_3wire,
         };
 
         const mp_arg_t make_new_args[] = {
@@ -87,7 +90,8 @@
             { MP_QSTR_cs_active_high,     MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false   } },
             { MP_QSTR_reverse_color_bits, MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false   } },
             { MP_QSTR_pclk_active_low,    MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false   } },
-            { MP_QSTR_pclk_idle_low,      MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false   } }
+            { MP_QSTR_pclk_idle_low,      MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false   } },
+            { MP_QSTR_spi_3wire,          MP_ARG_OBJ  | MP_ARG_KW_ONLY,  { .u_obj  = mp_const_none } },
         };
     
         mp_arg_val_t args[MP_ARRAY_SIZE(make_new_args)];
@@ -149,6 +153,12 @@
         self->panel_io_config.flags.pclk_active_neg = (unsigned int)args[ARG_pclk_active_low].u_bool;
         self->panel_io_config.flags.pclk_idle_low = (unsigned int)args[ARG_pclk_idle_low].u_bool;
 
+        if (args[ARG_spi_3wire].u_obj == mp_const_none) {
+            self->spi_3wire = NULL;
+        } else {
+            self->spi_3wire = (mp_spi_3wire_obj_t *)MP_OBJ_TO_PTR(args[ARG_spi_3wire].u_obj);
+        }
+
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
         printf("dc_gpio_num=%d\n", self->bus_config.dc_gpio_num);
         printf("wr_gpio_num=%d\n", self->bus_config.wr_gpio_num);
@@ -186,6 +196,7 @@
         self->panel_io_handle.init = &i80_init;
         self->panel_io_handle.del = &i80_del;
         self->panel_io_handle.get_lane_count = &i80_get_lane_count;
+        self->panel_io_handle.tx_param = &i80_tx_param;
 
         return MP_OBJ_FROM_PTR(self);
     }
@@ -213,6 +224,11 @@
         printf("lcd_param_bits=%d\n", self->panel_io_config.lcd_param_bits);
         printf("max_transfer_bytes=%d\n", self->bus_config.max_transfer_bytes);
     #endif
+
+        if (self->spi_3wire != NULL) {
+            mp_spi_3wire_init(self->spi_3wire, cmd_bits, param_bits);
+        }
+
         esp_err_t ret = esp_lcd_new_i80_bus(&self->bus_config, &self->bus_handle);
 
         if (ret != 0) {
@@ -228,6 +244,26 @@
         return ret;
     }
 
+    mp_lcd_err_t i80_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
+    {
+    #if CONFIG_LCD_ENABLE_DEBUG_LOG
+        printf("i80_tx_param(self, lcd_cmd=%d, param, param_size=%d)\n", lcd_cmd, param_size);
+    #endif
+
+        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)obj;
+
+        mp_lcd_err_t ret;
+
+        if (self->spi_3wire != NULL) {
+            mp_spi_3wire_tx_param(self->spi_3wire, lcd_cmd, param, param_size);
+            ret = LCD_OK
+        } else {
+            ret = esp_lcd_panel_io_tx_param(self->panel_io_handle.panel_io, lcd_cmd, param, param_size);
+        }
+
+        return ret;
+    }
+
 
     mp_lcd_err_t i80_del(mp_obj_t obj)
     {
@@ -236,6 +272,11 @@
     #endif
 
         mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)obj;
+
+        if (self->spi_3wire != NULL) {
+            mp_spi_3wire_deinit(self->spi_3wire);
+            self->spi_3wire = NULL;
+        }
 
         mp_lcd_err_t ret = esp_lcd_panel_io_del(self->panel_io_handle.panel_io);
         if (ret != 0) {

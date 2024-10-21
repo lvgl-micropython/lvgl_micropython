@@ -6,6 +6,7 @@
 
         //local_includes
         #include "lcd_types.h"
+        #include "spi_3wire.h"
 
         // esp-idf includes
         #include "esp_lcd_panel_io.h"
@@ -15,7 +16,7 @@
         #include "mphalport.h"
         #include "py/obj.h"
         #include "py/objarray.h"
-        #include "soc/soc_caps.h"
+
 
         typedef struct _mp_lcd_rgb_bus_obj_t {
             mp_obj_base_t base;
@@ -40,6 +41,8 @@
             mp_obj_array_t *view2;
 
             void *transmitting_buf;
+
+            mp_spi_3wire_obj_t *spi_3wire;
 
         } mp_lcd_rgb_bus_obj_t;
 
