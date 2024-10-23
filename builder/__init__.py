@@ -38,9 +38,12 @@ def revert_files(port):
 
             if os.path.isdir(src_file):
                 iter_path(src_file, dst_file)
+                print('rmdir', src_file)
                 os.rmdir(src_file)
             else:
+                print(src_file, '--->', dst_file)
                 shutil.copyfile(src_file, dst_file)
+                print('remove', src_file)
                 os.remove(src_file)
 
     iter_path(src_path, dst_path)
@@ -64,11 +67,16 @@ def copy_micropy_updates(port):
 
             if os.path.isdir(src_file):
                 if not os.path.exists(org_file):
+                    print('makedirs', org_file)
                     os.makedirs(org_file)
 
                 iter_files(src_file, dst_file, org_file)
             else:
-                shutil.copyfile(dst_file, org_file)
+                if os.path.exists(dst_file):
+                    print(dst_file, '--->', org_file)
+                    shutil.copyfile(dst_file, org_file)
+
+                print(src_file, '--->', dst_file)
                 shutil.copyfile(src_file, dst_file)
 
     iter_files(src_path, dst_path, org_path)
@@ -97,10 +105,12 @@ def read_file(port, file):
         org_path = os.path.join(org_path, *save_path)
 
     if not os.path.exists(org_path):
+        print('makedirs', org_path)
         os.makedirs(org_path)
 
     org_file = os.path.join(org_path, filename)
     if not os.path.exists(org_file):
+        print(file, '--->', org_file)
         shutil.copyfile(file, org_file)
 
     with open(file, 'rb') as f:
@@ -332,7 +342,7 @@ def get_lvgl():
 def get_micropython():
 
     cmd_ = [
-        'git submodule updatem --init --depth=1 -- lib/micropython',
+        'git submodule update --init --depth=1 -- lib/micropython',
     ]
     print()
     print('collecting MicroPython 1.23.0')
