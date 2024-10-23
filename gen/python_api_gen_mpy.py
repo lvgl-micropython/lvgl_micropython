@@ -624,7 +624,7 @@ ast = cparser.parse(pp_data, input_headers[0])
 
 forward_struct_decls = {}
 
-for item in ast.ext[:]:
+for item in ast.ext:
     if (
         isinstance(item, c_ast.Decl) and
         item.name is None and
@@ -633,17 +633,9 @@ for item in ast.ext[:]:
     ):
         if item.type.decls is None:
             forward_struct_decls[item.type.name] = [item]
-        else:
-            if item.type.name in forward_struct_decls:
-                decs = forward_struct_decls[item.type.name]
-                if len(decs) == 2:
-                    decl, td = decs
 
-                    td.type.type.decls = item.type.decls[:]
-
-                    ast.ext.remove(decl)
-                    ast.ext.remove(item)
-    elif (
+for item in ast.ext:
+    if (
         isinstance(item, c_ast.Typedef) and
         isinstance(item.type, c_ast.TypeDecl) and
         item.name and item.type.declname and item.name == item.type.declname and
@@ -653,6 +645,23 @@ for item in ast.ext[:]:
         if item.type.type.name in forward_struct_decls:
             forward_struct_decls[item.type.type.name].append(item)
 
+
+for item in ast.ext[:]:
+    if (
+        isinstance(item, c_ast.Decl) and
+        item.name is None and
+        isinstance(item.type, c_ast.Struct) and
+        item.type.name is not None
+    ):
+        if item.type.name in forward_struct_decls:
+            decs = forward_struct_decls[item.type.name]
+            if len(decs) == 2:
+                decl, td = decs
+
+                td.type.type.decls = item.type.decls[:]
+
+                ast.ext.remove(decl)
+                ast.ext.remove(item)
 
 
 # ast_file = open(os.path.join(os.path.dirname(__file__), 'ast.txt'), 'w')
