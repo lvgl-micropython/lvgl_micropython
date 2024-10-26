@@ -1,3 +1,8 @@
+# Copyright (C) 2024  Kevin G Schlosser
+# Code that is written by the above named is done under the GPL license
+# and that license is able to be viewed in the LICENSE file in the root
+# of this project.
+
 # This file is to be given as "make USER_C_MODULES=..." when building Micropython port
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)

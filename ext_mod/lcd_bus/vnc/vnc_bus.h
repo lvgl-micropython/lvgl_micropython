@@ -4,12 +4,9 @@
  * of this project.
  */
 
-#ifndef __MACHINE_SDL_H__
-    #define __MACHINE_SDL_H__
 
-    #define SDL_MAIN_HANDLED
+// https://github.com/FreeRTOS/Lab-Project-FreeRTOS-POSIX
+// https://github.com/LibVNC/libvncserver
 
-    void init_sdl(void);
-    void deinit_sdl(void);
 
-#endif
+

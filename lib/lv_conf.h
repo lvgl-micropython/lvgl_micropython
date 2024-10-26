@@ -1,7 +1,12 @@
-/**
- * @file lv_conf.h
- * Configuration file for v9.1.1-dev
+/* Original author: LVGL */
+
+/* Modified by
+ * Copyright (C) 2024  Kevin G Schlosser
+ * Code that is written by the above named is done under the GPL license
+ * and that license is able to be viewed in the LICENSE file in the root
+ * of this project.
  */
+
 
 #ifndef __MICROPY_CONFIG__
 #define __MICROPY_CONFIG__

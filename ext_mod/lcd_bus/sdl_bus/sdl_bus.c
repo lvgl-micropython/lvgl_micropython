@@ -1,11 +1,10 @@
-/**
- * @file lv_sdl_window.h
- *
+/* Copyright (C) 2024  Kevin G Schlosser
+ * Code that is written by the above named is done under the GPL license
+ * and that license is able to be viewed in the LICENSE file in the root
+ * of this project.
  */
 
-/*********************
- *      INCLUDES
- *********************/
+
 #include "sdl_bus.h"
 #include "lcd_types.h"
 #include "py/obj.h"

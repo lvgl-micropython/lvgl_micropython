@@ -1,3 +1,9 @@
+/* Copyright (C) 2024  Kevin G Schlosser
+ * Code that is written by the above named is done under the GPL license
+ * and that license is able to be viewed in the LICENSE file in the root
+ * of this project.
+ */
+
 #include "py/obj.h"
 #include "modlcd_bus.h"
 #include <stdbool.h>
@@ -6,7 +12,7 @@
 #ifndef _SDL_BUS_H
     #define _SDL_BUS_H
 
-    #define SDL_MAIN_HANDLED /*To fix SDL's "undefined reference to WinMain" issue*/
+    #define SDL_MAIN_HANDLED
 
     #ifdef MP_PORT_UNIX
         #include "SDL.h"

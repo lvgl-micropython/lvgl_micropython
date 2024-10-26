@@ -1,10 +1,19 @@
-/*
- * This file is part of the MicroPython project, http://micropython.org/
+/* Copyright (C) 2024  Kevin G Schlosser
+ * Code that is written by the above named is done under the GPL license
+ * and that license is able to be viewed in the LICENSE file in the root
+ * of this project.
+ */
+
+/* There is work that has been included in this file that is writen by
+ * "Nicko van Someren". That work carries the following license
+ *
+ * This file in part, is part of the MicroPython project, http://micropython.org/
  *
  * The MIT License (MIT)
  *
  * Copyright (c) 2019 Nicko van Someren
  *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights

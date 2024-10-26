@@ -1,0 +1,11 @@
+All files in all directories in this directory unless other wise stated inside the file
+fall under the following license.
+
+Copyright (C) 2024  Kevin G Schlosser
+Code that is written by the above named is done under the GPL license
+and that license is able to be viewed in the LICENSE file in the root
+of this project.
+
+The reason why a license is not included in each mfile is dut to the code being
+loaded onto a memory constrained device and not wanting to use additional
+storage and RAM to hold the license information.

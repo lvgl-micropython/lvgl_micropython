@@ -1,5 +1,13 @@
-/*
- * This file is part of the MicroPython project, http://micropython.org/
+/* Copyright (C) 2024  Kevin G Schlosser
+ * Code that is written by the above named is done under the GPL license
+ * and that license is able to be viewed in the LICENSE file in the root
+ * of this project.
+ */
+
+/* There is work that has been included in this file that is writen by
+ * "Eric Poulsen" <eric@zyxod.com>. That work carries the following license
+ *
+ * This file in part, is part of the MicroPython project, http://micropython.org/
  *
  * The MIT License (MIT)
  *

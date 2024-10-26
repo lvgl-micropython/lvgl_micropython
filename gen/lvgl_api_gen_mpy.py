@@ -1,3 +1,13 @@
+# Original Author: Amir Gonnen aka. @amirgon
+# Has been modified by a large assortment of various people
+# Part of this file falls under the LVGL License
+
+# Copyright (C) 2024  Kevin G Schlosser
+# Code that is written by the above named is done under the GPL license
+# and that license is able to be viewed in the LICENSE file in the root
+# of this project.
+
+
 # TODO
 # - Array conversion improvements:
 #   - return custom iterable object instead of Blob when converting to array

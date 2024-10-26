@@ -1,10 +1,19 @@
-/*
- * This file is part of the MicroPython project, http://micropython.org/
+/* Copyright (C) 2024  Kevin G Schlosser
+ * Code that is written by the above named is done under the GPL license
+ * and that license is able to be viewed in the LICENSE file in the root
+ * of this project.
+ */
+
+/* There is work that has been included in this file that is writen by
+ * "Damien P. George". That work carries the following license
+ *
+ * This file in part, is part of the MicroPython project, http://micropython.org/
  *
  * The MIT License (MIT)
  *
  * Copyright (c) 2013-2018 Damien P. George
  *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
@@ -23,6 +32,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
 
 #include "../../../../micropy_updates/common/mp_spi_common.h"
 #include "py/runtime.h"

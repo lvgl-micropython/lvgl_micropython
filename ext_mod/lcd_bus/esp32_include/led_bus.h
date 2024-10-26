@@ -1,3 +1,8 @@
+/* Copyright (C) 2024  Kevin G Schlosser
+ * Code that is written by the above named is done under the GPL license
+ * and that license is able to be viewed in the LICENSE file in the root
+ * of this project.
+ */
 
 #ifndef _ESP32_LED_BUS_H_
     #define _ESP32_LED_BUS_H_

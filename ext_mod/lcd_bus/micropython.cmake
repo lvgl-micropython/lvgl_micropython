@@ -1,5 +1,9 @@
-# Create an INTERFACE library for our C module.
+# Copyright (C) 2024  Kevin G Schlosser
+# Code that is written by the above named is done under the GPL license
+# and that license is able to be viewed in the LICENSE file in the root
+# of this project.
 
+# Create an INTERFACE library for our C module.
 add_library(usermod_lcd_bus INTERFACE)
 
 if(ESP_PLATFORM)
