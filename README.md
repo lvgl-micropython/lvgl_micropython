@@ -213,6 +213,7 @@ Compiling for ESP32
     * cmake
     * ninja-build
     * python
+    * libusb-1.0-0-dev
     
   * macOS
     * `xcode-select -–install`
