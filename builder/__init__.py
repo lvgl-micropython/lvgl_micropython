@@ -332,7 +332,7 @@ def get_lvgl():
 def get_micropython():
 
     cmd_ = [
-        'git submodule updatem --init --depth=1 -- lib/micropython',
+        'git submodule update --init --depth=1 -- lib/micropython',
     ]
     print()
     print('collecting MicroPython 1.23.0')
