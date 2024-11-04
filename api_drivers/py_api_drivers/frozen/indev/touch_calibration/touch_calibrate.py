@@ -1,5 +1,6 @@
 import lvgl as lv  # NOQA
 import math
+import time
 
 style = lv.style_t()
 style.init()
@@ -28,247 +29,215 @@ style.set_shadow_spread(0)
 style.set_shadow_width(0)
 
 
-def build_crosshair(scrn, img, scale, color_step):
+
+def draw_base_crosshair(scrn, size, center):
     canvas = lv.canvas(scrn)
     canvas.add_style(style, 0)
-    canvas.set_size(89, 89)
-    draw_buf = lv.draw_buf_create(89, 89, lv.COLOR_FORMAT.ARGB8888, 0)
+    canvas.set_size(size + 1, size + 1)
+    draw_buf = lv.draw_buf_create(size + 1, size + 1, lv.COLOR_FORMAT.ARGB8888, 0)
     canvas.set_draw_buf(draw_buf)
     canvas.fill_bg(lv.color_hex(0x000000), 0)
 
     layer = lv.layer_t()
     canvas.init_layer(layer)
 
-    desc = lv.draw_arc_dsc_t()
-    desc.init()
+    vertical_line = lv.draw_line_dsc_t()
+    vertical_line.init()
+    vertical_line.p1.x = center
+    vertical_line.p1.y = 0
+    vertical_line.p2.x = center
+    vertical_line.p2.y = size
+    vertical_line.color = lv.color_hex(0x00FF00)
+    vertical_line.width = 3
+    vertical_line.opa = 255
+    vertical_line.blend_mode = lv.BLEND_MODE.NORMAL
+    vertical_line.round_start = 0
+    vertical_line.round_end = 0
 
-    desc.color = lv.color_hex(0x838383)
-    desc.width = 4
-    desc.start_angle = 0
-    desc.end_angle = 3600
-    desc.center.x = 44
-    desc.center.y = 44
-    desc.radius = 37
-    desc.opa = 88
-    desc.rounded = 0
+    lv.draw_line(layer, vertical_line)
 
-    lv.draw_arc(layer, desc)
+    horizontal_line = lv.draw_line_dsc_t()
+    horizontal_line.init()
+    horizontal_line.p1.x = 0
+    horizontal_line.p1.y = center
+    horizontal_line.p2.x = size
+    horizontal_line.p2.y = center
+    horizontal_line.color = lv.color_hex(0x00FF00)
+    horizontal_line.width = 3
+    horizontal_line.opa = 255
+    horizontal_line.blend_mode = lv.BLEND_MODE.NORMAL
+    horizontal_line.round_start = 0
+    horizontal_line.round_end = 0
 
-    for i, (radius, na_color, a_color, opa) in enumerate((
-        (39, 0xFF0000, 0x00FF00, 255),
-        (34, 0xFF0000, 0x00FF00, 255),
-        (19, 0xFF0000, 0x00FF00, 255),
-        (9, 0x6D0000, 0x006D00, 207),
-        (8, 0xDD1919, 0x19DD19, 190),
-        (4, 0xB20000, 0x00B200, 192)
-    )):
-        desc = lv.draw_arc_dsc_t()
-        desc.init()
+    lv.draw_line(layer, horizontal_line)
+
+    return canvas, layer
 
 
-        if i <= color_step:
-            color = a_color
-        else:
-            color = na_color
+def build_crosshair(scrn):
+    display_height = scrn.get_height()
+    display_width = scrn.get_width()
+    size = min(display_width, display_height)
+    size = int(size * 0.2)
 
-        desc.color = lv.color_hex(color)
-        desc.width = 1
-        desc.start_angle = 0
-        desc.end_angle = 3600
-        desc.center.x = 44
-        desc.center.y = 44
-        desc.radius = radius
-        desc.opa = opa
-        desc.rounded = 0
+    if not size % 2:
+        size += 1
 
-        lv.draw_arc(layer, desc)
+    center = int(size / 2)
+    size -= 1
 
-    desc = lv.draw_line_dsc_t()
-    desc.init()
-    desc.p1.x = 43
-    desc.p1.y = 44
-    desc.p2.x = 45
-    desc.p2.y = 44
-    desc.color = lv.color_hex(0xFD0202)
-    desc.width = 3
-    desc.opa = 255
-    desc.blend_mode = lv.BLEND_MODE.NORMAL
-    desc.round_start = 0
-    desc.round_end = 0
+    canvas, layer = draw_base_crosshair(scrn, size, center)
 
-    lv.draw_line(layer, desc)
+    large_radius = center + 1
+    small_radius = int(large_radius * 0.33)
 
-    for x, y in (
-        (44, 42),
-        (44, 46),
-        (42, 44),
-        (46, 44)
-    ):
-        canvas.set_px(x, y, lv.color_hex(0xDD1818), 255)
+    outside_circle = lv.draw_arc_dsc_t()
+    outside_circle.init()
 
-    for x, y in (
-        (42, 43),
-        (46, 43),
-        (42, 45),
-        (46, 45),
-        (43, 42),
-        (45, 42),
-        (43, 46),
-        (45, 46)
-    ):
-        canvas.set_px(x, y, lv.color_hex(0xD82424), 186)
+    outside_circle.color = lv.color_hex(0xFF0000)
+    outside_circle.width = 2
+    outside_circle.start_angle = 0
+    outside_circle.end_angle = 3600
+    outside_circle.center.x = center
+    outside_circle.center.y = center
+    outside_circle.radius = large_radius
+    outside_circle.opa = 255
+    outside_circle.rounded = 0
 
-    # tested
-    for (x1, y1), (x2, y2) in (
-        ((34, 34), (37, 37)),
-        ((54, 34), (51, 37)),
-        ((34, 54), (37, 51)),
-        ((54, 54), (51, 51))
-    ):
+    lv.draw_arc(layer, outside_circle)
 
-        desc = lv.draw_line_dsc_t()
+    inside_circle = lv.draw_arc_dsc_t()
+    inside_circle.init()
 
-        desc.init()
-        desc.p1.x = x1
-        desc.p1.y = y1
-        desc.p2.x = x2
-        desc.p2.y = y2
-        desc.color = lv.color_hex(0xFD0202)
-        desc.width = 1
-        desc.opa = 255
-        desc.blend_mode = lv.BLEND_MODE.NORMAL
-        desc.round_start = 0
-        desc.round_end = 0
+    inside_circle.color = lv.color_hex(0xFF0000)
+    inside_circle.width = 1
+    inside_circle.start_angle = 0
+    inside_circle.end_angle = 3600
+    inside_circle.center.x = center
+    inside_circle.center.y = center
+    inside_circle.radius = small_radius
+    inside_circle.opa = 255
+    inside_circle.rounded = 0
 
-        lv.draw_line(layer, desc)
-
-    for item in (
-        (35, 31),
-        (32, 26),
-        (27, 23),
-        (24, 18),
-        (64, 70),
-        (61, 65),
-        (56, 62),
-        (53, 57),
-        (53, 31, 56, 34),
-        (56, 26, 61, 31),
-        (61, 23, 64, 26),
-        (64, 18, 69, 23),
-    ):
-
-        desc = lv.draw_line_dsc_t()
-        desc.init()
-        desc.color = lv.color_hex(0xFFFFFF)
-        desc.width = 1
-        desc.opa = 255
-        desc.blend_mode = lv.BLEND_MODE.NORMAL
-        desc.round_start = 0
-        desc.round_end = 0
-
-        if len(item) == 2:
-            a, b = item
-            desc.p1.x = a
-            desc.p1.y = b
-            desc.p2.x = b
-            desc.p2.y = a
-        else:
-            a, b, c, d = item
-            desc.p1.x = a
-            desc.p1.y = b
-            desc.p2.x = c
-            desc.p2.y = d
-
-            desc2 = lv.draw_line_dsc_t()
-            desc2.init()
-            desc2.color = lv.color_hex(0xFFFFFF)
-            desc2.width = 1
-            desc2.opa = 255
-            desc2.blend_mode = lv.BLEND_MODE.NORMAL
-            desc2.round_start = 0
-            desc2.round_end = 0
-            desc2.p1.x = b
-            desc2.p1.y = a
-            desc2.p2.x = d
-            desc2.p2.y = c
-            lv.draw_line(layer, desc2)
-
-        lv.draw_line(layer, desc)
-
-    for (x1, y1), (x2, y2) in (
-        ((24, 70), (18, 64)),
-        ((27, 65), (23, 61)),
-        ((32, 62), (26, 56)),
-        ((35, 57), (31, 53)),
-        ((21, 21), (33, 33)),
-        ((67, 21), (55, 33)),
-        ((21, 67), (33, 55)),
-        ((67, 67), (55, 55))
-    ):
-        desc = lv.draw_line_dsc_t()
-
-        desc.init()
-        desc.p1.x = x1
-        desc.p1.y = y1
-        desc.p2.x = x2
-        desc.p2.y = y2
-        desc.color = lv.color_hex(0xFFFFFF)
-        desc.width = 1
-        desc.opa = 255
-        desc.blend_mode = lv.BLEND_MODE.NORMAL
-        desc.round_start = 0
-        desc.round_end = 0
-
-        lv.draw_line(layer, desc)
+    lv.draw_arc(layer, inside_circle)
 
     canvas.finish_layer(layer)
-
-    img.set_src(canvas.get_image())
-    img.set_scale(scale)
-
+    base_crosshair = canvas.get_image()
     canvas.delete()
+
+    radius_range = large_radius - small_radius
+    num_grads = int(radius_range * 0.33)
+
+    grad_factor = 255 / num_grads / 255
+    crosshair_anim = []
+
+    for i in range(radius_range + num_grads):
+        canvas, layer = draw_base_crosshair(scrn, size, center)
+        inside_circle.color = lv.color_hex(0x9424AC)
+
+        for j in range(num_grads, -1, -1):
+            r = i + small_radius - j
+            if r < small_radius or r > large_radius:
+                continue
+
+            inside_circle.opa = int((~j + num_grads + 1) * grad_factor * 255)
+            inside_circle.radius = r
+            lv.draw_arc(layer, inside_circle)
+
+        clear_radius = i - num_grads - 1
+        if large_radius >= clear_radius >= small_radius:
+            inside_circle.color = lv.color_hex(0x000000)
+            inside_circle.opa = 255
+            inside_circle.radius = clear_radius
+            lv.draw_arc(layer, inside_circle)
+
+        canvas.finish_layer(layer)
+        crosshair_anim.append(canvas.get_image())
+        canvas.delete()
+
+    return base_crosshair, crosshair_anim
 
 
 class Tpcal_point(object):
 
-    def __init__(self, x, y):
+    def __init__(self, x, y, center):
+        self.center = center
         self.target_point = lv.point_t(dict(x=x, y=y))
-        self.touched_point = lv.point_t()
+        self.touched_points = []
+
+    @property
+    def target(self):
+        return self.target_point.x, self.target_point.y
+
+    def __setitem__(self, item, value):
+        try:
+            point = self.touched_points[item]
+        except IndexError:
+            point = lv.point_t()
+            self.touched_points.append(point)
+
+        x, y = value
+
+        point.x = x
+        point.y = y
+
+    def __len__(self):
+        return len(self.touched_points)
 
     @property
     def x(self):
         return self.target_point.x
 
-    @x.setter
-    def x(self, value):
-        self.touched_point.x = value
-
     @property
     def y(self):
         return self.target_point.y
 
-    @y.setter
-    def y(self, value):
-        self.touched_point.y = value
+    def get_center_point(self):
+        x = self.target_point.x + self.center
+        y = self.target_point.y + self.center
+        return lv.point_t(dict(x=x, y=y))
+
+    def get_calculated_point(self):
+        x_points = [point.x for point in self.touched_points]
+        y_points = [point.y for point in self.touched_points]
+
+        # trim off the highest and lowest values to
+        # eliminate them as possible outliners
+        x_points = sorted(x_points)[1:-1]
+        y_points = sorted(y_points)[1:-1]
+
+        # get the average x and y
+        avg_x = int(sum(x_points) / len(x_points))
+        avg_y = int(sum(y_points) / len(y_points))
+
+        return lv.point_t(dict(x=avg_x, y=avg_y))
+
+    def reset(self):
+        del self.touched_points[:]
 
     def __str__(self):
-        return (
+        calculated = self.get_calculated_point()
+        center = self.get_center_point()
+
+        res = [
             "Tpcal_point("
-            "touch_x={0}, "
-            "touch_y={1}, "
-            "screen_x={2}, "
-            "screen_y={3})"
-        ).format(
-            self.touched_point.x,
-            self.touched_point.y,
-            self.target_point.x,
-            self.target_point.y
-        )
+            f"  ScreenPoint(x={center.x}, y={center.y}),"
+        ]
+
+        for i, point in enumerate(self.touched_points):
+            res.append(f"  TouchPoint_{i + 1}(x={point.x}, y={point.y}),")
+
+        res.extend([
+            f"  CalcPoint(x={calculated.x}, y={calculated.y})",
+            ")"
+        ])
+
+        return '\n'.join(res)
 
 
 class TPCal(object):
 
-    def __init__(self, indev, callback):
+    def __init__(self, touch_count, indev, callback):
         self.callback = callback
         disp = indev.get_disp()
         disp.set_default()
@@ -276,11 +245,17 @@ class TPCal(object):
         width = self.width = disp._physical_width
         height = self.height = disp._physical_height
 
+        size = min(width, height)
+        size = int(size * 0.20)
+        if not size % 2:
+            size += 1
+
         self.curr_scrn = disp.get_screen_active()
 
         self.scr = lv.obj(None)
         self.scr.add_style(style, 0)
         self.scr.set_size(width, height)
+        self.scr.remove_flag(lv.obj.FLAG.SCROLLABLE)
 
         lv.screen_load(self.scr)
 
@@ -288,28 +263,40 @@ class TPCal(object):
         self.disp = disp
         
         self.run_again_timer = None
+        self.touch_count = touch_count
+
+        self.base_crosshair, self.crosshair_anim = build_crosshair(self.scr)
+        self.crosshair_size = size
+        self.crosshair_center = int(size / 2)
+
+        self.points = [
+            Tpcal_point(
+                x=5 + self.crosshair_center,
+                y=5 + self.crosshair_center,
+                center=self.crosshair_center
+            ),
+            Tpcal_point(
+                x=5 + self.crosshair_center,
+                y=int(height - self.crosshair_size - 5),
+                center=self.crosshair_center
+            ),
+            Tpcal_point(
+                x=int(width - self.crosshair_size - 5),
+                y=5 + self.crosshair_center,
+                center=self.crosshair_center
+            )
+        ]
 
         self.crosshair = lv.image(self.scr)
         self.crosshair.add_style(style, 0)
         self.crosshair.set_style_bg_opa(0, 0)
-        self.crosshair.set_size(89, 89)
-
-        self.crosshair_size = int(math.sqrt((width * height) >> 5))
-        self.crosshair_scale = int(self.crosshair_size / 89.0 * 256.0)
-        self.crosshair.set_size(self.crosshair_size, self.crosshair_size)
-        self.cross_offset = int(self.crosshair_size / 2)
-
-        build_crosshair(self.scr, self.crosshair, self.crosshair_scale, -1)
-
-        self.crosshair.set_pos(0, 0)
-
-        self.points = [
-            Tpcal_point(x=self.cross_offset, y=self.cross_offset),
-            Tpcal_point(x=self.cross_offset, y=int(height - self.cross_offset)),
-            Tpcal_point(x=int(width - self.cross_offset), y=self.cross_offset)
-        ]
+        self.crosshair.set_size(size, size)
+        self.crosshair.set_src(self.base_crosshair)
+        self.crosshair.remove_flag(lv.obj.FLAG.SCROLLABLE)
+        self.crosshair.remove_flag(lv.obj.FLAG.CLICKABLE)
 
         self.curr_point = self.points[0]
+        self.crosshair.set_pos(self.curr_point.x, self.curr_point.y)
 
         self.run_again_button = lv.button(self.scr)
         self.run_again_button.add_flag(lv.obj.FLAG.HIDDEN)
@@ -356,6 +343,14 @@ class TPCal(object):
         info_height = self.info_text.get_height()
         self.info_text.align(lv.ALIGN.CENTER, 0, -info_height - 10)
         self.info_text.remove_flag(lv.obj.FLAG.CLICKABLE)
+
+        self.count_text = lv.label(self.scr)
+        self.count_text.set_text('Target press count:  0')
+        self.count_text.update_layout()
+
+        count_height = self.count_text.get_height()
+        self.count_text.align(lv.ALIGN.CENTER, 0, -count_height - info_height - 20)
+        self.count_text.remove_flag(lv.obj.FLAG.CLICKABLE)
         
         self.alphaX = None
         self.betaX = None
@@ -368,6 +363,7 @@ class TPCal(object):
 
         self.scr.add_event_cb(self.on_press, lv.EVENT.PRESSED, None)
         indev._indev_drv.set_read_cb(self.on_touch)  # NOQA
+        self.taking_samples = True
 
     def on_ok(self, _):
         self.run_again_timer.delete()
@@ -391,18 +387,62 @@ class TPCal(object):
     def on_touch(self, _, data):
         coords = self.indev._get_coords()  # NOQA
 
-        if coords is None:
-            state = self.indev.RELEASED
-            x, y = self.indev._last_x, self.indev._last_y
-        else:
-            state, x, y = coords
+        def get_coords():
+            if coords is None:
+                state_ = self.indev.RELEASED
+                x_, y_ = self.indev._last_x, self.indev._last_y
+            else:
+                state_, x_, y_ = coords
 
-        if None not in (x, y):
-            self.indev._last_x, self.indev._last_y = x, y
+            if None in (x_, y_):
+                x_, y_ = self.indev._last_x, self.indev._last_y
 
-        data.point.x, data.point.y = (
-            self.indev._last_x, self.indev._last_y
-        )
+            return state_, x_, y_
+
+        state, x, y = get_coords()
+        count = 0
+
+        while self.taking_samples:
+            point = self.curr_point
+            if state == self.indev.PRESSED:
+                point[count] = (x, y)
+                count += 1
+
+                count_text = str(count)
+                if len(count_text) < 2:
+                    count_text = ' ' + count_text
+
+                self.count_text.set_text(f'Target press count: {count_text}')
+
+            anim_index = 0
+
+            while state == self.indev.PRESSED:
+                self.crosshair.set_src(self.crosshair_anim[anim_index])
+                anim_index += 1
+
+                if anim_index == len(self.crosshair_anim):
+                    anim_index = 0
+
+                time.sleep_ms(2)
+                state, x, y = get_coords()
+
+            self.crosshair.set_src(self.base_crosshair)
+
+            if count == self.touch_count:
+                self.taking_samples = False
+                state = self.indev.PRESSED
+            else:
+                while state == self.indev.RELEASED:
+                    time.sleep_ms(2)
+                    state, x, y = get_coords()
+
+        x, y = self.calibrate_touch(x, y)
+
+        self.indev._last_x = x
+        self.indev._last_y = y
+
+        data.point.x = x
+        data.point.y = y
         data.state = state
 
     def calibrate_touch(self, x, y):
@@ -438,15 +478,16 @@ class TPCal(object):
         self.ok_button.remove_flag(lv.obj.FLAG.CLICKABLE)
 
         for point in self.points:
-            point.touched_point.x = 0
-            point.touched_point.y = 0
+            point.reset()
 
         self.curr_point = self.points[0]
-        self.crosshair.set_pos(0, 0)
 
+        self.crosshair.set_pos(self.curr_point.x, self.curr_point.y)
+        self.taking_samples = True
         self.scr.add_event_cb(self.on_press, lv.EVENT.PRESSED, None)
         self.scr.remove_event_cb(self.on_scr_click)
-    
+        self.scr.remove_event_cb(self.on_scr_drag)
+
     def on_run_again_timer(self, _):
         self.run_count -= 1
 
@@ -463,8 +504,8 @@ class TPCal(object):
             self.on_recalibrate(None)
             
     def on_press(self, _):
-        self.indev.get_point(self.curr_point.touched_point)
         index = self.points.index(self.curr_point) + 1
+        self.count_text.set_text('Target press count:  0')
 
         if index == len(self.points):
             self.crosshair.remove_flag(lv.obj.FLAG.CLICKABLE)
@@ -485,8 +526,8 @@ class TPCal(object):
             for i, point in enumerate(self.points):
                 print(f'{i + 1}: {str(point)}')
             
-            tp1, tp2, tp3 = [point.touched_point for point in self.points]
-            sp1, sp2, sp3 = self.points
+            tp1, tp2, tp3 = [point.get_calculated_point() for point in self.points]
+            sp1, sp2, sp3 = [point.get_center_point() for point in self.points]
 
             divisor = float(
                 tp1.x * (tp3.y - tp2.y) - tp2.x * tp3.y +
@@ -521,20 +562,27 @@ class TPCal(object):
             ) / divisor
 
             self.scr.remove_event_cb(self.on_press)
-            self.scr.add_event_cb(self.on_scr_click, lv.EVENT.PRESSED, None)
-
+            self.scr.add_event_cb(self.on_scr_click, lv.EVENT.CLICKED, None)
+            self.scr.add_event_cb(self.on_scr_drag, lv.EVENT.PRESSING, None)
         else:
             self.curr_point = self.points[index]
             self.crosshair.set_pos(
-                self.curr_point.x - self.cross_offset,
-                self.curr_point.y - self.cross_offset
+                self.curr_point.x,
+                self.curr_point.y
             )
+            self.taking_samples = True
+
+    def on_scr_drag(self):
+        vect = lv.point_t()
+        self.indev.get_vect(vect)
+        x = self.crosshair.get_x_aligned() + vect.x
+        y = self.crosshair.get_y_aligned() + vect.y
+        self.crosshair.set_pos(x, y)
 
     def on_scr_click(self, _):
         point = lv.point_t()
         self.indev.get_point(point)
-
         self.crosshair.set_pos(
-            point.x - self.cross_offset,
-            point.y - self.cross_offset
+            point.x - self.crosshair_center,
+            point.y - self.crosshair_center
         )
