@@ -2,11 +2,6 @@
 #include "py/obj.h"
 #include "py/runtime.h"
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/idf_additions.h"
-#include "freertos/task.h"
-#include "freertos/semphr.h"
-
 #include "thread_common.h"
 #include "thread_thread.h"
 
@@ -15,6 +10,10 @@
 
 #include <string.h>
 #include <pthread.h>
+#include <sys/sysinfo.h>
+
+static uint8_t core_nums_used[64];
+
 
 static mp_obj_t multiprocessing_process_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
 {
@@ -36,12 +35,32 @@ static mp_obj_t multiprocessing_process_make_new(const mp_obj_type_t *type, size
         args
     );
 
-    uint16_t core_id = (uint16_t)xTaskGetCoreID(xTaskGetCurrentTaskHandle());
-    int pthread_getaffinity_np(pthread_t thread, size_t cpusetsize,
-                                  cpu_set_t *cpuset);
+    cpu_set_t cpuset;
+    pthread_t thread = pthread_self();
+    CPU_ZERO(&cpuset);
 
+    for (int j = 0; j < CPU_SETSIZE; j++) {
+        CPU_SET(j, &cpuset);
+    }
 
-    int16_t new_core_id = -1;
+    pthread_getaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
+
+    int core_id = -1;
+
+    for (int j = 0; j < CPU_SETSIZE; j++) {
+        if (CPU_ISSET(j, &cpuset)) {
+            core_id = j;
+            break;
+        }
+    }
+
+    if (core_id == -1) {
+        // raise error
+    }
+
+    int pthread_setaffinity_np(pthread_t thread, size_t cpusetsize, const cpu_set_t *cpuset);
+
+    int new_core_id = -1;
 
     for (uint16_t i=0;i<2;i++) {
         if (core_id == i) {

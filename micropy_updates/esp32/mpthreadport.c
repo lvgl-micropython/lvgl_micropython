@@ -35,7 +35,7 @@
 
 #if MICROPY_PY_THREAD
 #include "esp_task.h"
-#include "../../../../ext_mod/threading/common/inc/thread_common.h"
+#include "../../../../ext_mod/threading/esp32/common/inc/thread_common.h"
 
 
 #define MP_THREAD_MIN_STACK_SIZE                        (4 * 1024)
