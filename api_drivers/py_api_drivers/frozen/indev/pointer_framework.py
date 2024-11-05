@@ -61,7 +61,7 @@ class PointerDriver(_indev_base.IndevBase):
 
         import time
         import touch_calibrate
-        self._cal_running = touch_calibrate.TPCal(self, self.__cal_callback)
+        self._cal_running = touch_calibrate.TPCal(self, self.__cal_callback, 10)
         while self._cal_running:
             if update_handler is not None:
                 delay = update_handler()

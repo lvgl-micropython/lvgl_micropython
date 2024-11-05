@@ -237,7 +237,7 @@ class Tpcal_point(object):
 
 class TPCal(object):
 
-    def __init__(self, touch_count, indev, callback):
+    def __init__(self, indev, callback, touch_count):
         self.callback = callback
         disp = indev.get_disp()
         disp.set_default()
