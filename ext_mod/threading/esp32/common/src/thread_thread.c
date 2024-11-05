@@ -85,9 +85,27 @@ void thread_attr_func(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         // load attribute
         if (attr == MP_QSTR_name) {
             dest[0] = self->name;
-        }
-        if (attr == MP_QSTR_ident) {
+        } else if (attr == MP_QSTR_ident) {
             dest[0] = self->ident;
+        } else {
+            const mp_obj_type_t *type = mp_obj_get_type(self_in);
+
+            while (MP_OBJ_TYPE_HAS_SLOT(type, locals_dict)) {
+                // generic method lookup
+                // this is a lookup in the object (ie not class or type)
+                assert(MP_OBJ_TYPE_GET_SLOT(type, locals_dict)->base.type == &mp_type_dict); // MicroPython restriction, for now
+                mp_map_t *locals_map = &MP_OBJ_TYPE_GET_SLOT(type, locals_dict)->map;
+                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
+                if (elem != NULL) {
+                    mp_convert_member_lookup(self_in, type, elem->value, dest);
+                    break;
+                }
+                if (MP_OBJ_TYPE_GET_SLOT_OR_NULL(type, parent) == NULL) {
+                    break;
+                }
+                // search parents
+                type = MP_OBJ_TYPE_GET_SLOT(type, parent);
+            }
         }
     }
 }
