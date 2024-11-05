@@ -418,6 +418,7 @@ class TPCal(object):
 
             while state == self.indev.PRESSED:
                 self.crosshair.set_src(self.crosshair_anim[anim_index])
+                lv.refr_now(self.scr.get_display())
                 anim_index += 1
 
                 if anim_index == len(self.crosshair_anim):
@@ -427,6 +428,7 @@ class TPCal(object):
                 state, x, y = get_coords()
 
             self.crosshair.set_src(self.base_crosshair)
+            lv.refr_now(self.scr.get_display())
 
             if count == self.touch_count:
                 self.taking_samples = False
