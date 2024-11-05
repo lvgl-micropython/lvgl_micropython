@@ -663,6 +663,7 @@ Compiling for ESP32
     * cmake
     * ninja-build
     * python
+    * libusb-1.0-0-dev
     
   * macOS
     * `xcode-select -–install`
@@ -1259,5 +1260,14 @@ Bit orders are a tuple of durations. The first 2 numbers define a bit as 0 and t
 | WS2816A<br/>WS2816B<br/>WS2816C                                             |           200           |         -800         |          520          |         -480         | -280  |   GRB   |
 | WS2812B                                                                     |           400           |         -850         |          800          |         -450         | -5000 |   GRB   |
 | SK6813                                                                      |           240           |         -800         |          740          |         -200         | -800  |   GRB   |
+
+<br>
+
+# Projects made with this Binding...
+
+-----------------------------------------------------------
+
+https://github.com/fabse-hack/temp_humidity_micropython_lvgl
+
 
 

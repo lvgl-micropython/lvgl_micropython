@@ -5,7 +5,13 @@ from argparse import ArgumentParser
 from . import spawn
 from . import generate_manifest
 from . import update_mphalport as _update_mphalport
-
+from . import (
+    read_file,
+    write_file,
+    copy_micropy_updates,
+    revert_files,
+    scrub_build_folder
+)
 
 IDF_VER = '5.2.0'
 
@@ -87,8 +93,20 @@ class Partition:
         offset += self.phy_init
 
         if ota:
+            value = offset % 0x10000
+
+            if value:
+                self.nvs += 0x10000 - value
+                self.save()
+                return
+
             data.append(f'ota_0,app,ota_0,0x{offset:X},0x{self.factory:X}')
             offset += self.factory
+
+            value = offset % 0x10000
+            if value:
+                offset += 0x10000 - value
+
             data.append(f'ota_1,app,ota_1,0x{offset:X},0x{self.factory:X}')
             offset += self.factory
         else:
@@ -822,67 +840,21 @@ def find_esp32_ports(chip):
     return found_ports
 
 
-if not os.path.exists('micropy_updates/originals/esp32'):
-    os.mkdir('micropy_updates/originals/esp32')
-
-
-SDKCONFIG_PATH = f'build/sdkconfig.board'
-
 MPTHREADPORT_PATH = 'lib/micropython/ports/esp32/mpthreadport.c'
-MPTHREADPORT_SAVE_PATH = 'micropy_updates/originals/esp32/mpthreadport.c'
-
 MPCONFIGPORT_PATH = 'lib/micropython/ports/esp32/mpconfigport.h'
-MPCONFIGPORT_SAVE_PATH = 'micropy_updates/originals/esp32/mpconfigport.h'
-
 PANICHANDLER_PATH = 'lib/micropython/ports/esp32/panichandler.c'
-PANICHANDLER_SAVE_PATH = 'micropy_updates/originals/esp32/panichandler.c'
-
+SDKCONFIG_PATH = f'build/sdkconfig.board'
 MPHALPORT_PATH = 'lib/micropython/ports/esp32/mphalport.c'
-MPHALPORT_SAVE_PATH = 'micropy_updates/originals/esp32/mphalport.c'
-
 MAIN_PATH = 'lib/micropython/ports/esp32/main.c'
-MAIN_SAVE_PATH = 'micropy_updates/originals/esp32/main.c'
-
 COMMON_CMAKE_PATH = 'lib/micropython/ports/esp32/esp32_common.cmake'
-COMMON_CMAKE_SAVE_PATH = 'micropy_updates/originals/esp32/esp32_common.cmake'
 
 
-def write_file(file, data):
-    with open(file, 'wb') as f:
-        f.write(data.encode('utf-8'))
-
-
-def read_file(file, save_file):
-    with open(file, 'rb') as f1:
-        data = f1.read()
-
-    with open(save_file, 'wb') as f2:
-        f2.write(data)
-
-    return data.decode('utf-8')
-
-
-def revert_files():
-    src_path = 'micropy_updates/originals/esp32'
-    dst_path = 'lib/micropython/ports/esp32'
-
-    def iter_path(src_p, dst_p):
-        for file in os.listdir(src_p):
-            src_file = os.path.join(src_p, file)
-            dst_file = os.path.join(dst_p, file)
-
-            if os.path.isdir(src_file):
-                iter_path(src_file, dst_file)
-                os.rmdir(src_file)
-            else:
-                read_file(src_file, dst_file)
-                os.remove(src_file)
-
-    iter_path(src_path, dst_path)
+if not os.path.exists('micropy_updates/originals/esp32'):
+    os.makedirs('micropy_updates/originals/esp32')
 
 
 def update_mpthreadport():
-    data = read_file(MPTHREADPORT_PATH, MPTHREADPORT_SAVE_PATH)
+    data = read_file('esp32', MPTHREADPORT_PATH)
 
     if '_CORE_ID' not in data:
         data = data.replace('MP_TASK_COREID', '_CORE_ID')
@@ -904,7 +876,7 @@ def update_mpthreadport():
 
 
 def update_panic_handler():
-    data = read_file(PANICHANDLER_PATH, PANICHANDLER_SAVE_PATH)
+    data = read_file('esp32', PANICHANDLER_PATH)
 
     if '"MPY version : "' in data:
         beg, end = data.split('"MPY version : "', 1)
@@ -917,27 +889,13 @@ def update_panic_handler():
         write_file(PANICHANDLER_PATH, data)
 
 
-MPCONFIGBOARD_CMAKE_PATH = None
-MPCONFIGBOARD_CMAKE_SAVE_PATH = None
-
-
 def update_mpconfigboard():
-    global MPCONFIGBOARD_CMAKE_PATH
-    global MPCONFIGBOARD_CMAKE_SAVE_PATH
-
-    board_save_path = f'micropy_updates/originals/esp32/boards/{board}'
-
-    if not os.path.exists(board_save_path):
-        os.makedirs(board_save_path)
-
-    MPCONFIGBOARD_CMAKE_PATH = (
+    mpconfigboard_cmake_path = (
         'lib/micropython/ports/esp32/boards/'
         f'{board}/mpconfigboard.cmake'
     )
 
-    MPCONFIGBOARD_CMAKE_SAVE_PATH = os.path.join(board_save_path, 'mpconfigboard.cmake')
-
-    data = read_file(MPCONFIGBOARD_CMAKE_PATH, MPCONFIGBOARD_CMAKE_SAVE_PATH)
+    data = read_file('esp32', mpconfigboard_cmake_path)
 
     sdkconfig = (
         'set(SDKCONFIG_DEFAULTS ${SDKCONFIG_DEFAULTS} '
@@ -947,11 +905,11 @@ def update_mpconfigboard():
     if sdkconfig not in data:
         data += '\n' + sdkconfig + '\n'
 
-        write_file(MPCONFIGBOARD_CMAKE_PATH, data)
+        write_file(mpconfigboard_cmake_path, data)
 
 
 def update_mpconfigport():
-    data = read_file(MPCONFIGPORT_PATH, MPCONFIGPORT_SAVE_PATH)
+    data = read_file('esp32', MPCONFIGPORT_PATH)
 
     if 'MP_USB_OTG' in data:
         data = data.rsplit('\n\n#define MP_USB_OTG', 1)[0]
@@ -997,47 +955,43 @@ def update_mpconfigport():
                       'IRAM_ATTR f\n'
         )
 
-    for i in range(2):
-        pattern = f'#define MP_USE_DUAL_CORE                    ({i})'
-        if pattern in data:
-            text = (
-                f'#define MP_USE_DUAL_CORE                    '
-                f'({int(dual_core_threads)})'
-            )
-            break
-    else:
-        pattern = '#define MICROPY_PY_THREAD_GIL'
-        text = (
-            f'#define MP_USE_DUAL_CORE                    '
-            f'({int(dual_core_threads)})\n{pattern}'
-        )
-
-    data = data.replace(pattern, text)
-    text = (
-        f'#define MICROPY_PY_THREAD_GIL               '
-        f'({int(not dual_core_threads)})'
-    )
-    for i in range(2):
-        pattern = f'#define MICROPY_PY_THREAD_GIL               ({i})'
-
-        if pattern in data:
-            data = data.replace(pattern, text)
-            break
+    has_dual_core = 'MP_USE_DUAL_CORE' in data
 
     data = data.split('\n')
+
     for i, line in enumerate(data):
+        if has_dual_core and line.startswith('#define MP_USE_DUAL_CORE'):
+            data[i] = (
+                '#define MP_USE_DUAL_CORE                    '
+                f'({int(dual_core_threads)})'
+            )
+            continue
+
+        if line.startswith('#define MICROPY_PY_THREAD_GIL'):
+            data[i] = (
+                f'#define MICROPY_PY_THREAD_GIL               '
+                f'({int(not dual_core_threads)})'
+            )
+            if not has_dual_core:
+                data[i] += (
+                    '\n#define MP_USE_DUAL_CORE                    '
+                    f'({int(dual_core_threads)})'
+                )
+            continue
+
         if line.startswith('#define MICROPY_TASK_STACK_SIZE'):
             data[i] = (
                 f'#define MICROPY_TASK_STACK_SIZE           ({task_stack_size})'
             )
-            break
+            continue
+
     data = '\n'.join(data)
 
     write_file(MPCONFIGPORT_PATH, data)
 
 
 def update_mphalport():
-    data = read_file(MPHALPORT_PATH, MPHALPORT_SAVE_PATH)
+    data = read_file('esp32', MPHALPORT_PATH)
     data = data.replace(
         '#if CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG',
         '#if MP_USB_SERIAL_JTAG'
@@ -1051,8 +1005,7 @@ def update_mphalport():
 
 
 def update_main():
-    data = read_file(MAIN_PATH, MAIN_SAVE_PATH)
-
+    data = read_file('esp32', MAIN_PATH)
     data = data.replace(
         '#if CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG',
         '#if MP_USB_SERIAL_JTAG'
@@ -1163,120 +1116,64 @@ def compile(*args):  # NOQA
     global PORT
     global flash_size
 
+    add_components()
+
+    env, cmds = setup_idf_environ()
+
+    if ccache:
+        env['IDF_CCACHE_ENABLE'] = '1'
+
+    build_sdkconfig(*args)
+
+    if partition_size == -1:
+        p_size = 0x25A000
+    else:
+        p_size = partition_size
+
+    partition = Partition(p_size)
+    partition.save()
+
+    update_main()
+    update_mphalport()
+    update_mpthreadport()
+    update_panic_handler()
+    update_mpconfigboard()
+    update_mpconfigport()
+
+    copy_micropy_updates('esp32')
+
     try:
-
-        add_components()
-
-        env, cmds = setup_idf_environ()
-
-        if ccache:
-            env['IDF_CCACHE_ENABLE'] = '1'
-
-        build_sdkconfig(*args)
-
-        if partition_size == -1:
-            p_size = 0x25A000
-        else:
-            p_size = partition_size
-
-        partition = Partition(p_size)
-        partition.save()
-
-        update_main()
-        update_mphalport()
-        update_mpthreadport()
-        update_panic_handler()
-        update_mpconfigboard()
-        update_mpconfigport()
-
-        if dual_core_threads:
-            cwd = os.getcwd()
-
-            ext_mod_path = os.path.abspath('ext_mod/threading')
-            os.chdir('lib/micropython/ports/esp32')
-            threading_includes = set()
-
-            threading_sources = []
-            for root, dirs, files in os.walk(ext_mod_path):
-                if root.endswith('inc'):
-                    threading_includes.add(root)
-
-                for file in files:
-                    if not file.endswith('.c'):
-                        continue
-
-                    threading_sources.append(
-                        os.path.join(root, file)
-                    )
-
-            os.chdir(cwd)
-
-            # compile_cmd.append('MICROPY_MULTICORE_THREAD=1')
-
-
-            data = read_file(COMMON_CMAKE_PATH, COMMON_CMAKE_SAVE_PATH)
-
-            if data.count('list(APPEND MICROPY_SOURCE_PORT') == 2:
-                threading_sources = '\n'.join('    ' + item for item in threading_sources)
-
-                code = [
-                    'list(APPEND MICROPY_SOURCE_PORT',
-                    threading_sources,
-                    ')',
-                    '',
-                    'list(APPEND MICROPY_SOURCE_QSTR'
-                ]
-                data = data.replace('list(APPEND MICROPY_SOURCE_QSTR', '\n'.join(code))
-
-                threading_includes = '\n'.join('        ' + item for item in threading_includes)
-
-                code = [
-                    'INCLUDE_DIRS',
-                    threading_includes
-                ]
-                data = data.replace('INCLUDE_DIRS', '\n'.join(code))
-
-                write_file(COMMON_CMAKE_PATH, data)
-
-        src_path = 'micropy_updates/esp32'
-        dst_path = 'lib/micropython/ports/esp32'
-        originals_path = 'micropy_updates/originals/esp32'
-
-        for file in os.listdir(src_path):
-            if file == 'mpthreadport.c' and not dual_core_threads:
-                continue
-
-            src_file = os.path.join(dst_path, file)
-            dst_file = os.path.join(originals_path, file)
-
-            read_file(src_file, dst_file)
-
-            src_file = os.path.join(src_path, file)
-            dst_file = os.path.join(dst_path, file)
-
-            read_file(src_file, dst_file)
-
         cmd_ = compile_cmd[:]
         cmd_.extend(list(args))
 
         ret_code, output = spawn(cmd_, env=env, cmpl=True)
         if ret_code != 0:
             if skip_partition_resize:
-                revert_files()
+                revert_files('esp32')
                 sys.exit(ret_code)
 
             if partition_size != -1:
-                revert_files()
+                revert_files('esp32')
                 sys.exit(ret_code)
 
         if not skip_partition_resize and partition_size == -1:
-            if 'Error: app partition is too small' in output:
+
+            for pattern in (
+                'Error: app partition is too small',
+                'Error: All app partitions are too small'
+            ):
+                if pattern in output:
+                    break
+            else:
+                pattern = None
+
+            if pattern is not None:
                 sys.stdout.write(
                     '\n\033[31;1m***** Resizing Partition *****\033[0m\n'
                 )
                 sys.stdout.flush()
 
-                app_size = output.rsplit('Error: app partition is too small', 1)[1]
+                app_size = output.rsplit(pattern, 1)[1]
                 app_size = app_size.split('micropython.bin size', 1)[1]
                 app_size = int(app_size.split(':', 1)[0].strip(), 16)
 
@@ -1292,7 +1189,7 @@ def compile(*args):  # NOQA
                 ret_code, output = spawn(cmd_, env=env, cmpl=True)
 
                 if ret_code != 0:
-                    revert_files()
+                    revert_files('esp32')
                     sys.exit(ret_code)
 
             if 'Project build complete.' in output:
@@ -1321,7 +1218,7 @@ def compile(*args):  # NOQA
                     ret_code, output = spawn(cmd_, env=env, cmpl=True)
 
                     if ret_code != 0:
-                        revert_files()
+                        revert_files('esp32')
                         sys.exit(ret_code)
 
         if 'Project build complete.' in output:
@@ -1362,13 +1259,7 @@ def compile(*args):  # NOQA
             old_bin_files = ['0x' + item.strip() for item in output.split('0x')[1:]]
             old_bin_files = ' '.join(old_bin_files)
 
-            os.remove('build/lvgl_header.h')
-
-            for f in os.listdir('build'):
-                if f.startswith('lvgl'):
-                    continue
-
-                os.remove(os.path.join('build', f))
+            scrub_build_folder()
 
             build_bin_file = f'build/lvgl_micropy_{build_name[6:]}-{flash_size}'
             if oct_flash:
@@ -1465,7 +1356,7 @@ def compile(*args):  # NOQA
             print(output)
             print()
     finally:
-        revert_files()
+        revert_files('esp32')
 
 
 def mpy_cross():

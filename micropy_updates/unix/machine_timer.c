@@ -3,70 +3,106 @@
 #include "py/obj.h"
 #include "py/runtime.h"
 #include "mphalport.h"
+#include "machine_timer.h"
+
+#if !MICROPY_PY_THREAD
+#error Timer requires MICROPY_PY_THREAD
+#endif
+
 
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include "SDL_timer.h"
-#include "modmachine.h"
 
+#include <string.h>
 
-typedef struct _machine_timer_obj_t {
-    mp_obj_base_t base;
+#include <pthread.h>
+#include <unistd.h>
 
-    mp_uint_t group;
-    mp_uint_t index;
+#include <termios.h>
+#include <fcntl.h>
 
-    uint8_t repeat;
-    uint32_t period;
+static const useconds_t TIMER_POLL_INTERVAL_US = 1000;  // 1 millisecond
 
-    mp_obj_t callback;
+static pthread_t timer_poll_thread_id;
 
-    SDL_TimerID timer_id;
-
-    struct _machine_timer_obj_t *next;
-} machine_timer_obj_t;
+bool timer_polling = false;
+pthread_mutex_t timer_lock;
 
 
 const mp_obj_type_t machine_timer_type;
 
+static machine_timer_obj_t *timer_objs[TIMER_COUNT];
+
 
 static void machine_timer_disable(machine_timer_obj_t *self);
-static void machine_timer_init_helper(machine_timer_obj_t *self, int16_t mode, mp_obj_t callback, int64_t period);
+static void machine_timer_init_helper(machine_timer_obj_t *self, int16_t mode, mp_obj_t callback, int32_t period);
 
-void machine_timer_deinit_all(void) {
-    // Disable, deallocate and remove all timers from list
-    machine_timer_obj_t **t = &MP_STATE_PORT(machine_timer_obj_head);
-    while (*t != NULL) {
-        machine_timer_disable(*t);
-        machine_timer_obj_t *next = (*t)->next;
-        m_del_obj(machine_timer_obj_t, *t);
-        *t = next;
+
+static void *timer_poll_thread(void *arg)
+{
+    (void)arg;
+
+    machine_timer_obj_t *timer;
+
+    while (timer_polling) {
+        usleep(TIMER_POLL_INTERVAL_US);
+
+        pthread_mutex_lock(&timer_lock);
+
+        for (uint8_t i=0;i<TIMER_COUNT;i++) {
+            timer = timer_objs[i];
+
+            if (timer != NULL && timer->active) {
+                timer->ms_ticks += 1;
+
+                if (timer->ms_ticks >= timer->period) {
+                    timer->ms_ticks = 0;
+
+                    if (timer->callback != NULL && timer->callback != mp_const_none) {
+                        if (!timer->repeat) timer->active = false;
+
+                        mp_sched_schedule(timer->callback, MP_OBJ_FROM_PTR(timer));
+                    }
+                }
+            }
+        }
+        pthread_mutex_unlock(&timer_lock);
     }
+
+    return NULL;
 }
 
 
-static uint32_t _timer_handler(uint32_t interval, void *arg)
+void machine_timer_deinit_all(void)
 {
-    machine_timer_obj_t *self = (machine_timer_obj_t *)arg;
-    if (self->callback == mp_const_none) {
-        self->timer_id = 0;
-        return 0;
+    // Disable, deallocate and remove all timers from list
+    machine_timer_obj_t *timer;
+    pthread_mutex_lock(&timer_lock);
+
+    for (uint8_t i=0;i<TIMER_COUNT;i++) {
+        timer = timer_objs[i];
+        if (timer != NULL) {
+            machine_timer_disable(timer);
+        }
     }
 
-    if (self->timer_id == 0) {
-        return 0;
+    pthread_mutex_unlock(&timer_lock);
+
+    timer_polling = false;
+    pthread_join(timer_poll_thread_id, NULL);
+    pthread_mutex_destroy(&timer_lock);
+
+    timer = NULL;
+
+    for (uint8_t i=0;i<TIMER_COUNT;i++) {
+        timer = timer_objs[i];
+        if (timer != NULL) {
+            m_del_obj(machine_timer_obj_t, timer);
+            timer_objs[i] = NULL;
+        }
     }
-
-	mp_sched_schedule(self->callback, MP_OBJ_FROM_PTR(self));
-
-	if (!self->repeat) {
-	    self->timer_id = 0;
-	    return 0;
-	}
-
-	return interval;
 }
 
 
@@ -91,36 +127,46 @@ static mp_obj_t machine_timer_make_new(const mp_obj_type_t *type, size_t n_args,
     );
 
     uint8_t id = (uint8_t)args[ARG_id].u_int;
-    uint8_t mode = (uint8_t)args[ARG_mode].u_int;
-    uint32_t period = (uint32_t)args[ARG_period].u_int;
 
-    mp_uint_t group = (id >> 1) & 1;
-    mp_uint_t index = id & 1;
+    if (id >= TIMER_COUNT) {
+        mp_raise_msg_varg(
+            &mp_type_ValueError,
+            MP_ERROR_TEXT("Timer ID must be in range 0 - %d"),
+            TIMER_COUNT
+        );
+        return mp_const_none;
+    }
 
-    machine_timer_obj_t *self = NULL;
+    if (!timer_polling) {
+        pthread_mutex_init(&timer_lock, NULL);
+        timer_polling = true;
+        pthread_attr_t attr;
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+        pthread_create(&timer_poll_thread_id, &attr, &timer_poll_thread, NULL);
+    }
+
+    int16_t mode = (int16_t)args[ARG_mode].u_int;
+    int32_t period = (int32_t)args[ARG_period].u_int;
+
+    pthread_mutex_lock(&timer_lock);
+    machine_timer_obj_t *self = timer_objs[id];
 
     // Check whether the timer is already initialized, if so use it
-    for (machine_timer_obj_t *t = MP_STATE_PORT(machine_timer_obj_head); t; t = t->next) {
-        if (t->group == group && t->index == index) {
-            self = t;
-            break;
-        }
-    }
     // The timer does not exist, create it.
     if (self == NULL) {
         self = m_new_obj(machine_timer_obj_t);
         self->base.type = &machine_timer_type;
 
-        self->group = group;
-        self->index = index;
-        self->timer_id = 0;
-
-        // Add the timer to the linked-list of timers
-        self->next = MP_STATE_PORT(machine_timer_obj_head);
-        MP_STATE_PORT(machine_timer_obj_head) = self;
+        self->id = id;
+        self->callback = NULL;
+        timer_objs[id] = self;
+    } else {
+        machine_timer_disable(self);
     }
+    pthread_mutex_unlock(&timer_lock);
 
-    machine_timer_init_helper(self, (int16_t)mode, args[ARG_callback].u_obj, (int64_t)period);
+    machine_timer_init_helper(self, mode, args[ARG_callback].u_obj, period);
 
     return self;
 }
@@ -128,34 +174,59 @@ static mp_obj_t machine_timer_make_new(const mp_obj_type_t *type, size_t n_args,
 
 static void machine_timer_disable(machine_timer_obj_t *self)
 {
-    if (self->timer_id != 0) {
-        SDL_RemoveTimer(self->timer_id);
-        self->timer_id = 0;
-    }
+    self->active = false;
 }
 
 
 static void machine_timer_enable(machine_timer_obj_t *self)
 {
-	self->timer_id = SDL_AddTimer(self->period, &_timer_handler, self);
+    self->ms_ticks = 0;
+	self->active = true;
 }
 
 
-static void machine_timer_init_helper(machine_timer_obj_t *self, int16_t mode, mp_obj_t callback, int64_t period)
+static void machine_timer_init_helper(machine_timer_obj_t *self, int16_t mode, mp_obj_t callback, int32_t period)
 {
+    pthread_mutex_lock(&timer_lock);
     machine_timer_disable(self);
 
-    if (period != -1) self->period = (uint32_t)period;
+    if (period != -1) self->period = (uint16_t)period;
     if (mode != -1) self->repeat = (uint8_t)mode;
     if (callback != NULL) self->callback = callback;
 
     machine_timer_enable(self);
+    pthread_mutex_unlock(&timer_lock);
 }
+
+
+static mp_obj_t machine_timer_del(mp_obj_t self_in)
+{
+    machine_timer_obj_t *self = (machine_timer_obj_t *)self_in;
+
+    pthread_mutex_lock(&timer_lock);
+    machine_timer_disable(self);
+
+    if (timer_objs[self->id] != NULL) {
+        timer_objs[self->id] = NULL;
+        m_del_obj(machine_timer_obj_t, self);
+    }
+
+    pthread_mutex_unlock(&timer_lock);
+
+    return mp_const_none;
+}
+
+static MP_DEFINE_CONST_FUN_OBJ_1(machine_timer_del_obj, machine_timer_del);
 
 
 static mp_obj_t machine_timer_deinit(mp_obj_t self_in)
 {
+    machine_timer_obj_t *self = (machine_timer_obj_t *)self_in;
+
+    pthread_mutex_lock(&timer_lock);
     machine_timer_disable(self);
+    pthread_mutex_unlock(&timer_lock);
+
     return mp_const_none;
 }
 
@@ -180,7 +251,7 @@ static mp_obj_t machine_timer_init(size_t n_args, const mp_obj_t *pos_args, mp_m
         (machine_timer_obj_t *)args[ARG_self].u_obj,
         (int16_t)args[ARG_mode].u_int,
         args[ARG_callback].u_obj,
-        (int64_t)args[ARG_period].u_int
+        (int32_t)args[ARG_period].u_int
     );
 
     return mp_const_none;
@@ -190,7 +261,7 @@ static MP_DEFINE_CONST_FUN_OBJ_KW(machine_timer_init_obj, 1, machine_timer_init)
 
 
 static const mp_rom_map_elem_t machine_timer_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR___del__), MP_ROM_PTR(&machine_timer_deinit_obj) },
+    { MP_ROM_QSTR(MP_QSTR___del__), MP_ROM_PTR(&machine_timer_del_obj) },
     { MP_ROM_QSTR(MP_QSTR_deinit), MP_ROM_PTR(&machine_timer_deinit_obj) },
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&machine_timer_init_obj) },
     { MP_ROM_QSTR(MP_QSTR_ONE_SHOT), MP_ROM_INT(false) },
@@ -207,6 +278,3 @@ MP_DEFINE_CONST_OBJ_TYPE(
     make_new, machine_timer_make_new,
     locals_dict, &machine_timer_locals_dict
 );
-
-
-MP_REGISTER_ROOT_POINTER(struct _machine_timer_obj_t *machine_timer_obj_head);

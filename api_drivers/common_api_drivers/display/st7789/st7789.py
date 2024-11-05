@@ -1,6 +1,7 @@
 from micropython import const  # NOQA
 import display_driver_framework
 import lcd_bus
+import lvgl as lv
 
 
 STATE_HIGH = display_driver_framework.STATE_HIGH

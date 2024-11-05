@@ -1,5 +1,6 @@
+
 import os
-import shutil
+
 from .unix import (
     parse_args as _parse_args,
     build_commands as _build_commands,
@@ -12,14 +13,14 @@ from .unix import (
     mpy_cross as _mpy_cross
 )
 
-
 from . import unix
 
 
-unix.REAL_PORT = 'macOS'
+if not os.path.exists('micropy_updates/originals/raspberry_pi'):
+    os.makedirs('micropy_updates/originals/raspberry_pi')
 
-if not os.path.exists('micropy_updates/originals/macOS'):
-    os.makedirs('micropy_updates/originals/macOS')
+
+unix.REAL_PORT = 'raspberry_pi'
 
 
 def parse_args(extra_args, lv_cflags, board):
@@ -43,10 +44,11 @@ def force_clean(clean_mpy_cross):
 
 
 def build_sdl(addl_commands):
-    dst = f'lib/micropython/ports/unix/build-{unix.variant}/SDL'
+    if addl_commands.startswith('"') and addl_commands.endswith('"'):
+        addl_commands = addl_commands[1:-1]
 
-    if os.path.exists(os.path.join(dst, 'libSDL2-2.0.0.dylib')):
-        return
+    if has_neon():
+        addl_commands += ' CFLAGS="-mfpu=neon"'
 
     _build_sdl(addl_commands.strip())
 
@@ -61,13 +63,26 @@ def submodules():
 def compile(*args):  # NOQA
     _compile(*args)
 
-    src = f'lib/micropython/ports/unix/build-{unix.variant}/SDL/libSDL2-2.0.0.dylib'
-    dst = f'build/libSDL2-2.0.0.dylib'
-    if os.path.exists(src):
-        shutil.copyfile(src, dst)
-
 
 def mpy_cross():
     _mpy_cross()
 
 
+def has_neon():
+    """
+    Features : half thumb fastmult vfp edsp neon vfpv3 tls vfpv4 idiva idivt vfpd32 lpae evtstrm crc32
+    """
+
+    res = False
+
+    with os.popen('cat /proc/cpuinfo') as file:
+        for line in file:
+            if not line.startswith('Features'):
+                continue
+
+            res = ' neon ' in line
+
+            if res:
+                break
+
+    return res

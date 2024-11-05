@@ -18,7 +18,7 @@ argParser.add_argument(
     help='build target',
     choices=[
         'esp32', 'windows', 'stm32', 'unix', 'rp2',
-        'renesas-ra', 'nrf', 'mimxrt', 'samd', 'macOS'
+        'renesas-ra', 'nrf', 'mimxrt', 'samd', 'macOS', 'raspberry_pi'
     ],
     action='store',
     nargs=1
@@ -45,7 +45,7 @@ argParser.add_argument(
     default=None
 )
 
-if target in ('windows', 'unix'):
+if target in ('windows', 'unix', 'macOS', 'raspberry_pi'):
     argParser.add_argument(
         'VARIANT',
         dest='board',
@@ -187,6 +187,9 @@ if __name__ == '__main__':
         from builder import renesas as mod
     elif target.lower() == 'macos':
         from builder import macOS as mod
+        target = 'unix'
+    elif target.lower() == 'raspberry_pi':
+        from builder import raspberry_pi as mod
         target = 'unix'
     elif target.lower() == 'windows':
         from builder import windows as mod
