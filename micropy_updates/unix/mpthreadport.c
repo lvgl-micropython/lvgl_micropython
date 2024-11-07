@@ -40,35 +40,25 @@
 #include <semaphore.h>
 
 #include "shared/runtime/gchelper.h"
-
-// Some platforms don't have SIGRTMIN but if we do have it, use it to avoid
-// potential conflict with other uses of the more commonly used SIGUSR1.
-#ifdef SIGRTMIN
-#define MP_THREAD_GC_SIGNAL (SIGRTMIN + 5)
-#else
-#define MP_THREAD_GC_SIGNAL (SIGUSR1)
-#endif
-
-// This value seems to be about right for both 32-bit and 64-bit builds.
-#define THREAD_STACK_OVERFLOW_MARGIN (8192)
+#include "mpthreadport.h"
 
 
-pthread_key_t tls_key;
+// this structure forms a linked list, one node per active thread
+typedef struct _mp_thread_t {
+    pthread_t id;           // system id of thread
+    int ready;              // whether the thread is ready and running
+    void *arg;              // thread Python args, a GC root pointer
+    struct _mp_thread_t *next;
+} mp_thread_t;
+
+static pthread_key_t tls_key;
 
 // The mutex is used for any code in this port that needs to be thread safe.
 // Specifically for thread management, access to the linked list is one example.
 // But also, e.g. scheduler state.
-pthread_mutex_t thread_mutex;
-mp_thread_t *thread;
+static pthread_mutex_t thread_mutex;
+static mp_thread_t *thread;
 
-// this is used to synchronise the signal handler of the thread
-// it's needed because we can't use any pthread calls in a signal handler
-#if defined(__APPLE__)
-static char thread_signal_done_name[25];
-static sem_t *thread_signal_done_p;
-#else
-static sem_t thread_signal_done;
-#endif
 
 void mp_thread_unix_begin_atomic_section(void) {
     pthread_mutex_lock(&thread_mutex);
@@ -101,6 +91,8 @@ static void mp_thread_gc(int signo, siginfo_t *info, void *context) {
 }
 
 void mp_thread_init(void) {
+    threading_init();
+
     pthread_key_create(&tls_key, NULL);
     pthread_setspecific(tls_key, &mp_state_ctx.thread);
 
@@ -134,6 +126,8 @@ void mp_thread_init(void) {
 }
 
 void mp_thread_deinit(void) {
+    threading_deinit();
+
     mp_thread_unix_begin_atomic_section();
     while (thread->next != NULL) {
         mp_thread_t *th = thread;
@@ -157,6 +151,8 @@ void mp_thread_deinit(void) {
 // the global root pointers (in mp_state_ctx) while another thread is doing a
 // garbage collection and tracing these pointers.
 void mp_thread_gc_others(void) {
+    mp_thread_gc_others();
+
     mp_thread_unix_begin_atomic_section();
     for (mp_thread_t *th = thread; th != NULL; th = th->next) {
         gc_collect_root(&th->arg, 1);

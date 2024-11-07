@@ -13,6 +13,7 @@
     #define __MULTIPROCESSING_H__
 
     void multiprocessing_init(void);
-    extern mp_obj_t processes[2];
+    extern mp_obj_t *processes;
+    extern uint8_t process_count;
 
 #endif

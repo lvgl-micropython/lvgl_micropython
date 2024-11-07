@@ -1,80 +1,35 @@
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/semphr.h"
-#include "freertos/queue.h"
-
-
-#include "thread_common.h"
-#include "thread_thread.h"
-
-#include "threading.h"
-
-#include "multiprocessing.h"
-#include "multiprocessing_event.h"
-#include "multiprocessing_lock.h"
-#include "multiprocessing_process.h"
-#include "multiprocessing_rlock.h"
-#include "multiprocessing_semaphore.h"
-
-
 mp_obj_t processes[2];
 
 
 void multiprocessing_init(void)
 {
     mp_obj_thread_thread_t * main_thread = (mp_obj_thread_thread_t *)MP_OBJ_TO_PTR(threading_main_thread());
-    uint16_t curr_core_id = (uint16_t)xTaskGetCoreID(main_thread->id);
+    uint8_t curr_core_id = mp_get_process_core(&main_thread->thread);
     processes[curr_core_id] = MP_OBJ_FROM_PTR(main_thread);
 }
-
-
-int8_t get_current_process_core(void)
-{
-    cpu_set_t cpuset;
-    pthread_t thread = pthread_self();
-    CPU_ZERO(&cpuset);
-
-    for (int j = 0; j < CPU_SETSIZE; j++) {
-        CPU_SET(j, &cpuset);
-    }
-
-    pthread_getaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
-
-    int core_id = -1;
-
-    for (int j = 0; j < CPU_SETSIZE; j++) {
-        if (CPU_ISSET(j, &cpuset)) {
-            core_id = j;
-            break;
-        }
-    }
-
-    return (int8_t) core_id;
-}
-
 
 
 static mp_obj_t multiprocessing_active_children(void)
 {
     mp_obj_t list = mp_obj_new_list(0, NULL);
 
-    uint16_t core_id = (uint16_t)xTaskGetCoreID(xTaskGetCurrentTaskHandle());
-    uint16_t task_core_id;
+    uint8_t core_id = mp_get_current_process_core();
+    uint8_t task_core_id;
 
-    lock_acquire(&t_mutex, 1);
+    threading_lock_acquire(&t_mutex, 1);
 
     for (mp_obj_thread_thread_t *th = t_thread; th != NULL; th = th->next) {
         if (!th->is_alive) {
             continue;
         }
-        task_core_id = (uint16_t)xTaskGetCoreID(th->id);
+        task_core_id = mp_get_process_core(&th->thread);
 
         if (task_core_id == core_id) {
             mp_obj_list_append(list, MP_OBJ_FROM_PTR(th));
         }
     }
 
-    lock_release(&t_mutex);
+    threading_lock_release(&t_mutex);
     return list;
 }
 
@@ -83,7 +38,7 @@ static MP_DEFINE_CONST_FUN_OBJ_0(multiprocessing_active_children_obj, multiproce
 
 static mp_obj_t multiprocessing_cpu_count(void)
 {
-    return mp_obj_new_int(2);
+    return mp_obj_new_int_truncated(mp_get_cpu_count());
 }
 
 static MP_DEFINE_CONST_FUN_OBJ_0(multiprocessing_cpu_count_obj, multiprocessing_cpu_count);
@@ -91,7 +46,7 @@ static MP_DEFINE_CONST_FUN_OBJ_0(multiprocessing_cpu_count_obj, multiprocessing_
 
 static mp_obj_t multiprocessing_current_process(void)
 {
-    uint16_t core_id = (uint16_t)xTaskGetCoreID(xTaskGetCurrentTaskHandle());
+    uint8_t core_id = mp_get_current_process_core();
     return processes[core_id];
 }
 
@@ -101,13 +56,9 @@ static MP_DEFINE_CONST_FUN_OBJ_0(multiprocessing_current_process_obj, multiproce
 static mp_obj_t multiprocessing_parent_process(void)
 {
     mp_obj_t main_thread = threading_main_thread();
-    uint16_t core_id = (uint16_t)xTaskGetCoreID(xTaskGetCurrentTaskHandle());
+    uint8_t core_id = mp_get_current_process_core();
 
-    if (processes[core_id] == main_thread) {
-        return mp_const_none;
-    } else {
-        return main_thread;
-    }
+    return processes[core_id];
 }
 
 static MP_DEFINE_CONST_FUN_OBJ_0(multiprocessing_parent_process_obj, multiprocessing_parent_process);
@@ -135,5 +86,3 @@ const mp_obj_module_t mp_module_multiprocessing = {
 };
 
 MP_REGISTER_MODULE(MP_QSTR_multiprocessing, mp_module_multiprocessing);
-
-

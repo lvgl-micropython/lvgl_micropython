@@ -12,8 +12,7 @@
 #include <pthread.h>
 #include <sys/sysinfo.h>
 
-static uint8_t core_nums_used[64];
-
+static cpu_set_t used_cores;
 
 static mp_obj_t multiprocessing_process_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
 {
@@ -34,40 +33,17 @@ static mp_obj_t multiprocessing_process_make_new(const mp_obj_type_t *type, size
         make_new_args,
         args
     );
-
-    cpu_set_t cpuset;
-    pthread_t thread = pthread_self();
-    CPU_ZERO(&cpuset);
-
-    for (int j = 0; j < CPU_SETSIZE; j++) {
-        CPU_SET(j, &cpuset);
+    if (processes == NULL) {
+        process_count = (uint8_t)sysconf(_SC_NPROCESSORS_ONLN);
+        processes = (mp_obj_t *)malloc(sizeof(mp_obj_t) * process_count);
+        mp_obj_t main_t = threading_main_thread();
+        processes[((mp_obj_thread_thread_t *)MP_OBJ_TO_PTR(main_t))->core_id] = main_t;
     }
-
-    pthread_getaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
-
-    int core_id = -1;
-
-    for (int j = 0; j < CPU_SETSIZE; j++) {
-        if (CPU_ISSET(j, &cpuset)) {
-            core_id = j;
-            break;
-        }
-    }
-
-    if (core_id == -1) {
-        // raise error
-    }
-
-    int pthread_setaffinity_np(pthread_t thread, size_t cpusetsize, const cpu_set_t *cpuset);
 
     int new_core_id = -1;
-
-    for (uint16_t i=0;i<2;i++) {
-        if (core_id == i) {
-            continue;
-        }
+    for (uint8_t i=0; i<process_count;i++) {
         if (processes[i] == NULL) {
-            new_core_id = (int16_t)i;
+            new_core_id = j;
             break;
         }
     }

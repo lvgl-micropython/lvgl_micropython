@@ -2,29 +2,21 @@
 
 add_library(usermod_threading INTERFACE)
 
-set(THREADING_INCLUDES ${CMAKE_CURRENT_LIST_DIR}/common/inc)
+set(THREADING_INCLUDES
+    ${CMAKE_CURRENT_LIST_DIR}/../common/inc
+    ${CMAKE_CURRENT_LIST_DIR}
+)
 
 set(THREADING_SOURCES
-    ${CMAKE_CURRENT_LIST_DIR}/common/src/thread_common.c
-    ${CMAKE_CURRENT_LIST_DIR}/common/src/thread_event.c
-    ${CMAKE_CURRENT_LIST_DIR}/common/src/thread_lock.c
-    ${CMAKE_CURRENT_LIST_DIR}/common/src/thread_rlock.c
-    ${CMAKE_CURRENT_LIST_DIR}/common/src/thread_semaphore.c
-    ${CMAKE_CURRENT_LIST_DIR}/common/src/thread_thread.c
+    ${CMAKE_CURRENT_LIST_DIR}/../common/src/multiprocessing.c
+    ${CMAKE_CURRENT_LIST_DIR}/../common/src/thread_event.c
+    ${CMAKE_CURRENT_LIST_DIR}/../common/src/thread_lock.c
+    ${CMAKE_CURRENT_LIST_DIR}/../common/src/thread_rlock.c
+    ${CMAKE_CURRENT_LIST_DIR}/../common/src/thread_semaphore.c
+    ${CMAKE_CURRENT_LIST_DIR}/../common/src/thread_thread.c
+    ${CMAKE_CURRENT_LIST_DIR}/../common/src/threading.c
 
-    ${CMAKE_CURRENT_LIST_DIR}/multiprocessing/src/multiprocessing.c
-    ${CMAKE_CURRENT_LIST_DIR}/multiprocessing/src/multiprocessing_event.c
-    ${CMAKE_CURRENT_LIST_DIR}/multiprocessing/src/multiprocessing_lock.c
-    ${CMAKE_CURRENT_LIST_DIR}/multiprocessing/src/multiprocessing_rlock.c
-    ${CMAKE_CURRENT_LIST_DIR}/multiprocessing/src/multiprocessing_semaphore.c
-    ${CMAKE_CURRENT_LIST_DIR}/multiprocessing/src/multiprocessing_process.c
-
-    ${CMAKE_CURRENT_LIST_DIR}/threading/src/threading.c
-    ${CMAKE_CURRENT_LIST_DIR}/threading/src/threading_event.c
-    ${CMAKE_CURRENT_LIST_DIR}/threading/src/threading_lock.c
-    ${CMAKE_CURRENT_LIST_DIR}/threading/src/threading_rlock.c
-    ${CMAKE_CURRENT_LIST_DIR}/threading/src/threading_semaphore.c
-    ${CMAKE_CURRENT_LIST_DIR}/threading/src/threading_thread.c
+    ${CMAKE_CURRENT_LIST_DIR}/thread_port.c
 )
 
 # Add our source files to the lib

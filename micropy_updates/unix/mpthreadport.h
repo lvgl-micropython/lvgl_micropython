@@ -25,43 +25,45 @@
  */
 
 #ifndef __MPTHREADPORT__H__
-#define __MPTHREADPORT__H__
+    #define __MPTHREADPORT__H__
 
-#include <pthread.h>
-#include <stdbool.h>
+    #include <pthread.h>
+    #include <stdbool.h>
 
-// this structure forms a linked list, one node per active thread
-typedef struct _mp_thread_t {
-    pthread_t id;           // system id of thread
-    int ready;              // whether the thread is ready and running
-    void *arg;              // thread Python args, a GC root pointer
-    struct _mp_thread_t *next;
-} mp_thread_t;
-
-extern pthread_key_t tls_key;
-extern pthread_mutex_t thread_mutex;
-extern mp_thread_t *thread;
-
-
-typedef pthread_mutex_t mp_thread_mutex_t;
-
-void mp_thread_init(void);
-void mp_thread_deinit(void);
-void mp_thread_gc_others(void);
-
-// Unix version of "enable/disable IRQs".
-// Functions as a port-global lock for any code that must be serialised.
-void mp_thread_unix_begin_atomic_section(void);
-void mp_thread_unix_end_atomic_section(void);
-
-extern mp_thread_mutex_t thread_mutex;
-extern mp_thread_t thread_entry0;
-extern mp_thread_t *thread = NULL; // root pointer, handled by mp_thread_gc_others
-
-// for `-X realtime` command line option
-#if defined(__APPLE__)
-extern bool mp_thread_is_realtime_enabled;
-void mp_thread_set_realtime(void);
+    // Some platforms don't have SIGRTMIN but if we do have it, use it to avoid
+    // potential conflict with other uses of the more commonly used SIGUSR1.
+#ifdef SIGRTMIN
+    #define MP_THREAD_GC_SIGNAL (SIGRTMIN + 5)
+#else
+    #define MP_THREAD_GC_SIGNAL (SIGUSR1)
 #endif
 
+    // This value seems to be about right for both 32-bit and 64-bit builds.
+    #define THREAD_STACK_OVERFLOW_MARGIN (8192)
+
+    // this is used to synchronise the signal handler of the thread
+    // it's needed because we can't use any pthread calls in a signal handler
+#if defined(__APPLE__)
+    extern char thread_signal_done_name[25];
+    extern sem_t *thread_signal_done_p;
+#else
+    extern sem_t thread_signal_done;
+#endif
+
+    typedef pthread_mutex_t mp_thread_mutex_t;
+
+    void mp_thread_init(void);
+    void mp_thread_deinit(void);
+    void mp_thread_gc_others(void);
+
+    // Unix version of "enable/disable IRQs".
+    // Functions as a port-global lock for any code that must be serialised.
+    void mp_thread_unix_begin_atomic_section(void);
+    void mp_thread_unix_end_atomic_section(void);
+
+    // for `-X realtime` command line option
+#if defined(__APPLE__)
+    extern bool mp_thread_is_realtime_enabled;
+    void mp_thread_set_realtime(void);
+#endif
 #endif /* __MPTHREADPORT__H__ */

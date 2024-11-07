@@ -35,6 +35,8 @@ static mp_obj_t threading_thread_make_new(const mp_obj_type_t *type, size_t n_ar
         args
     );
 
+
+
     // create new object
     mp_obj_thread_thread_t *self = m_new_obj(mp_obj_thread_thread_t);
     self->base.type = &mp_type_threading_thread_t;
