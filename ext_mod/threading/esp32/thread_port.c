@@ -15,7 +15,7 @@
 
 #include "thread_thread.h"
 #include "thread_event.h"
-#include "thread_semphamore.h"
+#include "thread_semaphore.h"
 #include "thread_lock.h"
 #include "thread_rlock.h"
 
@@ -129,31 +129,31 @@ void threading_rlock_init(thread_rlock_t *rlock)
 }
 
 
-uint16_t threading_semphamore_get_count(thread_semphamore_t *sem)
+uint16_t threading_semaphore_get_count(thread_semaphore_t *sem)
 {
     return (uint16_t)uxSemaphoreGetCount(sem->handle);
 }
 
 
-bool threading_semphamore_acquire(thread_semphamore_t *sem, int32_t wait_ms)
+bool threading_semaphore_acquire(thread_semaphore_t *sem, int32_t wait_ms)
 {
     return (bool)(pdTRUE == xSemaphoreTake(sem->handle, wait_ms < 0 ? portMAX_DELAY : pdMS_TO_TICKS((uint16_t)wait_ms)));
 }
 
 
-void threading_semphamore_release(thread_semphamore_t *sem)
+void threading_semaphore_release(thread_semaphore_t *sem)
 {
     xSemaphoreGive(sem->handle);
 }
 
 
-void threading_semphamore_init(thread_semphamore_t *sem, uint16_t start_value)
+void threading_semaphore_init(thread_semaphore_t *sem, uint16_t start_value)
 {
     sem->handle = xSemaphoreCreateCountingStatic(start_value, start_value, &sem->buffer);
 }
 
 
-void threading_semphamore_delete(thread_semphamore_t *sem)
+void threading_semaphore_delete(thread_semaphore_t *sem)
 {
     vSemaphoreDelete(sem->handle);
 }

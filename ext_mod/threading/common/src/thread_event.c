@@ -108,7 +108,6 @@ static const mp_rom_map_elem_t event_locals_dict_table[] = {
 
 static MP_DEFINE_CONST_DICT(event_locals_dict, event_locals_dict_table);
 
-
 MP_DEFINE_CONST_OBJ_TYPE(
     mp_type_threading_event_t,
     MP_QSTR_Event,

@@ -24,4 +24,7 @@
     void threading_rlock_init(thread_rlock_t *rlock); // needs to be defined in port
     void threading_rlock_delete(thread_rlock_t *rlock); // needs to be defined in port
 
+    extern const mp_obj_type_t mp_type_threading_rlock_t;
+    extern const mp_obj_type_t mp_type_multiprocessing_rlock_t;
+
 #endif

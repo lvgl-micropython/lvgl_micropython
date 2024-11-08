@@ -59,18 +59,18 @@ static mp_obj_t thread_semaphore_acquire(size_t n_args, const mp_obj_t *pos_args
     bool res;
 
     uint16_t
-    bool threading_semphamore_acquire(thread_semphamore_t *sem, int32_t wait_ms);
-    void threading_semphamore_release(thread_semphamore_t *sem);
-    void threading_semphamore_init(thread_event_t *mutex);
-    void threading_semphamore_delete(thread_event_t *mutex);
+    bool threading_semaphore_acquire(thread_semaphore_t *sem, int32_t wait_ms);
+    void threading_semaphore_release(thread_semaphore_t *sem);
+    void threading_semaphore_init(thread_semaphore_t *sem);
+    void threading_semaphore_delete(thread_semaphore_t *sem);
 
-    uint16_t count = threading_semphamore_get_count(&self->sem);
+    uint16_t count = threading_semaphore_get_count(&self->sem);
 
     if (!blocking) {
         if (count >= self->start_value) {
             res = false;
         } else {
-            res =  threading_semphamore_acquire(&self->sem, 0);
+            res =  threading_semaphore_acquire(&self->sem, 0);
         }
     } else {
         float timeout_f;
@@ -87,7 +87,7 @@ static mp_obj_t thread_semaphore_acquire(size_t n_args, const mp_obj_t *pos_args
             self->waiting += 1;
         }
 
-        res = threading_semphamore_acquire(&self->sem, timeout);
+        res = threading_semaphore_acquire(&self->sem, timeout);
 
         if (res == true) {
             if (self->waiting > 0) {
@@ -140,7 +140,7 @@ static mp_obj_t thread_semaphore_release(size_t n_args, const mp_obj_t *pos_args
         if (self->value > 0) { 
             self->value -= 1;
         }
-        threading_semphamore_release(&self->sem);
+        threading_semaphore_release(&self->sem);
     }
     return mp_const_none;
 }
@@ -165,10 +165,10 @@ static mp_obj_t thread_semaphore__del__(mp_obj_t self_in)
     mp_obj_thread_semaphore_t *self = MP_OBJ_TO_PTR(self_in);
 
     for (uint16_t i=self->value;i<self->start_value;i++) {
-        threading_semphamore_release(&self->sem);
+        threading_semaphore_release(&self->sem);
     }
 
-    threading_semphamore_delete(&self->sem);
+    threading_semaphore_delete(&self->sem);
     return mp_const_none;
 }
 
@@ -204,7 +204,7 @@ static mp_obj_t threading_semaphore_make_new(const mp_obj_type_t *type, size_t n
         return mp_const_none;
     }
 
-    threading_semphamore_init(&self->sem, (uint16_t)start_value)
+    threading_semaphore_init(&self->sem, (uint16_t)start_value)
     self->start_value = (uint16_t)start_value;
 
     return MP_OBJ_FROM_PTR(self);
@@ -267,7 +267,7 @@ static mp_obj_t multiprocessing_semaphore_make_new(const mp_obj_type_t *type, si
         return mp_const_none;
     }
 
-    threading_semphamore_init(&self->sem, (uint16_t)start_value);
+    threading_semaphore_init(&self->sem, (uint16_t)start_value);
     self->start_value = (uint16_t)start_value;
 
     return MP_OBJ_FROM_PTR(self);

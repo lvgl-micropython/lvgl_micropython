@@ -30,7 +30,6 @@
         int ready;              // whether the thread is ready and running
         int is_alive;
         uint8_t core_id;
-        void *arg;              // thread Python args, a GC root pointer
         void *stack;            // pointer to the stack
         size_t stack_len;       // number of words in the stack
         struct _mp_obj_thread_t *next;
@@ -38,6 +37,9 @@
     } mp_obj_thread_t;
 
     mp_uint_t threading_create_thread(mp_obj_thread_t *self); // needs to be defined in port
-    void threading_delete_thread(thread_t *thread); // needs to be defined in port
+    void threading_delete_thread(mp_obj_thread_t *self); // needs to be defined in port
+
+    extern const mp_obj_type_t mp_type_threading_thread_t;
+    extern const mp_obj_type_t mp_type_multiprocessing_process_t;
 
 #endif

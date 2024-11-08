@@ -17,7 +17,7 @@
         StaticSemaphore_t buffer;
     };
 
-    struct _thread_semphamore_t {
+    struct _thread_semaphore_t {
         SemaphoreHandle_t handle;
         StaticSemaphore_t buffer;
     };
@@ -38,7 +38,7 @@
 
     #include "thread_thread.h"
     #include "thread_event.h"
-    #include "thread_semphamore.h"
+    #include "thread_semaphore.h"
     #include "thread_lock.h"
     #include "thread_rlock.h"
 

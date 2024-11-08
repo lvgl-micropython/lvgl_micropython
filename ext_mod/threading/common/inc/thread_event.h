@@ -21,6 +21,9 @@
     void threading_event_init(thread_event_t *event); // needs to be defined in port
     void threading_event_delete(thread_event_t *event); // needs to be defined in port
 
+    extern const mp_obj_type_t mp_type_threading_event_t;
+    extern const mp_obj_type_t mp_type_multiprocessing_event_t;
+
 #endif
 
 

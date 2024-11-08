@@ -16,7 +16,7 @@
 #include "thread_thread.h"
 #include "thread_lock.h"
 #include "thread_rlock.h"
-#include "thread_semphamore.h"
+#include "thread_semaphore.h"
 #include "thread_event.h"
 
 

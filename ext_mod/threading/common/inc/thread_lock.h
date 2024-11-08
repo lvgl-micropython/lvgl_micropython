@@ -19,4 +19,8 @@
     void threading_lock_init(thread_lock_t *lock); // needs to be defined in port
     void threading_lock_delete(thread_lock_t *lock); // needs to be defined in port
 
+    extern const mp_obj_type_t mp_type_threading_lock_t;
+    extern const mp_obj_type_t mp_type_multiprocessing_lock_t;
+
+
 #endif

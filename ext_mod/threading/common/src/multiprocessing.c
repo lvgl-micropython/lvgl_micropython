@@ -1,9 +1,17 @@
-mp_obj_t processes[2];
 
+#include "multiprocessing.h"
+#include "threading.h"
+#include "thread_lock.h"
+#include "thread_port.h"
+
+
+mp_obj_t *processes;
 
 void multiprocessing_init(void)
 {
-    mp_obj_thread_thread_t * main_thread = (mp_obj_thread_thread_t *)MP_OBJ_TO_PTR(threading_main_thread());
+    processes = (mp_obj_t *)malloc(sizeof(mp_obj_t) * mp_get_cpu_count());
+
+    mp_obj_thread_t * main_thread = (mp_obj_thread_t *)MP_OBJ_TO_PTR(threading_main_thread());
     uint8_t curr_core_id = mp_get_process_core(&main_thread->thread);
     processes[curr_core_id] = MP_OBJ_FROM_PTR(main_thread);
 }
@@ -16,9 +24,9 @@ static mp_obj_t multiprocessing_active_children(void)
     uint8_t core_id = mp_get_current_process_core();
     uint8_t task_core_id;
 
-    threading_lock_acquire(&t_mutex, 1);
+    threading_lock_acquire((thread_lock_t *)(&t_mutex), 1);
 
-    for (mp_obj_thread_thread_t *th = t_thread; th != NULL; th = th->next) {
+    for (mp_obj_thread_t *th = t_thread; th != NULL; th = th->next) {
         if (!th->is_alive) {
             continue;
         }
@@ -29,7 +37,7 @@ static mp_obj_t multiprocessing_active_children(void)
         }
     }
 
-    threading_lock_release(&t_mutex);
+    threading_lock_release((thread_lock_t *)(&t_mutex));
     return list;
 }
 

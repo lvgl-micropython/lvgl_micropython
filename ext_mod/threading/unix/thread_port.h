@@ -16,7 +16,7 @@
         volatile uint16_t ref_count;
     };
 
-    struct _thread_semphamore_t {
+    struct _thread_semaphore_t {
         sem_t handle;
         volatile uint16_t ref_count;
     };
@@ -38,7 +38,7 @@
 
     #include "thread_thread.h"
     #include "thread_event.h"
-    #include "thread_semphamore.h"
+    #include "thread_semaphore.h"
     #include "thread_lock.h"
     #include "thread_rlock.h"
 

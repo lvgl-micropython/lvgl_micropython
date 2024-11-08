@@ -344,7 +344,7 @@ void threading_rlock_init(thread_rlock_t *rlock)
 }
 
 
-uint16_t threading_semphamore_get_count(thread_semphamore_t *sem)
+uint16_t threading_semaphore_get_count(thread_semaphore_t *sem)
 {
     int count;
     sem_getvalue(&sem->handle, &count);
@@ -352,7 +352,7 @@ uint16_t threading_semphamore_get_count(thread_semphamore_t *sem)
 }
 
 
-bool threading_semphamore_acquire(thread_semphamore_t *sem, int32_t wait_ms)
+bool threading_semaphore_acquire(thread_semaphore_t *sem, int32_t wait_ms)
 {
     sem->ref_count++;
     if (wait_ms < 0) {
@@ -373,20 +373,20 @@ bool threading_semphamore_acquire(thread_semphamore_t *sem, int32_t wait_ms)
 }
 
 
-void threading_semphamore_release(thread_semphamore_t *sem)
+void threading_semaphore_release(thread_semaphore_t *sem)
 {
     sem_post(&sem->handle);
 }
 
 
-void threading_semphamore_init(thread_semphamore_t *sem, uint16_t start_value)
+void threading_semaphore_init(thread_semaphore_t *sem, uint16_t start_value)
 {
     sem->ref_count = 0;
     sem_init(&sem->handle, 0, (unsigned)start_value);
 }
 
 
-void threading_semphamore_delete(thread_semphamore_t *sem)
+void threading_semaphore_delete(thread_semaphore_t *sem)
 {
     uint16_t count = sem->ref_count;
     for (uint16_t i=0;i<count;i++) {
@@ -400,11 +400,29 @@ void threading_semphamore_delete(thread_semphamore_t *sem)
 static threading_thread_entry_cb_t ext_threading_thread_entry = NULL;
 
 
-thread_rlock_t t_mutex;
+thread_lock_t t_mutex;
 mp_obj_thread_t _main_thread;
 mp_obj_thread_t *t_thread = NULL; // root pointer, handled by threading_gc_others
 size_t thread_stack_size = 0;
 
+
+static void thread_finish(void) {
+    threading_lock_acquire(&t_mutex, 0)
+
+    mp_obj_thread_t *prev = NULL;
+    for (mp_obj_thread_t *th = t_thread; th != NULL; th = th->next) {
+        if (th->thread.handle == pthread_self()) {
+            if (prev == NULL) {
+                t_thread = th->next;
+            } else {
+                prev->next = th->next;
+            }
+            break;
+        }
+        prev = th;
+    }
+    threading_lock_release(&t_mutex);
+}
 
 void *thread_entry_cb(mp_obj_thread_t *self)
 {
@@ -437,6 +455,8 @@ void *thread_entry_cb(mp_obj_thread_t *self)
     // signal that we are finished
     self->is_alive = false;
     self->ready = 0;
+    thread_finish();
+
     return NULL;
 }
 
@@ -455,7 +475,7 @@ void threading_init(void *stack, uint32_t stack_len)
     _main_thread.is_alive = true;
     _main_thread.arg = NULL;
     _main_thread.next = NULL;
-    threading_rlock_init(&t_mutex);
+    threading_rlock_init((thread_rlock_t *)(&t_mutex));
 
     t_thread = &_main_thread;
 }
@@ -463,19 +483,38 @@ void threading_init(void *stack, uint32_t stack_len)
 
 void threading_deinit(void)
 {
-    threading_rlock_acquire(&t_mutex, 0)
+    threading_lock_acquire(&t_mutex, 0)
     while (t_thread->next != NULL) {
         mp_obj_thread_t *th = t_thread;
         t_thread = t_thread->next;
         pthread_cancel(&th->thread.handle);
     }
-    threading_rlock_release(&t_mutex);
+    threading_lock_release(&t_mutex);
 }
 
 
 void threading_gc_others(void)
 {
-    threading_rlock_acquire(&t_mutex, 0);
+
+    threading_lock_acquire(&t_mutex, 0);
+
+    for (mp_thread_obj_t *th = t_thread; th != NULL; th = th->next) {
+        gc_collect_root(&th->call_args, 1);
+
+        if (th->thread.handle == pthread_self() || !th->ready) continue;
+
+        pthread_kill(th->thread.handle, MP_THREAD_GC_SIGNAL);
+    #if defined(__APPLE__)
+        sem_wait(thread_signal_done_p);
+    #else
+        sem_wait(&thread_signal_done);
+    #endif
+    }
+
+    threading_lock_release(&t_mutex);
+}
+
+
 
     for (mp_obj_thread_t *th = t_thread; th != NULL; th = th->next) {
         gc_collect_root((void **)&th, 1);
@@ -488,7 +527,7 @@ void threading_gc_others(void)
         }
         gc_collect_root(th->stack, th->stack_len);
     }
-    threading_rlock_release(&t_mutex);
+
 }
 
 
@@ -528,31 +567,26 @@ mp_uint_t thread_create_ex(mp_obj_thread_t *self)
         self->call_args->stack_size = 2 * THREAD_STACK_OVERFLOW_MARGIN;
     }
 
-    // set thread attributes
+    threading_lock_acquire(&t_mutex, 0);
+
     pthread_attr_t attr;
     int ret = pthread_attr_init(&attr);
-    if (ret != 0) {
-        goto er;
-    }
+    if (ret != 0) goto er;
+
     ret = pthread_attr_setstacksize(&attr, self->call_args->stack_size);
-    if (ret != 0) {
-        goto er;
-    }
+    if (ret != 0) goto er;
 
     ret = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-    if (ret != 0) {
-        goto er;
-    }
+    if (ret != 0) goto er;
 
-    threading_rlock_acquire(&t_mutex, 0);
-
-    // create thread
-    pthread_t id;
     ret = pthread_create(&self->thread.handle, &attr, entry, arg);
-    if (ret != 0) {
-        threading_rlock_release(&t_mutex);
-        goto er;
-    }
+    if (ret != 0) goto er;
+
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET((int)self->core_id, &cpuset);
+    ret = pthread_setaffinity_np(&self->thread.handle, sizeof(cpuset), &cpuset);
+    if (ret != 0) goto er;
 
     // adjust stack_size to provide room to recover from hitting the limit
     self->call_args->stack_size -= THREAD_STACK_OVERFLOW_MARGIN;
@@ -561,13 +595,10 @@ mp_uint_t thread_create_ex(mp_obj_thread_t *self)
     self->ready = 0;
     self->next = t_thread;
     t_thread = self;
-
-    threading_rlock_release(&t_mutex);
-
-    MP_STATIC_ASSERT(sizeof(mp_uint_t) >= sizeof(pthread_t));
-    return (mp_uint_t)self->thread.handle;
+    threading_lock_release(&t_mutex);
 
 er:
+    threading_lock_release(&t_mutex);
     mp_raise_OSError(ret);
 }
 
@@ -579,7 +610,6 @@ mp_uint_t threading_create_thread(mp_obj_thread_t *self)
 
 void threading_delete_thread(mp_obj_thread_t *self)
 {
-
 
 
 }
