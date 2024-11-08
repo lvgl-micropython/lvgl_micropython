@@ -1,34 +1,34 @@
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/semphr.h"
-#include "freertos/queue.h"
+#include <pthread.h>
+
+#include <semaphore.h>
 
 
 #ifndef __THREAD_PORT_H__
     #define __THREAD_PORT_H__
 
     struct _thread_lock_t {
-        SemaphoreHandle_t handle;
-        StaticSemaphore_t buffer;
+        pthread_mutex_t handle;
+        volatile uint16_t ref_count;
     };
 
     struct _thread_rlock_t {
-        SemaphoreHandle_t handle;
-        StaticSemaphore_t buffer;
+        pthread_mutex_t handle;
+        volatile uint16_t ref_count;
     };
 
     struct _thread_semphamore_t {
-        SemaphoreHandle_t handle;
-        StaticSemaphore_t buffer;
+        sem_t handle;
+        volatile uint16_t ref_count;
     };
 
     struct _thread_event_t {
-        EventGroupHandle_t handle;
-        StaticEventGroup_t buffer;
+        sem_t handle;
+        volatile uint16_t ref_count;
+        volatile bool is_set;
     };
 
     struct _thread_t {
-        TaskHandle_t handle;
+        pthread_t handle;
     }
 
     void THREADING_FREERTOS_TASK_DELETE_HOOK(void *tcb);

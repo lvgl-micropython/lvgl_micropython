@@ -2,14 +2,14 @@
 #ifndef __MULTIPROCESSING_H__
     #define __MULTIPROCESSING_H__
 
-    uint8_t mp_get_current_process_core(void);
-    uint8_t mp_get_process_core(thread_t *thread);
-    uint8_t mp_get_cpu_count(void);
+    #include "thread_thread.h"
 
-    extern mp_obj_t *processes;
-    extern uint8_t process_count;
+    uint8_t mp_get_current_process_core(void); // needs to be defined in port
+    uint8_t mp_get_process_core(thread_t *thread); // needs to be defined in port
+    uint8_t mp_get_cpu_count(void); // needs to be defined in port
+    void multiprocessing_init(void); // needs to be defined in port
 
-    void multiprocessing_init(void);
-    extern mp_obj_t processes[2];
+    extern mp_obj_t *processes; // needs to be defined in port
+    extern uint8_t process_count; // needs to be defined in port
 
 #endif /* __MULTIPROCESSING_H__ */

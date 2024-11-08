@@ -216,7 +216,8 @@ void *thread_entry_cb(mp_obj_thread_t *self)
 
 
 
-void threading_init(void *stack, uint32_t stack_len) {
+void threading_init(void *stack, uint32_t stack_len)
+{
     mp_thread_set_state(&mp_state_ctx.thread);
     // create the first entry in the linked list of all threads
     _main_thread.thread.handle = xTaskGetCurrentTaskHandle();
@@ -238,7 +239,8 @@ void threading_init(void *stack, uint32_t stack_len) {
 }
 
 
-void threading_deinit(void) {
+void threading_deinit(void)
+{
     for (;;) {
         // Find a task to delete
         
@@ -266,8 +268,8 @@ void threading_deinit(void) {
 }
 
 
-
-void threading_gc_others(void) {
+void threading_gc_others(void)
+{
     threading_lock_acquire(&t_mutex, 1);
     
     for (mp_obj_thread_t *th = t_thread; th != NULL; th = th->next) {
@@ -285,7 +287,8 @@ void threading_gc_others(void) {
 }
 
 
-static void freertos_entry(void *arg) {
+static void freertos_entry(void *arg)
+{
     if (ext_threading_thread_entry) {
         mp_obj_thread_t *self = (mp_obj_thread_t *)arg;
         ext_threading_thread_entry(self);
@@ -297,7 +300,8 @@ static void freertos_entry(void *arg) {
 }
 
 
-mp_uint_t thread_create_ex(mp_obj_thread_t *self, int priority, char *name) {
+mp_uint_t thread_create_ex(mp_obj_thread_t *self, int priority, char *name)
+{
     // store thread entry function into a global variable so we can access it
     ext_threading_thread_entry = thread_entry_cb;
 
@@ -335,7 +339,8 @@ mp_uint_t thread_create_ex(mp_obj_thread_t *self, int priority, char *name) {
 }
 
 
-mp_uint_t threading_create_thread(thread_t *self) {
+mp_uint_t threading_create_thread(thread_t *self)
+{
     return thread_create_ex(self, THREADING_PRIORITY, "mp_thread");
 }
 

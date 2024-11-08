@@ -2,12 +2,11 @@
 #include "py/obj.h"
 #include "py/runtime.h"
 
-#include "thread_common.h"
 
 #ifndef __THREAD_THREAD_H__
     #define __THREAD_THREAD_H__
 
-    typedef struct _thread_t thread_t;
+    typedef struct _thread_t thread_t; // needs to be defined in port
 
     typedef struct _thread_entry_args_t {
         mp_obj_dict_t *dict_locals;
@@ -38,7 +37,7 @@
 
     } mp_obj_thread_t;
 
-    mp_uint_t threading_create_thread(mp_obj_thread_t *self);
-    void threading_delete_thread(thread_t *thread);
+    mp_uint_t threading_create_thread(mp_obj_thread_t *self); // needs to be defined in port
+    void threading_delete_thread(thread_t *thread); // needs to be defined in port
 
 #endif
