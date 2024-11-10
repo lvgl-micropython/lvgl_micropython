@@ -56,11 +56,15 @@
         rgb_panel_t *rgb_panel = __containerof(panel, rgb_panel_t, base);
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)user_ctx;
 
-        if (!self->trans_done && rgb_panel->fbs[rgb_panel->cur_fb_index] == self->transmitting_buf) {
-           if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
-               cb_isr(self->callback);
-           }
-           self->trans_done = true;
+        void *curr_buf = rgb_panel->fbs[rgb_panel->cur_fb_index]
+
+        if (self->view2 != NULL && self->last_buf != curr_buf) {
+            self->last_buf = curr_buf;
+            self->trans_done = true;
+
+            if (self->callback != mp_const_none) cb_isr(self->callback);
+        } else if (self->view2 == NULL) {
+            self->trans_done = true;
         }
 
         return false;
@@ -534,7 +538,6 @@
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
 
         self->trans_done = false;
-        self->transmitting_buf = color;
 
         esp_err_t ret = esp_lcd_panel_draw_bitmap(
             self->panel_handle,
@@ -550,7 +553,7 @@
             return LCD_OK;
         }
 
-        if (self->callback == mp_const_none || !self->panel_io_config.flags.double_fb) {
+        if (self->callback == mp_const_none || self->view2 == NULL) {
             while (!self->trans_done) {}
             self->trans_done = false;
         }

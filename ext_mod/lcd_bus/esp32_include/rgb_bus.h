@@ -39,7 +39,7 @@
             mp_obj_array_t *view1;
             mp_obj_array_t *view2;
 
-            void *transmitting_buf;
+            void *last_buf;
 
         } mp_lcd_rgb_bus_obj_t;
 
