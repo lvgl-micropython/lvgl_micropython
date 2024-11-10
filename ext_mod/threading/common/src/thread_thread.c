@@ -2,7 +2,7 @@
 #include "py/obj.h"
 #include "py/runtime.h"
 
-#include "thread_common.h"
+#include "threading.h"
 #include "thread_thread.h"
 
 

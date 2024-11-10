@@ -6,7 +6,7 @@ if(ESP_PLATFORM)
 
     set(THREADING_INCLUDES
         ${CMAKE_CURRENT_LIST_DIR}/common/inc
-        ${CMAKE_CURRENT_LIST_DIR}
+        ${CMAKE_CURRENT_LIST_DIR}/esp32
     )
 
     set(THREADING_SOURCES

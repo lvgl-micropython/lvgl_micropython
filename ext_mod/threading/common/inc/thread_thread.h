@@ -6,7 +6,7 @@
 #ifndef __THREAD_THREAD_H__
     #define __THREAD_THREAD_H__
 
-    typedef struct _thread_t thread_t; // needs to be defined in port
+    #include "thread_port.h"
 
     typedef struct _thread_entry_args_t {
         mp_obj_dict_t *dict_locals;

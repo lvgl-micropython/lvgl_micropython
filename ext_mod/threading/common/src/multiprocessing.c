@@ -11,7 +11,7 @@ void multiprocessing_init(void)
 {
     processes = (mp_obj_t *)malloc(sizeof(mp_obj_t) * mp_get_cpu_count());
 
-    mp_obj_thread_t * main_thread = (mp_obj_thread_t *)MP_OBJ_TO_PTR(threading_main_thread());
+    mp_obj_thread_t * main_thread = (mp_obj_thread_t *)MP_OBJ_TO_PTR(mp_get_main_thread());
     uint8_t curr_core_id = mp_get_process_core(&main_thread->thread);
     processes[curr_core_id] = MP_OBJ_FROM_PTR(main_thread);
 }
@@ -46,7 +46,7 @@ static MP_DEFINE_CONST_FUN_OBJ_0(multiprocessing_active_children_obj, multiproce
 
 static mp_obj_t multiprocessing_cpu_count(void)
 {
-    return mp_obj_new_int_truncated(mp_get_cpu_count());
+    return mp_obj_new_int_from_uint(mp_get_cpu_count());
 }
 
 static MP_DEFINE_CONST_FUN_OBJ_0(multiprocessing_cpu_count_obj, multiprocessing_cpu_count);
@@ -63,7 +63,7 @@ static MP_DEFINE_CONST_FUN_OBJ_0(multiprocessing_current_process_obj, multiproce
 
 static mp_obj_t multiprocessing_parent_process(void)
 {
-    mp_obj_t main_thread = threading_main_thread();
+    // mp_obj_t main_thread = mp_get_main_thread();
     uint8_t core_id = mp_get_current_process_core();
 
     return processes[core_id];

@@ -5,12 +5,12 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
-#include "thread_common.h"
+#include "threading.h"
 
 #ifndef __THREAD_RLOCK_H__
     #define __THREAD_RLOCK_H__
 
-    typedef struct _thread_rlock_t thread_rlock_t; // needs to be defined in port
+    #include "thread_port.h"
 
     typedef struct _mp_obj_rlock_t {
         mp_obj_base_t base;

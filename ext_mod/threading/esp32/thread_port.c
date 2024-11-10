@@ -7,6 +7,8 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "freertos/queue.h"
+#include "esp_task.h"
+
 
 #include "thread_port.h"
 
@@ -18,6 +20,7 @@
 #include "thread_semaphore.h"
 #include "thread_lock.h"
 #include "thread_rlock.h"
+
 
 #define THREADING_MIN_STACK_SIZE                        (4 * 1024)
 #define THREADING_DEFAULT_STACK_SIZE                    (THREADING_MIN_STACK_SIZE + 1024)
@@ -80,7 +83,7 @@ void threading_event_wait(thread_event_t *event, int32_t wait_ms)
 
 void threading_event_init(thread_event_t *event)
 {
-    event->handle = xEventGroupCreateStatic(event->buffer);
+    event->handle = xEventGroupCreateStatic(&event->buffer);
 }
 
 
@@ -105,14 +108,14 @@ void threading_lock_release(thread_lock_t *lock)
 
 void threading_lock_init(thread_lock_t *lock)
 {
-    mutex->handle = xSemaphoreCreateBinaryStatic(&lock->buffer);
+    lock->handle = xSemaphoreCreateBinaryStatic(&lock->buffer);
     xSemaphoreGive(lock->handle);
 }
 
 
-int threading_rlock_acquire(thread_rlock_t *rlock, uint16_t wait_ms)
+int threading_rlock_acquire(thread_rlock_t *rlock, int32_t wait_ms)
 {
-    return pdTRUE == xSemaphoreTakeRecursive(rlock->handle, wait < 0 ? portMAX_DELAY : pdMS_TO_TICKS(wait_ms));
+    return pdTRUE == xSemaphoreTakeRecursive(rlock->handle, wait_ms < 0 ? portMAX_DELAY : pdMS_TO_TICKS((uint16_t)wait_ms));
 }
 
 
@@ -124,7 +127,7 @@ void threading_rlock_release(thread_rlock_t *rlock)
 
 void threading_rlock_init(thread_rlock_t *rlock)
 {
-    mutex->handle = xSemaphoreCreateRecursiveMutexStatic(&rlock->buffer);
+    rlock->handle = xSemaphoreCreateRecursiveMutexStatic(&rlock->buffer);
     xSemaphoreGiveRecursive(rlock->handle);
 }
 
@@ -159,7 +162,7 @@ void threading_semaphore_delete(thread_semaphore_t *sem)
 }
 
 
-static threading_thread_entry_cb_t ext_threading_thread_entry = NULL;
+static thread_entry_cb_t ext_threading_thread_entry = NULL;
 
 
 thread_lock_t t_mutex;
@@ -225,7 +228,7 @@ void threading_init(void *stack, uint32_t stack_len)
     _main_thread.ident = mp_obj_new_int_from_uint((mp_uint_t)_main_thread.thread.handle);
     _main_thread.ready = 1;
     _main_thread.is_alive = true;
-    _main_thread.arg = NULL;
+    _main_thread.call_args = NULL;
     _main_thread.stack = stack;
     _main_thread.stack_len = stack_len;
     _main_thread.next = NULL;
@@ -244,25 +247,25 @@ void threading_deinit(void)
     for (;;) {
         // Find a task to delete
         
-        thread_t thread = { .handle=NULL };
+        mp_obj_thread_t *thread = NULL;
         threading_lock_acquire(&t_mutex, 1);
         
         for (mp_obj_thread_t *th = t_thread; th != NULL; th = th->next) {
             // Don't delete the current task
             if (th->thread.handle != xTaskGetCurrentTaskHandle()) {
-                thread.handle = th->thread.handle;
+                thread = th;
                 break;
             }
         }
         threading_lock_release(&t_mutex);
 
-        if (thread.handle == NULL) {
+        if (thread == NULL) {
             // No tasks left to delete
             break;
         } else {
             // Call FreeRTOS to delete the task (it will call FREERTOS_TASK_DELETE_HOOK)
             
-            threading_delete_thread(&thread);
+            threading_delete_thread(thread);
         }
     }
 }
@@ -274,7 +277,7 @@ void threading_gc_others(void)
     
     for (mp_obj_thread_t *th = t_thread; th != NULL; th = th->next) {
         gc_collect_root((void **)&th, 1);
-        gc_collect_root(&th->arg, 1); // probably not needed
+        gc_collect_root(&th->call_args, 1); // probably not needed
         if (th->thread.handle == xTaskGetCurrentTaskHandle()) {
             continue;
         }
@@ -335,18 +338,18 @@ mp_uint_t thread_create_ex(mp_obj_thread_t *self, int priority, char *name)
 
     threading_lock_release(&t_mutex);
 
-    return (mp_uint_t)self->id;
+    return (mp_uint_t)self->thread.handle;
 }
 
 
-mp_uint_t threading_create_thread(thread_t *self)
+mp_uint_t threading_create_thread(mp_obj_thread_t *self)
 {
     return thread_create_ex(self, THREADING_PRIORITY, "mp_thread");
 }
 
-void threading_delete_thread(thread_t *thread) 
+void threading_delete_thread(mp_obj_thread_t *thread)
 {
-    vTaskDelete(thread->handle);
+    vTaskDelete(thread->thread.handle);
 }
     
 

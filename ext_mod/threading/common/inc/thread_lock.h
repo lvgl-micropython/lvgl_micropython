@@ -6,7 +6,7 @@
 #ifndef __THREAD_LOCK_H__
     #define __THREAD_LOCK_H__
 
-    typedef struct _thread_lock_t thread_lock_t; // needs to be defined in port
+    #include "thread_port.h"
 
     typedef struct _mp_obj_lock_t {
         mp_obj_base_t base;

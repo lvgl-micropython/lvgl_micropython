@@ -6,7 +6,7 @@
 #ifndef __THREAD_EVENT_H__
     #define __THREAD_EVENT_H__
 
-    typedef struct _thread_event_t thread_event_t; // needs to be defined in port
+    #include "thread_port.h"
 
     typedef struct _mp_obj_thread_event_t {
         mp_obj_base_t base;
