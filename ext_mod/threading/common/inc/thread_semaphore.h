@@ -8,11 +8,11 @@
 
     #include "thread_port.h"
 
-    typedef struct _mp_obj_thread_semaphore_t {
+    typedef struct _mp_obj_semaphore_t {
         mp_obj_base_t base;
         thread_semaphore_t sem;
         uint16_t start_value;
-    } mp_obj_thread_semaphore_t;
+    } mp_obj_semaphore_t;
 
     uint16_t threading_semaphore_get_count(thread_semaphore_t *sem); // needs to be defined in port
     bool threading_semaphore_acquire(thread_semaphore_t *sem, int32_t wait_ms); // needs to be defined in port

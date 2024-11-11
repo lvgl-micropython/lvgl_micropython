@@ -10,7 +10,7 @@
 
 static void semaphore_attr_func(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_obj_thread_semaphore_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_obj_semaphore_t *self = MP_OBJ_TO_PTR(self_in);
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
@@ -52,7 +52,7 @@ static mp_obj_t semaphore_acquire(size_t n_args, const mp_obj_t *pos_args, mp_ma
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    mp_obj_thread_semaphore_t *self = MP_OBJ_TO_PTR(args[ARG_self].u_obj);
+    mp_obj_semaphore_t *self = MP_OBJ_TO_PTR(args[ARG_self].u_obj);
 
     bool blocking = (bool)args[ARG_blocking].u_bool;
 
@@ -101,7 +101,7 @@ static mp_obj_t semaphore_release(size_t n_args, const mp_obj_t *pos_args, mp_ma
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    mp_obj_thread_semaphore_t *self = (mp_obj_thread_semaphore_t *)args[ARG_self].u_obj;
+    mp_obj_semaphore_t *self = (mp_obj_semaphore_t *)args[ARG_self].u_obj;
 
     uint16_t n = (uint16_t)args[ARG_n].u_int;
 
@@ -129,7 +129,7 @@ static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(semaphore__exit__obj, 4, 4, semaphore
 
 static mp_obj_t semaphore__del__(mp_obj_t self_in)
 {
-    mp_obj_thread_semaphore_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_obj_semaphore_t *self = MP_OBJ_TO_PTR(self_in);
 
     for (uint16_t i=0;i<self->start_value;i++) {
         threading_semaphore_release(&self->sem);
@@ -158,7 +158,7 @@ static mp_obj_t thread_semaphore_make_new(const mp_obj_type_t *type, size_t n_ar
     );
 
     // create new object
-    mp_obj_thread_semaphore_t *self = m_new_obj(mp_obj_thread_semaphore_t);
+    mp_obj_semaphore_t *self = m_new_obj(mp_obj_semaphore_t);
     self->base.type = &mp_type_threading_semaphore_t;
 
     int32_t start_value = (int32_t)args[ARG_value].u_int;
@@ -221,7 +221,7 @@ static mp_obj_t multiprocess_semaphore_make_new(const mp_obj_type_t *type, size_
     );
 
     // create new object
-    mp_obj_thread_semaphore_t *self = m_new_obj(mp_obj_thread_semaphore_t);
+    mp_obj_semaphore_t *self = m_new_obj(mp_obj_semaphore_t);
     self->base.type = &mp_type_multiprocessing_semaphore_t;
 
     int32_t start_value = (int32_t)args[ARG_value].u_int;

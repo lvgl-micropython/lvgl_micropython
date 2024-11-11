@@ -13,7 +13,7 @@
 
 static mp_obj_t event_is_set(mp_obj_t self_in)
 {
-    mp_obj_thread_event_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_obj_event_t *self = MP_OBJ_TO_PTR(self_in);
     return mp_obj_new_bool(self->event.is_set);
 }
 
@@ -23,7 +23,7 @@ static MP_DEFINE_CONST_FUN_OBJ_1(event_is_set_obj, event_is_set);
 
 static mp_obj_t event_set(mp_obj_t self_in)
 {
-    mp_obj_thread_event_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_obj_event_t *self = MP_OBJ_TO_PTR(self_in);
     self->event.is_set = true;
     threading_event_set(&self->event);
     return mp_const_none;
@@ -35,7 +35,7 @@ static MP_DEFINE_CONST_FUN_OBJ_1(event_set_obj, event_set);
 
 static mp_obj_t event_clear(mp_obj_t self_in)
 {
-    mp_obj_thread_event_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_obj_event_t *self = MP_OBJ_TO_PTR(self_in);
     self->event.is_set = false;
     threading_event_clear(&self->event);
     return mp_const_none;
@@ -55,7 +55,7 @@ static mp_obj_t event_wait(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    mp_obj_thread_event_t *self = (mp_obj_thread_event_t *)args[ARG_self].u_obj;
+    mp_obj_event_t *self = (mp_obj_event_t *)args[ARG_self].u_obj;
 
     float timeout_f;
 
@@ -77,7 +77,7 @@ static MP_DEFINE_CONST_FUN_OBJ_KW(event_wait_obj, 1, event_wait);
 
 static mp_obj_t event__del__(mp_obj_t self_in)
 {
-    mp_obj_thread_event_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_obj_event_t *self = MP_OBJ_TO_PTR(self_in);
     threading_event_delete(&self->event);
     return mp_const_none;
 }
@@ -93,7 +93,7 @@ static mp_obj_t thread_event_make_new(const mp_obj_type_t *type, size_t n_args, 
     THREAD_UNUSED(all_args);
 
     // create new object
-    mp_obj_thread_event_t *self = m_new_obj(mp_obj_thread_event_t);
+    mp_obj_event_t *self = m_new_obj(mp_obj_event_t);
     self->base.type = &mp_type_threading_event_t;
     self->event.is_set = false;
     threading_event_init(&self->event);
@@ -134,7 +134,7 @@ static mp_obj_t multiprocess_event_make_new(const mp_obj_type_t *type, size_t n_
     THREAD_UNUSED(all_args);
 
     // create new object
-    mp_obj_thread_event_t *self = m_new_obj(mp_obj_thread_event_t);
+    mp_obj_event_t *self = m_new_obj(mp_obj_event_t);
     self->base.type = &mp_type_multiprocessing_event_t;
     self->event.is_set = false;
     threading_event_init(&self->event);

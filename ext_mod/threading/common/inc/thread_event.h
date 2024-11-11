@@ -8,11 +8,11 @@
 
     #include "thread_port.h"
 
-    typedef struct _mp_obj_thread_event_t {
+    typedef struct _mp_obj_event_t {
         mp_obj_base_t base;
         thread_event_t event;
         bool is_set;
-    } mp_obj_thread_event_t;
+    } mp_obj_event_t;
 
     void threading_event_set(thread_event_t *event); // needs to be defined in port
     bool threading_event_isset(thread_event_t *event); // needs to be defined in port

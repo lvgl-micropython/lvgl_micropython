@@ -19,7 +19,7 @@ static mp_obj_t lock_acquire(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    mp_obj_thread_lock_t *self = MP_OBJ_TO_PTR(args[ARG_self].u_obj);
+    mp_obj_lock_t *self = MP_OBJ_TO_PTR(args[ARG_self].u_obj);
     float timeout_f;
 
     if (args[ARG_timeout].u_obj != mp_const_none) {
@@ -57,11 +57,11 @@ static MP_DEFINE_CONST_FUN_OBJ_KW(lock_acquire_obj, 3, lock_acquire);
 static mp_obj_t lock__enter__(size_t n_args, const mp_obj_t *args)
 {
     (void)n_args; // unused
-    mp_obj_thread_lock_t *self = MP_OBJ_TO_PTR(args[0]);
+    mp_obj_lock_t *self = MP_OBJ_TO_PTR(args[0]);
 
     self->lock.ref_count += 1;
     threading_lock_acquire(&self->lock, -1);
-    return mp_const_none
+    return mp_const_none;
 }
 
 
@@ -70,11 +70,11 @@ static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(lock__enter__obj, 1, 1, lock__enter__
 
 static mp_obj_t lock_release(mp_obj_t self_in)
 {
-    mp_obj_thread_lock_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_obj_lock_t *self = MP_OBJ_TO_PTR(self_in);
     if (self->lock.ref_count == 0) {
-        mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Lock is already released");
+        mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Lock is already released"));
     } else {
-        threading_lock_release(&self->mutex);
+        threading_lock_release(&self->lock);
     }
 
     self->lock.ref_count -= 1;
@@ -97,7 +97,7 @@ static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(lock__exit__obj, 4, 4, lock__exit__);
 
 static mp_obj_t lock_locked(mp_obj_t self_in)
 {
-    mp_obj_thread_lock_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_obj_lock_t *self = MP_OBJ_TO_PTR(self_in);
 
     return mp_obj_new_bool(self->lock.ref_count != 0);
 }
@@ -113,21 +113,21 @@ static mp_obj_t thread_lock_make_new(const mp_obj_type_t *type, size_t n_args, s
     THREAD_UNUSED(n_kw);
     THREAD_UNUSED(all_args);
 
-    mp_obj_thread_lock_t *self = m_new_obj(mp_obj_thread_lock_t);
+    mp_obj_lock_t *self = m_new_obj(mp_obj_lock_t);
     self->base.type = &mp_type_threading_lock_t;
 
-    threading_lock_init(&self->lock;
+    threading_lock_init(&self->lock);
     self->locked = false;
     return MP_OBJ_FROM_PTR(self);
 }
 
 
 static const mp_rom_map_elem_t lock_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_acquire), MP_ROM_PTR(&thread_lock_acquire_obj) },
-    { MP_ROM_QSTR(MP_QSTR_release), MP_ROM_PTR(&thread_lock_release_obj) },
-    { MP_ROM_QSTR(MP_QSTR___enter__), MP_ROM_PTR(&thread_lock__enter__obj) },
-    { MP_ROM_QSTR(MP_QSTR___exit__), MP_ROM_PTR(&thread_lock__exit__obj) },
-    { MP_ROM_QSTR(MP_QSTR_locked), MP_ROM_PTR(&thread_lock_locked_obj) },
+    { MP_ROM_QSTR(MP_QSTR_acquire), MP_ROM_PTR(&lock_acquire_obj) },
+    { MP_ROM_QSTR(MP_QSTR_release), MP_ROM_PTR(&lock_release_obj) },
+    { MP_ROM_QSTR(MP_QSTR___enter__), MP_ROM_PTR(&lock__enter__obj) },
+    { MP_ROM_QSTR(MP_QSTR___exit__), MP_ROM_PTR(&lock__exit__obj) },
+    { MP_ROM_QSTR(MP_QSTR_locked), MP_ROM_PTR(&lock_locked_obj) },
 };
 
 static MP_DEFINE_CONST_DICT(lock_locals_dict, lock_locals_dict_table);
@@ -155,7 +155,7 @@ static mp_obj_t multiprocess_lock_make_new(const mp_obj_type_t *type, size_t n_a
     THREAD_UNUSED(n_kw);
     THREAD_UNUSED(all_args);
 
-    mp_obj_thread_lock_t *self = m_new_obj(mp_obj_thread_lock_t);
+    mp_obj_lock_t *self = m_new_obj(mp_obj_lock_t);
     self->base.type = &mp_type_multiprocessing_lock_t;
 
     threading_lock_init(&self->lock);

@@ -5,11 +5,14 @@
 #include "threading.h"
 #include "thread_thread.h"
 
+#include "multiprocessing.h"
+
+#include <string.h>
 
 
 static mp_obj_t thread_start(mp_obj_t self_in)
 {
-    mp_obj_thread_thread_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_obj_thread_t *self = MP_OBJ_TO_PTR(self_in);
     self->ident = mp_obj_new_int_from_uint(threading_create_thread(self));
 
     return mp_const_none;
@@ -20,7 +23,7 @@ static MP_DEFINE_CONST_FUN_OBJ_1(thread_start_obj, thread_start);
 
 static mp_obj_t thread_is_alive(mp_obj_t self_in)
 {
-    mp_obj_thread_thread_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_obj_thread_t *self = MP_OBJ_TO_PTR(self_in);
     return mp_obj_new_bool(self->is_alive);
 }
 
@@ -29,7 +32,7 @@ static MP_DEFINE_CONST_FUN_OBJ_1(thread_is_alive_obj, thread_is_alive);
 
 static void thread_attr_func(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 {
-    mp_obj_thread_thread_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_obj_thread_t *self = MP_OBJ_TO_PTR(self_in);
 
     if (dest[0] == MP_OBJ_NULL) {
         // load attribute
@@ -82,7 +85,7 @@ static mp_obj_t threading_thread_make_new(const mp_obj_type_t *type, size_t n_ar
     );
 
     // create new object
-    mp_obj_thread_thread_t *self = m_new_obj(mp_obj_thread_thread_t);
+    mp_obj_thread_t *self = m_new_obj(mp_obj_thread_t);
     self->base.type = &mp_type_threading_thread_t;
 
     self->name = args[ARG_name].u_obj;
@@ -185,7 +188,7 @@ static mp_obj_t multiprocessing_process_make_new(const mp_obj_type_t *type, size
     }
 
     // create new object
-    mp_obj_thread_thread_t *self = m_new_obj(mp_obj_thread_thread_t);
+    mp_obj_thread_t *self = m_new_obj(mp_obj_thread_t);
     self->base.type = &mp_type_multiprocessing_process_t;
 
     self->name = args[ARG_name].u_obj;

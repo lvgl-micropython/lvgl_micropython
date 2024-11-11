@@ -7,6 +7,9 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "freertos/queue.h"
+#include "freertos/event_groups.h"
+#include "freertos/idf_additions.h"
+
 #include "esp_task.h"
 
 
@@ -277,7 +280,7 @@ void threading_gc_others(void)
     
     for (mp_obj_thread_t *th = t_thread; th != NULL; th = th->next) {
         gc_collect_root((void **)&th, 1);
-        gc_collect_root(&th->call_args, 1); // probably not needed
+        gc_collect_root((void **)&th->call_args, 1); // probably not needed
         if (th->thread.handle == xTaskGetCurrentTaskHandle()) {
             continue;
         }
