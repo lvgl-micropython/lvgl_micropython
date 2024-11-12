@@ -1,6 +1,6 @@
 import display_driver_framework
-import rgb_display_framework
-from micropython import const
+import rgb_display_framework  # NOQA
+from micropython import const  # NOQA
 import lcd_bus
 import lvgl as lv
 import gc
