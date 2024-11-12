@@ -3,6 +3,7 @@ import rgb_display_framework
 from micropython import const
 import lcd_bus
 import lvgl as lv
+import gc
 
 
 STATE_HIGH = display_driver_framework.STATE_HIGH
@@ -76,7 +77,7 @@ class NV3041A(display_driver_framework.DisplayDriver):
         offset_y=0,
         color_byte_order=BYTE_ORDER_RGB,
         color_space=lv.COLOR_FORMAT.RGB888,  # NOQA
-        rgb565_byte_swap=False,
+        rgb565_byte_swap=False,  # NOQA
     ):
         num_lanes = data_bus.get_lane_count()
 
@@ -84,6 +85,43 @@ class NV3041A(display_driver_framework.DisplayDriver):
             self.__cmd_modifier = self.__quad_spi_cmd_modifier
             self.__color_cmd_modifier = self.__quad_spi_color_cmd_modifier
             _cmd_bits = 32
+
+            # we need to override the default handling for creating the frame
+            # buffer is using a quad spi bus. we don't want it to create
+            # partial buffers for the quad SPI display
+
+            buf_size = display_width * display_height * lv.color_format_get_size(color_space)
+
+            if frame_buffer1 is None:
+                gc.collect()
+
+                for flags in (
+                    lcd_bus.MEMORY_INTERNAL | lcd_bus.MEMORY_DMA,
+                    lcd_bus.MEMORY_SPIRAM | lcd_bus.MEMORY_DMA,
+                    lcd_bus.MEMORY_INTERNAL,
+                    lcd_bus.MEMORY_SPIRAM
+                ):
+                    try:
+                        frame_buffer1 = (
+                            data_bus.allocate_framebuffer(buf_size, flags)
+                        )
+
+                        if (flags | lcd_bus.MEMORY_DMA) == flags:
+                            frame_buffer2 = (
+                                data_bus.allocate_framebuffer(buf_size, flags)
+                            )
+
+                        break
+                    except MemoryError:
+                        frame_buffer1 = data_bus.free_framebuffer(frame_buffer1)
+
+                if frame_buffer1 is None:
+                    raise MemoryError(
+                        f'Unable to allocate memory for frame buffer ({buf_size})'  # NOQA
+                    )
+
+                if len(frame_buffer1) != buf_size:
+                    raise ValueError('incorrect framebuffer size')
         else:
             self.__cmd_modifier = self.__dummy_cmd_modifier
             self.__color_cmd_modifier = self.__dummy_cmd_modifier
@@ -93,6 +131,7 @@ class NV3041A(display_driver_framework.DisplayDriver):
         self.__ramwr = self.__color_cmd_modifier(_RAMWR)
         self.__ramwrc = self.__color_cmd_modifier(_RAMWRC)
         self.__caset = self.__cmd_modifier(_CASET)
+        self.__flush_ready_count = 0
 
         super().__init__(
             data_bus,
@@ -110,18 +149,30 @@ class NV3041A(display_driver_framework.DisplayDriver):
             offset_y,
             color_byte_order,
             color_space,  # NOQA
+            # we don't need to sue RGB565 byte swap so we override it
             rgb565_byte_swap=False,
             _cmd_bits=_cmd_bits,
             _param_bits=8,
             _init_bus=True
         )
 
+    def _flush_ready_cb(self, *_):
+        # since there are 2 transfers that take place we need to
+        # make sure that flush ready is only called after the second part
+        # of the buffer has sent.
+        self.__flush_ready_count += 1
+        if self.__flush_ready_count == 2:
+            self._disp_drv.flush_ready()
+            self.__flush_ready_count = 0
+
     def set_params(self, cmd, params=None):
         cmd = self.__cmd_modifier(cmd)
         self._data_bus.tx_param(cmd, params)
 
     def _set_memory_location(self, x1: int, y1: int, x2: int, y2: int):
-        # Column addresses
+        return self._dummy_set_memory_location(x1, y1, x2, y2)
+
+    def _dummy_set_memory_location(self, x1: int, y1: int, x2: int, y2: int):
         param_buf = self._param_buf  # NOQA
 
         param_buf[0] = (x1 >> 8) & 0xFF
