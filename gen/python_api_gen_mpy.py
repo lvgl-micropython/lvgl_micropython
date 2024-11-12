@@ -1340,7 +1340,7 @@ static mp_int_t mp_func_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, 
     const mp_lv_obj_fun_builtin_var_t obj_name = \\
         {{&mp_lv_type_fun_builtin_var}, n_args, mp_fun, lv_fun}
 
-#define MP_DEFINE_CONST_LV_FUN_OBJ_static_VAR(obj_name, n_args, mp_fun, lv_fun) \\
+#define MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR(obj_name, n_args, mp_fun, lv_fun) \\
     const mp_lv_obj_fun_builtin_var_t obj_name = \\
         {{&mp_lv_type_fun_builtin_static_var}, n_args, mp_fun, lv_fun}
 
@@ -3045,7 +3045,7 @@ static {builtin_macro}(mp_{func_obj_name}_mpobj, {param_count}, mp_{func_name}, 
             func_name = func_name,
             func_ptr = func_ptr,
             param_count = param_count,
-            builtin_macro='MP_DEFINE_CONST_LV_FUN_OBJ_static_VAR' if is_static else 'MP_DEFINE_CONST_LV_FUN_OBJ_VAR'))
+            builtin_macro='MP_DEFINE_CONST_LV_FUN_OBJ_STATIC_VAR' if is_static else 'MP_DEFINE_CONST_LV_FUN_OBJ_VAR'))
 
 def gen_mp_func(func, obj_name):
     # print('/* gen_mp_func: %s : %s */' % (obj_name, func))
