@@ -56,7 +56,7 @@
         rgb_panel_t *rgb_panel = __containerof(panel, rgb_panel_t, base);
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)user_ctx;
 
-        void *curr_buf = rgb_panel->fbs[rgb_panel->cur_fb_index]
+        void *curr_buf = rgb_panel->fbs[rgb_panel->cur_fb_index];
 
         if (self->view2 != NULL && self->last_buf != curr_buf) {
             self->last_buf = curr_buf;
