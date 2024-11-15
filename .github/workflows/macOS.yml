@@ -20,6 +20,8 @@ jobs:
 
     - name: Install Dependencies
       run: |
+        brew install --force gcc
+        gcc -v
         brew install --force ninja 
         git submodule update --init -- lib/pycparser
         git submodule update --init --jobs 4 -- lib/micropython        
