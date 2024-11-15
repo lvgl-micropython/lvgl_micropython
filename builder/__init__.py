@@ -53,6 +53,7 @@ def copy_micropy_updates(port):
 
     if port in ('raspberry_pi', 'macOS'):
         port = 'unix'
+        src_path = f'micropy_updates/{port}'
 
     dst_path = f'lib/micropython/ports/{port}'
 
@@ -68,7 +69,8 @@ def copy_micropy_updates(port):
 
                 iter_files(src_file, dst_file, org_file)
             else:
-                shutil.copyfile(dst_file, org_file)
+                if os.path.isfile(dst_file):        # backup file if it exits
+                    shutil.copyfile(dst_file, org_file)
                 shutil.copyfile(src_file, dst_file)
 
     iter_files(src_path, dst_path, org_path)
