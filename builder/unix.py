@@ -85,7 +85,7 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
     unix_cmd.extend(
         [
             f'LV_CFLAGS="{lv_cflags}"',
-            f'LV_PORT=unix',
+            f'LV_PORT={REAL_PORT}',
             f'USER_C_MODULES="{script_dir}/ext_mod"',
             (
                 '"CFLAGS_EXTRA='
