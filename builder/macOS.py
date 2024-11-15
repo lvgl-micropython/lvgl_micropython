@@ -43,34 +43,14 @@ def force_clean(clean_mpy_cross):
 
 
 def build_sdl(addl_commands):
-    dst = f'lib/micropython/ports/unix/build-{unix.variant}/SDL'
-    if not os.path.exists(dst):
-        os.makedirs(dst)
-    elif os.path.exists(os.path.join(dst, 'libSDL2-2.0.0.dylib')):
-        return
-
-    cwd = os.getcwd()
-    os.chdir(dst)
-    cmd_ = [
-        [
-            f'cmake -DSDL_STATIC=ON -DSDL_SHARED=ON '
-            f'-DCMAKE_BUILD_TYPE=Release {addl_commands} {unix.SCRIPT_PATH}/lib/SDL'
-        ],
-        [f'cmake --build . --config Release --parallel {os.cpu_count()}']
-    ]
-
-    res, _ = unix.spawn(cmd_, cmpl=True)
-    if res != 0:
-        sys.exit(res)
-
-    os.chdir(cwd)
+    pass
 
 
 unix.build_sdl = build_sdl
 
 
 def submodules():
-    _submodules()
+    pass
 
 
 def compile(*args):  # NOQA

@@ -21,13 +21,10 @@ jobs:
     - name: Install Dependencies
       run: |
         brew install --force ninja 
+        brew install --force sdl2
         git submodule update --init -- lib/pycparser
         git submodule update --init --jobs 4 -- lib/micropython        
         git submodule update --init --jobs 4 -- lib/lvgl        
-        git submodule update --init --jobs 4 -- lib/SDL
-        cd lib/SDL
-        git checkout release-2.30.2
-        cd ../..
 
     - name: Cached Deps
       id: cache-deps
@@ -69,10 +66,6 @@ jobs:
         format: "YYYY_MM_DD HH_mm_ss_SSS"
 
     - name: Build macOS port
-      env:
-        CC: gcc-14
-        CXX: g++-14
-
       run: python3 make.py macOS DISPLAY=sdl_display INDEV=sdl_pointer
 
     - uses: actions/upload-artifact@v4
