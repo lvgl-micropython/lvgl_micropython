@@ -20,8 +20,6 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        export PATH=/usr/local/bin:$PATH
-        ls /usr/local/bin/gcc* /usr/local/bin/g++*
         brew install --force ninja 
         git submodule update --init -- lib/pycparser
         git submodule update --init --jobs 4 -- lib/micropython        
@@ -71,6 +69,10 @@ jobs:
         format: "YYYY_MM_DD HH_mm_ss_SSS"
 
     - name: Build macOS port
+      env:
+        CC: gcc-14
+        CXX: g++-14
+
       run: python3 make.py macOS DISPLAY=sdl_display INDEV=sdl_pointer
 
     - uses: actions/upload-artifact@v4
