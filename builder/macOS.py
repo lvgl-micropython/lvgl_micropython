@@ -62,11 +62,6 @@ def submodules():
 def compile(*args):  # NOQA
     _compile(*args)
 
-    src = f'lib/micropython/ports/unix/build-{unix.variant}/SDL/libSDL2-2.0.0.dylib'
-    dst = f'build/libSDL2-2.0.0.dylib'
-    if os.path.exists(src):
-        shutil.copyfile(src, dst)
-
 
 def mpy_cross():
     _mpy_cross()
