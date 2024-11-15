@@ -58,7 +58,7 @@ jobs:
         . ./lib/esp-idf/export.sh
 
     - name: Build ESP32 port
-      run: python3 make.py esp32 submodules clean mpy_cross BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT DISPLAY=rgb_display INDEV=gt911 --ccache
+      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT DISPLAY=rgb_display INDEV=gt911 --ccache
 
     # - name: Build STM32 port
     #   run: python3 make.py stm32 submodules clean mpy_cross BOARD=STM32H7B3I_DK DISPLAY=rgb_display INDEV=gt911
@@ -73,7 +73,7 @@ jobs:
         format: "YYYY_MM_DD HH_mm_ss_SSS"
 
     - name: Build Unix port
-      run: python3 make.py unix submodules clean mpy_cross DISPLAY=sdl_display INDEV=sdl_pointer
+      run: python3 make.py unix DISPLAY=sdl_display INDEV=sdl_pointer
 
     - uses: actions/upload-artifact@v4
       with:
