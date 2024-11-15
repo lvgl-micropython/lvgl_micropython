@@ -67,7 +67,7 @@ jobs:
 
     - name: Build ESP32 port
       run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT DISPLAY=rgb_display INDEV=gt911
-    
+
 
     - uses: actions/upload-artifact@v4
       with:

@@ -50,7 +50,13 @@ unix.build_sdl = build_sdl
 
 
 def submodules():
-    pass
+    berkeley_db = os.path.abspath('lib/micropython/lib/berkeley-db-1.xx/README')
+
+    if not os.path.exists(berkeley_db):
+        return_code, _ = unix.spawn(unix.submodules_cmd)
+
+        if return_code != 0:
+            sys.exit(return_code)
 
 
 def compile(*args):  # NOQA
