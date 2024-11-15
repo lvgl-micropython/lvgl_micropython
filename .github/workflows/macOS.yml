@@ -20,7 +20,7 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        brew install --force gcc
+        brew reinstall gcc
         cd /usr/local/bin
         ls | grep 'gcc'
         brew install --force ninja 
