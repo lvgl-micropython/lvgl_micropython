@@ -20,9 +20,8 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        brew reinstall gcc
-        cd /usr/local/bin
-        ls | grep 'gcc'
+        export PATH=/usr/local/bin:$PATH
+        ls /usr/local/bin/gcc* /usr/local/bin/g++*
         brew install --force ninja 
         git submodule update --init -- lib/pycparser
         git submodule update --init --jobs 4 -- lib/micropython        
