@@ -45,14 +45,6 @@ jobs:
         export "IDF_PATH=${GITHUB_WORKSPACE}/lib/esp-idf"
         ./lib/esp-idf/install.sh all
 
-    - name: Setup ESP-IDF
-      run: |
-        export "IDF_PATH=${GITHUB_WORKSPACE}/lib/esp-idf"
-        . ./lib/esp-idf/export.sh
-
-    - name: Build ESP32 port
-      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT DISPLAY=rgb_display INDEV=gt911
-
     # - name: Build STM32 port
     #   run: python3 make.py stm32 submodules clean mpy_cross BOARD=STM32H7B3I_DK DISPLAY=rgb_display INDEV=gt911
 
@@ -67,6 +59,15 @@ jobs:
 
     - name: Build macOS port
       run: python3 make.py macOS DISPLAY=sdl_display INDEV=sdl_pointer
+
+    - name: Setup ESP-IDF
+      run: |
+        export "IDF_PATH=${GITHUB_WORKSPACE}/lib/esp-idf"
+        . ./lib/esp-idf/export.sh
+
+    - name: Build ESP32 port
+      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT DISPLAY=rgb_display INDEV=gt911
+    
 
     - uses: actions/upload-artifact@v4
       with:

@@ -28,11 +28,12 @@ ifneq (,$(findstring unix, $(LV_PORT)))
     LDFLAGS_USERMOD += -L$(BUILD)/SDL
 
     LDFLAGS_USERMOD += -lSDL2
-
 else
     ifneq (,$(findstring macOS, $(LV_PORT)))
+        # -F/Library/Frameworks -framework SDL2
         CFLAGS_USERMOD += -DMP_PORT_UNIX=1
-    	LDFLAGS_USERMOD  :=$(shell sdl2-config --libs)
-		CFLAGS_USERMOD :=$(shell sdl2-config --cflags)
+        CFLAGS_USERMOD += -I/Library/Frameworks/SDL2.framework/Headers/SDL2
+        CFLAGS_USERMOD += $(shell sdl2-config --cflags)
+    	LDFLAGS_USERMOD += $(shell sdl2-config --libs)
     endif
 endif
