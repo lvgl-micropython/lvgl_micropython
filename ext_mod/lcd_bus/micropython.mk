@@ -32,6 +32,7 @@ ifneq (,$(findstring unix, $(LV_PORT)))
 else
     ifneq (,$(findstring macOS, $(LV_PORT)))
         CFLAGS_USERMOD += -DMP_PORT_UNIX=1
-        LDFLAGS_USERMOD += -lSDL2-2.0
+    	LDFLAGS_USERMOD  :=$(shell sdl2-config --libs)
+		CFLAGS_USERMOD :=$(shell sdl2-config --cflags)
     endif
 endif
