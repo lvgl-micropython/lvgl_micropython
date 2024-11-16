@@ -123,7 +123,6 @@ class DisplayDriver:
         self._backup_set_memory_location = None
 
         self._rotation = lv.DISPLAY_ROTATION._0  # NOQA
-        self._invert_colors = False
 
         self._rgb565_byte_swap = rgb565_byte_swap
         self._cmd_bits = _cmd_bits
@@ -434,16 +433,14 @@ class DisplayDriver:
     def delete_refr_timer(self):
         self._disp_drv.delete_refr_timer()
 
-    def invert_colors(self):
+    def set_color_inversion(self, value):
         # If your white is showing up as black and your black
         # is showing up as white try setting this either True or False
         # and see if it corrects the problem.
         if None in (self._INVON, self._INVOFF):
             raise NotImplementedError
 
-        self._invert_colors = not self._invert_colors
-
-        if self._invert_colors:
+        if value:
             self.set_params(self._INVON)
         else:
             self.set_params(self._INVOFF)
