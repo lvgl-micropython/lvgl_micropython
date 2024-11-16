@@ -1,18 +1,3 @@
-# ***IMPORTANT PLEASE READ***
-_____________________________
-
-
-The `mpy_cross` build command has been removed. It will be compiled automatically if it has not been compiled yet.
-
-The `submodules` build command has been removed. The build script takes care of this for you automatically.
-
-The `clean` command has changed behavior. All ports are cleaned prior to a build using makefile's clean routine. 
-There are occasions where something gets stuck and the clean is not completed. That is where this command comes in. This wil do a complete
-wipe of the micropython build folders no matter what is in them. On the `unix` and `macos` ports using this command will remove 
-the SDL2 compilation. the clean that gets performed prior to every build will not.
-
-
-
 # LVGL binding for Micropython
 ______________________________
 
@@ -77,86 +62,6 @@ _____________________________________________
 * Special use drivers
   * SDL2 \**Only for the unix and macOS ports*\* 
 
-<br>
-
-### *New changes*
-___________________________
-
-ALL MCU's
-I have started to nail down a commoin API for the indev drivers, specifically the pointer/touch drivers.
-In order to do this I had to change the handling of the type of bus being used. Just like the displays the 
-touch/pointer driver IC's can sometimes accept an SPI bus or an I2C bus as the way to communicate.
-Instead of having to duplicate code for these driver IC's I decided to make the software driver completely
-unaware of the bus that is being used. To do this i made the I2C driver work in the same manner as the SPI driver.
-
-Here is a code example of how to use the I2C bus with a touch driver.
-
-```py
-from i2c import I2C
-import ft5x06
-
-i2c_bus = I2C.Bus(host=1, sda=10, sdl=11)
-touch_i2c = I2C.Device(i2c_bus, ft5x06.I2C_ADDR, ft5x06.BITS)
-touch = ft5x06.FT5x06(touch_i2c)
-```
-
-If a touch driver doesn't have the variable `I2C_ADDR` or `BITS` then that driver 
-doesn't support the I2C bus.
-
-
-ESP32-ALL
-* `--optimize-size`: If you are having an issue with getting the firmware to fit into your esp32
-  or if space is more of a concern than speed you can set this command line option. This will tell the compiler that the 
-  firmware size is more important than performance and the compiled binary will be smaller as a result.  
-
-* `--flash-size={size}`: Flash sizes that are able to be used are 4, 8, 16, 32, 64 and 128 across all 
-  variants of the ESP32. It is up to the user to know what their board is using.
-
-* `--ota`: If you want to set the partitions so you can do an over the air update of 
-  the firmware. I do want to note that this does take up twice as much application 
-  storage space. This feature applies to any board.
-
-* `CONFIG_*={value}`: You can alter the config settings of the esp-idf by using these settings. Refer to the ESP-IDF documentation
-  for further information
-
-* `SPI`: The `machine.SPI` class has undergone a HUGE change. It is now split into 2 pieces. `machine.SPI.Bus` and `machine.SPI.Device`
-  They exactly what they seem. It is easier to show a code example then it is to explain it.
-  
-```py
-from machine import SPI
-
-spi_bus = SPI.Bus(
-    host=1,
-    mosi=15,
-    miso=16,
-    sck=10
-)
-      
-spi_device = SPI.Device(
-    spi_bus=spi_bus,
-    freq=10000000,
-    cs=3,
-    polarity=0,
-    phase=0,
-    bits=8,
-    first_bit=SPI.MSB
-)
-      
-# if you want to delete a device from being used you have to deinit it first
-# and then you can delete it
-spi_device.deinit()
-del spi_device
-      
-# if you want to stop using a bus and all devices attached to it
-del spi_bus
-del spi_device
-      
-# The SPI.Bus instance you need to pass to machine.SDCard, lcd_bus.SPIBus
-# and any of the touch drivers that use SPI. 
-```
-
-All methods that existed for the original `machine.SPI` are available in 
-the `machine.SPI.Device` class. They work exactly how they did before.
 
 <br>
 
@@ -188,6 +93,10 @@ _______________________
   * Mouse
   * FT6x06
   * FT5x06
+
+* SDL display and SDL pointer
+  * unix
+  * macOS
 
 <br>
 
@@ -302,6 +211,7 @@ Compiling for macOS
   * `brew install libffi` 
   * `brew install ninja`
   * `brew install make`
+  * `brew install SDL2`
 
 
 Compiling for Windows
@@ -336,16 +246,13 @@ The first argument is positional and it must be one of the following.
 ### *Build Options*
 ________________________
 
-The next few arguments are optional to some degree.
+There are build options that are port specific and there is only a single build option that is not.
 
-  * submodules\*\*: collects all needed dependencies to perform the build.  Usually not needed because it is automatic.
-  * clean: cleans the build environment.  Often unnecessary.
-  * mpy_cross\*\*: compiles mpy-cross 
-               this is not used for all builds. if it is not supported it will do nothing.  In most cases it is automatic.
-
-**must be run only one time when the build is intially started. after that you will not need 
-to add these arguments. There is internal checking that is done to see if the argument needs to 
-be carried out. So you can also optionally leave it there if you want. 
+  * clean: This flat out deletes the build folder. It will only error if the user doesn't have 
+           permission to delete the files in the folder. So if the clean fails run the build using `sudo`
+           Make is instructed to perform a clean prior to every build so this really only needs to be used 
+           if there is some kind of an issue the make's clean is not cleaning out. This is also how you clean 
+           mpy-cross.  
 
 <br>
 
@@ -368,34 +275,67 @@ ____________________
 
   * LV_CFLAGS: additional compiler flags that get passed to the LVGL build only.
   * FROZEN_MANIFEST: path to a custom frozen manifest file
-  * DISPLAY: this can either be the file name (less the .py) of a display 
-             driver that is in the driver/display folder or it can be the absolute
-             path to your own custom driver (with the .py extension)
-  * INDEV: this can either be the file name (less the .py) of an indev 
-           driver that is in the driver/indev folder or it can be the absolute
-           path to your own custom driver (with the .py extension)
+  * DISPLAY: name of the display driver that is located in `api_drivers/common_api_drivers/display`
+             or it can be the absolute path to a custom driver you have written. This must be the 
+             path to the folder that contains the driver files.
+  * INDEV: name of the indev driver that is located in `api_drivers/common_api_drivers/indev`
+           or it can be the absolute path to your own custom driver (with the .py extension)
 
-
+The DISPLAY and INDEV build options can be stacked. meaning they camn be supplied more than once if you want to include multiple
+drivers. 
 <br>
 
 ### *ESP32 specific options*
 ____________________________
-  * --skip-partition-resize: do not resize the firmware partition
-  * --partition-size: set a custom firmware partition size
-  * --octal-flash ¹: This is only available for the 16mb flash and the 32mb flash
-  * --flash-size ² ³: This is how much flash storage is available.
 
-    Allowed Values are:
 
-    * ESP32-S3: 4, 8, 16 and 32 (default is 8)
-    * ESP32-S2: 2 and 4 (default is 4)
-    * ESP32: 4, 8 and 16 (default is 4)
-    , The default is 8.
-  
+#### *Common options across all boards*
 
-¹ Available for the ESP32-S3 when `BOARD_VARIANT` is set to `SPIRAM_OCT`<br> 
-² Available for the ESP32, ESP32-S2 and ESP32-S3<br>
-³ Available only when `BOARD_VARIANT` is set to `SPIRAM` or `SPIRAM_OCT`<br>
+* `BAUD={bits per second}`: how fast to flash the firmware, `deploy` must also be set to use this
+* `PORT={serial port}`: port the ESP is connected to, `deploy` must also be set to use this
+* `deploy`: after building flash the firmware, `PORT` and `BAUD` are optional. The speed will default 
+            to whatever the ESP-IDF is set to and there will be an attempt at detecting the port automatically
+* `--skip-partition-resize`: If you do not want the build system to resize the application partition automatically.
+* `--partition-size={app partition size}`: Manually set the application partition size. This is something you want 
+                                           to do when using ota firmware updates. the size of the firmware may change 
+                                           so setting the application partition to be larger than what the actual firmware  
+                                           size is is something I recommend doing. Having to modify the partition sizes over 
+                                           the air is not possible to do.   
+* `--optimize-size`: The build is set to optimize the firmware for performance. If you find that space is more of an issue
+                     then set this to get a smaller firmware size
+* `--debug`: Enables debugging output from the ESP-IDF
+* `--ccache`: This will speed up the build if the application partition size gets resized. It requires the `ccache` library to be installed
+* `--flash-size={4, 8, 16, 32, 64 or 128}`: Sets the flash size that you have available on your ESP32
+* `--ota`: Add this flag if you wanbt to do OTA updates. This creates 2 application partitions that are the same size. 
+* `--dual-core-threads`: (Experimental) MicroPython is written so that the user is only able to run code on a single core of the ESP32.
+                         That is very limiting. This option allows code to run on both CPU cores. Be warned mthis option also disables the GIL
+                         So care must be given to accessing global variables. You need to put nlocks in place to keep the memory from getting 
+                         corrupted. You do not get to decide what core to use. That is automatically done based on the load that is on the cores.
+* `--task-stack-size={stack size in bytes}`: Sets the default stack size for threads
+* `CONFIG_*={value}`: You can alter the config settings of the esp-idf by using these settings. Refer to the ESP-IDF documentation
+                      for further information
+
+<br>
+
+#### *ESP32-S3 specific options*
+
+* `BOARD_VARIANT=SPIRAM_OCT`: Use this if you have octal SPIRAM
+* --usb-otg: Enable REPL output on pins 19 & 20 of the ESP32-S3
+* --usb-jtag: Enable JTAG output on pins 19 & 20 of the ESP32-S3
+* --octal-flash: Set this if you have octal SPI flash
+
+<br>
+
+#### *ESP32-S2 specific options*
+* --usb-otg: Enable REPL output on pins 19 & 20 of the ESP32-S2
+* --usb-jtag: Enable JTAG output on pins 19 & 20 of the ESP32-S2
+* 
+<br>
+
+#### *ESP32 specific options*
+
+* `BOARD_VARIANT={D2WD, OTA, SPIRAM or UNICORE}`: If you have one of the variants seen to the right then 
+                                                  you will use this command. 
 
 <br>
 
@@ -407,6 +347,8 @@ ___________
     * ESP32_GENERIC
       * BOARD_VARIANT=D2WD
       * BOARD_VARIANT=OTA
+      * BOARD_VARIANT=SPIRAM
+      * BOARD_VARIANT=UNICORE
     * ESP32_GENERIC_C3
     * ESP32_GENERIC_S2
     * ESP32_GENERIC_S3
@@ -428,9 +370,9 @@ ___________
     * UM_TINYS3
     * UM_TINYWATCHS3
 
-  * windows: VARIANT=
-    * dev
-    * stndard
+  * windows: 
+    * VARIANT=dev
+    * VARIANT=standard
     
   * stm32: BOARD=
     * ADAFRUIT_F405_EXPRESS
@@ -502,11 +444,11 @@ ___________
     * VCC_GND_F407ZG
     * VCC_GND_H743VI
 
-  * unix: VARIANT=
-    * coverage
-    * minimal
-    * nanbox
-    * standard
+  * unix/macOS: 
+    * VARIANT=coverage
+    * VARIANT=minimal
+    * VARIANT=nanbox
+    * VARIANT=standard
   
   * rp2: BOARD=
     * ADAFRUIT_FEATHER_RP2040
@@ -621,31 +563,24 @@ To build for Unix use the following build command
 Couple of notes:
 
   * **DO NOT** enable LV_USE_DRAW_SDL, I have not written code to allow for it's use (yet).
-  * I recommend running `lv.task_handler` once every 5 milliseconds, shorter than that and you 
-    will have a lot of CPU time comsumed. Longer than that and your mouse response is not 
-    going to be great.
-
 
 
 Here is some example code for the unix port
 ```py
 from micropython import const  # NOQA
+import lcd_bus  # NOQA
+
 
 _WIDTH = const(480)
 _HEIGHT = const(320)
 
-_BUFFER_SIZE = _WIDTH * _HEIGHT * 3
-
-import lcd_bus  # NOQA
-
 bus = lcd_bus.SDLBus(flags=0)
 
-buf1 = bus.allocate_framebuffer(_BUFFER_SIZE, 0)
+buf1 = bus.allocate_framebuffer(_WIDTH * _HEIGHT * 3, 0)
 
 import lvgl as lv  # NOQA
 import sdl_display  # NOQA
 
-lv.init()
 
 display = sdl_display.SDLDisplay(
     data_bus=bus,
@@ -657,8 +592,13 @@ display = sdl_display.SDLDisplay(
 display.init()
 
 import sdl_pointer
+import task_handler
 
 mouse = sdl_pointer.SDLPointer()
+
+# the duration needs to be set to 5 to have a good response from the mouse.
+# There is a thread that runs that facilitates double buffering. 
+th = task_handler.TaskHandler(duration=5)
 
 scrn = lv.screen_active()
 scrn.set_style_bg_color(lv.color_hex(0x000000), 0)
@@ -666,11 +606,6 @@ scrn.set_style_bg_color(lv.color_hex(0x000000), 0)
 slider = lv.slider(scrn)
 slider.set_size(300, 25)
 slider.center()
-
-import task_handler
-# the duration needs to be set to 5 to have a good response from the mouse.
-# There is a thread that runs that facilitates double buffering. 
-th = task_handler.TaskHandler(duration=5)
 ```
 
 The touch screen drivers will handle the rotation that you set to the display.
@@ -684,6 +619,8 @@ store calibration data for the touch screen. In the exmaple below it shows how
 to properly create a display driver and touch driver and how to set the rotation 
 and also the calibration storage.
 
+
+example for I8080 bus with I2C touch
 ```py
 import lcd_bus
 from micropython import const
@@ -749,12 +686,13 @@ display = st7796.ST7796(
 import i2c  # NOQA
 import task_handler  # NOQA
 import ft6x36  # NOQA
-import time  # NOQA
 
 display.init()
 
-i2c_bus = i2c.I2CBus(scl=_SCL, sda=_SDA, freq=_TP_FREQ, use_locks=False)
-indev = ft6x36.FT6x36(i2c_bus)
+i2c_bus = i2c.I2C.Bus(host=0, scl=_SCL, sda=_SDA, freq=_TP_FREQ, use_locks=False)
+touch_dev = i2c.I2C.Device(bus=i2c_bus, dev_id=ft6x36.I2C_ADDR, reg_bits=ft6x36.BITS)
+
+indev = ft6x36.FT6x36(touch_dev)
 
 display.invert_colors()
 
@@ -782,6 +720,93 @@ label.set_text('HELLO WORLD!')
 label.align(lv.ALIGN.CENTER, 0, -50)
 ```
 
+
+example for SPI bus with SPI touch both on the same bus
+```py
+import lcd_bus
+from micropython import const
+import machine
+
+
+# display settings
+_WIDTH = const(320)
+_HEIGHT = const(480)
+_BL = const(45)
+_RST = const(4)
+_DC = const(0)
+
+_MOSI = const(11)
+_MISO = const(13)
+_SCK = const(12)
+_HOST = const(1)  # SPI2
+
+_LCD_CS = const(10)
+_LCD_FREQ = const(80000000)
+
+_TOUCH_CS = const(18)
+_TOUCH_FREQ = const(10000000)
+
+spi_bus = machine.SPI.Bus(
+    host=_HOST,
+    mosi=_MOSI,
+    miso=_MISO,
+    sck=_SCK
+)
+
+display_bus = lcd_bus.SPIBus(
+    spi_bus=spi_bus,
+    freq=_LCD_FREQ,
+    dc=_DC,
+    cs=_LCD_CS,
+)
+
+# we are going to let the display driver sort out the best freame buffer size and where to allocate it to.
+# fb1 = display_bus.allocate_framebuffer(_BUFFER_SIZE, lcd_bus.MEMORY_INTERNAL | lcd_bus.MEMORY_DMA)
+# fb2 = display_bus.allocate_framebuffer(_BUFFER_SIZE, lcd_bus.MEMORY_INTERNAL | lcd_bus.MEMORY_DMA)
+
+import st7796  # NOQA
+import lvgl as lv  # NOQA
+
+
+display = st7796.ST7796(
+    data_bus=display_bus,
+    display_width=_WIDTH,
+    display_height=_HEIGHT,
+    backlight_pin=_BL,
+    color_space=lv.COLOR_FORMAT.RGB565,
+    color_byte_order=st7796.BYTE_ORDER_RGB,
+    rgb565_byte_swap=True,
+)
+
+import task_handler  # NOQA
+import xpt2046  # NOQA
+
+display.set_power(True)
+display.init()
+display.set_backlight(100)
+
+touch_dev = machine.SPI.Device(
+    spi_bus=spi_bus,
+    freq=_TOUCH_FREQ,
+    cs=_TOUCH_CS
+)
+
+indev = xpt2046.XPT2046(touch_dev)
+
+th = task_handler.TaskHandler()
+
+scrn = lv.screen_active()
+scrn.set_style_bg_color(lv.color_hex(0x000000), 0)
+
+slider = lv.slider(scrn)
+slider.set_size(300, 50)
+slider.center()
+
+label = lv.label(scrn)
+label.set_text('HELLO WORLD!')
+label.align(lv.ALIGN.CENTER, 0, -50)
+```
+
 You are able to force the calibration at any time by calling `indev.calibrate()` 
 regardless of what `indev.is_calibrate` returns. This makes it possible to redo 
 the calibration by either using a pin that you can check the state of or through
@@ -789,10 +814,7 @@ a button in your UI that you provide to the user.
 
 Thank again and enjoy!!
 
-***NOTE***: On ESP32-S3, SPI host 0 and SPI host 1 share a common SPI bus. 
-The main Flash and PSRAM are connected to the host 0. It is recommended to use 
-SPI host 2 when connecting an SPI device like a display that is going to utilize
-the PSRAM for the frame buffer.
+***NOTE***: SPI host 0 on the ESP32 is reserved for use with SPIRAM and flash. 
 
 
 Bit orders are a tuple of durations. The first 2 numbers define a bit as 0 and the second 2 define a bit as 1. Negitive numbers are the duration to hold low and positive are for how long to hold high
