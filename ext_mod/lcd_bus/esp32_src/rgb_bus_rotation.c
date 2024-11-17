@@ -12,10 +12,13 @@
     #include "freertos/event_groups.h"
     #include "freertos/idf_additions.h"
 
+    #include "esp_lcd_panel_ops.h"
+
     #include "rgb_bus.h"
 
+    #include <string.h>
 
-    #define RGB_BIT_0 ( 1 << 0 )
+    #define RGB_BIT_0 (1 << 0)
 
 
     void rgb_bus_event_init(rgb_bus_event_t *event)
@@ -61,11 +64,11 @@
 
     void rgb_bus_event_set_from_isr(rgb_bus_event_t *event)
     {
-        xEventGroupSetBitsFromISR(event->handle, RGB_BIT_0, pdFALSE)
+        xEventGroupSetBitsFromISR(event->handle, RGB_BIT_0, pdFALSE);
     }
 
 
-    int rgb_bus_lock_acquire(thread_lock_t *lock, int32_t wait_ms)
+    int rgb_bus_lock_acquire(rgb_bus_lock_t *lock, int32_t wait_ms)
     {
         return pdTRUE == xSemaphoreTake(lock->handle, wait_ms < 0 ? portMAX_DELAY : pdMS_TO_TICKS((uint16_t)wait_ms));
     }
@@ -79,7 +82,7 @@
 
     void rgb_bus_lock_release_from_isr(rgb_bus_lock_t *lock)
     {
-        xSemaphoreGiveFromISR(lock->handle, pdFALSE)
+        xSemaphoreGiveFromISR(lock->handle, pdFALSE);
     }
 
 
@@ -103,10 +106,9 @@
     typedef void (* copy_func_cb_t)(uint8_t *to, const uint8_t *from);
 
     static void copy_pixels(
-            uint8_t *to, uint8_t *from, uint16_t x_start, uint16_t y_start,
-            uint16_t x_end, uint16_t y_end, uint16_t h_res, uint16_t v_res,
-            uint8_t bytes_per_pixel, copy_func_cb_t func, uint8_t rotate,
-            uint8_t bytes_per_pixel);
+                uint8_t *to, uint8_t *from, uint32_t x_start, uint32_t y_start,
+                uint32_t x_end, uint32_t y_end, uint32_t h_res, uint32_t v_res,
+                uint32_t bytes_per_pixel, copy_func_cb_t func, uint8_t rotate);
 
 
     __attribute__((always_inline))
@@ -134,31 +136,24 @@
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)self_in;
 
         copy_func_cb_t func;
-        uint8_t bytes_per_pixel;
-        uint32_t copy_bytes_per_line;
-        uint8_t *from;
-        size_t offset;
-        uint8_t *to;
+        uint8_t bytes_per_pixel = self->bytes_per_pixel;
 
-        switch (self->bpp) {
-            case 8:
+        switch (bytes_per_pixel) {
+            case 1:
                 func = copy_8bpp;
-                bytes_per_pixel = 1;
-            case 16:
+                break;
+            case 2:
                 func = copy_16bpp;
-                bytes_per_pixel = 2;
-            case 24:
+                break;
+            case 3:
                 func = copy_24bpp;
-                bytes_per_pixel = 3;
+                break;
             default:
                 // raise error
                 return;
         }
 
-        uint8_t *partial_buf;
-
         rgb_bus_lock_acquire(&self->copy_lock, -1);
-        rgb_bus_event_clear(&self->full_copy);
 
         while (!rgb_bus_event_isset(&self->copy_task_exit)) {
             rgb_bus_lock_acquire(&self->copy_lock, -1);
@@ -167,9 +162,9 @@
                 rgb_bus_event_clear(&self->partial_copy);
 
                 copy_pixels(
-                    self->idle_buf, self->partial_buf,
-                    self->start_x, self->start_y,
-                    self->end_x, self->end_y,
+                    self->idle_fb, self->partial_buf,
+                    self->x_start, self->y_start,
+                    self->x_end, self->y_end,
                     self->width, self->height,
                     bytes_per_pixel, func, self->rotation);
 
@@ -178,7 +173,7 @@
 
             if (rgb_bus_event_isset(&self->last_update)) {
                 rgb_bus_event_clear(&self->last_update);
-                uint8_t *idle_buf = self->idle_buf;
+                uint8_t *idle_fb = self->idle_fb;
                 rgb_bus_event_set(&self->swap_bufs);
 
                 esp_lcd_panel_draw_bitmap(
@@ -187,11 +182,11 @@
                     0,
                     self->width,
                     self->height,
-                    idle_buf;
+                    idle_fb
                 );
 
                 rgb_bus_lock_acquire(&self->swap_lock, -1);
-                memcpy(self->idle_buf, self.->active_buf, self->width * self->height * bytes_per_pixel);
+                memcpy(self->idle_fb, self->active_fb, self->width * self->height * bytes_per_pixel);
             }
         }
     }
@@ -208,7 +203,7 @@
         uint32_t v_res,
         uint32_t bytes_per_pixel,
         copy_func_cb_t func,
-        uint8_t rotate,
+        uint8_t rotate
     ) {
 
         if (rotate == RGB_BUS_ROTATION_90 || rotate == RGB_BUS_ROTATION_270) {
@@ -223,7 +218,9 @@
             y_end = MIN(y_end, v_res);
         }
 
-        uint16_t copy_bytes_per_line = (self->x_end - self->x_start) * (uint16_t)bytes_per_pixel;
+        uint16_t copy_bytes_per_line = (x_end - x_start) * (uint16_t)bytes_per_pixel;
+        int pixels_per_line = h_res;
+        uint32_t bytes_per_line = bytes_per_pixel * pixels_per_line;
         size_t offset = y_start * copy_bytes_per_line + x_start * bytes_per_pixel;
 
         switch (rotate) {
@@ -234,8 +231,6 @@
                     fb += bytes_per_line;
                     from += copy_bytes_per_line;
                 }
-                bytes_to_flush = (y_end - y_start) * bytes_per_line;
-                flush_ptr = to + y_start * bytes_per_line;
                 break;
 
             case RGB_BUS_ROTATION_180:
@@ -249,8 +244,6 @@
                         from += bytes_per_pixel;
                     }
                 }
-                bytes_to_flush = (y_end - y_start) * bytes_per_line;
-                flush_ptr = to + (v_res - y_end) * bytes_per_line;
                 break;
 
             case RGB_BUS_ROTATION_90:
@@ -264,13 +257,11 @@
                         func(to + i, from + j);
                     }
                 }
-                bytes_to_flush = (x_end - x_start) * bytes_per_line;
-                flush_ptr = to + x_start * bytes_per_line;
                 break;
 
-            case ROTATE_MASK_SWAP_XY | ROTATE_MASK_MIRROR_X | ROTATE_MASK_MIRROR_Y:
-                uint32_t jj
-                uint32_t ii
+            case RGB_BUS_ROTATION_270:
+                uint32_t jj;
+                uint32_t ii;
 
                 for (int y = y_start; y < y_end; y++) {
                     for (int x = x_start; x < x_end; x++) {
@@ -279,8 +270,6 @@
                         func(to + ii, from + jj);
                     }
                 }
-                bytes_to_flush = (x_end - x_start) * bytes_per_line;
-                flush_ptr = to + (v_res - x_end) * bytes_per_line;
                 break;
 
             default:

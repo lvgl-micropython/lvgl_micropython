@@ -29,6 +29,8 @@
     // stdlib includes
     #include <string.h>
 
+    #define DEFAULT_STACK_SIZE    (5 * 1024)
+
 
     typedef struct {
         esp_lcd_panel_t base;  // Base class of generic lcd panel
@@ -53,8 +55,8 @@
     static bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
     {
         LCD_UNUSED(edata);
-
-        rgb_panel_t *rgb_panel = __containerof(panel, rgb_panel_t, base);
+        LCD_UNUSED(panel);
+        // rgb_panel_t *rgb_panel = __containerof(panel, rgb_panel_t, base);
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)user_ctx;
 
         if (rgb_bus_event_isset_from_isr(&self->swap_bufs)) {
@@ -420,10 +422,9 @@
         self->panel_io_config.timings.v_res = (uint32_t)height;
         self->panel_io_config.bits_per_pixel = (size_t)bpp;
 
-        self->buf_to_flush.width = width;
-        self->buf_to_flush.height = height;
-        self->buf_to_flush.bytes_per_pixel = bpp / 8;
-        self->buf_to_flush.buf = NULL;
+        self->width = width;
+        self->height = height;
+        self->bytes_per_pixel = bpp / 8;
 
         self->panel_io_config.flags.fb_in_psram = 1;
         self->panel_io_config.flags.double_fb = 1;
@@ -474,7 +475,7 @@
         rgb_bus_lock_init(&self->swap_lock);
 
         xTaskCreatePinnedToCore(
-                rgb_bus_copy_task, "rgb_task", const uint32_t ulStackDepth,
+                rgb_bus_copy_task, "rgb_task", DEFAULT_STACK_SIZE / sizeof(StackType_t),
                 self, ESP_TASK_PRIO_MAX - 1, &self->copy_task_handle, 0);
 
         return LCD_OK;
@@ -493,7 +494,7 @@
     }
 
 
-    mp_lcd_err_t rgb_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, int rotation, bool last_update)
+    mp_lcd_err_t rgb_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update)
     {
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
         printf("rgb_tx_color(self, lcd_cmd=%d, color, color_size=%d, x_start=%d, y_start=%d, x_end=%d, y_end=%d)\n", lcd_cmd, color_size, x_start, y_start, x_end, y_end);

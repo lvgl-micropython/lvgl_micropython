@@ -88,7 +88,7 @@
         bool rgb_bus_event_isset_from_isr(rgb_bus_event_t *event);
         void rgb_bus_event_set_from_isr(rgb_bus_event_t *event);
 
-        int  rgb_bus_lock_acquire(thread_lock_t *lock, int32_t wait_ms);
+        int  rgb_bus_lock_acquire(rgb_bus_lock_t *lock, int32_t wait_ms);
         void rgb_bus_lock_release(rgb_bus_lock_t *lock);
         void rgb_bus_lock_init(rgb_bus_lock_t *lock);
         void rgb_bus_lock_delete(rgb_bus_lock_t *lock);
