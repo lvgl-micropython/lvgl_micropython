@@ -3,22 +3,24 @@ ______________________________
 
 
 This project is a spinoff of the 
-https://github.com/lvgl/lv_micropython and https://github.com/lvgl/lv_binding_micropython
+[lv_micropython](https://github.com/lvgl/lv_micropython)
+ and 
+[lv_binding_micropython](https://github.com/lvgl/lv_binding_micropython) 
 projects. The goal of this project is to make it easier to compile, create a common API so 
 it is easy to add new drivers and to support more connection topologies to displays and input devices.
 
 
 ***What is MicroPython?***
 
-MicroPython is just how it sounds. It is a micro version of Python. It is written to run on microcontrollers
+[MicroPython](https://micropython.org) is just how it sounds. It is a micro version of Python. It is written to run on microcontrollers
 It has a small memory footprint and small binary size as well as provides access to the hardware
-related bits of a microcontroller. https://micropython.org/
+related bits of a microcontroller. 
 
 ***What is LVGL?***
 
-LVGL is a graphics framework writtemn for C99. It is also written to run on resource constrained devices.
+[LVGL](https://lvgl.io) is a graphics framework writtemn for C99. It is also written to run on resource constrained devices.
 It is a feature rich framework that provides a plethora of different controls (widgets) as well as the ability
-to make your owmn custom controls. https://lvgl.io/
+to make your owmn custom controls. 
 
 ***What is a binding?***
 
