@@ -61,7 +61,6 @@ to C99 and vice versa. It allows us access to the LVGL code by using the Python 
     - [*MCU*](#*mcu*)
       - [*I8080 display with I2C touch input*](#*i8080-display-with-i2c-touch-input*)
       - [*SPI bus with SPI touch (same SPI bus)*](#*spi-bus-with-spi-touch-(same-spi-bus)*)
-- [Projects made with this Binding...](#projects-made-with-this-binding...)
 
 
 
