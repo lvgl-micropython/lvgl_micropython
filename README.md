@@ -230,7 +230,7 @@ To compile you will need Python >= 3.10 for for all build types.
   * libdecor-0-dev
 
 
-#### Compiling for macOS :
+#### Compiling for macOS:
 
   * `command xcode-select–install`
   * `brew install libffi` 
