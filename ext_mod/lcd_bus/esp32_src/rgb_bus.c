@@ -17,6 +17,7 @@
     #include "esp_lcd_panel_ops.h"
     #include "esp_lcd_panel_interface.h"
     #include "esp_lcd_panel_rgb.h"
+    #include "esp_task.h"
 
     // micropython includes
     #include "mphalport.h"
@@ -56,15 +57,12 @@
         rgb_panel_t *rgb_panel = __containerof(panel, rgb_panel_t, base);
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)user_ctx;
 
-        void *curr_buf = rgb_panel->fbs[rgb_panel->cur_fb_index];
-
-        if (self->view2 != NULL && self->last_buf != curr_buf) {
-            self->last_buf = curr_buf;
-            self->trans_done = true;
-
-            if (self->callback != mp_const_none) cb_isr(self->callback);
-        } else if (self->view2 == NULL) {
-            self->trans_done = true;
+        if (rgb_bus_event_isset_from_isr(&self->swap_bufs)) {
+            rgb_bus_event_clear_from_isr(&self->swap_bufs);
+            uint8_t *idle_fb = self->idle_fb;
+            self->idle_fb = self->active_fb;
+            self->active_fb = idle_fb;
+            rgb_bus_lock_release_from_isr(&self->swap_lock);
         }
 
         return false;
@@ -77,7 +75,7 @@
     mp_lcd_err_t rgb_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
     mp_lcd_err_t rgb_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
     mp_lcd_err_t rgb_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
-    mp_lcd_err_t rgb_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end);
+    mp_lcd_err_t rgb_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update);
     mp_obj_t rgb_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps);
     mp_obj_t rgb_free_framebuffer(mp_obj_t obj, mp_obj_t buf);
 
@@ -349,65 +347,30 @@
 
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
 
-        void *buf = heap_caps_calloc(1, 1, MALLOC_CAP_INTERNAL);
-        mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE, 1, buf));
+        void *buf = heap_caps_calloc(1, size, caps);
+
+        if (buf == NULL) {
+           mp_raise_msg_varg(
+               &mp_type_MemoryError,
+               MP_ERROR_TEXT("Not enough memory available (%d)"),
+               size
+           );
+        }
+
+        mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE, size, buf));
         view->typecode |= 0x80; // used to indicate writable buffer
 
-        if ((caps | MALLOC_CAP_SPIRAM) == caps) {
-            uint32_t available = (uint32_t)heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
-            if (available < size) {
-                heap_caps_free(buf);
-                mp_raise_msg_varg(
-                    &mp_type_MemoryError,
-                    MP_ERROR_TEXT("Not enough memory available in SPIRAM (%d)"),
-                    size
-                );
-                return mp_const_none;
-            }
-            self->panel_io_config.flags.fb_in_psram = 1;
-
-            if (self->view1 == NULL) {
-                self->buffer_size = size;
-                self->view1 = view;
-            } else if (self->buffer_size != size) {
-                heap_caps_free(buf);
-                mp_raise_msg_varg(
-                    &mp_type_MemoryError,
-                    MP_ERROR_TEXT("Frame buffer sizes do not match (%d)"),
-                    size
-                );
-                return mp_const_none;
-            } else if (self->view2 == NULL) {
-                self->view2 = view;
-                self->panel_io_config.flags.double_fb = 1;
-            } else {
-                heap_caps_free(buf);
-                mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("There is a maximum of 2 frame buffers allowed"));
-                return mp_const_none;
-            }
-
-            return MP_OBJ_FROM_PTR(view);
+        if (self->view1 == NULL) {
+            self->view1 = view;
+        } else if (self->view2 == NULL) {
+            self->view2 = view;
         } else {
-            uint32_t available = (uint32_t)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
-            if (size % 2 != 0) {
-                heap_caps_free(buf);
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("bounce buffer size needs to be divisible by 2"));
-                return mp_const_none;
-            }
-
-            if (available < size) {
-                heap_caps_free(buf);
-                mp_raise_msg_varg(
-                    &mp_type_MemoryError,
-                    MP_ERROR_TEXT("Not enough SRAM DMA memory (%d)"),
-                    size
-                );
-                return mp_const_none;
-            }
-            self->panel_io_config.flags.bb_invalidate_cache = true;
-            self->panel_io_config.bounce_buffer_size_px = size;
-            return MP_OBJ_FROM_PTR(view);
+            heap_caps_free(buf);
+            mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("There is a maximum of 2 frame buffers allowed"));
+            return mp_const_none;
         }
+
+        return MP_OBJ_FROM_PTR(view);
     }
 
     mp_lcd_err_t rgb_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
@@ -457,14 +420,13 @@
         self->panel_io_config.timings.v_res = (uint32_t)height;
         self->panel_io_config.bits_per_pixel = (size_t)bpp;
 
-        if (self->panel_io_config.bounce_buffer_size_px) {
-            size_t bb_size = self->panel_io_config.bounce_buffer_size_px;
-            if (buffer_size % bb_size == 0) {
-                self->panel_io_config.bounce_buffer_size_px = bb_size / 2;
-            } else {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("frame buffer size needs to be a multiple of the bounce buffer size"));
-            }
-        }
+        self->buf_to_flush.width = width;
+        self->buf_to_flush.height = height;
+        self->buf_to_flush.bytes_per_pixel = bpp / 8;
+        self->buf_to_flush.buf = NULL;
+
+        self->panel_io_config.flags.fb_in_psram = 1;
+        self->panel_io_config.flags.double_fb = 1;
 
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
         printf("h_res=%lu\n", self->panel_io_config.timings.h_res);
@@ -501,17 +463,19 @@
 
         rgb_panel_t *rgb_panel = __containerof((esp_lcd_panel_t *)self->panel_handle, rgb_panel_t, base);
 
-        void *buf1 = self->view1->items;
-        self->view1->items = (void *)rgb_panel->fbs[0];
-        self->view1->len = buffer_size;
-        heap_caps_free(buf1);
+        self->active_fb = rgb_panel->fbs[0];
+        self->idle_fb = rgb_panel->fbs[1];
 
-        if (self->panel_io_config.flags.double_fb) {
-            void *buf2 = self->view2->items;
-            self->view2->items = (void *)rgb_panel->fbs[1];
-            self->view2->len = buffer_size;
-            heap_caps_free(buf2);
-        }
+        rgb_bus_lock_init(&self->copy_lock);
+        rgb_bus_event_init(&self->copy_task_exit);
+        rgb_bus_event_init(&self->last_update);
+        rgb_bus_event_init(&self->partial_copy);
+        rgb_bus_event_init(&self->swap_bufs);
+        rgb_bus_lock_init(&self->swap_lock);
+
+        xTaskCreatePinnedToCore(
+                rgb_bus_copy_task, "rgb_task", const uint32_t ulStackDepth,
+                self, ESP_TASK_PRIO_MAX - 1, &self->copy_task_handle, 0);
 
         return LCD_OK;
     }
@@ -529,7 +493,7 @@
     }
 
 
-    mp_lcd_err_t rgb_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end)
+    mp_lcd_err_t rgb_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, int rotation, bool last_update)
     {
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
         printf("rgb_tx_color(self, lcd_cmd=%d, color, color_size=%d, x_start=%d, y_start=%d, x_end=%d, y_end=%d)\n", lcd_cmd, color_size, x_start, y_start, x_end, y_end);
@@ -537,26 +501,16 @@
 
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
 
-        self->trans_done = false;
+        self->partial_buf = (uint8_t *)color;
+        self->x_start = x_start;
+        self->y_start = y_start;
+        self->x_end = x_end;
+        self->y_end = y_end;
+        self->rotation = rotation;
 
-        esp_err_t ret = esp_lcd_panel_draw_bitmap(
-            self->panel_handle,
-            x_start,
-            y_start,
-            x_end,
-            y_end,
-            color
-        );
+        if (last_update) rgb_bus_event_set(&self->last_update);
 
-        if (ret != 0) {
-            mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_panel_draw_bitmap)"), ret);
-            return LCD_OK;
-        }
-
-        if (self->callback == mp_const_none || self->view2 == NULL) {
-            while (!self->trans_done) {}
-            self->trans_done = false;
-        }
+        rgb_bus_lock_release(&self->copy_lock);
 
         return LCD_OK;
     }

@@ -78,7 +78,7 @@ mp_lcd_err_t led_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
 mp_lcd_err_t led_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
 mp_lcd_err_t led_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
 mp_lcd_err_t led_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
-mp_lcd_err_t led_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end);
+mp_lcd_err_t led_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update);
 mp_obj_t led_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps);
 mp_obj_t led_free_framebuffer(mp_obj_t obj, mp_obj_t buf);
 
@@ -486,13 +486,16 @@ mp_lcd_err_t led_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
 }
 
 
-mp_lcd_err_t led_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end)
+mp_lcd_err_t led_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update)
 {
     LCD_UNUSED(lcd_cmd);
     LCD_UNUSED(x_start);
     LCD_UNUSED(y_start);
     LCD_UNUSED(x_end);
     LCD_UNUSED(y_end);
+    LCD_UNUSED(rotation);
+    LCD_UNUSED(last_update);
+
     mp_lcd_led_bus_obj_t *self = (mp_lcd_led_bus_obj_t *)obj;
     mp_lcd_err_t err;
     uint8_t tmp_color[4];

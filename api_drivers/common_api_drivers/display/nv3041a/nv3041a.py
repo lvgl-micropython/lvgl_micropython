@@ -199,5 +199,5 @@ class NV3041A(display_driver_framework.DisplayDriver):
 
         first_chunk = int(size / 10)
 
-        self._data_bus.tx_color(self.__ramwr, data_view[:first_chunk], x1, y1, x2, y2)
-        self._data_bus.tx_color(self.__ramwrc, data_view[first_chunk:], x1, y1, x2, y2)
+        self._data_bus.tx_color(self.__ramwr, data_view[:first_chunk], x1, y1, x2, y2, self._rotation, False)
+        self._data_bus.tx_color(self.__ramwrc, data_view[first_chunk:], x1, y1, x2, y2, self._rotation, self._disp_drv.flush_is_last())

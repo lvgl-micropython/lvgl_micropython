@@ -27,7 +27,7 @@
 
     mp_lcd_err_t sdl_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
     mp_lcd_err_t sdl_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
-    mp_lcd_err_t sdl_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end);
+    mp_lcd_err_t sdl_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update);
     mp_lcd_err_t sdl_del(mp_obj_t obj);
     mp_lcd_err_t sdl_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size,  bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
     mp_lcd_err_t sdl_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
@@ -102,13 +102,15 @@
         return LCD_OK;
     }
 
-    mp_lcd_err_t sdl_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end)
+    mp_lcd_err_t sdl_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update)
     {
         LCD_UNUSED(x_start);
         LCD_UNUSED(y_start);
         LCD_UNUSED(x_end);
         LCD_UNUSED(y_end);
         LCD_UNUSED(color_size);
+        LCD_UNUSED(rotation);
+        LCD_UNUSED(last_update);
 
         mp_lcd_sdl_bus_obj_t *self = MP_OBJ_TO_PTR(obj);
 

@@ -79,7 +79,7 @@
     mp_lcd_err_t s_spi_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
     mp_lcd_err_t s_spi_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
     mp_lcd_err_t s_spi_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
-    mp_lcd_err_t s_spi_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end);
+    mp_lcd_err_t s_spi_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update);
 
     void send_param_16(mp_lcd_spi_bus_obj_t *self, void *param, size_t param_size);
     void send_param_8(mp_lcd_spi_bus_obj_t *self, void *param, size_t param_size);
@@ -269,12 +269,14 @@
     }
 
 
-    mp_lcd_err_t s_spi_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end)
+    mp_lcd_err_t s_spi_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update)
     {
         LCD_UNUSED(x_start);
         LCD_UNUSED(y_start);
         LCD_UNUSED(x_end);
         LCD_UNUSED(y_end);
+        LCD_UNUSED(rotation);
+        LCD_UNUSED(last_update);
 
         mp_lcd_spi_bus_obj_t *self = MP_OBJ_TO_PTR(obj);
 

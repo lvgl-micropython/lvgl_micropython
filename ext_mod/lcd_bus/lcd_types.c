@@ -154,7 +154,7 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
     }
 
 
-    mp_lcd_err_t lcd_panel_io_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end)
+    mp_lcd_err_t lcd_panel_io_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update)
     {
         mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
 
@@ -167,12 +167,15 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
             LCD_UNUSED(y_start);
             LCD_UNUSED(x_end);
             LCD_UNUSED(y_end);
+            LCD_UNUSED(rotation);
+            LCD_UNUSED(last_update);
+
             #if CONFIG_LCD_ENABLE_DEBUG_LOG
                 printf("lcd_panel_io_tx_color(self, lcd_cmd=%d, color, color_size=%d)\n", lcd_cmd, color_size);
             #endif
             return esp_lcd_panel_io_tx_color(self->panel_io_handle.panel_io, lcd_cmd, color, color_size);
         } else {
-            return self->panel_io_handle.tx_color(obj, lcd_cmd, color, color_size, x_start, y_start, x_end, y_end);
+            return self->panel_io_handle.tx_color(obj, lcd_cmd, color, color_size, x_start, y_start, x_end, y_end, rotation, last_update);
         }
     }
 
@@ -234,7 +237,7 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
     }
 
 
-    mp_lcd_err_t lcd_panel_io_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end)
+    mp_lcd_err_t lcd_panel_io_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update)
     {
         mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
 
@@ -242,7 +245,7 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
             rgb565_byte_swap((uint16_t *)color, (uint32_t)(color_size / 2));
         }
 
-        return self->panel_io_handle.tx_color(obj, lcd_cmd, color, color_size, x_start, y_start, x_end, y_end);
+        return self->panel_io_handle.tx_color(obj, lcd_cmd, color, color_size, x_start, y_start, x_end, y_end, rotation, last_update);
     }
 #endif
 

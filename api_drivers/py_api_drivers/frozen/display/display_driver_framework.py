@@ -616,7 +616,7 @@ class DisplayDriver:
         # what converts from the C_Array object the binding passes into a
         # memoryview object that can be passed to the bus drivers
         data_view = color_p.__dereference__(size)
-        self._data_bus.tx_color(cmd, data_view, x1, y1, x2, y2)
+        self._data_bus.tx_color(cmd, data_view, x1, y1, x2, y2, self._rotation, self._disp_drv.flush_is_last())
 
     # we always register this callback no matter what. This is what tells LVGL
     # that the buffer is able to be written to. If this callback doesn't get
