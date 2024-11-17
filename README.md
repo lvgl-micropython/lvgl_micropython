@@ -1,23 +1,72 @@
 # LVGL binding for Micropython
 ______________________________
 
-I have tried to make this as simple as possible for paople to use. 
-There are some glitches still in it I am sure. If you come across an issue 
-please let me know.
 
-I am still in development mode for the unix port. I am writing an SDL driver 
-that conforms To the rest of the driver framework. I have started working on 
-writing the frameworks for the different indev (input) types that LVGL supports.
-The frameworks are written to make it easier to write display and input drivers
-for the binding.
+This project is a spinoff of the 
+https://github.com/lvgl/lv_micropython and https://github.com/lvgl/lv_binding_micropython
+projects. The goal of this project is to make it easier to compile, create a common API so 
+it is easy to add new drivers and to support more connection topologies to displays and input devices.
+
+
+***What is MicroPython?***
+
+MicroPython is just how it sounds. It is a micro version of Python. It is written to run on microcontrollers
+It has a small memory footprint and small binary size as well as provides access to the hardware
+related bits of a microcontroller. https://micropython.org/
+
+***What is LVGL?***
+
+LVGL is a graphics framework writtemn for C99. It is also written to run on resource constrained devices.
+It is a feature rich framework that provides a plethora of different controls (widgets) as well as the ability
+to make your owmn custom controls. https://lvgl.io/
+
+***What is a binding?***
+
+A Binding is a code that encapsulates code written in one programming language so it is accessable from another 
+programming language. It is best to think of it as a translator, in the case of this project it translates Python 
+to C99 and vice versa. It allows us access to the LVGL code by using the Python programming language.
 
 <br>
 
 
-### *Supported displays and touch interfaces*
+## Table of Contents
+
+  - [*Supported display and touch hardware*](#*supported-display-and-touch-hardware*)
+    - [Supported Display IC's](#supported-display-ic's)
+    - [Supported Touch IC's](#supported-touch-ic's)
+    - [Special use drivers](#special-use-drivers)
+  - [*Build Instructions*](#*build-instructions*)
+    - [*Requirements*](#*requirements*)
+      - [Compiling for ESP32:](#compiling-for-esp32:)
+      - [Compiling for RP2:](#compiling-for-rp2:)
+      - [Compiling for STM32:](#compiling-for-stm32:)
+      - [Compiling for Ubuntu (Linux):](#compiling-for-ubuntu-(linux):)
+      - [Compiling for macOS :](#compiling-for-macos-:)
+      - [Compiling for Windows:](#compiling-for-windows:)
+    - [*Command line syntax/parameters*](#*command-line-syntax/parameters*)
+      - [*Build Target (required)*](#*build-target-(required)*)
+      - [*Build Options (optional)*](#*build-options-(optional)*)
+      - [*Target Options (optional)*](#*target-options-(optional)*)
+        - [*Model/Variant*](#*model/variant*)
+        - [*Model/Variant specific options*](#*model/variant-specific-options*)
+          - [*ESP32 options*](#*esp32-options*)
+      - [*Global Options (optional)*](#*global-options-(optional)*)
+        - [*Input/Output*](#*input/output*)
+        - [*Other global options*](#*other-global-options*)
+    - [*Example build commands*](#*example-build-commands*)
+  - [*Python code examples*](#*python-code-examples*)
+    - [*Unix/macOS*](#*unix/macos*)
+    - [*MCU*](#*mcu*)
+      - [*I8080 display with I2C touch input*](#*i8080-display-with-i2c-touch-input*)
+      - [*SPI bus with SPI touch (same SPI bus)*](#*spi-bus-with-spi-touch-(same-spi-bus)*)
+- [Projects made with this Binding...](#projects-made-with-this-binding...)
+
+
+
+## *Supported display and touch hardware*
 _____________________________________________
 
-* Supported Display IC's
+### Supported Display IC's
   * ICs not listed below can often be handled with generic drivers like "rgb_display"
   * GC9A01
   * HX8357B
@@ -46,7 +95,7 @@ _____________________________________________
   * ST7789
   * ST7796
 
-* Supported Touch IC's
+### Supported Touch IC's
   * CST816S
   * FT5x06
   * FT5x16
@@ -59,44 +108,9 @@ _____________________________________________
   * STMPE610
   * XPT2046
 
-* Special use drivers
+### Special use drivers
   * SDL2 \**Only for the unix and macOS ports*\* 
 
-
-<br>
-
-### *Confirmed working*
-_______________________
-
-* Display Bus
-  * ESP32 SPI
-  * ESP32 RGB
-  * ESP32 I8080
-
-* Memory
-  * SRAM
-  * SRAM DMA
-  * PSRAM (SPIRAM)
-  * PSRAM (SPIRAM) DMA
-
-* Display IC
-  * ST7796
-  * ST7789
-  * ILI9341
-  * SDL
-  * RGB
-  * ILI9488
-
-* Touch IC
-  * XPT2046
-  * GT911
-  * Mouse
-  * FT6x06
-  * FT5x06
-
-* SDL display and SDL pointer
-  * unix
-  * macOS
 
 <br>
 
@@ -116,7 +130,12 @@ installed (gcc, clang, msvc) and the necessary support libs.
 
 ### *Requirements*
 _________________
-Compiling for ESP32
+
+To compile you will need Python >= 3.10 for for all build types.
+
+
+#### Compiling for ESP32:
+
   * Ubuntu (Linux): you can install all of these using `apt-get install` 
     * build-essential
     * cmake
@@ -131,7 +150,8 @@ Compiling for ESP32
     * `brew install python`
 
 
-Compiling for RP2
+#### Compiling for RP2:
+
   * Ubuntu (Linux): you can install all of these using `apt-get install` 
     * build-essential
     * cmake
@@ -152,7 +172,8 @@ Compiling for RP2
     * Not yet supported
 
 
-Compiling for STM32:
+#### Compiling for STM32:
+
   * Ubuntu (Linux): you can install all of these using `apt-get install` 
     * gcc-arm-none-eabi 
     * libnewlib-arm-none-eabi: maybe??
@@ -171,7 +192,9 @@ Compiling for STM32:
     * Not yet supported
 
 
-Compiling for Ubuntu (Linux): you can install all of these using `apt-get install` 
+#### Compiling for Ubuntu (Linux):
+
+  use `apt-get install {requirements}` for Ubuntu like Linux variants. 
 
   * build-essential 
   * libffi-dev 
@@ -206,7 +229,8 @@ Compiling for Ubuntu (Linux): you can install all of these using `apt-get instal
   * libdecor-0-dev
 
 
-Compiling for macOS 
+#### Compiling for macOS :
+
   * `command xcode-select–install`
   * `brew install libffi` 
   * `brew install ninja`
@@ -214,145 +238,98 @@ Compiling for macOS
   * `brew install SDL2`
 
 
-Compiling for Windows
+#### Compiling for Windows:
+
   * not supported yet
 
 <br>
- 
-### *Build Target*
-__________________
 
-You are also going to need Python >= 3.10 installed for all builds
 
-There is a single entry point for all builds. That is the make.py script in the
-root of the repository.
+### *Command line syntax/parameters*
+____________________________________
 
-The first argument is positional and it must be one of the following.
-
-  * esp32
-  * windows
-  * macOS
-  * stm32
-  * unix
-  * rp2 
-  * renesas-ra
-  * nrf
-  * mimxrt
-  * samd
-
+    python3 make.py {build target} {build options} {target options} {global options}
 
 <br>
 
-### *Build Options*
-________________________
+#### *Build Target (required)*
 
-There are build options that are port specific and there is only a single build option that is not.
+This is a required option and it is positional. It must be the first option provided.
+Choices are:
 
-  * clean: This flat out deletes the build folder. It will only error if the user doesn't have 
-           permission to delete the files in the folder. So if the clean fails run the build using `sudo`
-           Make is instructed to perform a clean prior to every build so this really only needs to be used 
-           if there is some kind of an issue the make's clean is not cleaning out. This is also how you clean 
-           mpy-cross.  
-
-<br>
-
-### *Identifying the MCU board*
-_______________________________
-
-The next group of options are going to be port specific, some may have them and some may not.
-
-  * BOARD: The MCU to build for. This follows the same symantics as what MIcroPython uses.
-  * BOARD_VARIANT: if there is a variation of the board that it to be compiled for.
-
-
-I will go into specifics for what what boards and variants are available for a specific port a 
-little bit further down.
+  * `esp32`: Espressif ESP32 line of MCU's
+  * `macOS`: Compile to run on macOS
+    NOTE: MUST be compiled on the same computer it is going to run on
+  * `stm32`: ST Microprocessors line of MCU's
+  * `unix`: Compile to run on unix
+    NOTE: MUST be compiled on the same computer it is going to run on
+  * `rp2`: Raspberry Pi Pico 2 MCU
+  * `renesas-ra`: Renesas RA line of MCU's
+  * `nrf`: Nordic Semiconductor MCU's
+  * `mimxrt`: NXP i.MX RT line of MCU's
+  * `samd`: Microchip Technology SAM D line of MCU's
 
 <br>
 
-### *Additional Arguments*
-____________________
+#### *Build Options (optional)*
 
-  * LV_CFLAGS: additional compiler flags that get passed to the LVGL build only.
-  * FROZEN_MANIFEST: path to a custom frozen manifest file
-  * DISPLAY: name of the display driver that is located in `api_drivers/common_api_drivers/display`
-             or it can be the absolute path to a custom driver you have written. This must be the 
-             path to the folder that contains the driver files.
-  * INDEV: name of the indev driver that is located in `api_drivers/common_api_drivers/indev`
-           or it can be the absolute path to your own custom driver (with the .py extension)
+This is a positoional argument and it must be the second one in the build command 
+if it is used. Choices are:
 
-The DISPLAY and INDEV build options can be stacked. meaning they camn be supplied more than once if you want to include multiple
-drivers. 
-<br>
-
-### *ESP32 specific options*
-____________________________
-
-
-#### *Common options across all boards*
-
-* `BAUD={bits per second}`: how fast to flash the firmware, `deploy` must also be set to use this
-* `PORT={serial port}`: port the ESP is connected to, `deploy` must also be set to use this
-* `deploy`: after building flash the firmware, `PORT` and `BAUD` are optional. The speed will default 
-            to whatever the ESP-IDF is set to and there will be an attempt at detecting the port automatically
-* `--skip-partition-resize`: If you do not want the build system to resize the application partition automatically.
-* `--partition-size={app partition size}`: Manually set the application partition size. This is something you want 
-                                           to do when using ota firmware updates. the size of the firmware may change 
-                                           so setting the application partition to be larger than what the actual firmware  
-                                           size is is something I recommend doing. Having to modify the partition sizes over 
-                                           the air is not possible to do.   
-* `--optimize-size`: The build is set to optimize the firmware for performance. If you find that space is more of an issue
-                     then set this to get a smaller firmware size
-* `--debug`: Enables debugging output from the ESP-IDF
-* `--ccache`: This will speed up the build if the application partition size gets resized. It requires the `ccache` library to be installed
-* `--flash-size={4, 8, 16, 32, 64 or 128}`: Sets the flash size that you have available on your ESP32
-* `--ota`: Add this flag if you wanbt to do OTA updates. This creates 2 application partitions that are the same size. 
-* `--dual-core-threads`: (Experimental) MicroPython is written so that the user is only able to run code on a single core of the ESP32.
-                         That is very limiting. This option allows code to run on both CPU cores. Be warned mthis option also disables the GIL
-                         So care must be given to accessing global variables. You need to put nlocks in place to keep the memory from getting 
-                         corrupted. You do not get to decide what core to use. That is automatically done based on the load that is on the cores.
-* `--task-stack-size={stack size in bytes}`: Sets the default stack size for threads
-* `CONFIG_*={value}`: You can alter the config settings of the esp-idf by using these settings. Refer to the ESP-IDF documentation
-                      for further information
+  * `clean`: This flat out deletes the build folder. It will only error if the user doesn't have 
+    permission to delete the files in the folder. So if the clean fails run the build using `sudo`
+    Make is instructed to perform a clean prior to every build so this really only needs to be used 
+    if there is some kind of an issue the make's clean is not cleaning out. This is also how you clean 
+    mpy-cross.  
 
 <br>
 
-#### *ESP32-S3 specific options*
+#### *Target Options (optional)*
 
-* `BOARD_VARIANT=SPIRAM_OCT`: Use this if you have octal SPIRAM
-* --usb-otg: Enable REPL output on pins 19 & 20 of the ESP32-S3
-* --usb-jtag: Enable JTAG output on pins 19 & 20 of the ESP32-S3
-* --octal-flash: Set this if you have octal SPI flash
+Target options is broken down into 2 sections
 
-<br>
+    python3 make.py {build target} {build options} {{model/variant} {model/variant specific options}} {global options}
 
-#### *ESP32-S2 specific options*
-* --usb-otg: Enable REPL output on pins 19 & 20 of the ESP32-S2
-* --usb-jtag: Enable JTAG output on pins 19 & 20 of the ESP32-S2
-* 
-<br>
 
-#### *ESP32 specific options*
+##### *Model/Variant*
 
-* `BOARD_VARIANT={D2WD, OTA, SPIRAM or UNICORE}`: If you have one of the variants seen to the right then 
-                                                  you will use this command. 
+The model is the processor model being used or the build type. the build type is what is 
+specified when compiling to run  on macOS or Unix.
 
-<br>
+When compiling for macOS or Unix you are able to specify the build type. That is done by using
+the `VARIANT` option. The syntax for this option is `VARIANT={build type}`
 
-## *Boards & Board Variants*
-___________
+Here are the available build types:
 
-  * esp32: BOARD=
+  * `coverage`
+  * `minimal`
+  * `nanbox`
+  * `standard` (default)
+
+
+When compiling for all others you use the `BOARD` option. The symntax for this option 
+is `BOARD={board name}`. Some "boards" are generic and can have different variants. To specify
+what board variamnmt is being used you use the following option, `BOARD_VARIANT={variant}`.
+
+This is a list of the boards that MicroPython supports. Some of these boards might not have 
+enough available program storage or RAM to be able to run the binding. I will at some point look 
+at the specs for each of them to see if they will be able to run this binding.
+
+Any sub items listed under a board is a variant that is available for that board.
+
+NOTE: You cannot specify a variant unless the board has been specified.
+
+  * esp32: 
     * ARDUINO_NANO_ESP32
     * ESP32_GENERIC
-      * BOARD_VARIANT=D2WD
-      * BOARD_VARIANT=OTA
-      * BOARD_VARIANT=SPIRAM
-      * BOARD_VARIANT=UNICORE
+      * D2WD
+      * OTA
+      * SPIRAM
+      * UNICORE
     * ESP32_GENERIC_C3
     * ESP32_GENERIC_S2
     * ESP32_GENERIC_S3
-      * BOARD_VARIANT=SPIRAM_OCT
+      * SPIRAM_OCT
     * LILYGO_TTGO_LORA32
     * LOLIN_C3_MINI
     * LOLIN_S2_MINI
@@ -369,12 +346,8 @@ ___________
     * UM_TINYS2
     * UM_TINYS3
     * UM_TINYWATCHS3
-
-  * windows: 
-    * VARIANT=dev
-    * VARIANT=standard
-    
-  * stm32: BOARD=
+       
+  * stm32:
     * ADAFRUIT_F405_EXPRESS
     * ARDUINO_GIGA
     * ARDUINO_NICLA_VISION
@@ -443,14 +416,8 @@ ___________
     * VCC_GND_F407VE
     * VCC_GND_F407ZG
     * VCC_GND_H743VI
-
-  * unix/macOS: 
-    * VARIANT=coverage
-    * VARIANT=minimal
-    * VARIANT=nanbox
-    * VARIANT=standard
   
-  * rp2: BOARD=
+  * rp2:
     * ADAFRUIT_FEATHER_RP2040
     * ADAFRUIT_ITSYBITSY_RP2040
     * ADAFRUIT_QTPY_RP2040
@@ -470,11 +437,11 @@ ___________
     * W5100S_EVB_PICO
     * W5500_EVB_PICO
     * WEACTSTUDIO
-      * BOARD_VARIANT=FLASH_2M
-      * BOARD_VARIANT=FLASH_4M
-      * BOARD_VARIANT=FLASH_8M
+      * FLASH_2M
+      * FLASH_4M
+      * FLASH_8M
       
-    * renesas-ra: BOARD=
+    * renesas-ra:
       * ARDUINO_PORTENTA_C33
       * EK_RA4M1
       * EK_RA4W1
@@ -483,7 +450,7 @@ ___________
       * RA4M1_CLICKER
       * VK_RA6M5
       
-    * nrf: BOARD=
+    * nrf:
       * ACTINIUS_ICARUS
       * ARDUINO_NANO_33_BLE_SENSE
       * ARDUINO_PRIMO
@@ -508,7 +475,7 @@ ___________
       * SEEED_XIAO_NRF52
       * WT51822_S4AT 
 
-    * mimxrt: BOARD=
+    * mimxrt:
       * ADAFRUIT_METRO_M7
       * MIMXRT1010_EVK
       * MIMXRT1015_EVK
@@ -522,7 +489,7 @@ ___________
       * TEENSY40
       * TEENSY41
 
-    * samd: BOARD=
+    * samd:
       * ADAFRUIT_FEATHER_M0_EXPRESS
       * ADAFRUIT_FEATHER_M4_EXPRESS
       * ADAFRUIT_ITSYBITSY_M0_EXPRESS
@@ -534,11 +501,86 @@ ___________
       * SEEED_WIO_TERMINAL
       * SEEED_XIAO_SAMD21
       * SPARKFUN_SAMD51_THING_PLUS
-      
+
+
+##### *Model/Variant specific options*
+______________________________________
+
+
+###### *ESP32 options*
+
+Common options that are available across all esp32 targets:
+
+* `BAUD={bits per second}`: how fast to flash the firmware, `deploy` must also be set to use this
+* `PORT={serial port}`: port the ESP is connected to, `deploy` must also be set to use this
+* `deploy`: after building flash the firmware, `PORT` and `BAUD` are optional. The speed will default 
+            to whatever the ESP-IDF is set to and there will be an attempt at detecting the port automatically
+* `--skip-partition-resize`: If you do not want the build system to resize the application partition automatically.
+* `--partition-size={app partition size}`: Manually set the application partition size. This is something you want 
+                                           to do when using ota firmware updates. the size of the firmware may change 
+                                           so setting the application partition to be larger than what the actual firmware  
+                                           size is is something I recommend doing. Having to modify the partition sizes over 
+                                           the air is not possible to do.   
+* `--optimize-size`: The build is set to optimize the firmware for performance. If you find that space is more of an issue
+                     then set this to get a smaller firmware size
+* `--debug`: Enables debugging output from the ESP-IDF
+* `--ccache`: This will speed up the build if the application partition size gets resized. It requires the `ccache` library to be installed
+* `--flash-size={4, 8, 16, 32, 64 or 128}`: Sets the flash size that you have available on your ESP32
+* `--ota`: Add this flag if you wanbt to do OTA updates. This creates 2 application partitions that are the same size. 
+* `--dual-core-threads`: (Experimental) MicroPython is written so that the user is only able to run code on a single core of the ESP32.
+                         That is very limiting. This option allows code to run on both CPU cores. Be warned mthis option also disables the GIL
+                         So care must be given to accessing global variables. You need to put nlocks in place to keep the memory from getting 
+                         corrupted. You do not get to decide what core to use. That is automatically done based on the load that is on the cores.
+* `--task-stack-size={stack size in bytes}`: Sets the default stack size for threads
+* `CONFIG_*={value}`: You can alter the config settings of the esp-idf by using these settings. Refer to the ESP-IDF documentation
+                      for further information
+
+
+Options specific to the ESP32-S3 processors:
+
+* `--usb-otg`: Enable REPL output on pins 19 & 20 of the ESP32-S3
+* `--usb-jtag`: Enable JTAG output on pins 19 & 20 of the ESP32-S3
+* `--octal-flash`: Set this if you have octal SPI flash
+
+Options specific to the ESP32-S2 processors:
+
+* `--usb-otg`: Enable REPL output on pins 19 & 20 of the ESP32-S2
+* `--usb-jtag`: Enable JTAG output on pins 19 & 20 of the ESP32-S2
 
 <br>
 
-## *Build Command Examples*
+#### *Global Options (optional)*
+________________________________
+
+These are options that are available across all targets, boards and board variants.
+The global options are broken down into 2 secions
+
+    python3 make.py {build target} {build options} {target options} {{input/output} {other}}
+
+<br>
+
+##### *Input/Output*
+
+  * `DISPLAY={ic model or path}`: model number of the display driver that is located in `api_drivers/common_api_drivers/display`
+             or it can be the absolute path to a custom driver you have written. This must be the 
+             path to the folder that contains the driver files.
+  * `INDEV={ic model or path}`: model number of indev driver that is located in `api_drivers/common_api_drivers/indev`
+           or it can be the absolute path to your own custom driver (with the .py extension)
+
+The above options are able to be repeated if you want to include multiple drivers.
+
+<br>
+
+##### *Other global options*
+
+  * `LV_CFLAGS="{lvgl compile options}"`: additional compiler flags that get passed to the LVGL build only.
+  * `FROZEN_MANIFEST={path/to/manifest.py}`: path to a custom frozen manifest file
+
+
+<br>
+
+
+### *Example build commands*
 ___________________________
 
 Build for an ESP32-S3 processor with Octal SPIRAM and the given display and input drivers
@@ -565,7 +607,12 @@ Couple of notes:
   * **DO NOT** enable LV_USE_DRAW_SDL, I have not written code to allow for it's use (yet).
 
 
-Here is some example code for the unix port
+
+## *Python code examples*
+_________________________
+
+### *Unix/macOS*
+
 ```py
 from micropython import const  # NOQA
 import lcd_bus  # NOQA
@@ -619,8 +666,14 @@ store calibration data for the touch screen. In the exmaple below it shows how
 to properly create a display driver and touch driver and how to set the rotation 
 and also the calibration storage.
 
+<br>
 
-example for I8080 bus with I2C touch
+### *MCU*
+_________
+
+
+#### *I8080 display with I2C touch input*
+
 ```py
 import lcd_bus
 from micropython import const
@@ -720,8 +773,11 @@ label.set_text('HELLO WORLD!')
 label.align(lv.ALIGN.CENTER, 0, -50)
 ```
 
+<br>
 
-example for SPI bus with SPI touch both on the same bus
+#### *SPI bus with SPI touch (same SPI bus)*
+____________________________________________
+
 ```py
 import lcd_bus
 from micropython import const
@@ -814,7 +870,16 @@ a button in your UI that you provide to the user.
 
 Thank again and enjoy!!
 
+<br>
+<br>
+
 ***NOTE***: SPI host 0 on the ESP32 is reserved for use with SPIRAM and flash. 
+
+<br>
+<br>
+
+***NOT USED AT THIS TIME***
+_____________________________________________________________________
 
 
 Bit orders are a tuple of durations. The first 2 numbers define a bit as 0 and the second 2 define a bit as 1. Negitive numbers are the duration to hold low and positive are for how long to hold high
