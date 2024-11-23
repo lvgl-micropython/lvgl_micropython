@@ -384,14 +384,6 @@
     #endif
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
 
-        if (buffer_size != self->buffer_size) {
-            mp_raise_msg_varg(
-                &mp_type_ValueError,
-                MP_ERROR_TEXT("Frame buffer size is not correct for the display size (%d)"),
-                buffer_size
-            );
-        }
-
         if (bpp == 16 && rgb565_byte_swap) {
             /*
             We change the pins aound when the bus width is 16 and wanting to
@@ -433,7 +425,6 @@
         printf("h_res=%lu\n", self->panel_io_config.timings.h_res);
         printf("v_res=%lu\n", self->panel_io_config.timings.v_res);
         printf("bits_per_pixel=%d\n", self->panel_io_config.bits_per_pixel);
-        printf("bounce_buffer_size_px=%d\n", self->panel_io_config.bounce_buffer_size_px);
         printf("rgb565_byte_swap=%d\n", self->rgb565_byte_swap);
     #endif
         mp_lcd_err_t ret = esp_lcd_new_rgb_panel(&self->panel_io_config, &self->panel_handle);

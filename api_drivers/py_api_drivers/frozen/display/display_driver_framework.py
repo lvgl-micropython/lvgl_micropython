@@ -175,10 +175,8 @@ class DisplayDriver:
                     display_height *
                     lv.color_format_get_size(color_space)
                 )
+                buf_size = int(buf_size // 10)
                 gc.collect()
-
-                if not isinstance(data_bus, lcd_bus.RGBBus):
-                    buf_size = int(buf_size // 10)
 
                 for flags in (
                     lcd_bus.MEMORY_INTERNAL | lcd_bus.MEMORY_DMA,
@@ -214,14 +212,7 @@ class DisplayDriver:
                 self._init_bus()
 
     def _init_bus(self):
-        if isinstance(self._data_bus, lcd_bus.RGBBus):
-            buffer_size = int(
-                self.display_width *
-                self.display_height *
-                lv.color_format_get_size(self._color_space)
-            )
-        else:
-            buffer_size = len(self._frame_buffer1)
+        buffer_size = len(self._frame_buffer1)
 
         self._data_bus.init(
             self.display_width,
@@ -235,13 +226,24 @@ class DisplayDriver:
 
         self._disp_drv.set_flush_cb(self._flush_cb)
 
+        full_screen_size = (
+            self.display_width *
+            self.display_height *
+            lv.color_format_get_size(self._color_space)
+        )
+        if full_screen_size == len(self._frame_buffer1):
+            render_mode = lv.DISPLAY_RENDER_MODE.FULL  # NOQA
+        else:
+            render_mode = lv.DISPLAY_RENDER_MODE.PARTIAL  # NOQA
+
+        self._disp_drv.set_buffers(
+            self._frame_buffer1,
+            self._frame_buffer2,
+            len(self._frame_buffer1),
+            render_mode
+        )
+
         if isinstance(self._data_bus, lcd_bus.RGBBus):
-            self._disp_drv.set_buffers(
-                self._frame_buffer2,
-                self._frame_buffer1,
-                len(self._frame_buffer1),
-                lv.DISPLAY_RENDER_MODE.DIRECT  # NOQA
-            )
             # we don't need to set column and page addresses for the RGBBus.
             # The tx_params function in C code for the RGB Bus is a dummy
             # function that only has the purpose of keeping the API the same
@@ -252,28 +254,9 @@ class DisplayDriver:
                 '_set_memory_location',
                 self._dummy_set_memory_location
             )
-        else:
-            full_screen_size = (
-                self.display_width *
-                self.display_height *
-                lv.color_format_get_size(self._color_space)
-            )
-            if full_screen_size == len(self._frame_buffer1):
-                render_mode = lv.DISPLAY_RENDER_MODE.FULL  # NOQA
-            else:
-                render_mode = lv.DISPLAY_RENDER_MODE.PARTIAL  # NOQA
-
-            self._disp_drv.set_buffers(
-                self._frame_buffer1,
-                self._frame_buffer2,
-                len(self._frame_buffer1),
-                render_mode
-            )
 
         self._data_bus.register_callback(self._flush_ready_cb)
-
         self.set_default()
-
         self._disp_drv.add_event_cb(
             self._on_size_change,
             lv.EVENT.RESOLUTION_CHANGED,  # NOQA
@@ -292,34 +275,7 @@ class DisplayDriver:
 
         self._rotation = rotation
 
-        if self._disp_drv.sw_rotate:
-            rotation *= 900
-
-            for layer in (
-                self._disp_drv.get_layer_top(),
-                self._disp_drv.get_layer_sys(),
-                self._disp_drv.layer_bottom()
-            ):
-                layer.update_layout()
-                width = layer.get_width()
-                height = layer.get_height()
-
-                layer.set_style_transform_pivot_x(int(width / 2), 0)
-                layer.set_style_transform_pivot_y(int(height / 2), 0)
-                layer.set_style_transform_rotation(rotation, 0)
-
-            for i in range(self._disp_drv.screen_cnt):
-                scrn = self._disp_drv.screens[i]
-
-                scrn.update_layout()
-                width = scrn.get_width()
-                height = scrn.get_height()
-
-                scrn.set_style_transform_pivot_x(int(width / 2), 0)
-                scrn.set_style_transform_pivot_y(int(height / 2), 0)
-                scrn.set_style_transform_rotation(rotation, 0)
-
-        elif self._initilized:
+        if not isinstance(self._data_bus, lcd_bus.RGBBus) and self._initilized:
             self._param_buf[0] = (self._madctl(
                 self._color_byte_order, self._ORIENTATION_TABLE, ~rotation
             ))
