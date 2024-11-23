@@ -218,7 +218,7 @@ def common_args(extra_args):
     else:
         def_flash_size = 4
 
-    esp_argParser = ArgumentParser(prefix_chars='-BPd')
+    esp_argParser = ArgumentParser(prefix_chars='-BPdCU')
     esp_argParser.add_argument(
         'BAUD',
         dest='baud',
