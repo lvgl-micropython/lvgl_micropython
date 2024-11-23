@@ -178,6 +178,8 @@ usb_otg = False
 usb_jtag = False
 optimize_size = False
 ota = False
+components = []
+user_c_modules = []
 
 dual_core_threads = False
 task_stack_size = 16 * 1024
@@ -197,6 +199,8 @@ def common_args(extra_args):
     global ota
     global dual_core_threads
     global task_stack_size
+    global components
+    global user_c_modules
 
     if board == 'ARDUINO_NANO_ESP32':
         raise RuntimeError('Board is not currently supported')
@@ -297,6 +301,25 @@ def common_args(extra_args):
         action='store'
     )
 
+    esp_argParser.add_argument(
+        'COMPONENT',
+        dest='components',
+        help=(
+            'Component you want to add from the esp component registry\n'
+            'the format needs to be as follows\n'
+            'COMPONENT="espressif/esp32-camera^2.0.15"'
+        ),
+        action='append',
+        default=[]
+    )
+
+    esp_argParser.add_argument(
+        'USER_C_MODULE',
+        dest='user_c_modules',
+        action='append',
+        default=[]
+    )
+
     esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
 
     BAUD = esp_args.baud
@@ -311,6 +334,10 @@ def common_args(extra_args):
     ota = esp_args.ota
     dual_core_threads = esp_args.dual_core_threads
     task_stack_size = esp_args.task_stack_size
+    task_stack_size = esp_args.task_stack_size
+
+    components = esp_args.components
+    user_c_modules = esp_args.user_c_modules
 
     return extra_args
 
@@ -753,19 +780,76 @@ def setup_idf_environ():
     return env, cmds
 
 
-def add_components():
-    # port_path = f'{SCRIPT_DIR}/lib/micropython/ports/esp32'
-    # for pth in ('esp32', 'esp32c3', 'esp32s2', 'esp32s3'):
-    #     pth = os.path.join(port_path, f'main_{pth}', 'idf_component.yml')
-    #     with open(pth, 'rb') as f:
-    #         data = f.read().decode('utf-8')
+def user_c_module():
+    'include(${CMAKE_CURRENT_LIST_DIR}/lcd_bus/micropython.cmake)'
+
+    with open('ext_mod/esp32_components.cmake', 'r') as f:
+        data = f.read().split('\n')
+
+    for line in data[:]:
+        if line.startswith('include'):
+            data.remove(line)
+
+    data.append('')
+
+    if user_c_modules:
+        for module in user_c_modules:
+            data.append(f'include({module})')
+
+    with open('ext_mod/esp32_components.cmake', 'w') as f:
+        f.write('\n'.join(data))
+
+
+def add_components(env, cmds):
+    # if a user adds a user_c_module they will be able to
+    # add any includes needed for a component that was downloaded from the
+    # component registry by using this code.
+
+    # set(USER_MOD_INCLUDES ${CMAKE_CURRENT_LIST_DIR})
     #
-    #     if 'espressif/esp_lcd_panel_io_additions: "~1.0.1"' not in data:
-    #         data += '\n  espressif/esp_io_expander: "~1.0.1"'
-    #         data += '\n  espressif/esp_lcd_panel_io_additions: "~1.0.1"\n'
-    #         with open(pth, 'wb') as f:
-    #             f.write(data.encode('utf-8'))
-    pass
+    # idf_component_get_property(ESP_COMP_INCLUDES comp_name INCLUDE_DIRS)
+    # idf_component_get_property(ESP_COMP_PRIV_INCLUDES comp_name PRIV_INCLUDE_DIRS)
+    # idf_component_get_property(ESP_COMP_DIR comp_name COMPONENT_DIR)
+    #
+    # if(ESP_COMP_INCLUDES)
+    #     list(TRANSFORM ESP_COMP_INCLUDES PREPEND ${ESP_COMP_DIR}/)
+    #     list(APPEND USER_MOD_INCLUDES ${ESP_COMP_INCLUDES})
+    # endif()
+    #
+    # if(ESP_COMP_PRIV_INCLUDES)
+    #     list(TRANSFORM ESP_COMP_PRIV_INCLUDES PREPEND ${ESP_COMP_DIR}/)
+    #     list(APPEND USER_MOD_INCLUDES ${ESP_COMP_PRIV_INCLUDES})
+    # endif()
+
+    comp_names = []
+    comps = []
+
+    for component in components:
+        comp_name = ''
+        for char in component:
+            if char == '"':
+                continue
+            if char in '<>=`^|':
+                break
+            comp_name += char
+
+        comp_names.append(comp_name.split('/')[-1])
+        comps.append([f'idf.py add-dependency {component}'])
+
+    if comps:
+        cmds.extend(comps)
+        ret_code, output = spawn(cmds, env=env)
+        if ret_code != 0:
+            sys.exit(ret_code)
+
+        with open('ext_mod/esp32_components.cmake', 'w') as f:
+            f.write('list(APPEND IDF_COMPONENTS\n')
+            for item in comp_names:
+                f.write(f'    {item}\n')
+            f.write(')\n')
+    else:
+        with open('ext_mod/esp32_components.cmake', 'w') as f:
+            f.write('')
 
 
 def submodules():
@@ -1116,9 +1200,8 @@ def compile(*args):  # NOQA
     global PORT
     global flash_size
 
-    add_components()
-
     env, cmds = setup_idf_environ()
+    add_components(env, cmds[:])
 
     if ccache:
         env['IDF_CCACHE_ENABLE'] = '1'
