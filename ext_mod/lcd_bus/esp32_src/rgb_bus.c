@@ -491,8 +491,9 @@
         printf("rgb_tx_color(self, lcd_cmd=%d, color, color_size=%d, x_start=%d, y_start=%d, x_end=%d, y_end=%d)\n", lcd_cmd, color_size, x_start, y_start, x_end, y_end);
     #endif
 
-        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
+        LCD_UNUSED(color_size);
 
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
         self->partial_buf = (uint8_t *)color;
         self->x_start = x_start;
         self->y_start = y_start;
@@ -501,7 +502,7 @@
         self->rotation = rotation;
 
         if (last_update) rgb_bus_event_set(&self->last_update);
-
+        printf("rgb_tx_color\n");
         rgb_bus_lock_release(&self->copy_lock);
 
         return LCD_OK;

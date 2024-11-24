@@ -11,6 +11,9 @@
     #include "freertos/semphr.h"
     #include "freertos/event_groups.h"
     #include "freertos/idf_additions.h"
+    #include "rom/ets_sys.h"
+    #include "esp_system.h"
+    #include "esp_cpu.h"
 
     #include "esp_lcd_panel_ops.h"
 
@@ -133,6 +136,8 @@
     }
 
     void rgb_bus_copy_task(void *self_in) {
+        printf("rgb_bus_copy_task - STARTED\n");
+        
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)self_in;
 
         copy_func_cb_t func;
@@ -160,6 +165,8 @@
 
             if (rgb_bus_event_isset(&self->partial_copy)) {
                 rgb_bus_event_clear(&self->partial_copy);
+                printf("rgb_bus_copy_task - partial_copy\n");
+
 
                 copy_pixels(
                     self->idle_fb, self->partial_buf,
@@ -168,11 +175,40 @@
                     self->width, self->height,
                     bytes_per_pixel, func, self->rotation);
 
-                if (self->callback != mp_const_none) mp_sched_schedule(self->callback, MP_OBJ_FROM_PTR(self));
-            }
+                if (self->callback != mp_const_none) {
+                    volatile uint32_t sp = (uint32_t)esp_cpu_get_sp();
+
+                    void *old_state = mp_thread_get_state();
+
+                    mp_state_thread_t ts;
+                    mp_thread_set_state(&ts);
+                    mp_stack_set_top((void*)sp);
+                    mp_stack_set_limit(CONFIG_FREERTOS_IDLE_TASK_STACKSIZE - 1024);
+                    mp_locals_set(mp_state_ctx.thread.dict_locals);
+                    mp_globals_set(mp_state_ctx.thread.dict_globals);
+
+                    mp_sched_lock();
+                    gc_lock();
+
+                    nlr_buf_t nlr;
+                    if (nlr_push(&nlr) == 0) {
+                        mp_call_function_n_kw(self->callback, 0, 0, NULL);
+                        nlr_pop();
+                    } else {
+                        ets_printf("Uncaught exception in IRQ callback handler!\n");
+                        mp_obj_print_exception(&mp_plat_print, MP_OBJ_FROM_PTR(nlr.ret_val));
+                    }
+
+                    gc_unlock();
+                    mp_sched_unlock();
+
+                    mp_thread_set_state(old_state);
+                }
 
             if (rgb_bus_event_isset(&self->last_update)) {
                 rgb_bus_event_clear(&self->last_update);
+                printf("rgb_bus_copy_task - last_update\n");
+
                 uint8_t *idle_fb = self->idle_fb;
                 rgb_bus_event_set(&self->swap_bufs);
 
