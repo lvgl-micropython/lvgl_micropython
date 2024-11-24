@@ -137,7 +137,7 @@
 
     void rgb_bus_copy_task(void *self_in) {
         printf("rgb_bus_copy_task - STARTED\n");
-        
+
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)self_in;
 
         copy_func_cb_t func;
@@ -204,6 +204,7 @@
 
                     mp_thread_set_state(old_state);
                 }
+            }
 
             if (rgb_bus_event_isset(&self->last_update)) {
                 rgb_bus_event_clear(&self->last_update);
