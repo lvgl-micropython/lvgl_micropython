@@ -501,8 +501,8 @@
         self->y_end = y_end;
         self->rotation = rotation;
 
+        rgb_bus_event_set(&self->partial_copy);
         if (last_update) rgb_bus_event_set(&self->last_update);
-        printf("rgb_tx_color\n");
         rgb_bus_lock_release(&self->copy_lock);
 
         return LCD_OK;
