@@ -455,8 +455,8 @@
 
         rgb_panel_t *rgb_panel = __containerof((esp_lcd_panel_t *)self->panel_handle, rgb_panel_t, base);
 
-        self->active_fb = rgb_panel->fbs[0];
-        self->idle_fb = rgb_panel->fbs[1];
+        self->active_fb = rgb_panel->fbs[1];
+        self->idle_fb = rgb_panel->fbs[0];
 
         rgb_bus_lock_init(&self->copy_lock);
         rgb_bus_event_init(&self->copy_task_exit);
