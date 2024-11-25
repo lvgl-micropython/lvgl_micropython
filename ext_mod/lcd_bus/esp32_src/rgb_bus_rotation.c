@@ -266,8 +266,8 @@
                     self->panel_handle,
                     0,
                     0,
-                    self->width,
-                    self->height,
+                    self->width - 1,
+                    self->height - 1,
                     idle_fb
                 );
 
