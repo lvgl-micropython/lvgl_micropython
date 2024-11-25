@@ -27,7 +27,7 @@
     void rgb_bus_event_init(rgb_bus_event_t *event)
     {
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("rgb_bus_event_init\n");
+        mp_printf("rgb_bus_event_init\n");
     #endif
         event->handle = xEventGroupCreateStatic(&event->buffer);
     }
@@ -36,7 +36,7 @@
     void rgb_bus_event_delete(rgb_bus_event_t *event)
     {
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("rgb_bus_event_delete\n");
+        mp_printf("rgb_bus_event_delete\n");
     #endif
         xEventGroupSetBits(event->handle, RGB_BIT_0);
         vEventGroupDelete(event->handle);
@@ -47,7 +47,7 @@
     bool rgb_bus_event_isset(rgb_bus_event_t *event)
     {
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("rgb_bus_event_isset\n");
+        mp_printf("rgb_bus_event_isset\n");
     #endif
         return (bool)(xEventGroupGetBits(event->handle) & RGB_BIT_0);
     }
@@ -62,7 +62,7 @@
     void rgb_bus_event_set(rgb_bus_event_t *event)
     {
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("rgb_bus_event_set\n");
+        mp_printf("rgb_bus_event_set\n");
     #endif
         xEventGroupSetBits(event->handle, RGB_BIT_0);
     }
@@ -71,7 +71,7 @@
     void rgb_bus_event_clear(rgb_bus_event_t *event)
     {
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("rgb_bus_event_clear\n");
+        mp_printf("rgb_bus_event_clear\n");
     #endif
         xEventGroupClearBits(event->handle, RGB_BIT_0);
     }
@@ -90,7 +90,7 @@
     int rgb_bus_lock_acquire(rgb_bus_lock_t *lock, int32_t wait_ms)
     {
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("rgb_bus_lock_acquire\n");
+        mp_printf("rgb_bus_lock_acquire\n");
     #endif
         return pdTRUE == xSemaphoreTake(lock->handle, wait_ms < 0 ? portMAX_DELAY : pdMS_TO_TICKS((uint16_t)wait_ms));
     }
@@ -99,7 +99,7 @@
     void rgb_bus_lock_release(rgb_bus_lock_t *lock)
     {
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("rgb_bus_lock_release\n");
+        mp_printf("rgb_bus_lock_release\n");
     #endif
         xSemaphoreGive(lock->handle);
     }
@@ -114,7 +114,7 @@
     void rgb_bus_lock_init(rgb_bus_lock_t *lock)
     {
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("rgb_bus_lock_init\n");
+        mp_printf("rgb_bus_lock_init\n");
     #endif
         lock->handle = xSemaphoreCreateBinaryStatic(&lock->buffer);
         xSemaphoreGive(lock->handle);
@@ -124,7 +124,7 @@
     void rgb_bus_lock_delete(rgb_bus_lock_t *lock)
     {
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("rgb_bus_lock_delete\n");
+        mp_printf("rgb_bus_lock_delete\n");
     #endif
         vSemaphoreDelete(lock->handle);
     }
@@ -165,7 +165,7 @@
 
     void rgb_bus_copy_task(void *self_in) {
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("rgb_bus_copy_task - STARTED\n");
+        mp_printf("rgb_bus_copy_task - STARTED\n");
     #endif
 
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)self_in;
@@ -195,13 +195,13 @@
         while (!exit) {
             rgb_bus_lock_acquire(&self->copy_lock, -1);
             #if CONFIG_LCD_ENABLE_DEBUG_LOG
-                printf("!rgb_bus_event_isset(&self->copy_task_exit)\n");
+                mp_printf("!rgb_bus_event_isset(&self->copy_task_exit)\n");
             #endif
 
             if (rgb_bus_event_isset(&self->partial_copy)) {
                 rgb_bus_event_clear(&self->partial_copy);
             #if CONFIG_LCD_ENABLE_DEBUG_LOG
-                printf("rgb_bus_event_isset(&self->partial_copy)\n");
+                mp_printf("rgb_bus_event_isset(&self->partial_copy)\n");
             #endif
 
 
@@ -231,18 +231,18 @@
                     if (nlr_push(&nlr) == 0) {
 
                     #if CONFIG_LCD_ENABLE_DEBUG_LOG
-                        printf("mp_call_function_n_kw(1)\n");
+                        mp_printf("mp_call_function_n_kw(1)\n");
                     #endif
 
                         mp_call_function_n_kw(self->callback, 0, 0, NULL);
 
                     #if CONFIG_LCD_ENABLE_DEBUG_LOG
-                        printf("mp_call_function_n_kw(2)\n");
+                        mp_printf("mp_call_function_n_kw(2)\n");
                     #endif
 
                         nlr_pop();
                     } else {
-                        ets_printf("Uncaught exception in IRQ callback handler!\n");
+                        ets_mp_printf("Uncaught exception in IRQ callback handler!\n");
                         mp_obj_print_exception(&mp_plat_print, MP_OBJ_FROM_PTR(nlr.ret_val));
                     }
 
@@ -256,7 +256,7 @@
             if (rgb_bus_event_isset(&self->last_update)) {
                 rgb_bus_event_clear(&self->last_update);
             #if CONFIG_LCD_ENABLE_DEBUG_LOG
-                printf("rgb_bus_event_isset(&self->last_update)\n");
+                mp_printf("rgb_bus_event_isset(&self->last_update)\n");
             #endif
 
                 uint8_t *idle_fb = self->idle_fb;
@@ -272,7 +272,7 @@
                 );
 
                 if (ret != 0) {
-                    printf("esp_lcd_panel_draw_bitmap error (%d)\n", ret);
+                    mp_printf("esp_lcd_panel_draw_bitmap error (%d)\n", ret);
                 } else {
                     rgb_bus_lock_acquire(&self->swap_lock, -1);
                     memcpy(self->idle_fb, self->active_fb, self->width * self->height * bytes_per_pixel);
@@ -298,7 +298,7 @@
         uint8_t rotate
     ) {
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("copy_pixels(to, from, x_start=%lu, y_start=%lu, x_end=%lu, y_end=%lu, h_res=%lu, v_res=%lu, bytes_per_pixel=%lu, func, rotate=%u)\n",
+        mp_printf("copy_pixels(to, from, x_start=%lu, y_start=%lu, x_end=%lu, y_end=%lu, h_res=%lu, v_res=%lu, bytes_per_pixel=%lu, func, rotate=%u)\n",
                 x_start, y_start, x_end, y_end, h_res, v_res, bytes_per_pixel, rotate);
     #endif
         if (rotate == RGB_BUS_ROTATION_90 || rotate == RGB_BUS_ROTATION_270) {
@@ -319,14 +319,14 @@
         size_t offset = y_start * copy_bytes_per_line + x_start * bytes_per_pixel;
 
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("x_start=%lu, y_start=%lu, x_end=%lu, y_end=%lu, copy_bytes_per_line=%hu, bytes_per_line=%lu, offset=%d\n",
+        mp_printf("x_start=%lu, y_start=%lu, x_end=%lu, y_end=%lu, copy_bytes_per_line=%hu, bytes_per_line=%lu, offset=%d\n",
                 x_start, y_start, x_end, y_end, copy_bytes_per_line, bytes_per_line, offset);
     #endif
 
         switch (rotate) {
             case RGB_BUS_ROTATION_0:
             #if CONFIG_LCD_ENABLE_DEBUG_LOG
-                printf("RGB_BUS_ROTATION_0\n");
+                mp_printf("RGB_BUS_ROTATION_0\n");
             #endif
                 uint8_t *fb = to + (y_start * h_res + x_start) * bytes_per_pixel;
 
@@ -343,7 +343,7 @@
                 break;
             case RGB_BUS_ROTATION_180:
             #if CONFIG_LCD_ENABLE_DEBUG_LOG
-                printf("RGB_BUS_ROTATION_180\n");
+                mp_printf("RGB_BUS_ROTATION_180\n");
             #endif
                 uint32_t index;
                 for (int y = y_start; y < y_end; y++) {
@@ -359,7 +359,7 @@
 
             case RGB_BUS_ROTATION_90:
             #if CONFIG_LCD_ENABLE_DEBUG_LOG
-                printf("RGB_BUS_ROTATION_90\n");
+                mp_printf("RGB_BUS_ROTATION_90\n");
             #endif
                 uint32_t j;
                 uint32_t i;
@@ -375,7 +375,7 @@
 
             case RGB_BUS_ROTATION_270:
             #if CONFIG_LCD_ENABLE_DEBUG_LOG
-                printf("RGB_BUS_ROTATION_270\n");
+                mp_printf("RGB_BUS_ROTATION_270\n");
             #endif
                 uint32_t jj;
                 uint32_t ii;
