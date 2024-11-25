@@ -30,6 +30,27 @@ to C99 and vice versa. It allows us access to the LVGL code by using the Python 
 
 <br>
 
+## *Important Update*
+
+I have altered how the RGBBus driver works. Due to low framerates from LVGL needing to render the whole screen 
+each time a small change is made and LVGL also having to keep the 2 frame buffers in sync I have decided to try 
+and bring a little bit of my coding ability to the show to see if I am able to overcome some of the performance issues.
+
+This comes at the cost of additional memory but due to the buffers needing to reside in SPIRAM because of their size 
+I figured what's a couple hundred K more. What I have done is this.
+
+The 2 full frame buffers are no longer accessable to the user. These are kept tucked away in C code. The user is able to 
+allocate partial buffers of any size they want. I have not messed about with this to see if there is a sweet spot with the 
+size but I would imagine that 1/10 the display size is a good starting point. I am running a task on the second core of the ESP32
+and in that task is where the buffer copying takes place. This is ideal because it is able to offload that work so there is no 
+drop in performance in the user code. MicroPython only uses one core of the ESP32 and that is what makes this an ideal thing to do. 
+
+If you use 2 partial buffers while one of being copied to the full frame buffer LVGL is able to fill the other partial buffer.
+Another nifty thing I have done is I am handling the rotation of the screen in that task as well. This should provide much better 
+performance than having LVGL handle the rotation.
+
+So make sure when you are creating the frame buffers for the RGB display that you make them a fraction of the size of what they 
+used to be.
 
 ## Table of Contents
 
