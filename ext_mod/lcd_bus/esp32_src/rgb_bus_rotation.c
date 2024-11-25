@@ -189,7 +189,7 @@
         }
 
         rgb_bus_lock_acquire(&self->copy_lock, -1);
-
+        rgb_bus_lock_acquire(&self->swap_lock, -1);
         bool exit = rgb_bus_event_isset(&self->copy_task_exit);
 
         while (!exit) {
@@ -348,8 +348,7 @@
                 uint32_t index;
                 for (int y = y_start; y < y_end; y++) {
                     index = ((v_res - 1 - y) * h_res + (h_res - 1 - x_start)) * bytes_per_pixel;
-                    for (size_t x = x_start; x < x_end; x++)
-                    {
+                    for (size_t x = x_start; x < x_end; x++) {
                         func(to + index, from);
                         index -= bytes_per_pixel;
                         from += bytes_per_pixel;
