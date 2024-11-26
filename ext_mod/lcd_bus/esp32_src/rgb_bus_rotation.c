@@ -231,7 +231,7 @@
                     mp_call_function_n_kw(self->callback, 0, 0, NULL);
                     nlr_pop();
                 } else {
-                    ets_mp_printf(&mp_plat_print, "Uncaught exception in IRQ callback handler!\n");
+                    ets_printf("Uncaught exception in IRQ callback handler!\n");
                     mp_obj_print_exception(&mp_plat_print, MP_OBJ_FROM_PTR(nlr.ret_val));
                 }
 
