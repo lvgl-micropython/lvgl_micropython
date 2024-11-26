@@ -71,7 +71,7 @@
             rgb_bus_lock_t copy_lock;
             rgb_bus_event_t copy_task_exit;
             rgb_bus_event_t last_update;
-            rgb_bus_event_t partial_copy;
+            rgb_bus_lock_t tx_color_lock;
             rgb_bus_event_t swap_bufs;
             rgb_bus_lock_t swap_lock;
 
