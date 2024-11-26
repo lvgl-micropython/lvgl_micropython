@@ -514,7 +514,7 @@
         LCD_UNUSED(color_size);
 
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
-
+        
         rgb_bus_lock_acquire(&self->tx_color_lock, -1);
 
         self->partial_buf = (uint8_t *)color;
@@ -524,7 +524,6 @@
         self->y_end = y_end;
         self->rotation = rotation;
 
-        rgb_bus_event_set(&self->partial_copy);
         if (last_update) rgb_bus_event_set(&self->last_update);
         rgb_bus_lock_release(&self->copy_lock);
 
