@@ -279,7 +279,7 @@
 
         if (self->view1 != NULL || self->view2 != NULL) {
             mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("Framebuffers have not been released"));
-            return mp_const_none;
+            return LCD_FAIL;
         }
 
         rgb_bus_lock_acquire(&self->tx_color_lock, -1);
@@ -295,7 +295,6 @@
         rgb_bus_lock_delete(&self->swap_lock);
 
         rgb_bus_event_delete(&self->swap_bufs);
-        rgb_bus_event_delete(&self->last_update);
         rgb_bus_event_delete(&self->copy_task_exit);
 
         return ret;
@@ -481,7 +480,6 @@
         rgb_bus_lock_init(&self->copy_lock);
         rgb_bus_lock_init(&self->tx_color_lock);
         rgb_bus_event_init(&self->copy_task_exit);
-        rgb_bus_event_init(&self->last_update);
         rgb_bus_event_init(&self->swap_bufs);
         rgb_bus_lock_init(&self->swap_lock);
 
@@ -517,6 +515,7 @@
         
         rgb_bus_lock_acquire(&self->tx_color_lock, -1);
 
+        self->last_update = (uint8_t)last_update;
         self->partial_buf = (uint8_t *)color;
         self->x_start = x_start;
         self->y_start = y_start;
@@ -524,7 +523,6 @@
         self->y_end = y_end;
         self->rotation = rotation;
 
-        if (last_update) rgb_bus_event_set(&self->last_update);
         rgb_bus_lock_release(&self->copy_lock);
 
         return LCD_OK;
