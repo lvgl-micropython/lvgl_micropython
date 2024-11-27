@@ -6,8 +6,8 @@ import time
 from machine import Timer  # NOQA
 
 
-TASK_HANDLER_STARTED = 0x00
-TASK_HANDLER_FINISHED = 0x01
+TASK_HANDLER_STARTED = 0x01
+TASK_HANDLER_FINISHED = 0x02
 
 _default_timer_id = 0
 
@@ -106,7 +106,7 @@ class TaskHandler(object):
 
                 run_update = True
                 for cb, evt, data in self._callbacks:
-                    if not evt ^ TASK_HANDLER_STARTED:
+                    if not evt & TASK_HANDLER_STARTED:
                         continue
 
                     try:
@@ -133,7 +133,7 @@ class TaskHandler(object):
                     start_time = time.ticks_ms()
 
                     for cb, evt, data in self._callbacks:
-                        if not evt ^ TASK_HANDLER_FINISHED:
+                        if not evt & TASK_HANDLER_FINISHED:
                             continue
 
                         try:
