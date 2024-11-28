@@ -328,25 +328,27 @@
     }
 
 
-    void copy_pixels(uint8_t *to, uint8_t *from, uint32_t x_start, uint32_t y_start,
-            uint32_t x_end, uint32_t y_end, uint32_t h_res, uint32_t v_res,
+    void copy_pixels(uint8_t *dst, uint8_t *src, uint32_t x_start, uint32_t y_start,
+            uint32_t x_end, uint32_t y_end, uint32_t d_width, uint32_t d_height,
             uint32_t bytes_per_pixel, copy_func_cb_t func, uint8_t rotate)
     {
         if (rotate == RGB_BUS_ROTATION_90 || rotate == RGB_BUS_ROTATION_270) {
-            x_start = MIN(x_start, v_res);
-            x_end = MIN(x_end, v_res);
-            y_start = MIN(y_start, h_res);
-            y_end = MIN(y_end, h_res);
+            x_start = MIN(x_start, d_height);
+            x_end = MIN(x_end, d_height);
+            y_start = MIN(y_start, d_width);
+            y_end = MIN(y_end, d_width);
         } else {
-            x_start = MIN(x_start, h_res);
-            x_end = MIN(x_end, h_res);
-            y_start = MIN(y_start, v_res);
-            y_end = MIN(y_end, v_res);
+            x_start = MIN(x_start, d_width);
+            x_end = MIN(x_end, d_width);
+            y_start = MIN(y_start, d_height);
+            y_end = MIN(y_end, d_height);
         }
 
-        uint16_t copy_bytes_per_line = (x_end - x_start) * (uint16_t)bytes_per_pixel;
-        int pixels_per_line = h_res;
-        uint32_t bytes_per_line = bytes_per_pixel * pixels_per_line;
+        uint16_t src_bytes_per_line = (x_end - x_start + 1) * (uint16_t)bytes_per_pixel;
+        uint32_t dst_bytes_per_line = bytes_per_pixel * d_width;
+        size_t offset = y_start * src_bytes_per_line + x_start * bytes_per_pixel;
+
+        uint32_t copy_bytes_per_line = (x_end - x_start) * bytes_per_pixel;
         size_t offset = y_start * copy_bytes_per_line + x_start * bytes_per_pixel;
 
         // mp_printf(&mp_plat_print, "x_start=%lu, y_start=%lu, x_end=%lu, y_end=%lu, copy_bytes_per_line=%u, bytes_per_line=%lu, %lu\n",
@@ -354,54 +356,57 @@
 
         switch (rotate) {
             case RGB_BUS_ROTATION_0:
-                uint8_t *fb = to + ((y_start * h_res + x_start) * bytes_per_pixel);
+                uint8_t *fb = dst + ((y_start * d_width + x_start) * bytes_per_pixel);
 
-                if (x_start == 0 && x_end == (h_res - 1)) {
-                    memcpy(fb, from, h_res * (y_end - y_start + 1) * bytes_per_pixel);
+                if (x_start == 0 && x_end == (d_width - 1)) {
+                    memcpy(fb, src, d_width * (y_end - y_start + 1) * bytes_per_pixel);
                 } else {
                     for (int y = y_start; y < y_end; y++) {
-                        memcpy(fb, from, copy_bytes_per_line);
-                        fb += bytes_per_line;
-                        from += copy_bytes_per_line;
+                        memcpy(fb, src, src_bytes_per_line);
+                        fb += dst_bytes_per_line;
+                        from += src_bytes_per_line;
                     }
                 }
 
                 break;
 
-            case RGB_BUS_ROTATION_180:
-                uint32_t index;
-                for (int y = y_start; y < y_end; y++) {
-                    index = ((v_res - 1 - y) * h_res + (h_res - 1 - x_start)) * bytes_per_pixel;
-                    for (size_t x = x_start; x < x_end; x++) {
-                        func(to + index, from);
-                        index -= bytes_per_pixel;
-                        from += bytes_per_pixel;
-                    }
-                }
-                break;
-
+            // SWAP_XY   MIRROR_Y
             case RGB_BUS_ROTATION_90:
                 uint32_t j;
                 uint32_t i;
 
                 for (int y = y_start; y < y_end; y++) {
                     for (int x = x_start; x < x_end; x++) {
-                        j = y * copy_bytes_per_line + x * bytes_per_pixel - offset;
-                        i = ((v_res - 1 - x) * h_res + y) * bytes_per_pixel;
-                        func(to + i, from + j);
+                        j = y * src_bytes_per_line + x * bytes_per_pixel - offset;
+                        i = ((d_height - 1 - x) * d_width + y) * bytes_per_pixel;
+                        func(dst + i, src + j);
                     }
                 }
                 break;
 
+            // MIRROR_X MIRROR_Y
+            case RGB_BUS_ROTATION_180:
+                uint32_t index;
+                for (int y = y_start; y < y_end; y++) {
+                    index = ((d_height - 1 - y) * d_width + (d_width - 1 - x_start)) * bytes_per_pixel;
+                    for (size_t x = x_start; x < x_end; x++) {
+                        func(dst + index, src);
+                        index -= bytes_per_pixel;
+                        from += bytes_per_pixel;
+                    }
+                }
+                break;
+
+            // SWAP_XY   MIRROR_X
             case RGB_BUS_ROTATION_270:
                 uint32_t jj;
                 uint32_t ii;
 
                 for (int y = y_start; y < y_end; y++) {
                     for (int x = x_start; x < x_end; x++) {
-                        jj = y * copy_bytes_per_line + x * bytes_per_pixel - offset;
-                        ii = (x * h_res + h_res - 1 - y) * bytes_per_pixel;
-                        func(to + ii, from + jj);
+                        jj = y * src_bytes_per_line + x * bytes_per_pixel - offset;
+                        ii = (x * d_width + d_width - 1 - y) * bytes_per_pixel;
+                        func(dst + ii, src + jj);
                     }
                 }
                 break;
