@@ -29,11 +29,17 @@
         event->handle = xEventGroupCreateStatic(&event->buffer);
     }
 
+
     void rgb_bus_event_delete(rgb_bus_event_t *event)
     {
         xEventGroupSetBits(event->handle, RGB_BIT_0);
         vEventGroupDelete(event->handle);
 
+    }
+
+    void rgb_bus_event_wait(rgb_bus_event_t *event)
+    {
+        xEventGroupWaitBits(event->handle, RGB_BIT_0, pdFALSE, pdTRUE, portMAX_DELAY);
     }
 
 
@@ -60,10 +66,12 @@
         xEventGroupClearBits(event->handle, RGB_BIT_0);
     }
 
+
     void rgb_bus_event_clear_from_isr(rgb_bus_event_t *event)
     {
         xEventGroupClearBitsFromISR(event->handle, RGB_BIT_0);
     }
+
 
     void rgb_bus_event_set_from_isr(rgb_bus_event_t *event)
     {
@@ -101,6 +109,7 @@
         vSemaphoreDelete(lock->handle);
     }
 
+
     #define RGB_BUS_ROTATION_0    (0)
     #define RGB_BUS_ROTATION_90   (1)
     #define RGB_BUS_ROTATION_180  (2)
@@ -112,6 +121,24 @@
                 uint8_t *to, uint8_t *from, uint32_t x_start, uint32_t y_start,
                 uint32_t x_end, uint32_t y_end, uint32_t h_res, uint32_t v_res,
                 uint32_t bytes_per_pixel, copy_func_cb_t func, uint8_t rotate);
+
+
+    static bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
+    {
+        LCD_UNUSED(edata);
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)user_ctx;
+        rgb_panel_t *rgb_panel = __containerof(panel, rgb_panel_t, base);
+        uint8_t *curr_buf = rgb_panel->fbs[rgb_panel->cur_fb_index];
+
+        if (curr_buf != self->active_fb && !rgb_bus_event_isset_from_isr(&self->swap_bufs)) {
+            uint8_t *idle_fb = self->idle_fb;
+            self->idle_fb = self->active_fb;
+            self->active_fb = idle_fb;
+            rgb_bus_event_set_from_isr(&self->swap_bufs);
+        }
+
+        return false;
+    }
 
 
     __attribute__((always_inline))
@@ -142,8 +169,45 @@
 
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)self_in;
 
+        esp_lcd_rgb_panel_event_callbacks_t callbacks = { .on_vsync = rgb_bus_trans_done_cb };
+
+        self->init_err = esp_lcd_new_rgb_panel(&self->panel_io_config, &self->panel_handle);
+        if (self->init_err != 0) {
+            self->init_err_msg = MP_ERROR_TEXT("%d(esp_lcd_new_rgb_panel)");
+            rgb_bus_lock_release(&self->init_lock);
+            return;
+        }
+
+        self->init_err = esp_lcd_rgb_panel_register_event_callbacks(self->panel_handle, &callbacks, self);
+        if (self->init_err != 0) {
+            self->init_err_msg = MP_ERROR_TEXT("%d(esp_lcd_rgb_panel_register_event_callbacks)");
+            rgb_bus_lock_release(&self->init_lock);
+            return;
+        }
+
+        self->init_err = esp_lcd_panel_reset(self->panel_handle);
+        if (self->init_err != 0) {
+            self->init_err_msg = MP_ERROR_TEXT("%d(esp_lcd_panel_reset)");
+            rgb_bus_lock_release(&self->init_lock);
+            return;
+        }
+
+        self->init_err = esp_lcd_panel_init(self->panel_handle);
+        if (self->init_err != 0) {
+            self->init_err_msg = MP_ERROR_TEXT("%d(esp_lcd_panel_init)");
+            rgb_bus_lock_release(&self->init_lock);
+            return;
+        }
+
+        rgb_panel_t *rgb_panel = __containerof((esp_lcd_panel_t *)self->panel_handle, rgb_panel_t, base);
+
+        self->active_fb = rgb_panel->fbs[0];
+        self->idle_fb = rgb_panel->fbs[1];
+
         uint8_t *idle_fb;
         copy_func_cb_t func;
+        bool last_update;
+
         uint8_t bytes_per_pixel = self->bytes_per_pixel;
 
         switch (bytes_per_pixel) {
@@ -161,19 +225,22 @@
                 return;
         }
 
-        // we acquire both of these locks once so the next time they are acquired
-        // it will stall. the areas that release them do so only to allow the code
-        // to run a single time. when the lock is acquired the next loop around
-        // it will stall the task amnd yield so other work is able to be done.
         rgb_bus_lock_acquire(&self->copy_lock, -1);
-        rgb_bus_lock_acquire(&self->swap_lock, -1);
+
+        self->init_err = LCD_OK;
+        rgb_bus_lock_release(&self->init_lock);
 
         bool exit = rgb_bus_event_isset(&self->copy_task_exit);
-
         while (!exit) {
             rgb_bus_lock_acquire(&self->copy_lock, -1);
 
             if (self->partial_buf == NULL) break;
+            last_update = self->last_update;
+
+
+        #if LCD_RGB_OPTIMUM_FB_SIZE
+            self->optimum_fb.flush_count += 1;
+        #endif
 
             idle_fb = self->idle_fb;
 
@@ -183,6 +250,8 @@
                 self->x_end, self->y_end,
                 self->width, self->height,
                 bytes_per_pixel, func, self->rotation);
+
+            rgb_bus_lock_release(&self->tx_color_lock);
 
             if (self->callback != mp_const_none) {
                 volatile uint32_t sp = (uint32_t)esp_cpu_get_sp();
@@ -214,12 +283,23 @@
                 mp_thread_set_state(old_state);
             }
 
-            if (self->last_update) {
-                // the reason why this locked is released this way is to ensure that the partial
-                // buffer has been copied correctly before another one gets into the queue
-                // it is places here after the partial check to ensure the setting of the partial doesn't overlap
-                // with the wrong partial buffer
-                rgb_bus_lock_release(&self->tx_color_lock);
+            if (last_update) {
+
+            #if LCD_RGB_OPTIMUM_FB_SIZE
+                if (self->optimum_fb.curr_index == 254) {
+                    self->optimum_fb.curr_index = 0;
+                } else {
+                    self->optimum_fb.curr_index += 1;
+                }
+                if (self->optimum_fb.sample_count < 255) {
+                    self->optimum_fb.sample_count += 1;
+                }
+                self->optimum_fb.samples[self->optimum_fb.curr_index] = self->optimum_fb.flush_count;
+                self->optimum_fb.flush_count = 0;
+
+                rgb_bus_lock_release(&self->optimum_fb.lock);
+                rgb_bus_lock_acquire(&self->optimum_fb.lock, -1);
+            #endif
 
                 mp_lcd_err_t ret = esp_lcd_panel_draw_bitmap(
                     self->panel_handle,
@@ -233,12 +313,10 @@
                 if (ret != 0) {
                     mp_printf(&mp_plat_print, "esp_lcd_panel_draw_bitmap error (%d)\n", ret);
                 } else {
-                    rgb_bus_event_set(&self->swap_bufs);
-                    rgb_bus_lock_acquire(&self->swap_lock, -1);
-                    memcpy( self->active_fb, self->idle_fb, self->width * self->height * bytes_per_pixel);
+                    rgb_bus_event_clear(&self->swap_bufs);
+                    rgb_bus_event_wait(&self->swap_bufs);
+                    memcpy(self->idle_fb, self->active_fb, self->width * self->height * bytes_per_pixel);
                 }
-            } else {
-                rgb_bus_lock_release(&self->tx_color_lock);
             }
 
             exit = rgb_bus_event_isset(&self->copy_task_exit);
@@ -309,7 +387,7 @@
                 for (int y = y_start; y < y_end; y++) {
                     for (int x = x_start; x < x_end; x++) {
                         j = y * copy_bytes_per_line + x * bytes_per_pixel - offset;
-                        i = (x * h_res + y) * bytes_per_pixel;
+                        i = ((v_res - 1 - x) * h_res + y) * bytes_per_pixel;
                         func(to + i, from + j);
                     }
                 }

@@ -8,7 +8,14 @@
         #include "lcd_types.h"
 
         // esp-idf includes
+        #include "hal/lcd_hal.h"
+        #include "esp_pm.h"
+        #include "esp_intr_alloc.h"
+        #include "esp_heap_caps.h"
+
         #include "esp_lcd_panel_io.h"
+        #include "esp_lcd_panel_ops.h"
+        #include "esp_lcd_panel_interface.h"
         #include "esp_lcd_panel_rgb.h"
 
         #include "freertos/FreeRTOS.h"
@@ -22,6 +29,24 @@
         #include "py/obj.h"
         #include "py/objarray.h"
 
+        typedef struct {
+            esp_lcd_panel_t base;  // Base class of generic lcd panel
+            int panel_id;          // LCD panel ID
+            lcd_hal_context_t hal; // Hal layer object
+            size_t data_width;     // Number of data lines
+            size_t fb_bits_per_pixel; // Frame buffer color depth, in bpp
+            size_t num_fbs;           // Number of frame buffers
+            size_t output_bits_per_pixel; // Color depth seen from the output data line. Default to fb_bits_per_pixel, but can be changed by YUV-RGB conversion
+            size_t sram_trans_align;  // Alignment for framebuffer that allocated in SRAM
+            size_t psram_trans_align; // Alignment for framebuffer that allocated in PSRAM
+            int disp_gpio_num;     // Display control GPIO, which is used to perform action like "disp_off"
+            intr_handle_t intr;    // LCD peripheral interrupt handle
+            esp_pm_lock_handle_t pm_lock; // Power management lock
+            size_t num_dma_nodes;  // Number of DMA descriptors that used to carry the frame buffer
+            uint8_t *fbs[3]; // Frame buffers
+            uint8_t cur_fb_index;  // Current frame buffer index
+            uint8_t bb_fb_index;  // Current frame buffer index which used by bounce buffer
+        } rgb_panel_t;
 
         typedef struct _rgb_bus_lock_t {
             SemaphoreHandle_t handle;
@@ -33,6 +58,15 @@
             StaticEventGroup_t buffer;
         } rgb_bus_event_t;
 
+    #if LCD_RGB_OPTIMUM_FB_SIZE
+        typedef struct _rgb_bus_optimum_fb_size_t {
+            uint16_t flush_count;
+            uint8_t sample_count;
+            uint8_t curr_index;
+            uint16_t *samples;
+            rgb_bus_lock_t lock;
+        } rgb_bus_optimum_fb_size_t;
+    #endif
 
         typedef struct _mp_lcd_rgb_bus_obj_t {
             mp_obj_base_t base;
@@ -73,9 +107,16 @@
             rgb_bus_event_t copy_task_exit;
             rgb_bus_lock_t tx_color_lock;
             rgb_bus_event_t swap_bufs;
-            rgb_bus_lock_t swap_lock;
+            rgb_bus_lock_t init_lock;
 
             TaskHandle_t copy_task_handle;
+
+            mp_lcd_err_t init_err;
+            mp_rom_error_text_t init_err_msg;
+
+        #if LCD_RGB_OPTIMUM_FB_SIZE
+            rgb_bus_optimum_fb_size_t optimum_fb;
+        #endif
 
         } mp_lcd_rgb_bus_obj_t;
 
@@ -87,6 +128,7 @@
         void rgb_bus_event_clear_from_isr(rgb_bus_event_t *event);
         bool rgb_bus_event_isset_from_isr(rgb_bus_event_t *event);
         void rgb_bus_event_set_from_isr(rgb_bus_event_t *event);
+        void rgb_bus_event_wait(rgb_bus_event_t *event);
 
         int  rgb_bus_lock_acquire(rgb_bus_lock_t *lock, int32_t wait_ms);
         void rgb_bus_lock_release(rgb_bus_lock_t *lock);
