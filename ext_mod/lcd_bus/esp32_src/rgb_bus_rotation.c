@@ -344,7 +344,7 @@
             y_end = MIN(y_end, d_height);
         }
 
-        uint16_t src_bytes_per_line = (x_end - x_start + 1) * (uint16_t)bytes_per_pixel;
+        uint16_t src_bytes_per_line = (x_end - x_start) * (uint16_t)bytes_per_pixel;
         uint32_t dst_bytes_per_line = bytes_per_pixel * d_width;
         size_t offset = y_start * src_bytes_per_line + x_start * bytes_per_pixel;
 
@@ -361,6 +361,8 @@
                 if (x_start == 0 && x_end == (d_width - 1)) {
                     memcpy(fb, src, d_width * (y_end - y_start + 1) * bytes_per_pixel);
                 } else {
+                    src_bytes_per_line = (x_end - x_start + 1) * (uint16_t)bytes_per_pixel;
+
                     for (int y = y_start; y < y_end; y++) {
                         memcpy(fb, src, src_bytes_per_line);
                         fb += dst_bytes_per_line;
