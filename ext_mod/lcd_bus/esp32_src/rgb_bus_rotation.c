@@ -344,7 +344,7 @@
             y_end = MIN(y_end, v_res);
         }
 
-        uint16_t copy_bytes_per_line = (x_end - x_start + 1) * (uint16_t)bytes_per_pixel;
+        uint16_t copy_bytes_per_line = (x_end - x_start) * (uint16_t)bytes_per_pixel;
         int pixels_per_line = h_res;
         uint32_t bytes_per_line = bytes_per_pixel * pixels_per_line;
         size_t offset = y_start * copy_bytes_per_line + x_start * bytes_per_pixel;
@@ -357,7 +357,7 @@
                 uint8_t *fb = to + ((y_start * h_res + x_start) * bytes_per_pixel);
 
                 if (x_start == 0 && x_end == (h_res - 1)) {
-                    memcpy(fb, from, bytes_per_line * (y_end - y_start + 1));
+                    memcpy(fb, from, h_res * (y_end - y_start + 1) * bytes_per_pixel);
                 } else {
                     for (int y = y_start; y < y_end; y++) {
                         memcpy(fb, from, copy_bytes_per_line);
@@ -400,7 +400,7 @@
                 for (int y = y_start; y < y_end; y++) {
                     for (int x = x_start; x < x_end; x++) {
                         jj = y * copy_bytes_per_line + x * bytes_per_pixel - offset;
-                        ii = ((v_res - 1 - x) * h_res + y) * bytes_per_pixel;
+                        ii = (x * h_res + h_res - 1 - y) * bytes_per_pixel;
                         func(to + ii, from + jj);
                     }
                 }
