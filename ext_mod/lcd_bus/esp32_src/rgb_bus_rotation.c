@@ -344,12 +344,9 @@
             y_end = MIN(y_end, d_height);
         }
 
-        uint16_t src_bytes_per_line = (x_end - x_start) * (uint16_t)bytes_per_pixel;
+        uint16_t src_bytes_per_line = (x_end - x_start + 1) * (uint16_t)bytes_per_pixel;
         uint32_t dst_bytes_per_line = bytes_per_pixel * d_width;
         size_t offset = y_start * src_bytes_per_line + x_start * bytes_per_pixel;
-
-        uint32_t copy_bytes_per_line = (x_end - x_start) * bytes_per_pixel;
-        size_t offset = y_start * copy_bytes_per_line + x_start * bytes_per_pixel;
 
         // mp_printf(&mp_plat_print, "x_start=%lu, y_start=%lu, x_end=%lu, y_end=%lu, copy_bytes_per_line=%u, bytes_per_line=%lu, %lu\n",
         //         x_start, y_start, x_end, y_end, copy_bytes_per_line, bytes_per_line, (uint32_t)((y_start * h_res + x_start) * bytes_per_pixel));
@@ -361,12 +358,10 @@
                 if (x_start == 0 && x_end == (d_width - 1)) {
                     memcpy(fb, src, d_width * (y_end - y_start + 1) * bytes_per_pixel);
                 } else {
-                    src_bytes_per_line = (x_end - x_start + 1) * (uint16_t)bytes_per_pixel;
-
                     for (int y = y_start; y < y_end; y++) {
                         memcpy(fb, src, src_bytes_per_line);
                         fb += dst_bytes_per_line;
-                        from += src_bytes_per_line;
+                        src += src_bytes_per_line;
                     }
                 }
 
@@ -394,7 +389,7 @@
                     for (size_t x = x_start; x < x_end; x++) {
                         func(dst + index, src);
                         index -= bytes_per_pixel;
-                        from += bytes_per_pixel;
+                        src += bytes_per_pixel;
                     }
                 }
                 break;
