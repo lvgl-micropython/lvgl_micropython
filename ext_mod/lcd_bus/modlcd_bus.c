@@ -257,6 +257,16 @@ mp_obj_t mp_lcd_bus_register_callback(size_t n_args, const mp_obj_t *pos_args, m
 MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_bus_register_callback_obj, 2, mp_lcd_bus_register_callback);
 
 
+static mp_obj_t mp_lcd_bus__pump_main_thread(void)
+{
+    mp_handle_pending(true);
+    return mp_const_none;
+}
+
+static MP_DEFINE_CONST_FUN_OBJ_0(mp_lcd_bus__pump_main_thread_obj, mp_lcd_bus__pump_main_thread);
+
+
+
 static const mp_rom_map_elem_t mp_lcd_bus_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_lane_count),       MP_ROM_PTR(&mp_lcd_bus_get_lane_count_obj)       },
     { MP_ROM_QSTR(MP_QSTR_allocate_framebuffer), MP_ROM_PTR(&mp_lcd_bus_allocate_framebuffer_obj) },
@@ -279,6 +289,7 @@ static const mp_map_elem_t mp_module_lcd_bus_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_SPIBus),             (mp_obj_t)&mp_lcd_spi_bus_type        },
     { MP_ROM_QSTR(MP_QSTR_I2CBus),             (mp_obj_t)&mp_lcd_i2c_bus_type        },
     { MP_ROM_QSTR(MP_QSTR_I80Bus),             (mp_obj_t)&mp_lcd_i80_bus_type        },
+    { MP_ROM_QSTR(MP_QSTR__pump_main_thread),  MP_ROM_PTR(&mp_lcd_bus__pump_main_thread_obj)       },
 
     #ifdef MP_PORT_UNIX
         { MP_ROM_QSTR(MP_QSTR_SDLBus),         (mp_obj_t)&mp_lcd_sdl_bus_type        },

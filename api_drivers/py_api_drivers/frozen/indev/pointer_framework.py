@@ -24,7 +24,6 @@ class PointerDriver(_indev_base.IndevBase):
         self._orig_width = self._width
         self._orig_height = self._height
         self._set_type(lv.INDEV_TYPE.POINTER)  # NOQA
-        self._cal_running = None
         self._startup_rotation = startup_rotation
 
         self._indev_drv.enable(True)
@@ -45,37 +44,17 @@ class PointerDriver(_indev_base.IndevBase):
         if last_state == self.PRESSED:
             lv.refr_now(self._disp_drv)
 
-    def __cal_callback(self, alphaX, betaX, deltaX, alphaY, betaY, deltaY):
-        self._cal.alphaX = alphaX
-        self._cal.betaX = betaX
-        self._cal.deltaX = deltaX
-        self._cal.alphaY = alphaY
-        self._cal.betaY = betaY
-        self._cal.deltaY = deltaY
-        self._cal.save()
-        self._cal_running = None
-
-    def calibrate(self, update_handler=None):
-        if self._cal_running:
-            return
-
-        import time
+    def calibrate(self):
         import touch_calibrate
-        self._cal_running = touch_calibrate.TPCal(self, self.__cal_callback)
-        while self._cal_running:
-            if update_handler is not None:
-                delay = update_handler()
-                time.sleep_ms(delay)
-            else:
-                time.sleep_ms(33)
 
-        self._indev_drv.set_read_cb(self._read)
+        if touch_calibrate.calibrate(self, self._cal):
+            self._cal.save()
+            return True
+
+        return False
 
     @property
     def is_calibrated(self):
-        if self._cal_running:
-            return False
-
         cal = self._cal
 
         return None not in (
@@ -98,19 +77,19 @@ class PointerDriver(_indev_base.IndevBase):
             cal = self._cal
             x = int(round(x * cal.alphaX + y * cal.betaX + cal.deltaX))
             y = int(round(x * cal.alphaY + y * cal.betaY + cal.deltaY))
+        else:
+            if (
+                self._startup_rotation == lv.DISPLAY_ROTATION._180 or  # NOQA
+                self._startup_rotation == lv.DISPLAY_ROTATION._270  # NOQA
+            ):
+                x = self._orig_width - x - 1
+                y = self._orig_height - y - 1
 
-        if (
-            self._startup_rotation == lv.DISPLAY_ROTATION._180 or  # NOQA
-            self._startup_rotation == lv.DISPLAY_ROTATION._270  # NOQA
-        ):
-            x = self._orig_width - x - 1
-            y = self._orig_height - y - 1
-
-        if (
-            self._startup_rotation == lv.DISPLAY_ROTATION._90 or  # NOQA
-            self._startup_rotation == lv.DISPLAY_ROTATION._270  # NOQA
-        ):
-            x, y = self._orig_height - y - 1, x
+            if (
+                self._startup_rotation == lv.DISPLAY_ROTATION._90 or  # NOQA
+                self._startup_rotation == lv.DISPLAY_ROTATION._270  # NOQA
+            ):
+                x, y = self._orig_height - y - 1, x
 
         return x, y
 
