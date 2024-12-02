@@ -476,6 +476,9 @@
         self->rotation = rotation;
 
         rgb_bus_lock_release(&self->copy_lock);
+        if (self->callback != mp_const_none) {
+            mp_call_function_n_kw(self->callback, 0, 0, NULL);
+        }
 
         return LCD_OK;
     }
