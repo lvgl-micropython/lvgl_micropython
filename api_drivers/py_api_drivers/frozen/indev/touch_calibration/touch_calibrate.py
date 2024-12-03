@@ -115,6 +115,7 @@ def calibrate(indev, cal_data):
 
             print('  ', j + 1, 'of 8:', (x, y))
 
+
     print()
     print('averaged trimmed points')
     for i, points in enumerate(captured_points):
@@ -127,6 +128,16 @@ def calibrate(indev, cal_data):
         points['y'] = int(sum(points['y']) / 6)
 
         print('  point', i + 1, 'of 3:', (points['x'], points['y']))
+
+    if captured_points[0]['x'] > captured_points[1]['x']:
+        mirror_x = True
+    else:
+        mirror_x = False
+
+    if captured_points[0]['y'] > captured_points[2]['y']:
+        mirror_y = True
+    else:
+        mirror_y = False
 
     tp1, tp2, tp3 = captured_points
     sp1, sp2, sp3 = target_points
@@ -176,6 +187,9 @@ def calibrate(indev, cal_data):
         cal_data.alphaY = alphaY
         cal_data.betaY = betaY
         cal_data.deltaY = deltaY
+
+        cal_data.mirrorX = mirror_x
+        cal_data.mirrorY = mirror_y
 
     except ZeroDivisionError:
         print('Error in calculation please try again.')

@@ -63,7 +63,9 @@ class PointerDriver(_indev_base.IndevBase):
             cal.deltaX,
             cal.alphaY,
             cal.betaY,
-            cal.deltaY
+            cal.deltaY,
+            cal.mirrorX,
+            cal.mirrorY
         )
 
     def _get_coords(self):
@@ -77,6 +79,11 @@ class PointerDriver(_indev_base.IndevBase):
             cal = self._cal
             x = int(round(x * cal.alphaX + y * cal.betaX + cal.deltaX))
             y = int(round(x * cal.alphaY + y * cal.betaY + cal.deltaY))
+
+            if cal.mirrorX:
+                x = self._orig_width - x - 1
+            if cal.mirrorY:
+                y = self._orig_height - y - 1
         else:
             if (
                 self._startup_rotation == lv.DISPLAY_ROTATION._180 or  # NOQA
@@ -114,9 +121,15 @@ class PointerDriver(_indev_base.IndevBase):
 
         if (
             self._debug and
-            (x != self._last_x or y != self._last_y or self._last_state != state)  # NOQA
+            (x != self._last_x or
+             y != self._last_y or
+             self._last_state != state)
         ):
-            print(f'{self.__class__.__name__}(raw_x={self._last_x}, raw_y={self._last_y}, x={data.point.x}, y={data.point.y}, state={"PRESSED" if data.state else "RELEASED"})')  # NOQA
+            template = '{}(raw_x={}, raw_y={}, x={}, y={}, state={})'
+            print(template.format(
+                self.__class__.__name__,
+                x, y, data.point.x, data.point.y,
+                "PRESSED" if data.state else "RELEASED"))
 
         self._last_state = state
         self._last_x, self._last_y = x, y
