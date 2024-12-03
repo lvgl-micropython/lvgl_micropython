@@ -253,35 +253,35 @@
 
             rgb_bus_lock_release(&self->tx_color_lock);
 
-//            if (self->callback != mp_const_none) {
-//                volatile uint32_t sp = (uint32_t)esp_cpu_get_sp();
-//
-//                void *old_state = mp_thread_get_state();
-//
-//                mp_state_thread_t ts;
-//                mp_thread_set_state(&ts);
-//                mp_stack_set_top((void*)sp);
-//                mp_stack_set_limit(CONFIG_FREERTOS_IDLE_TASK_STACKSIZE - 1024);
-//                mp_locals_set(mp_state_ctx.thread.dict_locals);
-//                mp_globals_set(mp_state_ctx.thread.dict_globals);
-//
-//                mp_sched_lock();
-//                gc_lock();
-//
-//                nlr_buf_t nlr;
-//                if (nlr_push(&nlr) == 0) {
-//                    mp_call_function_n_kw(self->callback, 0, 0, NULL);
-//                    nlr_pop();
-//                } else {
-//                    ets_printf("Uncaught exception in IRQ callback handler!\n");
-//                    mp_obj_print_exception(&mp_plat_print, MP_OBJ_FROM_PTR(nlr.ret_val));
-//                }
-//
-//                gc_unlock();
-//                mp_sched_unlock();
-//
-//                mp_thread_set_state(old_state);
-//            }
+            if (self->callback != mp_const_none) {
+                volatile uint32_t sp = (uint32_t)esp_cpu_get_sp();
+
+                void *old_state = mp_thread_get_state();
+
+                mp_state_thread_t ts;
+                mp_thread_set_state(&ts);
+                mp_stack_set_top((void*)sp);
+                mp_stack_set_limit(CONFIG_FREERTOS_IDLE_TASK_STACKSIZE - 1024);
+                mp_locals_set(mp_state_ctx.thread.dict_locals);
+                mp_globals_set(mp_state_ctx.thread.dict_globals);
+
+                mp_sched_lock();
+                gc_lock();
+
+                nlr_buf_t nlr;
+                if (nlr_push(&nlr) == 0) {
+                    mp_call_function_n_kw(self->callback, 0, 0, NULL);
+                    nlr_pop();
+                } else {
+                    ets_printf("Uncaught exception in IRQ callback handler!\n");
+                    mp_obj_print_exception(&mp_plat_print, MP_OBJ_FROM_PTR(nlr.ret_val));
+                }
+
+                gc_unlock();
+                mp_sched_unlock();
+
+                mp_thread_set_state(old_state);
+            }
 
             if (last_update) {
 
