@@ -163,9 +163,7 @@
     }
 
     void rgb_bus_copy_task(void *self_in) {
-    #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        mp_printf(&mp_plat_print, "rgb_bus_copy_task - STARTED\n");
-    #endif
+        LCD_DEBUG_PRINT("rgb_bus_copy_task - STARTED\n")
 
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)self_in;
 
@@ -322,9 +320,7 @@
             exit = rgb_bus_event_isset(&self->copy_task_exit);
         }
 
-    #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        mp_printf(&mp_plat_print, "rgb_bus_copy_task - STOPPED\n");
-    #endif
+        LCD_DEBUG_PRINT(&mp_plat_print, "rgb_bus_copy_task - STOPPED\n")
     }
 
 

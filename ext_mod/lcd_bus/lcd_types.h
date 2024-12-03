@@ -11,6 +11,8 @@
     typedef struct _lcd_panel_io_t lcd_panel_io_t;
 
     #ifdef ESP_IDF_VERSION
+        #include "sdkconfig.h"
+
         // esp-idf includes
         #include "esp_lcd_panel_io.h"
 
@@ -22,13 +24,13 @@
         #define LCD_ERR_INVALID_SIZE   0x104
         #define LCD_ERR_NOT_SUPPORTED  0x106
 
-
         typedef int mp_lcd_err_t;
 
         void cb_isr(mp_obj_t cb);
         bool bus_trans_done_cb(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx);
 
     #else
+
         typedef enum {
             LCD_OK = 0,
             LCD_FAIL = -1,
@@ -40,6 +42,12 @@
         } mp_lcd_err_t;
 
         bool bus_trans_done_cb(lcd_panel_io_t *panel_io, void *edata, void *user_ctx);
+    #endif
+
+    #if CONFIG_LCD_ENABLE_DEBUG_LOG
+        #define LCD_DEBUG_PRINT(...) mp_printf(&mp_plat_print, __VA_ARGS__);
+    #else
+        #define LCD_DEBUG_PRINT(...);
     #endif
 
     struct _lcd_panel_io_t {

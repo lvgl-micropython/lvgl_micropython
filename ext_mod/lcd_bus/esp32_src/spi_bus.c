@@ -144,19 +144,17 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     self->spi_device.deinit = &spi_deinit_callback;
     self->spi_device.user_data = self;
 
-#if CONFIG_LCD_ENABLE_DEBUG_LOG
-    printf("host=%d\n", self->host);
-    printf("cs_gpio_num=%d\n", self->panel_io_config.cs_gpio_num);
-    printf("dc_gpio_num=%d\n", self->panel_io_config.dc_gpio_num);
-    printf("spi_mode=%d\n", self->panel_io_config.spi_mode);
-    printf("pclk_hz=%i\n", self->panel_io_config.pclk_hz);
-    printf("dc_low_on_data=%d\n", self->panel_io_config.flags.dc_low_on_data);
-    printf("lsb_first=%d\n", self->panel_io_config.flags.lsb_first);
-    printf("cs_high_active=%d\n", self->panel_io_config.flags.cs_high_active);
-    printf("dual=%d\n", self->panel_io_config.flags.sio_mode);
-    printf("quad=%d\n", self->panel_io_config.flags.quad_mode);
-    printf("octal=%d\n", self->panel_io_config.flags.octal_mode);
-#endif
+    LCD_DEBUG_PRINT("host=%d\n", self->host)
+    LCD_DEBUG_PRINT("cs_gpio_num=%d\n", self->panel_io_config.cs_gpio_num)
+    LCD_DEBUG_PRINT("dc_gpio_num=%d\n", self->panel_io_config.dc_gpio_num)
+    LCD_DEBUG_PRINT("spi_mode=%d\n", self->panel_io_config.spi_mode)
+    LCD_DEBUG_PRINT("pclk_hz=%i\n", self->panel_io_config.pclk_hz)
+    LCD_DEBUG_PRINT("dc_low_on_data=%d\n", self->panel_io_config.flags.dc_low_on_data)
+    LCD_DEBUG_PRINT("lsb_first=%d\n", self->panel_io_config.flags.lsb_first)
+    LCD_DEBUG_PRINT("cs_high_active=%d\n", self->panel_io_config.flags.cs_high_active)
+    LCD_DEBUG_PRINT("dual=%d\n", self->panel_io_config.flags.sio_mode)
+    LCD_DEBUG_PRINT("quad=%d\n", self->panel_io_config.flags.quad_mode)
+    LCD_DEBUG_PRINT("octal=%d\n", self->panel_io_config.flags.octal_mode)
 
     return MP_OBJ_FROM_PTR(self);
 }
@@ -171,9 +169,7 @@ void spi_deinit_callback(machine_hw_spi_device_obj_t *device)
 mp_lcd_err_t spi_del(mp_obj_t obj)
 {
     mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
-#if CONFIG_LCD_ENABLE_DEBUG_LOG
-    printf("spi_del(self)\n");
-#endif
+    LCD_DEBUG_PRINT("spi_del(self)\n")
 
     if (!self->spi_device.active) return ESP_OK;
 
@@ -195,9 +191,7 @@ mp_lcd_err_t spi_del(mp_obj_t obj)
 
 mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
 {
-#if CONFIG_LCD_ENABLE_DEBUG_LOG
-    printf("spi_init(self, width=%i, height=%i, bpp=%i, buffer_size=%lu, rgb565_byte_swap=%i, cmd_bits=%i, param_bits=%i)\n", width, height, bpp, buffer_size, (uint8_t)rgb565_byte_swap, cmd_bits, param_bits);
-#endif
+    LCD_DEBUG_PRINT("spi_init(self, width=%i, height=%i, bpp=%i, buffer_size=%lu, rgb565_byte_swap=%i, cmd_bits=%i, param_bits=%i)\n", width, height, bpp, buffer_size, (uint8_t)rgb565_byte_swap, cmd_bits, param_bits)
     mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
 
     if (self->spi_device.spi_bus->state == MP_SPI_STATE_STOPPED) {
@@ -214,12 +208,10 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
     self->panel_io_config.lcd_cmd_bits = (int)cmd_bits;
     self->panel_io_config.lcd_param_bits = (int)param_bits;
 
-#if CONFIG_LCD_ENABLE_DEBUG_LOG
-    printf("lcd_cmd_bits=%d\n", self->panel_io_config.lcd_cmd_bits);
-    printf("lcd_param_bits=%d\n", self->panel_io_config.lcd_param_bits);
-    printf("rgb565_byte_swap=%i\n",  (uint8_t)self->rgb565_byte_swap);
-    printf("trans_queue_depth=%i\n", (uint8_t)self->panel_io_config.trans_queue_depth);
-#endif
+    LCD_DEBUG_PRINT("lcd_cmd_bits=%d\n", self->panel_io_config.lcd_cmd_bits)
+    LCD_DEBUG_PRINT("lcd_param_bits=%d\n", self->panel_io_config.lcd_param_bits)
+    LCD_DEBUG_PRINT("rgb565_byte_swap=%i\n",  (uint8_t)self->rgb565_byte_swap)
+    LCD_DEBUG_PRINT("trans_queue_depth=%i\n", (uint8_t)self->panel_io_config.trans_queue_depth)
 
     mp_lcd_err_t ret = esp_lcd_new_panel_io_spi(self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io);
     if (ret != ESP_OK) {
@@ -245,9 +237,7 @@ mp_lcd_err_t spi_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
         *lane_count = 1;
     }
 
-#if CONFIG_LCD_ENABLE_DEBUG_LOG
-    printf("spi_get_lane_count(self) -> %i\n", (uint8_t)(*lane_count));
-#endif
+    LCD_DEBUG_PRINT("spi_get_lane_count(self) -> %i\n", (uint8_t)(*lane_count))
 
     return LCD_OK;
 }
@@ -257,9 +247,7 @@ mp_obj_t mp_spi_bus_get_host(mp_obj_t obj)
 {
     mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
 
-#if CONFIG_LCD_ENABLE_DEBUG_LOG
-    printf("mp_spi_bus_get_host(self) -> %i\n", (uint8_t)self->host);
-#endif
+    LCD_DEBUG_PRINT("mp_spi_bus_get_host(self) -> %i\n", (uint8_t)self->host)
     return mp_obj_new_int((uint8_t)self->host);
 }
 

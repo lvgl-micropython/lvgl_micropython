@@ -127,22 +127,20 @@
 
         self->bus_config.pclk_hz = (uint32_t)args[ARG_freq].u_int;
 
-    #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("bus_id=%d\n", self->bus_config.bus_id);
-        printf("num_data_lanes=%d\n", self->bus_config.num_data_lanes);
-        printf("lane_bit_rate_mbps=%d\n",self->bus_config.lane_bit_rate_mbps);
-        printf("phy_clk_src=%d\n", self->bus_config.phy_clk_src);
-        printf("virtual_channel=%d\n", self->panel_io_config.virtual_channel);
-        printf("dpi_clk_src=%d\n", self->panel_config.dpi_clk_src);
-        printf("dpi_clock_freq_mhz=%d\n", self->panel_config.dpi_clock_freq_mhz);
-        printf("hsync_front_porch=%d\n", self->panel_config.video_timing.hsync_front_porch);
-        printf("hsync_back_porch=%d\n", self->panel_config.video_timing.hsync_back_porch);
-        printf("hsync_pulse_width=%d\n", self->panel_config.video_timing.hsync_pulse_width);
-        printf("vsync_front_porch=%d\n", self->panel_config.video_timing.vsync_front_porch);
-        printf("vsync_back_porch=%d\n", self->panel_config.video_timing.vsync_back_porch);
-        printf("vsync_pulse_width=%d\n", self->panel_config.video_timing.vsync_pulse_width);
-        printf("pclk_hz[10]=%d\n", self->bus_config.pclk_hz);
-    #endif
+        LCD_DEBUG_PRINT("bus_id=%d\n", self->bus_config.bus_id)
+        LCD_DEBUG_PRINT("num_data_lanes=%d\n", self->bus_config.num_data_lanes)
+        LCD_DEBUG_PRINT("lane_bit_rate_mbps=%d\n",self->bus_config.lane_bit_rate_mbps)
+        LCD_DEBUG_PRINT("phy_clk_src=%d\n", self->bus_config.phy_clk_src)
+        LCD_DEBUG_PRINT("virtual_channel=%d\n", self->panel_io_config.virtual_channel)
+        LCD_DEBUG_PRINT("dpi_clk_src=%d\n", self->panel_config.dpi_clk_src)
+        LCD_DEBUG_PRINT("dpi_clock_freq_mhz=%d\n", self->panel_config.dpi_clock_freq_mhz)
+        LCD_DEBUG_PRINT("hsync_front_porch=%d\n", self->panel_config.video_timing.hsync_front_porch)
+        LCD_DEBUG_PRINT("hsync_back_porch=%d\n", self->panel_config.video_timing.hsync_back_porch)
+        LCD_DEBUG_PRINT("hsync_pulse_width=%d\n", self->panel_config.video_timing.hsync_pulse_width)
+        LCD_DEBUG_PRINT("vsync_front_porch=%d\n", self->panel_config.video_timing.vsync_front_porch)
+        LCD_DEBUG_PRINT("vsync_back_porch=%d\n", self->panel_config.video_timing.vsync_back_porch)
+        LCD_DEBUG_PRINT("vsync_pulse_width=%d\n", self->panel_config.video_timing.vsync_pulse_width)
+        LCD_DEBUG_PRINT("pclk_hz[10]=%d\n", self->bus_config.pclk_hz)
 
         self->panel_io_handle.get_lane_count = &dsi_get_lane_count;
         self->panel_io_handle.del = &dsi_del;
@@ -157,9 +155,7 @@
 
     mp_lcd_err_t dsi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
     {
-    #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("dsi_init(self, width=%i, height=%i, bpp=%i, buffer_size=%lu, rgb565_byte_swap=%i, cmd_bits=%i, param_bits=%i)\n", width, height, bpp, buffer_size, (uint8_t)rgb565_byte_swap, cmd_bits, param_bits);
-    #endif
+        LCD_DEBUG_PRINT("dsi_init(self, width=%i, height=%i, bpp=%i, buffer_size=%lu, rgb565_byte_swap=%i, cmd_bits=%i, param_bits=%i)\n", width, height, bpp, buffer_size, (uint8_t)rgb565_byte_swap, cmd_bits, param_bits)
 
         mp_lcd_dsi_bus_obj_t *self = (mp_lcd_dsi_bus_obj_t *)obj;
 
@@ -187,13 +183,12 @@
         self->panel_io_config.lcd_cmd_bits = (int)cmd_bits;
         self->panel_io_config.lcd_param_bits = (int)param_bits;
 
-    #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("lcd_cmd_bits=%d\n", self->panel_io_config.lcd_cmd_bits);
-        printf("lcd_param_bits=%d\n", self->panel_io_config.lcd_param_bits);
-        printf("h_size=%d\n", self->panel_config.video_timing.h_size);
-        printf("v_size=%d\n", self->panel_config.video_timing.v_size);
-        printf("pixel_format=%d\n", self->panel_config.pixel_format);
-    #endif
+        LCD_DEBUG_PRINT("lcd_cmd_bits=%d\n", self->panel_io_config.lcd_cmd_bits)
+        LCD_DEBUG_PRINT("lcd_param_bits=%d\n", self->panel_io_config.lcd_param_bits)
+        LCD_DEBUG_PRINT("h_size=%d\n", self->panel_config.video_timing.h_size)
+        LCD_DEBUG_PRINT("v_size=%d\n", self->panel_config.video_timing.v_size)
+        LCD_DEBUG_PRINT("pixel_format=%d\n", self->panel_config.pixel_format)
+
         esp_err_t ret = esp_lcd_new_dsi_bus(&self->bus_config,  &self->bus_handle);
 
         if (ret != 0) {
@@ -253,9 +248,7 @@
 
     mp_lcd_err_t dsi_del(mp_obj_t obj)
     {
-    #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("dsi_del(self)\n");
-    #endif
+        LCD_DEBUG_PRINT("dsi_del(self)\n")
 
         mp_lcd_dsi_bus_obj_t *self = (mp_lcd_dsi_bus_obj_t *)obj;
 
@@ -286,9 +279,7 @@
         mp_lcd_dsi_bus_obj_t *self = (mp_lcd_dsi_bus_obj_t *)obj;
         *lane_count = (uint8_t)self->bus_config.num_data_lanes;
 
-    #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("dsi_get_lane_count(self)-> %d\n", (uint8_t)self->bus_config.num_data_lanes);
-    #endif
+        LCD_DEBUG_PRINT("dsi_get_lane_count(self)-> %d\n", (uint8_t)self->bus_config.num_data_lanes)
 
         return LCD_OK;
     }
@@ -309,15 +300,11 @@
         if (array_buf == self->view1) {
             heap_caps_free(item_buf);
             self->view1 = NULL;
-        #if CONFIG_LCD_ENABLE_DEBUG_LOG
-            printf("dsi_free_framebuffer(self, buf=1)\n");
-        #endif
+            LCD_DEBUG_PRINT("dsi_free_framebuffer(self, buf=1)\n")
         } else if (array_buf == self->view2) {
             heap_caps_free(item_buf);
             self->view2 = NULL;
-        #if CONFIG_LCD_ENABLE_DEBUG_LOG
-            printf("dsi_free_framebuffer(self, buf=2)\n");
-        #endif
+            LCD_DEBUG_PRINT("dsi_free_framebuffer(self, buf=2)\n")
         } else {
             mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("No matching buffer found"));
         }
@@ -327,9 +314,7 @@
 
     mp_obj_t dsi_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps)
     {
-    #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("dsi_allocate_framebuffer(self, size=%lu, caps=%lu)\n", size, caps);
-    #endif
+        LCD_DEBUG_PRINT("dsi_allocate_framebuffer(self, size=%lu, caps=%lu)\n", size, caps)
 
         mp_lcd_dsi_bus_obj_t *self = (mp_lcd_dsi_bus_obj_t *)obj;
 
@@ -375,7 +360,8 @@
             self->panel_config.num_fbs = 2;
         } else {
             heap_caps_free(buf);
-            mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("There is a maximum of 2 frame buffers allowed"));
+            mp_raise_msg(&mp_type_MemoryError,
+                    MP_ERROR_TEXT("There is a maximum of 2 frame buffers allowed"));
             return mp_const_none;
         }
 
@@ -385,9 +371,8 @@
 
     mp_lcd_err_t dsi_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update)
     {
-    #if CONFIG_LCD_ENABLE_DEBUG_LOG
-        printf("dsi_tx_color(self, lcd_cmd=%d, color, color_size=%d, x_start=%d, y_start=%d, x_end=%d, y_end=%d)\n", lcd_cmd, color_size, x_start, y_start, x_end, y_end);
-    #endif
+        LCD_DEBUG_PRINT("dsi_tx_color(self, lcd_cmd=%d, color, color_size=%d, x_start=%d, y_start=%d, x_end=%d, y_end=%d)\n", lcd_cmd, color_size, x_start, y_start, x_end, y_end)
+
         LCD_UNUSED(rotation);
         LCD_UNUSED(last_update);
 
