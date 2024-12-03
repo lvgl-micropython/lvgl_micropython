@@ -47,7 +47,7 @@
     #if CONFIG_LCD_ENABLE_DEBUG_LOG
         #define LCD_DEBUG_PRINT(...) mp_printf(&mp_plat_print, __VA_ARGS__);
     #else
-        #define LCD_DEBUG_PRINT(...);
+        #define LCD_DEBUG_PRINT(...)
     #endif
 
     struct _lcd_panel_io_t {
