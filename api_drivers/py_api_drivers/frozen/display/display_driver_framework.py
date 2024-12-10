@@ -566,9 +566,6 @@ class DisplayDriver:
             lv.color_format_get_size(self._color_space)
         )
 
-        if isinstance(self._data_bus, lcd_bus.RGBBus) and self._rotation>0:
-            y2+=1
-
         cmd = self._set_memory_location(x1, y1, x2, y2)
 
         # we have to use the __dereference__ method because this method is
