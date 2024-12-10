@@ -1207,7 +1207,8 @@ def build_sdkconfig(*args):
         if not os.path.exists(display_path):
             continue
 
-        base_config.extend(read_file(display_path).split('\n'))
+        with open(display_path, 'r') as f:
+            base_config.extend(f.read().split('\n'))
 
     with open(SDKCONFIG_PATH, 'w') as f:
         f.write('\n'.join(base_config))
