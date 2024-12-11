@@ -455,7 +455,7 @@
                 LCD_UNUSED(offset);
 
                 for (uint32_t y = y_start; y < y_end; y++) {
-                    index = (dst_height - 1 - y) * dst_width + (dst_width - 1 - x_start);
+                    i = (dst_height - 1 - y) * dst_width + (dst_width - 1 - x_start);
                     for (uint32_t x = x_start; x < x_end; x++) {
                         copy_16bpp(dst + i, src);
                         src++;
