@@ -6,6 +6,13 @@ _CASET = const(0x15)
 _PASET = const(0x75)
 _RAMWR = const(0x5C)
 
+STATE_HIGH = display_driver_framework.STATE_HIGH
+STATE_LOW = display_driver_framework.STATE_LOW
+STATE_PWM = display_driver_framework.STATE_PWM
+
+BYTE_ORDER_RGB = display_driver_framework.BYTE_ORDER_RGB
+BYTE_ORDER_BGR = display_driver_framework.BYTE_ORDER_BGR
+
 
 class SSD1351(display_driver_framework.DisplayDriver):
     _INVOFF = 0xA6
