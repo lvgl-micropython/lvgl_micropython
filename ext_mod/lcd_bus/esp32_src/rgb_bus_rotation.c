@@ -354,7 +354,7 @@
     }
 
 
-    void rotate0(const uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t bytes_per_pixel)
+    void rotate0(uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t bytes_per_pixel)
     {
         dst += ((y_start * dst_width + x_start) * bytes_per_pixel);
 
@@ -372,7 +372,7 @@
         }
     }
 
-    void rotate_8bpp(const uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate)
+    void rotate_8bpp(uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate)
     {
         uint32_t j;
         uint32_t i;
@@ -429,7 +429,7 @@
     }
 
 
-    void rotate_16bpp(const uint16_t *src, uint16_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate)
+    void rotate_16bpp(uint16_t *src, uint16_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate)
     {
         uint32_t j;
         uint32_t i;
@@ -485,7 +485,7 @@
     }
 
 
-    void rotate_24bpp(const uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate)
+    void rotate_24bpp(uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate)
     {
         uint32_t j;
         uint32_t i;
@@ -542,7 +542,7 @@
     }
 
 
-    void rotate_32bpp(const uint32_t *src, uint32_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate)
+    void rotate_32bpp(uint32_t *src, uint32_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate)
     {
         uint32_t j;
         uint32_t i;
