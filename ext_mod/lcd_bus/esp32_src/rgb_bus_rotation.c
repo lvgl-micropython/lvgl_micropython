@@ -116,16 +116,16 @@
     #define RGB_BUS_ROTATION_270  (3)
 
 
-    __attribute__((always_inline)) static inline void rotate0(const uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t bytes_per_pixel);
-    __attribute__((always_inline)) static inline void rotate_8bpp(const uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate);
-    __attribute__((always_inline)) static inline void rotate_16bpp(const uint16_t *src, uint16_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate);
-    __attribute__((always_inline)) static inline void rotate_24bpp(const uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate);
-    __attribute__((always_inline)) static inline void rotate_32bpp(const uint32_t *src, uint32_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate);
+    __attribute__((always_inline)) static inline void rotate0(uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t bytes_per_pixel);
+    __attribute__((always_inline)) static inline void rotate_8bpp(uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate);
+    __attribute__((always_inline)) static inline void rotate_16bpp(uint16_t *src, uint16_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate);
+    __attribute__((always_inline)) static inline void rotate_24bpp(uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate);
+    __attribute__((always_inline)) static inline void rotate_32bpp(uint32_t *src, uint32_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate);
 
 
     static void copy_pixels(
-                void *to, const void *from, uint32_t x_start, uint32_t y_start,
-                uint32_t x_end, uint32_t y_end, uint32_t h_res, uint32_t v_res,
+                void *dst, void *src, uint32_t x_start, uint32_t y_start,
+                uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height,
                 uint32_t bytes_per_pixel, uint8_t rotate);
 
 
@@ -319,8 +319,7 @@
         *to++ = *from++;
     }
 
-
-    void copy_pixels(uint8_t *dst, uint8_t *src, uint32_t x_start, uint32_t y_start,
+    void copy_pixels(void *dst, void *src, uint32_t x_start, uint32_t y_start,
             uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height,
             uint32_t bytes_per_pixel, uint8_t rotate)
     {
