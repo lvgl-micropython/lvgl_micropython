@@ -116,15 +116,15 @@
     #define RGB_BUS_ROTATION_270  (3)
 
 
-    __attribute__((always_inline)) static inline void rotate0(const uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t bytes_per_pixel)
-    __attribute__((always_inline)) static inline void rotate_8bpp(const uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate)
-    __attribute__((always_inline)) static inline void rotate_16bpp(const uint16_t *src, uint16_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate)
-    __attribute__((always_inline)) static inline void rotate_24bpp(const uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate)
-    __attribute__((always_inline)) static inline void rotate_32bpp(const uint32_t *src, uint32_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate)
+    __attribute__((always_inline)) static inline void rotate0(const uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t bytes_per_pixel);
+    __attribute__((always_inline)) static inline void rotate_8bpp(const uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate);
+    __attribute__((always_inline)) static inline void rotate_16bpp(const uint16_t *src, uint16_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate);
+    __attribute__((always_inline)) static inline void rotate_24bpp(const uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate);
+    __attribute__((always_inline)) static inline void rotate_32bpp(const uint32_t *src, uint32_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate);
 
 
     static void copy_pixels(
-                uint8_t *to, uint8_t *from, uint32_t x_start, uint32_t y_start,
+                void *to, const void *from, uint32_t x_start, uint32_t y_start,
                 uint32_t x_end, uint32_t y_end, uint32_t h_res, uint32_t v_res,
                 uint32_t bytes_per_pixel, uint8_t rotate);
 
@@ -188,7 +188,6 @@
         self->idle_fb = rgb_panel->fbs[1];
 
         uint8_t *idle_fb;
-        copy_func_cb_t func;
         bool last_update;
 
         uint8_t bytes_per_pixel = self->bytes_per_pixel;
@@ -212,7 +211,7 @@
             idle_fb = self->idle_fb;
 
             copy_pixels(
-                idle_fb, self->partial_buf,
+                (void *)idle_fb, (void *)self->partial_buf,
                 self->x_start, self->y_start,
                 self->x_end, self->y_end,
                 self->width, self->height,
@@ -322,35 +321,35 @@
 
 
     void copy_pixels(uint8_t *dst, uint8_t *src, uint32_t x_start, uint32_t y_start,
-            uint32_t x_end, uint32_t y_end, uint32_t d_width, uint32_t d_height,
+            uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height,
             uint32_t bytes_per_pixel, uint8_t rotate)
     {
         if (rotate == RGB_BUS_ROTATION_0) {
-            rotate0(src, dst, MIN(x_start, d_width), MIN(y_start, d_height),
-                    MIN(x_end, d_width), MIN(y_end, d_height),
-                    d_width, d_height, bytes_per_pixel);
+            rotate0(src, dst, MIN(x_start, dst_width), MIN(y_start, dst_height),
+                    MIN(x_end, dst_width), MIN(y_end, dst_height),
+                    dst_width, dst_height, bytes_per_pixel);
         } else {
             y_end += 1;
             if (rotate == RGB_BUS_ROTATION_90 || rotate == RGB_BUS_ROTATION_270) {
-                x_start = MIN(x_start, d_height);
-                x_end = MIN(x_end, d_height);
-                y_start = MIN(y_start, d_width);
-                y_end = MIN(y_end, d_width);
+                x_start = MIN(x_start, dst_height);
+                x_end = MIN(x_end, dst_height);
+                y_start = MIN(y_start, dst_width);
+                y_end = MIN(y_end, dst_width);
             } else {
-                x_start = MIN(x_start, d_width);
-                x_end = MIN(x_end, d_width);
-                y_start = MIN(y_start, d_height);
-                y_end = MIN(y_end, d_height);
+                x_start = MIN(x_start, dst_width);
+                x_end = MIN(x_end, dst_width);
+                y_start = MIN(y_start, dst_height);
+                y_end = MIN(y_end, dst_height);
             }
 
             if (bytes_per_pixel == 1) {
-                rotate_8bpp(src, dst, x_start, y_start, x_end, y_end, d_width, d_height, rotate);
+                rotate_8bpp(src, dst, x_start, y_start, x_end, y_end, dst_width, dst_height, rotate);
             } else if (bytes_per_pixel == 2) {
-                rotate_16bpp(src, dst, x_start, y_start, x_end, y_end, d_width, d_height, rotate);
+                rotate_16bpp(src, dst, x_start, y_start, x_end, y_end, dst_width, dst_height, rotate);
             } else if (bytes_per_pixel == 3) {
-                rotate_24bpp(src, dst, x_start, y_start, x_end, y_end, d_width, d_height, rotate);
+                rotate_24bpp(src, dst, x_start, y_start, x_end, y_end, dst_width, dst_height, rotate);
             } else if (bytes_per_pixel == 4) {
-                rotate_32bpp(src, dst, x_start, y_start, x_end, y_end, d_width, d_height, rotate);
+                rotate_32bpp(src, dst, x_start, y_start, x_end, y_end, dst_width, dst_height, rotate);
             }
         }
     }
@@ -444,7 +443,7 @@
                 for (uint32_t y = y_start; y < y_end; y++) {
                     for (uint32_t x = x_start; x < x_end; x++) {
                         j = y * src_bytes_per_line + x - offset;
-                        i = (d_height - 1 - x) * d_width + y;
+                        i = (dst_height - 1 - x) * dst_width + y;
                         copy_16bpp(dst + i, src + j);
                     }
                 }
