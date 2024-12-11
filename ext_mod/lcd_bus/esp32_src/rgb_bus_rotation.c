@@ -582,7 +582,7 @@
                 for (uint32_t y = y_start; y < y_end; y++) {
                     for (uint32_t x = x_start; x < x_end; x++) {
                         j = y * src_bytes_per_line + x - offset;
-                        i = x * dest_width + dest_width - 1 - y;
+                        i = x * dst_width + dst_width - 1 - y;
                         copy_32bpp(dst + i, src + j);
                     }
                 }
