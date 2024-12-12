@@ -164,12 +164,14 @@ To compile you will need Python >= 3.10 for for all build types.
     * ninja-build
     * python
     * libusb-1.0-0-dev
+    * doxygen
     
   * macOS
     * `xcode-select -–install`
     * `brew install cmake`
     * `brew install ninja`
     * `brew install python`
+    * `brew install doxygen`
 
 
 #### Compiling for RP2:
@@ -181,6 +183,7 @@ To compile you will need Python >= 3.10 for for all build types.
     * python
     * gcc-arm-none-eabi 
     * libnewlib-arm-none-eabi
+    * doxygen
   
   * macOS
     * `command xcode-select–install`
@@ -189,6 +192,7 @@ To compile you will need Python >= 3.10 for for all build types.
     * `brew install ninja`
     * `brew install python`
     * `brew install armmbed/formulae/arm-none-eabi-gcc`
+    * `brew install doxygen`
 
   * Windows
     * Not yet supported
@@ -202,6 +206,7 @@ To compile you will need Python >= 3.10 for for all build types.
     * build-essential
     * ninja-build
     * python
+    * doxygen
   
   * macOS
     * `command xcode-select–install`
@@ -209,6 +214,7 @@ To compile you will need Python >= 3.10 for for all build types.
     * `brew install ninja`
     * `brew install python`
     * `brew install armmbed/formulae/arm-none-eabi-gcc`
+    * `brew install doxygen`
 
   * Windows
     * Not yet supported
@@ -249,6 +255,7 @@ To compile you will need Python >= 3.10 for for all build types.
   * libpipewire-0.3-dev
   * libwayland-dev   
   * libdecor-0-dev
+  * doxygen
 
 
 #### Compiling for macOS:
@@ -258,6 +265,7 @@ To compile you will need Python >= 3.10 for for all build types.
   * `brew install ninja`
   * `brew install make`
   * `brew install SDL2`
+  * `brew install doxygen`
 
 
 #### Compiling for Windows:
