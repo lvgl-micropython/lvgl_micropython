@@ -25,7 +25,6 @@ def eprint(*args, **kwargs):
 # from pudb.remote import set_trace
 # set_trace(term_size=(180, 50))
 
-from sys import argv
 import sys
 import os
 
@@ -35,7 +34,8 @@ from os.path import dirname, abspath
 from os.path import commonprefix
 
 script_path = dirname(abspath(__file__))
-pycparser_path = os.path.join(script_path, '..', 'lib', 'pycparser')
+project_path = os.path.abspath(os.path.join(script_path, '..'))
+pycparser_path = os.path.join(project_path, 'lib', 'pycparser')
 
 
 sys.path.insert(0, os.path.abspath(pycparser_path))
@@ -93,8 +93,7 @@ def Node__repr__(self):
     return result
 
 
-c_ast._repr = _repr
-setattr(c_ast.Node, '__repr__', Node__repr__)
+
 
 
 #
@@ -110,14 +109,46 @@ argParser.add_argument('--metadata', dest='metadata', help='Optional file to emi
 argParser.add_argument('--board', dest='board', help='Board or OS', metavar='<Board or OS>', action='store', default='')
 argParser.add_argument('--output', dest='output', help='Output file path', metavar='<Output path>', action='store')
 argParser.add_argument('--debug', dest='debug', help='enable debugging output', action='store_true')
-argParser.add_argument('--header_file', dest='input', action='append', default=[])
+argParser.add_argument('--header_file', dest='header', action='store', default=None)
 
 args, unknownargs = argParser.parse_known_args()
 
 module_name = args.module_name
 module_prefix = args.module_prefix if args.module_prefix else args.module_name
-input_headers = args.input[:]
+input_header = args.header
 DEBUG = args.debug
+
+lvgl_path = os.path.dirname(input_header)
+private_header = os.path.join(lvgl_path, 'lv_private.h')
+
+lv_config_path = os.path.abspath(os.path.join(lvgl_path, '..', 'lv_conf.h'))
+gen_json_path = os.path.join(lvgl_path, 'scripts/gen_json')
+
+sys.path.insert(0, gen_json_path)
+
+original_nodes = {}
+
+import inspect
+
+for key, value in c_ast.__dict__.items():
+    if inspect.isclass(value):
+        original_nodes[key] = value
+
+
+import gen_json
+
+
+json_ast = gen_json.run(None, lv_config_path, False, os.path.join(project_path, 'build', 'lvgl_header.h'), False)
+lvgl_json = json_ast.to_dict()
+
+
+for key, value in original_nodes.items():
+    setattr(c_ast, key, value)
+
+
+c_ast._repr = _repr
+setattr(c_ast.Node, '__repr__', Node__repr__)
+
 
 pp_file = args.output.rsplit('.', 1)[0] + '.pp'
 
@@ -269,7 +300,7 @@ os.environ['PATH'] = (
 cpp_cmd.extend([f'-D{define}' for define in args.define])
 cpp_cmd.extend(['-DPYCPARSER', '-E', f'-I{fake_libc_path}'])
 cpp_cmd.extend([f'-I{include}' for include in args.include])
-cpp_cmd.append(f'"{input_headers[0]}"')
+cpp_cmd.append(f'"{input_header}"')
 
 
 if sys.platform.startswith('win'):
@@ -439,7 +470,7 @@ lv_func_pattern = re.compile('^{prefix}_(.+)'.format(prefix=module_prefix), re.I
 create_obj_pattern = re.compile('^{prefix}_(.+)_create$'.format(prefix=module_prefix))
 lv_method_pattern = re.compile('^{prefix}_[^_]+_(.+)'.format(prefix=module_prefix), re.IGNORECASE)
 lv_base_obj_pattern = re.compile('^(struct _){{0,1}}{prefix}_{base_name}_t( [*]){{0,1}}'.format(prefix=module_prefix, base_name = base_obj_name))
-lv_str_enum_pattern = re.compile('^_{prefix}_STR_(.+)'.format(prefix=module_prefix.upper()))
+lv_str_enum_pattern = re.compile('^_?{prefix}_STR_(.+)'.format(prefix=module_prefix.upper()))
 lv_callback_type_pattern = re.compile('({prefix}_){{0,1}}(.+)_cb(_t){{0,1}}'.format(prefix=module_prefix))
 lv_global_callback_pattern = re.compile('.*g_cb_t')
 lv_func_returns_array = re.compile('.*_array$')
@@ -620,7 +651,7 @@ with open(pp_file, 'r') as f:
     pp_data = f.read()
 
 cparser = pycparser.CParser()
-ast = cparser.parse(pp_data, input_headers[0])
+ast = cparser.parse(pp_data, input_header)
 
 forward_struct_decls = {}
 
@@ -733,18 +764,17 @@ for t in typedefs:
             synonym[t.declname] = t.type.name
             # eprint('%s === struct %s' % (t.declname, t.type.name))
 struct_typedefs = [typedef for typedef in typedefs if is_struct(typedef.type)]
-structs = collections.OrderedDict((typedef.declname, typedef.type) for typedef in struct_typedefs if typedef.declname and typedef.type.decls) # and not lv_base_obj_pattern.match(typedef.declname))
 structs_without_typedef = collections.OrderedDict((decl.type.name, decl.type) for decl in ast.ext if hasattr(decl, 'type') and is_struct(decl.type))
-#
-# # for typedefs that referenced to a forward declaration struct, replace it with the real definition.
-# for typedef in struct_typedefs:
-#     if typedef.type.decls is None: # None means it's a forward declaration
-#         struct_name = typedef.type.name
-#         # check if it's found in `structs_without_typedef`. It actually has the typedef. Replace type with it.
-#         if typedef.type.name in structs_without_typedef:
-#             typedef.type = structs_without_typedef[struct_name]
-# 
-# structs = collections.OrderedDict((typedef.declname, typedef.type) for typedef in struct_typedefs if typedef.declname and typedef.type.decls) # and not lv_base_obj_pattern.match(typedef.declname))
+
+# for typedefs that referenced to a forward declaration struct, replace it with the real definition.
+for typedef in struct_typedefs:
+    if typedef.type.decls is None: # None means it's a forward declaration
+        struct_name = typedef.type.name
+        # check if it's found in `structs_without_typedef`. It actually has the typedef. Replace type with it.
+        if typedef.type.name in structs_without_typedef:
+            typedef.type = structs_without_typedef[struct_name]
+
+structs = collections.OrderedDict((typedef.declname, typedef.type) for typedef in struct_typedefs if typedef.declname and typedef.type.decls) # and not lv_base_obj_pattern.match(typedef.declname))
 structs.update(structs_without_typedef) # This is for struct without typedef
 explicit_structs = collections.OrderedDict((typedef.type.name, typedef.declname) for typedef in struct_typedefs if typedef.type.name) # and not lv_base_obj_pattern.match(typedef.type.name))
 opaque_structs = collections.OrderedDict((typedef.declname, c_ast.Struct(name=typedef.declname, decls=[])) for typedef in typedefs if isinstance(typedef.type, c_ast.Struct) and typedef.type.decls == None)
@@ -1202,6 +1232,8 @@ register_int_ptr_type('i64ptr',
 # Emit Header
 #
 
+input_headers = [input_header, private_header]
+
 print ("""
 /*
  * Auto-Generated file, DO NOT EDIT!
@@ -1237,7 +1269,7 @@ print ("""
 {lv_headers}
 """.format(
         module_name = module_name,
-        cmd_line=' '.join(argv),
+        cmd_line=' '.join(sys.argv),
         pp_cmd=pp_cmd,
         objs=", ".join(['%s(%s)' % (objname, parent_obj_names[objname]) for objname in obj_names]),
         lv_headers='\n'.join('#include "%s"' % header for header in input_headers)))
@@ -2218,7 +2250,7 @@ for enum_def in enum_defs:
                 enums[enum_name] = enum
 
 for enum in [enum for enum in enums if len(enums[enum]) == 1 and enum.startswith('ENUM')]:
-    int_constants.append('%s_%s' % (enum, list(enums[enum].keys())[0]))
+    int_constants.append('%s_%s' % (enum, next(iter(enums[enum]))))
     enum_name = '%s_%s' % (enum,  list(enums[enum].keys())[0])
     constant_metadata[enum_name.replace('ENUM_', '').replace('LV_', '')] = {'py_type': 'int', 'c_type': enum_name.replace('ENUM_', '')}
     del enums[enum]
@@ -2327,14 +2359,17 @@ def get_user_data(func, func_name = None, containing_struct = None, containing_s
             user_data = 'user_data'
             user_data_found = user_data in [decl.name for decl in flatten_struct_decls]
             # print('/* --> callback: user_data=%s user_data_found=%s containing_struct=%s */' % (user_data, user_data_found, containing_struct))
-
-    ud_accessors = get_user_data_accessors(containing_struct, containing_struct_name)
-    if user_data_found:
-        res = (user_data, )
-    else:
-        res = (None, )
-
-    return res + ud_accessors
+            if not user_data_found and lvgl_json is not None:
+                containing_struct_j = next((struct for struct in lvgl_json["structures"] if struct["name"] == struct_arg_type_name), None)
+                if (containing_struct_j is None
+                    and struct_arg_type_name.startswith("lv_")
+                    and None is not next((fwd_decl for fwd_decl in lvgl_json["forward_decls"] if fwd_decl["name"] == struct_arg_type_name), None)
+                ):
+                    struct_arg_type_name_with_underscore = "_" + struct_arg_type_name
+                    containing_struct_j = next((struct for struct in lvgl_json["structures"] if struct["name"] == struct_arg_type_name_with_underscore), None)
+                if containing_struct_j is not None:
+                    user_data_found = any(user_data == field["name"] for field in containing_struct_j["fields"])
+    return (user_data if user_data_found else None), *get_user_data_accessors(containing_struct, containing_struct_name)
 
 #
 # Generate structs when needed
@@ -2438,12 +2473,10 @@ def try_generate_struct(struct_name, struct):
                     gen_func_error(decl, "Missing 'user_data' as a field of the first parameter of the callback function '%s_%s_callback'" % (struct_name, func_name))
                 else:
                     gen_func_error(decl, "Missing 'user_data' member in struct '%s'" % struct_name)
-
-            write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}mp_lv_callback(dest[1], {lv_callback} ,MP_QSTR_{struct_name}_{field}, {user_data}, NULL, NULL, NULL); break; // converting to callback {type_name}'.
-                format(struct_name = struct_name, field = sanitize(decl.name), lv_callback = lv_callback, user_data = full_user_data_ptr, type_name = type_name, cast = cast))
-            read_cases.append('case MP_QSTR_{field}: dest[0] = mp_lv_funcptr(&mp_{funcptr}_mpobj, {cast}data->{field}, {lv_callback} ,MP_QSTR_{struct_name}_{field}, {user_data}); break; // converting from callback {type_name}'.
-                format(struct_name = struct_name, field = sanitize(decl.name), lv_callback = lv_callback, funcptr = lv_to_mp_funcptr[type_name], user_data = full_user_data, type_name = type_name, cast = cast))
-            attribute_meta[sanitize(decl.name)] = {'py_type': 'Callable', 'c_type': type_name, 'is_writeable': True, 'is_readable': True}
+            write_cases.append('case MP_QSTR_{field}: data->{decl_name} = {cast}mp_lv_callback(dest[1], {lv_callback} ,MP_QSTR_{struct_name}_{field}, {user_data}, NULL, NULL, NULL); break; // converting to callback {type_name}'.
+                format(struct_name = struct_name, field = sanitize(decl.name), decl_name = decl.name, lv_callback = lv_callback, user_data = full_user_data_ptr, type_name = type_name, cast = cast))
+            read_cases.append('case MP_QSTR_{field}: dest[0] = mp_lv_funcptr(&mp_{funcptr}_mpobj, {cast}data->{decl_name}, {lv_callback} ,MP_QSTR_{struct_name}_{field}, {user_data}); break; // converting from callback {type_name}'.
+                format(struct_name = struct_name, field = sanitize(decl.name), decl_name = decl.name, lv_callback = lv_callback, funcptr = lv_to_mp_funcptr[type_name], user_data = full_user_data, type_name = type_name, cast = cast))
         else:
             user_data = None
             # Only allow write to non-const members
@@ -2455,20 +2488,16 @@ def try_generate_struct(struct_name, struct):
             if isinstance(decl.type, c_ast.ArrayDecl):
                 memcpy_size = 'sizeof(%s)*%s' % (gen.visit(decl.type.type), gen.visit(decl.type.dim))
                 if is_writeable:
-                    write_cases.append('case MP_QSTR_{field}: memcpy((void*)&data->{field}, {cast}{convertor}(dest[1]), {size}); break; // converting to {type_name}'.
-                        format(field = sanitize(decl.name), convertor = mp_to_lv_convertor, type_name = type_name, cast = cast, size = memcpy_size))
-
-
-                read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{field}); break; // converting from {type_name}'.
-                    format(field = sanitize(decl.name), convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
+                    write_cases.append('case MP_QSTR_{field}: memcpy((void*)&data->{decl_name}, {cast}{convertor}(dest[1]), {size}); break; // converting to {type_name}'.
+                        format(field = sanitize(decl.name), decl_name = decl.name, convertor = mp_to_lv_convertor, type_name = type_name, cast = cast, size = memcpy_size))
+                read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{decl_name}); break; // converting from {type_name}'.
+                    format(field = sanitize(decl.name), decl_name = decl.name, convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
             else:
                 if is_writeable:
-                    write_cases.append('case MP_QSTR_{field}: data->{field} = {cast}{convertor}(dest[1]); break; // converting to {type_name}'.
-                        format(field = sanitize(decl.name), convertor = mp_to_lv_convertor, type_name = type_name, cast = cast))
-
-                read_cases.append(
-                    'case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{field}); break; // converting from {type_name}'.
-                        format(field=sanitize(decl.name), convertor=lv_to_mp_convertor, type_name=type_name, cast=cast))
+                    write_cases.append('case MP_QSTR_{field}: data->{decl_name} = {cast}{convertor}(dest[1]); break; // converting to {type_name}'.
+                        format(field = sanitize(decl.name), decl_name = decl.name, convertor = mp_to_lv_convertor, type_name = type_name, cast = cast))
+                read_cases.append('case MP_QSTR_{field}: dest[0] = {convertor}({cast}data->{decl_name}); break; // converting from {type_name}'.
+                    format(field = sanitize(decl.name), decl_name = decl.name, convertor = lv_to_mp_convertor, type_name = type_name, cast = cast))
     print('''
 /*
  * Struct {struct_name}
@@ -3082,7 +3111,7 @@ def gen_mp_func(func, obj_name):
     prototype_str = gen.visit(function_prototype(func))
     if prototype_str in func_prototypes:
         original_func = func_prototypes[prototype_str]
-        if not original_func.name.endswith('cb_t') and generated_funcs[original_func.name] == True:
+        if generated_funcs[original_func.name] == True:
             print("/* Reusing %s for %s */" % (original_func.name, func.name))
             emit_func_obj(func.name, original_func.name, param_count, func.name, is_static_member(func, base_obj_type))
 
@@ -3158,7 +3187,11 @@ static mp_obj_t mp_{func}(size_t mp_n_args, const mp_obj_t *mp_args, void *lv_fu
         func=func.name,
         func_ptr=prototype_str,
         print_func=gen.visit(func),
-        build_args="\n    ".join(build_args),
+        build_args="\n    ".join([build_mp_func_arg(arg, i, func, obj_name) for i,arg in enumerated_args
+            if isinstance(arg, c_ast.EllipsisParam) or
+               (not isinstance(arg.type, c_ast.TypeDecl)) or
+               (not isinstance(arg.type.type, c_ast.IdentifierType)) or
+               'void' not in arg.type.type.names]), # Handle the case of 'void' param which should be ignored
         send_args=", ".join([(arg.name if (hasattr(arg, 'name') and arg.name) else ("arg%d" % i)) for i,arg in enumerate(args)]),
         build_result=build_result,
         build_return_value=build_return_value))
