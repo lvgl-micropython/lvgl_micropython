@@ -13,7 +13,8 @@ list(APPEND LV_CFLAGS
 
 separate_arguments(SECOND_BUILD_ENV UNIX_COMMAND $ENV{SECOND_BUILD})
 
-set(LVGL_HEADER "${BINDING_DIR}/build/lvgl_header.h")
+set(LVGL_DIR "${BINDING_DIR}/lib/lvgl")
+
 
 file(GLOB_RECURSE LVGL_HEADERS ${BINDING_DIR}/lib/lvgl/src/*.h ${BINDING_DIR}/lib/lv_conf.h)
 
@@ -25,9 +26,10 @@ file(GLOB_RECURSE LVGL_HEADERS ${BINDING_DIR}/lib/lvgl/src/*.h ${BINDING_DIR}/li
 # found to go about doing it.
 
 if(${SECOND_BUILD_ENV} EQUAL "0")
+
     execute_process(
         COMMAND
-            ${Python3_EXECUTABLE} ${BINDING_DIR}/gen/$ENV{GEN_SCRIPT}_api_gen_mpy.py ${LV_CFLAGS} --output=${CMAKE_BINARY_DIR}/lv_mp.c --include=${BINDING_DIR}/lib --include=${BINDING_DIR}/lib/lvgl --board=$ENV{LV_PORT} --module_name=lvgl --module_prefix=lv --metadata=${CMAKE_BINARY_DIR}/lv_mp.c.json --header_file=${LVGL_HEADER}
+            ${Python3_EXECUTABLE} ${BINDING_DIR}/gen/$ENV{GEN_SCRIPT}_api_gen_mpy.py ${LV_CFLAGS} --output=${CMAKE_BINARY_DIR}/lv_mp.c --include=${BINDING_DIR}/lib --include=${BINDING_DIR}/lib/lvgl --board=$ENV{LV_PORT} --module_name=lvgl --module_prefix=lv --metadata=${CMAKE_BINARY_DIR}/lv_mp.c.json --header_file=${LVGL_DIR}/lvgl.h
         WORKING_DIRECTORY
             ${CMAKE_CURRENT_LIST_DIR}
 
