@@ -1,4 +1,4 @@
-***IMPORTANT READF ME FIRST***
+***IMPORTANT READ ME FIRST***
 
 * DO NOT use any information from the official binding and try to use that when compiling this binding it is not going to work
 * DO NOT add any submodule initilization commands when cloning the repo or any any point after the repo has been cloned.
@@ -8,7 +8,7 @@
   cd lvgl_micropython
   python3 make.py esp32 ......
   ```
-
+* If you want to update to the current master then delete your local copy and clone it again from scratch.
 
 
 
