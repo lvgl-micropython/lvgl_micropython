@@ -7,9 +7,6 @@
 [submodule "lib/micropython"]
 	path = lib/micropython
 	url = https://github.com/micropython/micropython
-[submodule "lib/lvgl"]
-	path = lib/lvgl
-	url = https://github.com/lvgl/lvgl
 [submodule "lib/esp-idf"]
 	path = lib/esp-idf
 	url = https://github.com/espressif/esp-idf
