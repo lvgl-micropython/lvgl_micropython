@@ -7,7 +7,6 @@
 # - Implement inheritance instead of embed base methods (how? seems it's not supported, see https://github.com/micropython/micropython/issues/1159)
 # - When converting mp to ptr (and vice versa), verify that types are compatible. Now all pointers are casted to void*.
 
-from __future__ import print_function
 
 import collections
 import copy
