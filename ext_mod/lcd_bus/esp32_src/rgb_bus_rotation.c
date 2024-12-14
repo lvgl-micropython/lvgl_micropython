@@ -116,20 +116,34 @@
     #define RGB_BUS_ROTATION_270  (3)
 
 
-    __attribute__((always_inline)) static inline void rotate0(uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t bytes_per_pixel);
-    __attribute__((always_inline)) static inline void rotate_8bpp(uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate);
-    __attribute__((always_inline)) static inline void rotate_16bpp(uint16_t *src, uint16_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate);
-    __attribute__((always_inline)) static inline void rotate_24bpp(uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate);
-    __attribute__((always_inline)) static inline void rotate_32bpp(uint32_t *src, uint32_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate);
+    static void rotate0(uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start,
+                        uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height,
+                        uint8_t bytes_per_pixel);
+
+    static void rotate_8bpp(uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start,
+                        uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height,
+                        uint8_t rotate);
+
+    static void rotate_16bpp(uint16_t *src, uint16_t *dst, uint32_t x_start, uint32_t y_start,
+                        uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height,
+                        uint8_t rotate);
+
+    static void rotate_24bpp(uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start,
+                        uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height,
+                        uint8_t rotate);
+
+    static void rotate_32bpp(uint32_t *src, uint32_t *dst, uint32_t x_start, uint32_t y_start,
+                        uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height,
+                        uint8_t rotate);
 
 
-    static void copy_pixels(
-                void *dst, void *src, uint32_t x_start, uint32_t y_start,
-                uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height,
-                uint32_t bytes_per_pixel, uint8_t rotate);
+    static void copy_pixels(void *dst, void *src, uint32_t x_start, uint32_t y_start,
+                        uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height,
+                        uint32_t bytes_per_pixel, uint8_t rotate);
 
 
-    static bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
+    static bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel,
+                                    const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
     {
         LCD_UNUSED(edata);
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)user_ctx;
@@ -294,19 +308,19 @@
 
 
     __attribute__((always_inline))
-    static inline void copy_8bpp(uint8_t *to, const uint8_t *from)
+    static inline void copy_8bpp(uint8_t *from, uint8_t *to)
     {
         *to++ = *from++;
     }
 
     __attribute__((always_inline))
-    static inline void copy_16bpp(uint16_t *to, const uint16_t *from)
+    static inline void copy_16bpp(uint16_t *from, uint16_t *to)
     {
         *to++ = *from++;
     }
 
     __attribute__((always_inline))
-    static inline void copy_24bpp(uint8_t *to, const uint8_t *from)
+    static inline void copy_24bpp(uint8_t *from, uint8_t *to)
     {
         *to++ = *from++;
         *to++ = *from++;
@@ -314,7 +328,7 @@
     }
 
     __attribute__((always_inline))
-    static inline void copy_32bpp(uint32_t *to, const uint32_t *from)
+    static inline void copy_32bpp(uint32_t *from, uint32_t *to)
     {
         *to++ = *from++;
     }
@@ -354,7 +368,9 @@
     }
 
 
-    void rotate0(uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t bytes_per_pixel)
+    void rotate0(uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start,
+                uint32_t x_end, uint32_t y_end, uint32_t dst_width,
+                uint32_t dst_height, uint8_t bytes_per_pixel)
     {
         dst += ((y_start * dst_width + x_start) * bytes_per_pixel);
 
@@ -372,10 +388,12 @@
         }
     }
 
-    void rotate_8bpp(uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate)
+    void rotate_8bpp(uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start,
+                    uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height,
+                    uint8_t rotate)
     {
-        uint32_t j;
         uint32_t i;
+        uint32_t j;
 
         uint32_t src_bytes_per_line = x_end - x_start + 1;
         uint32_t offset = y_start * src_bytes_per_line + x_start;
@@ -384,9 +402,9 @@
             case RGB_BUS_ROTATION_90:
                 for (uint32_t y = y_start; y < y_end; y++) {
                     for (uint32_t x = x_start; x < x_end; x++) {
-                        j = y * src_bytes_per_line + x - offset;
-                        i = (dst_height - 1 - x) * dst_width + y;
-                        copy_8bpp(dst + i, src + j);
+                        i = y * src_bytes_per_line + x - offset;
+                        j = (dst_height - 1 - x) * dst_width + y;
+                        copy_8bpp(src + i, dst + j);
                     }
                 }
                 break;
@@ -400,7 +418,7 @@
                 for (uint32_t y = y_start; y < y_end; y++) {
                     i = (dst_height - 1 - y) * dst_width + (dst_width - 1 - x_start);
                     for (uint32_t x = x_start; x < x_end; x++) {
-                        copy_8bpp(dst + i, src);
+                        copy_8bpp(src, dst + i);
                         src++;
                         i--;
                     }
@@ -411,9 +429,9 @@
             case RGB_BUS_ROTATION_270:
                 for (uint32_t y = y_start; y < y_end; y++) {
                     for (uint32_t x = x_start; x < x_end; x++) {
-                        j = y * src_bytes_per_line + x - offset;
-                        i = x * dst_width + dst_width - 1 - y;
-                        copy_8bpp(dst + i, src + j);
+                        i = y * src_bytes_per_line + x - offset;
+                        j = x * dst_width + dst_width - 1 - y;
+                        copy_8bpp(src + i, dst + j);
                     }
                 }
                 break;
@@ -429,10 +447,12 @@
     }
 
 
-    void rotate_16bpp(uint16_t *src, uint16_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate)
+    void rotate_16bpp(uint16_t *src, uint16_t *dst, uint32_t x_start, uint32_t y_start,
+                    uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height,
+                    uint8_t rotate)
     {
-        uint32_t j;
         uint32_t i;
+        uint32_t j;
 
         uint32_t src_bytes_per_line = x_end - x_start + 1;
         uint32_t offset = y_start * src_bytes_per_line + x_start;
@@ -441,9 +461,9 @@
             case RGB_BUS_ROTATION_90:
                 for (uint32_t y = y_start; y < y_end; y++) {
                     for (uint32_t x = x_start; x < x_end; x++) {
-                        j = y * src_bytes_per_line + x - offset;
-                        i = (dst_height - 1 - x) * dst_width + y;
-                        copy_16bpp(dst + i, src + j);
+                        i = y * src_bytes_per_line + x - offset;
+                        j = (dst_height - 1 - x) * dst_width + y;
+                        copy_16bpp(src + i, dst + j);
                     }
                 }
                 break;
@@ -457,7 +477,7 @@
                 for (uint32_t y = y_start; y < y_end; y++) {
                     i = (dst_height - 1 - y) * dst_width + (dst_width - 1 - x_start);
                     for (uint32_t x = x_start; x < x_end; x++) {
-                        copy_16bpp(dst + i, src);
+                        copy_16bpp(src, dst + i);
                         src++;
                         i--;
                     }
@@ -468,9 +488,9 @@
             case RGB_BUS_ROTATION_270:
                 for (uint32_t y = y_start; y < y_end; y++) {
                     for (uint32_t x = x_start; x < x_end; x++) {
-                        j = y * src_bytes_per_line + x - offset;
-                        i = (x * dst_width + dst_width - 1 - y);
-                        copy_16bpp(dst + i, src + j);
+                        i = y * src_bytes_per_line + x - offset;
+                        j = (x * dst_width + dst_width - 1 - y);
+                        copy_16bpp(src + i, dst + j);
                     }
                 }
                 break;
@@ -485,10 +505,12 @@
     }
 
 
-    void rotate_24bpp(uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate)
+    void rotate_24bpp(uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start,
+                    uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height,
+                    uint8_t rotate)
     {
-        uint32_t j;
         uint32_t i;
+        uint32_t j;
 
         uint32_t src_bytes_per_line = (x_end - x_start + 1) * 3;
         uint32_t offset = y_start * src_bytes_per_line + x_start * 3;
@@ -498,9 +520,9 @@
             case RGB_BUS_ROTATION_90:
                 for (uint32_t y = y_start; y < y_end; y++) {
                     for (uint32_t x = x_start; x < x_end; x++) {
-                        j = y * src_bytes_per_line + x * 3 - offset;
-                        i = ((dst_height - 1 - x) * dst_width + y) * 3;
-                        copy_24bpp(dst + i, src + j);
+                        i = y * src_bytes_per_line + x * 3 - offset;
+                        j = ((dst_height - 1 - x) * dst_width + y) * 3;
+                        copy_24bpp(src + i, dst + j);
                     }
                 }
                 break;
@@ -514,7 +536,7 @@
                 for (int y = y_start; y < y_end; y++) {
                     i = ((dst_height - 1 - y) * dst_width + (dst_width - 1 - x_start)) * 3;
                     for (size_t x = x_start; x < x_end; x++) {
-                        copy_24bpp(dst + i, src);
+                        copy_24bpp(src, dst + i);
                         src += 3;
                         i -= 3;
                     }
@@ -525,9 +547,9 @@
             case RGB_BUS_ROTATION_270:
                 for (uint32_t y = y_start; y < y_end; y++) {
                     for (uint32_t x = x_start; x < x_end; x++) {
-                        j = y * src_bytes_per_line + x * 3 - offset;
-                        i = (x * dst_width + dst_width - 1 - y) * 3;
-                        copy_24bpp(dst + i, src + j);
+                        i = y * src_bytes_per_line + x * 3 - offset;
+                        j = (x * dst_width + dst_width - 1 - y) * 3;
+                        copy_24bpp(src + i, dst + j);
                     }
                 }
                 break;
@@ -542,10 +564,12 @@
     }
 
 
-    void rotate_32bpp(uint32_t *src, uint32_t *dst, uint32_t x_start, uint32_t y_start, uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height, uint8_t rotate)
+    void rotate_32bpp(uint32_t *src, uint32_t *dst, uint32_t x_start, uint32_t y_start,
+                    uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height,
+                    uint8_t rotate)
     {
-        uint32_t j;
         uint32_t i;
+        uint32_t j;
 
         uint32_t src_bytes_per_line = x_end - x_start + 1;
         uint32_t offset = y_start * src_bytes_per_line + x_start;
@@ -554,9 +578,9 @@
             case RGB_BUS_ROTATION_90:
                 for (uint32_t y = y_start; y < y_end; y++) {
                     for (uint32_t x = x_start; x < x_end; x++) {
-                        j = y * src_bytes_per_line + x - offset;
-                        i = (dst_height - 1 - x) * dst_width + y;
-                        copy_32bpp(dst + i, src + j);
+                        i = y * src_bytes_per_line + x - offset;
+                        j = (dst_height - 1 - x) * dst_width + y;
+                        copy_32bpp(src + i, dst + j);
                     }
                 }
                 break;
@@ -570,7 +594,7 @@
                 for (uint32_t y = y_start; y < y_end; y++) {
                     i = (dst_height - 1 - y) * dst_width + (dst_width - 1 - x_start);
                     for (uint32_t x = x_start; x < x_end; x++) {
-                        copy_32bpp(dst + i, src);
+                        copy_32bpp(src, dst + i);
                         src++;
                         i--;
                     }
@@ -581,9 +605,9 @@
             case RGB_BUS_ROTATION_270:
                 for (uint32_t y = y_start; y < y_end; y++) {
                     for (uint32_t x = x_start; x < x_end; x++) {
-                        j = y * src_bytes_per_line + x - offset;
-                        i = x * dst_width + dst_width - 1 - y;
-                        copy_32bpp(dst + i, src + j);
+                        i = y * src_bytes_per_line + x - offset;
+                        j = x * dst_width + dst_width - 1 - y;
+                        copy_32bpp(src + i, dst + j);
                     }
                 }
                 break;
