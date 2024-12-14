@@ -449,7 +449,8 @@ class mem_pool_t(object):
 '''
 
 
-def run(json_path):
+def run(json_path, lvgl_api_json_path):
+
     with open(json_path, 'r') as f:
         data = f.read()
 

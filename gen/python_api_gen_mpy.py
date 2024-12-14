@@ -3730,6 +3730,7 @@ for name, metadata in list(variable_metadata.items()):
 
 
 if args.metadata:
+
     metadata = collections.OrderedDict()
     metadata['objects'] = {obj_name: obj_metadata[obj_name] for obj_name in obj_names}
     metadata['functions'] = {simplify_identifier(f.name): func_metadata[f.name] for f in module_funcs}
@@ -3746,9 +3747,16 @@ if args.metadata:
     with open(args.metadata, 'w') as metadata_file:
         json.dump(metadata, metadata_file, indent=4)
 
+    build_path = os.path.split(args.metadata)[0]
+
+    api_json_path = os.path.join(build_path, 'lvgl_api.json')
+
+    with open(api_json_path, 'w') as metadata_file:
+        json.dump(lvgl_json, metadata_file, indent=4)
+
     import stub_gen
 
-    stub_gen.run(args.metadata)
+    stub_gen.run(args.metadata, api_json_path)
 
 stdout.close()
 
