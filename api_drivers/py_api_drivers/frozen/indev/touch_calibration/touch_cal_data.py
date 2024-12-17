@@ -99,9 +99,7 @@ class TouchCalData(object):
         mv = memoryview(blob)
         try:
             self._config.get_blob("ts_config", mv)
-        except OSError as err:
-            sys.print_exception(err)
-
+        except OSError:
             self._alphaX = None
             self._betaX = None
             self._deltaX = None
