@@ -109,11 +109,11 @@ class TouchCalData(object):
             self._alphaY = None
             self._betaY = None
             self._deltaY = None
-            self._mirror_x = None
-            self._mirror_y = None
+            self._mirrorX = None
+            self._mirrorY = None
         else:
             (
-                alphaX, betaX, deltaX, alphaY, betaY, deltaY, mirror_x, mirror_y
+                alphaX, betaX, deltaX, alphaY, betaY, deltaY, mirrorX, mirrorY
             ) = struct.unpack("<IIIIIIBB", blob)
 
             self._alphaX = round(lcd_utils.int_float_converter(alphaX), 7)
@@ -122,8 +122,8 @@ class TouchCalData(object):
             self._alphaY = round(lcd_utils.int_float_converter(alphaY), 7)
             self._betaY = round(lcd_utils.int_float_converter(betaY), 7)
             self._deltaY = round(lcd_utils.int_float_converter(deltaY), 7)
-            self._mirror_x = bool(mirror_x)
-            self._mirror_y = bool(mirror_y)
+            self._mirrorX = bool(mirrorX)
+            self._mirrorY = bool(mirrorY)
 
         self._is_dirty = False
 
@@ -136,8 +136,8 @@ class TouchCalData(object):
                 self._alphaY,
                 self._betaY,
                 self._deltaY,
-                self._mirror_x,
-                self._mirror_y
+                self._mirrorX,
+                self._mirrorY
             ):
                 self._config.erase('ts_config')
 
@@ -152,7 +152,7 @@ class TouchCalData(object):
                 blob = struct.pack(
                     '<IIIIIIBB',
                     alphaX, betaX, deltaX, alphaY, betaY, deltaY,
-                    int(self._mirror_x), int(self._mirror_y)
+                    int(self._mirrorX), int(self._mirrorY)
                 )
 
                 blob = bytearray(blob)
@@ -164,27 +164,27 @@ class TouchCalData(object):
 
     @property
     def mirrorX(self):
-        return self._mirror_x
+        return self._mirrorX
 
     @mirrorX.setter
     def mirrorX(self, value):
         if value is None:
-            self._mirror_x = None
+            self._mirrorX = None
         else:
-            self._mirror_x = bool(value)
+            self._mirrorX = bool(value)
 
         self._is_dirty = True
 
     @property
     def mirrorY(self):
-        return self._mirror_y
+        return self._mirrorY
 
     @mirrorY.setter
     def mirrorY(self, value):
         if value is None:
-            self._mirror_y = None
+            self._mirrorY = None
         else:
-            self._mirror_y = bool(value)
+            self._mirrorY = bool(value)
 
         self._is_dirty = True
 
@@ -273,7 +273,8 @@ class TouchCalData(object):
         self.alphaY = None
         self.betaY = None
         self.deltaY = None
-        self._mirror_x = None
-        self._mirror_y = None
+        self._mirrorX = None
+        self._mirrorY = None
+
         self._is_dirty = True
         self.save()
