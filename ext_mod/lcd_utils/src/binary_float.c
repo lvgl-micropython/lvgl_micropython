@@ -23,12 +23,4 @@ static mp_obj_t mp_lcd_utils_int_float_converter(size_t n_args, const mp_obj_t *
     }
 }
 
-alphaX: 0.9185965     7
-betaX: -0.03718129    8
-deltaX: 13.55056      5
-alphaY: 0.003533064   9
-betaY: 0.999857       6
-deltaY: 2.936733      6
-
-
 MP_DEFINE_CONST_FUN_OBJ_VAR(mp_lcd_utils_int_float_converter_obj, 1, mp_lcd_utils_int_float_converter);
