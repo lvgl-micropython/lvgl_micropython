@@ -72,9 +72,26 @@ def calibrate(indev, cal_data):
     indev.enable(False)
 
     new_scrn = lv.obj()
-    lv.screen_load(new_scrn)
-
     new_scrn.add_style(style, 0)
+
+    label = lv.label(new_scrn)
+    label.set_text('Touch Calibration')
+    label.center()
+
+    lv.screen_load_anim(new_scrn, lv.SCR_LOAD_ANIM.FADE_IN, 500, 0, False)
+
+    count = 0
+    while count < 200:
+        count += 1
+        lcd_bus._pump_main_thread()
+        time.sleep_ms(5)
+
+    label.delete()
+    count = 0
+    while count < 100:
+        count += 1
+        lcd_bus._pump_main_thread()
+        time.sleep_ms(5)
 
     target = lv.obj(new_scrn)
     target.add_style(style, 0)
