@@ -40,6 +40,7 @@ STATE_PWM = -1
 class DisplayDriver:
     _INVON = 0x21
     _INVOFF = 0x20
+
     _ORIENTATION_TABLE = (
         _MADCTL_MX,
         _MADCTL_MV,

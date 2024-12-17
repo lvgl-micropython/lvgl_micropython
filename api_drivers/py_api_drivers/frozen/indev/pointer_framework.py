@@ -11,6 +11,7 @@ class PointerDriver(_indev_base.IndevBase):
     def __init__(self, touch_cal=None, startup_rotation=lv.DISPLAY_ROTATION._0, debug=False):  # NOQA
         self._last_x = -1
         self._last_y = -1
+
         self._last_state = self.RELEASED
 
         super().__init__(debug=debug)

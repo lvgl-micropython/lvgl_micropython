@@ -33,7 +33,6 @@ style.set_shadow_width(0)
 
 
 def calibrate(indev, cal_data):
-    indev.enable(False)
 
     if not task_handler.TaskHandler.is_running():
         th_running = False
@@ -63,6 +62,15 @@ def calibrate(indev, cal_data):
     ]
 
     old_scrn = lv.screen_active()
+
+    disp = old_scrn.get_display()
+    rotation = disp.get_rotation()
+
+    if rotation != lv.DISPLAY_ROTATION._0:
+        disp.set_rotation(lv.DISPLAY_ROTATION._0)
+
+    indev.enable(False)
+
     new_scrn = lv.obj()
     lv.screen_load(new_scrn)
 
@@ -115,7 +123,6 @@ def calibrate(indev, cal_data):
 
             print('  ', j + 1, 'of 8:', (x, y))
 
-
     print()
     print('averaged trimmed points')
     for i, points in enumerate(captured_points):
@@ -138,6 +145,10 @@ def calibrate(indev, cal_data):
         mirror_y = True
     else:
         mirror_y = False
+
+    print('mirroring')
+    print('  mirrored x:', mirror_x)
+    print('  mirrored y:', mirror_y)
 
     tp1, tp2, tp3 = captured_points
     sp1, sp2, sp3 = target_points
@@ -206,5 +217,8 @@ def calibrate(indev, cal_data):
         task_handler.TaskHandler._current_instance.deinit()
 
     indev.enable(True)
+
+    if rotation != lv.DISPLAY_ROTATION._0:
+        disp.set_rotation(rotation)
 
     return res
