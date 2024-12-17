@@ -337,7 +337,7 @@ def get_micropython():
         'git submodule update --init --depth=1 -- lib/micropython',
     ]
     print()
-    print('collecting MicroPython 1.23.0')
+    print('collecting MicroPython 1.24.1')
     result, _ = spawn(cmd_, spinner=True)
     if result != 0:
         sys.exit(result)
@@ -346,17 +346,12 @@ def get_micropython():
     with open(mkrules_path, 'rb') as f:
         data = f.read().decode('utf-8')
 
-    pattern = (
-        '$(Q)git submodule update --init '
-        '$(addprefix $(TOP)/,$(GIT_SUBMODULES))'
-    )
+    pattern = '$(Q)cd $(TOP) && git submodule update --init $(GIT_SUBMODULES)'
+
     if pattern in data:
         data = data.replace(
             pattern,
-            (
-                '$(Q)git submodule update --init --depth=1 '
-                '$(addprefix $(TOP)/,$(GIT_SUBMODULES))'
-            )
+            '$(Q)cd $(TOP) && git submodule update --init --depth=1 $(GIT_SUBMODULES)'
         )
         with open(mkrules_path, 'wb') as f:
             f.write(data.encode('utf-8'))

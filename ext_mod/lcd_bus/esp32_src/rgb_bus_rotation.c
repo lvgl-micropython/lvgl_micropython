@@ -5,6 +5,7 @@
     #include "py/obj.h"
     #include "py/runtime.h"
     #include "py/gc.h"
+    #include "py/stackctrl.h"
 
     #include "freertos/FreeRTOS.h"
     #include "freertos/task.h"

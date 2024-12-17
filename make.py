@@ -137,7 +137,6 @@ if lv_cflags is not None:
 
 
 def get_submodules():
-
     if not os.path.exists(
         os.path.join(SCRIPT_DIR, 'lib/micropython/mpy-cross')
     ):
