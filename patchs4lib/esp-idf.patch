@@ -1,0 +1,111 @@
+diff --git a/components/fatfs/CMakeLists.txt b/components/fatfs/CMakeLists.txt
+index b6a288e0d0..139597f9cb 100644
+--- a/components/fatfs/CMakeLists.txt
++++ b/components/fatfs/CMakeLists.txt
+@@ -1,34 +1,2 @@
+-idf_build_get_property(target IDF_TARGET)
+ 
+-set(srcs "diskio/diskio.c"
+-        "diskio/diskio_rawflash.c"
+-        "diskio/diskio_wl.c"
+-        "src/ff.c"
+-        "src/ffunicode.c")
+ 
+-set(include_dirs "diskio" "src")
+-
+-set(requires "wear_levelling")
+-
+-# for linux, we do not have support for vfs and sdmmc, for real targets, add respective sources
+-if(${target} STREQUAL "linux")
+-    list(APPEND srcs "port/linux/ffsystem.c")
+-else()
+-    list(APPEND srcs "port/freertos/ffsystem.c"
+-            "diskio/diskio_sdmmc.c"
+-            "vfs/vfs_fat.c"
+-            "vfs/vfs_fat_sdmmc.c"
+-            "vfs/vfs_fat_spiflash.c")
+-
+-    list(APPEND include_dirs "vfs")
+-
+-    list(APPEND requires "sdmmc")
+-
+-    list(APPEND priv_requires "vfs")
+-endif()
+-
+-idf_component_register(SRCS ${srcs}
+-                       INCLUDE_DIRS ${include_dirs}
+-                       REQUIRES ${requires}
+-                       PRIV_REQUIRES ${priv_requires}
+-                      )
+diff --git a/components/freertos/esp_additions/freertos_tasks_c_additions.h b/components/freertos/esp_additions/freertos_tasks_c_additions.h
+index 9c5340dfb7..9147622c67 100644
+--- a/components/freertos/esp_additions/freertos_tasks_c_additions.h
++++ b/components/freertos/esp_additions/freertos_tasks_c_additions.h
+@@ -295,6 +295,51 @@ _Static_assert( tskNO_AFFINITY == ( BaseType_t ) CONFIG_FREERTOS_NO_AFFINITY, "C
+         return xReturn;
+     }
+ 
++
++    /*-----------------------------------------------------------*/
++
++    BaseType_t xTaskCreateRestrictedPinnedToCore( const TaskParameters_t * const pxTaskDefinition, TaskHandle_t *pxCreatedTask, const BaseType_t xCoreID)
++    {
++        TCB_t *pxNewTCB;
++        BaseType_t xReturn = errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY;
++
++        configASSERT( pxTaskDefinition->puxStackBuffer );
++
++        if( pxTaskDefinition->puxStackBuffer != NULL )
++        {
++            /* Allocate space for the TCB.  Where the memory comes from depends
++            on the implementation of the port malloc function and whether or
++            not static allocation is being used. */
++            pxNewTCB = ( TCB_t * ) pvPortMalloc( sizeof( TCB_t ) );
++
++            if( pxNewTCB != NULL )
++            {
++                memset(pxNewTCB, 0, sizeof(TCB_t));
++                /* Store the stack location in the TCB. */
++                pxNewTCB->pxStack = pxTaskDefinition->puxStackBuffer;
++
++                /* Tasks can be created statically or dynamically, so note
++                this task had a statically allocated stack in case it is
++                later deleted.  The TCB was allocated dynamically. */
++                pxNewTCB->ucStaticallyAllocated = tskDYNAMICALLY_ALLOCATED_STACK_AND_TCB;
++
++                prvInitialiseNewTask(   pxTaskDefinition->pvTaskCode,
++                                        pxTaskDefinition->pcName,
++                                        pxTaskDefinition->usStackDepth,
++                                        pxTaskDefinition->pvParameters,
++                                        pxTaskDefinition->uxPriority,
++                                        pxCreatedTask, pxNewTCB,
++                                        pxTaskDefinition->xRegions,
++                                        xCoreID );
++
++                prvAddNewTaskToReadyList( pxNewTCB );
++                xReturn = pdPASS;
++            }
++        }
++
++        return xReturn;
++    }
++
+ #endif /* ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) */
+ /*----------------------------------------------------------*/
+ 
+diff --git a/components/freertos/esp_additions/include/freertos/idf_additions.h b/components/freertos/esp_additions/include/freertos/idf_additions.h
+index 9582dc7b42..70cf1a5be6 100644
+--- a/components/freertos/esp_additions/include/freertos/idf_additions.h
++++ b/components/freertos/esp_additions/include/freertos/idf_additions.h
+@@ -68,6 +68,11 @@
+                                         TaskHandle_t * const pxCreatedTask,
+                                         const BaseType_t xCoreID );
+ 
++    BaseType_t xTaskCreateRestrictedPinnedToCore( const TaskParameters_t * const pxTaskDefinition,
++                                                TaskHandle_t *pxCreatedTask,
++                                                const BaseType_t xCoreID);
++
++
+ #endif /* configSUPPORT_DYNAMIC_ALLOCATION */
+ 
+ #if ( configSUPPORT_STATIC_ALLOCATION == 1 )

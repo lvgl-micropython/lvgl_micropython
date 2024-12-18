@@ -1,0 +1,195 @@
+diff --git a/lib/pico-sdk b/lib/pico-sdk
+--- a/lib/pico-sdk
++++ b/lib/pico-sdk
+@@ -1 +1 @@
+-Subproject commit 6a7db34ff63345a7badec79ebea3aaef1712f374
++Subproject commit 6a7db34ff63345a7badec79ebea3aaef1712f374-dirty
+diff --git a/ports/esp32/boards/ESP32_GENERIC_S3/mpconfigboard.cmake b/ports/esp32/boards/ESP32_GENERIC_S3/mpconfigboard.cmake
+index 1f7440353..23706ffea 100644
+--- a/ports/esp32/boards/ESP32_GENERIC_S3/mpconfigboard.cmake
++++ b/ports/esp32/boards/ESP32_GENERIC_S3/mpconfigboard.cmake
+@@ -1,3 +1,4 @@
++
+ set(IDF_TARGET esp32s3)
+ 
+ set(SDKCONFIG_DEFAULTS
+@@ -27,3 +28,39 @@ if(MICROPY_BOARD_VARIANT STREQUAL "FLASH_4M")
+         boards/ESP32_GENERIC_S3/sdkconfig.flash_4m
+     )
+ endif()
++
++#lwt added start
++set(ADF_COMPS     "$ENV{ADF_PATH}/components")
++
++message(WARNING "LWT 2 IDF_PATH: $ENV{IDF_PATH}")
++message(WARNING "LWT 2 ADF_PATH: $ENV{ADF_PATH}")
++message(WARNING "LWT 2 ADF_COMPS: ${ADF_COMPS}")
++
++set(ADF_BOARD_DIR "$ENV{ADF_PATH}/components/audio_board/esp32_s3_korvo2_v3")
++
++set(ADF_BOARD_CODEC_SRC
++            ${ADF_COMPS}/audio_hal/driver/es7210/es7210.c
++            ${ADF_COMPS}/audio_hal/driver/es8311/es8311.c)
++set(ADF_BOARD_CODEC_INC
++            ${ADF_COMPS}/audio_hal/driver/es7210
++            ${ADF_COMPS}/audio_hal/driver/es8311)
++set(ADF_BOARD_INIT_SRC
++            $ENV{ADF_PATH}/components $ENV{ADF_PATH}/micropython_adf/boards/korvo2v3/board_init.c)
++
++message(WARNING "File: ${CMAKE_CURRENT_LIST_FILE}, Line: ${CMAKE_CURRENT_LIST_LINE}, lwt 1")
++
++list(APPEND EXTRA_COMPONENT_DIRS
++        $ENV{ADF_PATH}/components/esp_peripherals
++        $ENV{ADF_PATH}/components/audio_hal
++        $ENV{ADF_PATH}/components/audio_board
++        $ENV{ADF_PATH}/components/display_service
++        $ENV{ADF_PATH}/components/esp_dispatcher
++        $ENV{ADF_PATH}/components/audio_pipeline
++        $ENV{ADF_PATH}/components/audio_sal
++        $ENV{ADF_PATH}/components/esp-adf-libs
++        $ENV{ADF_PATH}/components/esp-sr
++        $ENV{ADF_PATH}/micropython_adf/boards)
++        
++
++message(WARNING "EXTRA_COMPONENT_DIRS: ${EXTRA_COMPONENT_DIRS}")
++#lwt added end
+diff --git a/ports/esp32/boards/ESP32_GENERIC_S3/mpconfigboard.h b/ports/esp32/boards/ESP32_GENERIC_S3/mpconfigboard.h
+index c714fe2c2..3cc605c02 100644
+--- a/ports/esp32/boards/ESP32_GENERIC_S3/mpconfigboard.h
++++ b/ports/esp32/boards/ESP32_GENERIC_S3/mpconfigboard.h
+@@ -9,3 +9,9 @@
+ 
+ #define MICROPY_HW_I2C0_SCL                 (9)
+ #define MICROPY_HW_I2C0_SDA                 (8)
++
++//lwt added from
++#define MICROPY_PY_MACHINE_DAC              (0)
++//lwt enabled by default?
++//#define MICROPY_HW_ENABLE_SDCARD (1)
++
+diff --git a/ports/esp32/boards/ESP32_GENERIC_S3/sdkconfig.board b/ports/esp32/boards/ESP32_GENERIC_S3/sdkconfig.board
+index a36b97116..82c76d90a 100644
+--- a/ports/esp32/boards/ESP32_GENERIC_S3/sdkconfig.board
++++ b/ports/esp32/boards/ESP32_GENERIC_S3/sdkconfig.board
+@@ -7,3 +7,8 @@ CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
+ CONFIG_ESPTOOLPY_FLASHSIZE_16MB=
+ CONFIG_PARTITION_TABLE_CUSTOM=y
+ CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions-8MiB.csv"
++
++#lwt freertos compile error
++CONFIG_FREERTOS_ENABLE_BACKWARD_COMPATIBILITY=y
++#sdcard pin define
++CONFIG_ESP32_S3_KORVO2_V3_BOARD=y
+\ No newline at end of file
+diff --git a/ports/esp32/boards/sdkconfig.base b/ports/esp32/boards/sdkconfig.base
+index fef25fe30..a086eb690 100644
+--- a/ports/esp32/boards/sdkconfig.base
++++ b/ports/esp32/boards/sdkconfig.base
+@@ -117,3 +117,6 @@ CONFIG_ETH_USE_SPI_ETHERNET=y
+ CONFIG_ETH_SPI_ETHERNET_W5500=y
+ CONFIG_ETH_SPI_ETHERNET_KSZ8851SNL=y
+ CONFIG_ETH_SPI_ETHERNET_DM9051=y
++
++CONFIG_FREERTOS_INTERRUPT_BACKTRACE=n
++CONFIG_FREERTOS_IDLE_TASK_STACKSIZE=4096
+diff --git a/ports/esp32/esp32_common.cmake b/ports/esp32/esp32_common.cmake
+index e928fb439..649db3d8e 100644
+--- a/ports/esp32/esp32_common.cmake
++++ b/ports/esp32/esp32_common.cmake
+@@ -134,7 +134,56 @@ list(APPEND IDF_COMPONENTS
+     spi_flash
+     ulp
+     vfs
++    audio_pipeline audio_sal driver esp-adf-libs esp_http_client boards
++    esp_peripherals
++    audio_board
++    display_service
++    esp_dispatcher
++    esp-sr
++    audio_hal
+ )
++#lwt added audio_pipeline audio_sal driver esp-adf-libs esp_http_client boards
++
++
++#lwt added
++set(lwt_adf_srcs
++    ${ADF_BOARD_INIT_SRC}
++    ${ADF_BOARD_CODEC_SRC}
++    ${ADF_BOARD_DIR}/board_pins_config.c
++    ${ADF_COMPS}/audio_hal/audio_hal.c
++    ${ADF_COMPS}/audio_hal/audio_volume.c
++    ${ADF_COMPS}/audio_stream/http_stream.c
++    ${ADF_COMPS}/audio_stream/i2s_stream_idf5.c
++    ${ADF_COMPS}/audio_stream/raw_stream.c
++    ${ADF_COMPS}/audio_stream/http_playlist.c
++    ${ADF_COMPS}/audio_stream/lib/gzip/gzip_miniz.c
++    ${ADF_COMPS}/audio_stream/lib/hls/hls_parse.c
++    ${ADF_COMPS}/audio_stream/lib/hls/hls_playlist.c
++    ${ADF_COMPS}/audio_stream/lib/hls/join_path.c
++    ${ADF_COMPS}/audio_stream/lib/hls/line_reader.c
++    ${ADF_COMPS}/esp_peripherals/driver/i2c_bus/i2c_bus_adf.c
++)
++
++set(lwt_adf_includes
++    ${ADF_BOARD_DIR}
++    ${ADF_BOARD_CODEC_INC}
++    ${ADF_COMPS}/audio_board/include
++    ${ADF_COMPS}/audio_hal/include
++    ${ADF_COMPS}/audio_hal/driver/include
++    ${ADF_COMPS}/audio_stream/include
++    ${ADF_COMPS}/audio_stream/lib/gzip/include
++    ${ADF_COMPS}/audio_stream/lib/hls/include
++    ${ADF_COMPS}/esp_peripherals/include
++    ${ADF_COMPS}/display_service/include
++    ${ADF_COMPS}/esp_dispatcher/include
++    ${ADF_COMPS}/esp_peripherals/driver/i2c_bus
++    $ENV{ADF_PATH}/micropython_adf/boards/include
++)
++
++message(WARNING "lwt_adf_srcs: ${lwt_adf_srcs}")
++message(WARNING "lwt_adf_includes: ${lwt_adf_includes}")
++
++#lwt added end
+ 
+ # Register the main IDF component.
+ idf_component_register(
+@@ -146,12 +195,16 @@ idf_component_register(
+         ${MICROPY_SOURCE_DRIVERS}
+         ${MICROPY_SOURCE_PORT}
+         ${MICROPY_SOURCE_BOARD}
++        ${lwt_adf_srcs}
++
+     INCLUDE_DIRS
+         ${MICROPY_INC_CORE}
+         ${MICROPY_INC_USERMOD}
+         ${MICROPY_PORT_DIR}
+         ${MICROPY_BOARD_DIR}
+         ${CMAKE_BINARY_DIR}
++        ${lwt_adf_includes}
++
+     LDFRAGMENTS
+         linker.lf
+     REQUIRES
+diff --git a/ports/esp32/main_esp32s3/CMakeLists.txt b/ports/esp32/main_esp32s3/CMakeLists.txt
+index 40188abff..dea3ca65c 100644
+--- a/ports/esp32/main_esp32s3/CMakeLists.txt
++++ b/ports/esp32/main_esp32s3/CMakeLists.txt
+@@ -9,3 +9,4 @@ if(NOT MICROPY_PORT_DIR)
+ endif()
+ 
+ include(${MICROPY_PORT_DIR}/esp32_common.cmake)
++
+diff --git a/ports/esp32/mpconfigport.h b/ports/esp32/mpconfigport.h
+index 0afb12f85..a3568e589 100644
+--- a/ports/esp32/mpconfigport.h
++++ b/ports/esp32/mpconfigport.h
+@@ -306,3 +306,9 @@ void boardctrl_startup(void);
+ #endif
+ #endif
+ #endif
++
++
++#include "genhdr/mpversion.h"
++
++#define MICROPY_BANNER_NAME_AND_VERSION "LVGL MicroPython 1.23.0 on " MICROPY_BUILD_DATE
++
