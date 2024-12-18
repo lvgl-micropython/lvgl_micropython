@@ -874,6 +874,19 @@ def add_components(env, cmds):
         with open('ext_mod/esp32_components.cmake', 'w') as f:
             f.write('')
 
+#lwt added
+def get_espadf():
+    cmd = [
+        ['cd lib/esp-adf'],
+        ['git', 'submodule', 'update', '--init', '--depth=1']
+    ]
+    print()
+    print('collecting ESP-ADF')
+    print('this might take a while...')
+    result, _ = spawn(cmd, spinner=True)
+    if result != 0:
+        sys.exit(result)
+#lwt added end
 
 def submodules():
     if has_correct_idf():
@@ -895,6 +908,10 @@ def submodules():
     env['IDF_PATH'] = os.path.abspath(idf_path)
     #lwt added
     adf_path = 'lib/esp-adf'
+    
+    if not os.path.exists(os.path.join(adf_path, 'components/esp-adf-libs/component.mk')):
+    	get_espadf()
+    	
     env['ADF_PATH'] = os.path.abspath(adf_path)
     env['ADF_COMPS'] = os.path.abspath(adf_path) + '/components'
     print('lwt setting up ADF_PATH:', env['ADF_PATH'])
