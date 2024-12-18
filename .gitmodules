@@ -13,3 +13,6 @@
 [submodule "lib/esp-idf"]
 	path = lib/esp-idf
 	url = https://github.com/espressif/esp-idf
+[submodule "lib/esp-adf"]
+	path = lib/esp-adf
+	url = https://github.com/liwentang12/esp-adf-for-lvgl-mpy.git

@@ -740,7 +740,9 @@ def setup_idf_environ():
     else:
         print('Getting ESP-IDF build Environment')
         idf_path = 'lib/esp-idf'
-
+        adf_path = os.path.abspath('lib/esp-adf') #lwt added
+        adf_comps = os.path.abspath('lib/esp-adf/components')
+        
         if not os.path.exists(os.path.join(idf_path, 'export.sh')):
             submodules()
             return setup_idf_environ()
@@ -750,12 +752,16 @@ def setup_idf_environ():
         if 'GITHUB_RUN_ID' in os.environ:
             cmds = [
                 [f'export "IDF_PATH={idf_path}"'],
+                [f'export "ADF_PATH={adf_path}"'], #lwt added
+                [f'export "ADF_COMPS={adf_comps}"'],
                 ['cd', idf_path],
                 ['. ./export.sh'],
                 ['printenv']
             ]
         else:
             cmds = [
+                [f'export "ADF_PATH={adf_path}"'], #lwt added
+                [f'export "ADF_COMPS={adf_comps}"'],
                 [f'cd {idf_path}'],
                 [f'. ./export.sh'],
                 ['printenv']
@@ -887,6 +893,12 @@ def submodules():
     print('this might take a while...')
     env = {k: v for k, v in os.environ.items()}
     env['IDF_PATH'] = os.path.abspath(idf_path)
+    #lwt added
+    adf_path = 'lib/esp-adf'
+    env['ADF_PATH'] = os.path.abspath(adf_path)
+    env['ADF_COMPS'] = os.path.abspath(adf_path) + '/components'
+    print('lwt setting up ADF_PATH:', env['ADF_PATH'])
+    #lwt added end
 
     result, _ = spawn(cmds, spinner=True, env=env)
     if result != 0:
