@@ -1,3 +1,12 @@
+build step: 
+1. git clone -b main_adf --depth=1 https://github.com/liwentang12/lvgl_micropython_with_esp32_adf.git
+2. cd lvgl_micropython_4_esp32_adf
+3. git submodule update --init --depth=1
+4. cd lib/micropython && git apply ../../patchs4lib/micropython.patch
+5. cd ../../lib/esp-idf && git apply ../../patchs4lib/esp-idf.patch
+6. python3 make.py esp32 BOARD=ESP32_GENERIC_S3 DISPLAY=st7789 BOARD_VARIANT=SPIRAM_OCT --flash-size=16
+______________________________
+
 # LVGL binding for Micropython
 ______________________________
 
