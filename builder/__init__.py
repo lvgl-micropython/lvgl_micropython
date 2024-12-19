@@ -251,7 +251,8 @@ def generate_manifest(
     for file in io_expanders:
         if not os.path.exists(file):
             tmp_file = (
-                f'{script_dir}/api_drivers/common_api_drivers/io_expander/{file.lower()}'
+                f'{script_dir}/api_drivers/common_api_drivers'
+                f'/io_expander/{file.lower()}'
             )
 
             if not os.path.exists(tmp_file):
@@ -271,7 +272,8 @@ def generate_manifest(
     for file in indevs:
         if not os.path.exists(file):
             tmp_file = (
-                f'{script_dir}/api_drivers/common_api_drivers/indev/{file.lower()}.py'
+                f'{script_dir}/api_drivers/common_api_drivers'
+                f'/indev/{file.lower()}.py'
             )
 
             if not os.path.exists(tmp_file):
@@ -308,7 +310,8 @@ def generate_manifest(
     for file in displays:
         if not os.path.exists(file):
             tmp_file = (
-                f'{script_dir}/api_drivers/common_api_drivers/display/{file.lower()}'
+                f'{script_dir}/api_drivers/common_api_drivers'
+                f'/display/{file.lower()}'
             )
 
             if not os.path.exists(tmp_file):
@@ -369,7 +372,8 @@ def get_micropython():
     if pattern in data:
         data = data.replace(
             pattern,
-            '$(Q)cd $(TOP) && git submodule update --init --depth=1 $(GIT_SUBMODULES)'
+            '$(Q)cd $(TOP) && git submodule '
+            'update --init --depth=1 $(GIT_SUBMODULES)'
         )
         with open(mkrules_path, 'wb') as f:
             f.write(data.encode('utf-8'))
@@ -692,7 +696,7 @@ def mpy_cross():
 
 
 def build_manifest(
-    target, script_dir, lvgl_api, displays, indevs, frozen_manifest
+    target, script_dir, lvgl_api, displays, indevs, expanders, frozen_manifest
 ):
     update_mphalport(target)
     if target == 'teensy':
@@ -704,7 +708,7 @@ def build_manifest(
 
     generate_manifest(
         script_dir, lvgl_api, manifest_path,
-        displays, indevs, frozen_manifest
+        displays, indevs, expanders, frozen_manifest
     )
 
 

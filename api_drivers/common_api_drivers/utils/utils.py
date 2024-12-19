@@ -5,7 +5,7 @@ import ctypes
 
 # Calculate pointer size on current machine, and corresponding fmt
 
-ptr_size = ctypes.sizeof({'p': (ctypes.PTR, ctypes.VOID)})
+ptr_size = ctypes.sizeof({'p': (ctypes.PTR, ctypes.VOID)})  # NOQA
 fmt_options = {2: 'H', 4: 'L', 8: 'Q'}
 buf_fmt = fmt_options[ptr_size] if ptr_size in fmt_options else None
 
@@ -28,7 +28,7 @@ def aligned_buf(buf, alignment):
 
     """
 
-    p = lv.C_Pointer()
+    p = lv.C_Pointer()  # NOQA
     p.ptr_val = buf
 
     if not buf_fmt:
@@ -42,7 +42,6 @@ def aligned_buf(buf, alignment):
         return None
 
     addr += offset
-    p = lv.C_Pointer.__cast__(struct.pack(buf_fmt, addr))
+    p = lv.C_Pointer.__cast__(struct.pack(buf_fmt, addr))  # NOQA
 
     return p.ptr_val.__dereference__(len(buf) - offset)
-

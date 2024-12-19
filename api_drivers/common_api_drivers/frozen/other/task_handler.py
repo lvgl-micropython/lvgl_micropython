@@ -20,7 +20,7 @@ class _DefaultUserData(object):
 
 
 def _default_exception_hook(e):
-    sys.print_exception(e)
+    sys.print_exception(e)  # NOQA
     TaskHandler._current_instance.deinit()  # NOQA
 
 
@@ -101,7 +101,7 @@ class TaskHandler(object):
         try:
             self._scheduled -= 1
 
-            if lv._nesting.value == 0:
+            if lv._nesting.value == 0:  # NOQA
                 self._running = True
 
                 run_update = True
@@ -120,17 +120,17 @@ class TaskHandler(object):
                         ):
                             self.exception_hook(err)
                         else:
-                            sys.print_exception(err)
+                            sys.print_exception(err)  # NOQA
 
-                stop_time = time.ticks_ms()
+                stop_time = time.ticks_ms()  # NOQA
 
-                ticks_diff = time.ticks_diff(stop_time, self._start_time)
+                ticks_diff = time.ticks_diff(stop_time, self._start_time)  # NOQA
                 self._start_time = stop_time
                 lv.tick_inc(ticks_diff)
 
                 if run_update:
                     lv.task_handler()
-                    start_time = time.ticks_ms()
+                    start_time = time.ticks_ms()  # NOQA
 
                     for cb, evt, data in self._callbacks:
                         if not evt & TASK_HANDLER_FINISHED:
@@ -145,10 +145,10 @@ class TaskHandler(object):
                             ):
                                 self.exception_hook(err)
                             else:
-                                sys.print_exception(err)
+                                sys.print_exception(err)  # NOQA
 
-                    stop_time = time.ticks_ms()
-                    ticks_diff = time.ticks_diff(stop_time, start_time)
+                    stop_time = time.ticks_ms()  # NOQA
+                    ticks_diff = time.ticks_diff(stop_time, start_time)  # NOQA
                     lv.tick_inc(ticks_diff)
 
                 self._running = False

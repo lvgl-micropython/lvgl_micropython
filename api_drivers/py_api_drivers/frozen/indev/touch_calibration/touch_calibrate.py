@@ -6,30 +6,30 @@ import lcd_bus
 
 
 style = lv.style_t()
-style.init()
+style.init()  # NOQA
 
-style.set_bg_color(lv.color_hex(0x000000))
-style.set_bg_opa(255)
-style.set_border_opa(0)
-style.set_border_width(0)
-style.set_margin_bottom(0)
-style.set_margin_left(0)
-style.set_margin_right(0)
-style.set_margin_top(0)
+style.set_bg_color(lv.color_hex(0x000000))  # NOQA
+style.set_bg_opa(255)  # NOQA
+style.set_border_opa(0)  # NOQA
+style.set_border_width(0)  # NOQA
+style.set_margin_bottom(0)  # NOQA
+style.set_margin_left(0)  # NOQA
+style.set_margin_right(0)  # NOQA
+style.set_margin_top(0)  # NOQA
 # style.set_opa(0)
-style.set_outline_opa(0)
-style.set_outline_pad(0)
-style.set_outline_width(0)
-style.set_pad_left(0)
-style.set_pad_right(0)
-style.set_pad_top(0)
-style.set_pad_bottom(0)
-style.set_radius(0)
-style.set_shadow_offset_x(0)
-style.set_shadow_offset_y(0)
-style.set_shadow_opa(0)
-style.set_shadow_spread(0)
-style.set_shadow_width(0)
+style.set_outline_opa(0)  # NOQA
+style.set_outline_pad(0)  # NOQA
+style.set_outline_width(0)  # NOQA
+style.set_pad_left(0)  # NOQA
+style.set_pad_right(0)  # NOQA
+style.set_pad_top(0)  # NOQA
+style.set_pad_bottom(0)  # NOQA
+style.set_radius(0)  # NOQA
+style.set_shadow_offset_x(0)  # NOQA
+style.set_shadow_offset_y(0)  # NOQA
+style.set_shadow_opa(0)  # NOQA
+style.set_shadow_spread(0)  # NOQA
+style.set_shadow_width(0)  # NOQA
 
 
 def calibrate(indev, cal_data):
@@ -40,8 +40,8 @@ def calibrate(indev, cal_data):
     else:
         th_running = True
 
-    width = indev._orig_width
-    height = indev._orig_height
+    width = indev._orig_width  # NOQA
+    height = indev._orig_height  # NOQA
 
     coords = [
         [20, 20],  # upper left
@@ -61,73 +61,73 @@ def calibrate(indev, cal_data):
         dict(x=[], y=[])
     ]
 
-    old_scrn = lv.screen_active()
+    old_scrn = lv.screen_active()  # NOQA
 
     disp = old_scrn.get_display()
     rotation = disp.get_rotation()
 
-    if rotation != lv.DISPLAY_ROTATION._0:
-        disp.set_rotation(lv.DISPLAY_ROTATION._0)
+    if rotation != lv.DISPLAY_ROTATION._0:  # NOQA
+        disp.set_rotation(lv.DISPLAY_ROTATION._0)  # NOQA
 
     indev.enable(False)
 
-    new_scrn = lv.obj()
+    new_scrn = lv.obj()  # NOQA
     new_scrn.add_style(style, 0)
 
-    label = lv.label(new_scrn)
+    label = lv.label(new_scrn)  # NOQA
     label.set_text('Touch Calibration')
     label.center()
 
-    lv.screen_load_anim(new_scrn, lv.SCR_LOAD_ANIM.FADE_IN, 500, 0, False)
+    lv.screen_load_anim(new_scrn, lv.SCR_LOAD_ANIM.FADE_IN, 500, 0, False)  # NOQA
 
     count = 0
     while count < 200:
         count += 1
-        lcd_bus._pump_main_thread()
-        time.sleep_ms(5)
+        lcd_bus._pump_main_thread()  # NOQA
+        time.sleep_ms(5)  # NOQA
 
     label.delete()
     count = 0
     while count < 100:
         count += 1
-        lcd_bus._pump_main_thread()
-        time.sleep_ms(5)
+        lcd_bus._pump_main_thread()  # NOQA
+        time.sleep_ms(5)  # NOQA
 
-    target = lv.obj(new_scrn)
+    target = lv.obj(new_scrn)  # NOQA
     target.add_style(style, 0)
     target.set_size(20, 20)
     target.set_style_bg_color(lv.color_hex(0xFF0000), 0)
 
-    new_scrn.remove_flag(lv.obj.FLAG.CLICKABLE)
-    new_scrn.remove_flag(lv.obj.FLAG.CLICK_FOCUSABLE)
-    new_scrn.remove_flag(lv.obj.FLAG.CHECKABLE)
-    new_scrn.remove_flag(lv.obj.FLAG.SCROLLABLE)
+    new_scrn.remove_flag(lv.obj.FLAG.CLICKABLE)  # NOQA
+    new_scrn.remove_flag(lv.obj.FLAG.CLICK_FOCUSABLE)  # NOQA
+    new_scrn.remove_flag(lv.obj.FLAG.CHECKABLE)  # NOQA
+    new_scrn.remove_flag(lv.obj.FLAG.SCROLLABLE)  # NOQA
 
-    target.remove_flag(lv.obj.FLAG.CLICKABLE)
-    target.remove_flag(lv.obj.FLAG.CLICK_FOCUSABLE)
-    target.remove_flag(lv.obj.FLAG.CHECKABLE)
-    target.remove_flag(lv.obj.FLAG.SCROLLABLE)
+    target.remove_flag(lv.obj.FLAG.CLICKABLE)  # NOQA
+    target.remove_flag(lv.obj.FLAG.CLICK_FOCUSABLE)  # NOQA
+    target.remove_flag(lv.obj.FLAG.CHECKABLE)  # NOQA
+    target.remove_flag(lv.obj.FLAG.SCROLLABLE)  # NOQA
 
     for i in range(3):
         print('point', i + 1, 'of 3')
 
         target.set_pos(*coords[i])
-        lcd_bus._pump_main_thread()
+        lcd_bus._pump_main_thread()  # NOQA
 
-        time.sleep_ms(1000)
+        time.sleep_ms(1000)  # NOQA
 
         for j in range(8):
-            lcd_bus._pump_main_thread()
-            touch = indev._get_coords()
+            lcd_bus._pump_main_thread()  # NOQA
+            touch = indev._get_coords()  # NOQA
             if touch is not None:
                 state = touch[0]
             else:
                 state = 0
 
             while touch is None or not state:
-                time.sleep_ms(10)
-                lcd_bus._pump_main_thread()
-                touch = indev._get_coords()
+                time.sleep_ms(10)  # NOQA
+                lcd_bus._pump_main_thread()  # NOQA
+                touch = indev._get_coords()  # NOQA
 
                 if touch is not None:
                     state = touch[0]
@@ -225,17 +225,17 @@ def calibrate(indev, cal_data):
     else:
         res = True
 
-    lv.screen_load(old_scrn)
+    lv.screen_load(old_scrn)  # NOQA
     new_scrn.delete()
 
-    lcd_bus._pump_main_thread()
+    lcd_bus._pump_main_thread()  # NOQA
 
     if not th_running:
-        task_handler.TaskHandler._current_instance.deinit()
+        task_handler.TaskHandler._current_instance.deinit()  # NOQA
 
     indev.enable(True)
 
-    if rotation != lv.DISPLAY_ROTATION._0:
+    if rotation != lv.DISPLAY_ROTATION._0:  # NOQA
         disp.set_rotation(rotation)
 
     return res

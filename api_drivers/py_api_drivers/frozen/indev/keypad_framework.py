@@ -8,7 +8,7 @@ class KeypadDriver(_indev_base.IndevBase):
         if not lv.is_initialized():
             lv.init()
 
-        disp = lv.display_get_default()
+        disp = lv.display_get_default()  # NOQA
 
         if disp is None:
             raise RuntimeError(
@@ -19,7 +19,7 @@ class KeypadDriver(_indev_base.IndevBase):
 
         displays = display_driver_framework.DisplayDriver.get_displays()
         for display in displays:
-            if display._disp_drv == disp:
+            if display._disp_drv == disp:  # NOQA
                 self._py_disp_drv = display
                 break
         else:
@@ -31,15 +31,15 @@ class KeypadDriver(_indev_base.IndevBase):
         self._current_state = self.RELEASED
 
         indev_drv = lv.indev_create()
-        indev_drv.set_type(lv.INDEV_TYPE.KEYPAD)
-        indev_drv.set_read_cb(self._read)
-        indev_drv.set_driver_data(self)
-        indev_drv.set_display(disp)
-        indev_drv.enable(True)
+        indev_drv.set_type(lv.INDEV_TYPE.KEYPAD)  # NOQA
+        indev_drv.set_read_cb(self._read)  # NOQA
+        indev_drv.set_driver_data(self)  # NOQA
+        indev_drv.set_display(disp)  # NOQA
+        indev_drv.enable(True)  # NOQA
         self._indev_drv = indev_drv
 
         super().__init__()
-        self._set_type(lv.INDEV_TYPE.KEYPAD)
+        self._set_type(lv.INDEV_TYPE.KEYPAD)  # NOQA
 
     def _get_key(self):
         # this method needs to be overridden.
@@ -51,8 +51,8 @@ class KeypadDriver(_indev_base.IndevBase):
         key = self._get_key()
 
         if key is None:  # ignore no key
-            if self._current_state != lv.INDEV_STATE.RELEASED:
-                self._current_state = lv.INDEV_STATE.RELEASED
+            if self._current_state != lv.INDEV_STATE.RELEASED:  # NOQA
+                self._current_state = lv.INDEV_STATE.RELEASED  # NOQA
                 res = True
             else:
                 res = False
@@ -66,7 +66,7 @@ class KeypadDriver(_indev_base.IndevBase):
 
         self._last_key = key
 
-        if self._current_state == state == lv.INDEV_STATE.RELEASED:
+        if self._current_state == state == lv.INDEV_STATE.RELEASED:  # NOQA
             res = False
             data.continue_reading = False
         else:
@@ -81,86 +81,81 @@ class KeypadDriver(_indev_base.IndevBase):
         return res
 
     def get_type(self):
-        return self._indev_drv.get_type()
+        return self._indev_drv.get_type()  # NOQA
 
     def read(self):
-        self._indev_drv.read()
+        self._indev_drv.read()  # NOQA
 
     def send_event(self, code, param):
-        return self._indev_drv.send_event(code, param)
+        return self._indev_drv.send_event(code, param)  # NOQA
 
     def remove_event(self, index):
-        return self._indev_drv.remove_event(index)
+        return self._indev_drv.remove_event(index)  # NOQA
 
     def get_event_dsc(self, index):
-        return self._indev_drv.get_event_dsc(index)
+        return self._indev_drv.get_event_dsc(index)  # NOQA
 
     def get_event_count(self):
-        return self._indev_drv.get_event_count()
+        return self._indev_drv.get_event_count()  # NOQA
 
-    def add_event_cb(self, event_cb, filter, user_data):
-        self._indev_drv.add_event_cb(event_cb, filter, user_data)
+    def add_event_cb(self, event_cb, filter, user_data):  # NOQA
+        self._indev_drv.add_event_cb(event_cb, filter, user_data)  # NOQA
 
     def search_obj(self, point):
-        return self._indev_drv.search_obj(point)
+        return self._indev_drv.search_obj(point)  # NOQA
 
     def delete_read_timer(self):
-        self._indev_drv.delete_read_timer()
+        self._indev_drv.delete_read_timer()  # NOQA
 
     def get_read_timer(self):
-        return self._indev_drv.get_read_timer()
+        return self._indev_drv.get_read_timer()  # NOQA
 
     def get_active_obj(self):
-        return self._indev_drv.get_active_obj()
+        return self._indev_drv.get_active_obj()  # NOQA
 
     def wait_release(self):
-        self._indev_drv.wait_release()
+        self._indev_drv.wait_release()  # NOQA
 
     def get_vect(self, point):
-        self._indev_drv.get_vect(point)
+        self._indev_drv.get_vect(point)  # NOQA
 
     def get_scroll_obj(self):
-        return self._indev_drv.get_scroll_obj()
+        return self._indev_drv.get_scroll_obj()  # NOQA
 
     def get_scroll_dir(self):
-        return self._indev_drv.get_scroll_dir()
+        return self._indev_drv.get_scroll_dir()  # NOQA
 
     def get_gesture_dir(self):
-        return self._indev_drv.get_gesture_dir()
+        return self._indev_drv.get_gesture_dir()  # NOQA
 
     def get_point(self, point):
-        self._indev_drv.get_point(point)
+        self._indev_drv.get_point(point)  # NOQA
 
     def get_state(self):
-        return self._indev_drv.get_state()
+        return self._indev_drv.get_state()  # NOQA
 
     def enable(self, en):
-        self._indev_drv.enable(en)
+        self._indev_drv.enable(en)  # NOQA
 
     def get_group(self):
-        return self._indev_drv.get_group()
+        return self._indev_drv.get_group()  # NOQA
 
     def set_group(self, group):
-        self._indev_drv.set_group(group)
+        self._indev_drv.set_group(group)  # NOQA
 
     def set_cursor(self, cur_obj):
-        self._indev_drv.set_cursor(cur_obj)
+        self._indev_drv.set_cursor(cur_obj)  # NOQA
 
     def reset_long_press(self):
-        self._indev_drv.reset_long_press()
+        self._indev_drv.reset_long_press()  # NOQA
 
     def reset(self, obj):
-        self._indev_drv.reset(obj)
+        self._indev_drv.reset(obj)  # NOQA
 
     def get_disp(self):
         return self._disp_drv
 
     @staticmethod
     def active():
-        indev = lv.indev_active()
+        indev = lv.indev_active()  # NOQA
         return indev.get_driver_data()
-
-
-
-
-

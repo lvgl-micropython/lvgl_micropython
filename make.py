@@ -209,7 +209,8 @@ if __name__ == '__main__':
         import builder as mod
 
     extra_args, lv_cflags, board = mod.parse_args(extra_args, lv_cflags, board)
-    extra_args = mod.build_commands(target, extra_args, SCRIPT_DIR, lv_cflags, board)
+    extra_args = mod.build_commands(
+        target, extra_args, SCRIPT_DIR, lv_cflags, board)
 
     if clean:
         print('Cleaning build....')
@@ -229,7 +230,8 @@ if __name__ == '__main__':
     set_mp_version(target.lower())
 
     mod.build_manifest(
-        target, SCRIPT_DIR, lvgl_api, displays, indevs, expanders, frozen_manifest
+        target, SCRIPT_DIR, lvgl_api, displays,
+        indevs, expanders, frozen_manifest
     )
     create_lvgl_header()
 

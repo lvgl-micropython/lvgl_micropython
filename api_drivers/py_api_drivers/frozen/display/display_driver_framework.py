@@ -161,7 +161,10 @@ class DisplayDriver:
             elif not isinstance(backlight_pin, int):
                 self._backlight_pin = backlight_pin
             else:
-                self._backlight_pin = machine.Pin(backlight_pin, machine.Pin.OUT)
+                self._backlight_pin = machine.Pin(
+                    backlight_pin,
+                    machine.Pin.OUT
+                )
 
             if backlight_on_state == STATE_PWM:
                 if isinstance(self._backlight_pin, io_expander_framework.Pin):
@@ -525,7 +528,7 @@ class DisplayDriver:
             value = self._backlight_pin.duty_u16()  # NOQA
             return round(value / 65535 * 100.0, 2)
 
-        value = self._backlight_pin.value()
+        value = self._backlight_pin.value()  # NOQA
 
         if self._power_on_state:
             return value
@@ -539,9 +542,9 @@ class DisplayDriver:
         if self._backlight_on_state == STATE_PWM:
             self._backlight_pin.duty_u16(int(value / 100.0 * 65535.0))  # NOQA
         elif self._power_on_state:
-            self._backlight_pin.value(int(bool(value)))
+            self._backlight_pin.value(int(bool(value)))  # NOQA
         else:
-            self._backlight_pin.value(not int(bool(value)))
+            self._backlight_pin.value(not int(bool(value)))  # NOQA
 
     def _dummy_set_memory_location(self, *_, **__):  # NOQA
         return _RAMWR
@@ -586,7 +589,8 @@ class DisplayDriver:
         # what converts from the C_Array object the binding passes into a
         # memoryview object that can be passed to the bus drivers
         data_view = color_p.__dereference__(size)
-        self._data_bus.tx_color(cmd, data_view, x1, y1, x2, y2, self._rotation, self._disp_drv.flush_is_last())
+        self._data_bus.tx_color(cmd, data_view, x1, y1, x2, y2,
+                                self._rotation, self._disp_drv.flush_is_last())
 
     # we always register this callback no matter what. This is what tells LVGL
     # that the buffer is able to be written to. If this callback doesn't get

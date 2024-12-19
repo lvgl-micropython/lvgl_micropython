@@ -82,7 +82,6 @@ def build_commands(_, extra_args, __, lv_cflags, brd):
     return extra_args
 
 
-
 def build_manifest(
     target, script_dir, lvgl_api, displays, indevs, expanders, frozen_manifest
 ):

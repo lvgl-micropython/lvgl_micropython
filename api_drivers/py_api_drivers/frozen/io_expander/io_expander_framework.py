@@ -3,7 +3,7 @@ class Pin(object):
     IN = 0x00
     OUT = 0x01
 
-    def __init__(self, id, mode=-1, value=None):
+    def __init__(self, id, mode=-1, value=None):  # NOQA
         self._id = id
         self._mode = 0
         self._buf = bytearray(2)

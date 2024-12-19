@@ -798,7 +798,6 @@ def setup_idf_environ():
 
 
 def user_c_module():
-    'include(${CMAKE_CURRENT_LIST_DIR}/lcd_bus/micropython.cmake)'
 
     with open('ext_mod/esp32_components.cmake', 'r') as f:
         data = f.read().split('\n')
@@ -873,7 +872,9 @@ def submodules():
 
     env, cmds = setup_idf_environ()
 
-    wifi_lib = os.path.abspath(os.path.join(idf_path, 'components/esp_wifi/lib'))
+    wifi_lib = os.path.abspath(
+        os.path.join(idf_path, 'components/esp_wifi/lib')
+    )
     berkeley_db = os.path.abspath('lib/micropython/lib/berkeley-db-1.xx/README')
 
     if not os.path.exists(berkeley_db) or not os.path.exists(wifi_lib):
@@ -1324,7 +1325,8 @@ def compile(*args):  # NOQA
 
             for ver in ('3.8', '3.9', '3.10', '3.11', '3.12'):
                 python_path = (
-                    f'{espressif_path}/python_env/idf{IDF_VER[:-2]}_py{ver}_env/bin'
+                    f'{espressif_path}/python_env/'
+                    f'idf{IDF_VER[:-2]}_py{ver}_env/bin'
                 )
                 if os.path.exists(python_path):
                     break
@@ -1352,7 +1354,10 @@ def compile(*args):  # NOQA
                 bf = f'{full_file_path}{bf.strip()}'
                 bin_files.extend([f'0x{item.strip()}', bf])
 
-            old_bin_files = ['0x' + item.strip() for item in output.split('0x')[1:]]
+            old_bin_files = [
+                '0x' + item.strip()
+                for item in output.split('0x')[1:]
+            ]
             old_bin_files = ' '.join(old_bin_files)
 
             scrub_build_folder()

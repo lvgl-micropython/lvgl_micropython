@@ -1,5 +1,5 @@
 import struct
-import sys
+
 
 try:
     from esp32 import NVS  # NOQA

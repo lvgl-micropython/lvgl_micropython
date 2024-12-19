@@ -55,7 +55,13 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
 
 
 def build_manifest(
-    target, script_dir, lvgl_api, displays, indevs, expanders, frozen_manifest
+    target,
+    script_dir,
+    lvgl_api,
+    displays,
+    indevs,
+    expanders,
+    frozen_manifest
 ):
     update_mphalport(target)
     manifest_path = 'lib/micropython/ports/nrf/modules/manifest.py'
@@ -73,6 +79,7 @@ def force_clean(clean_mpy_cross):
         spawn(cross_clean)
 
     spawn(clean_cmd)
+
 
 def clean():
     force_clean(False)

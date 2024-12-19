@@ -30,9 +30,9 @@ class PointerDriver(_indev_base.IndevBase):
         self._indev_drv.enable(True)
 
     def enable_input_priority(self):
-        self._indev_drv.set_mode(lv.INDEV_MODE.EVENT)
+        self._indev_drv.set_mode(lv.INDEV_MODE.EVENT)  # NOQA
         self.__timer = lv.timer_create(self.__ip_callback, 33, None)  # NOQA
-        self.__timer.set_repeat_count(-1)
+        self.__timer.set_repeat_count(-1)  # NOQA
 
     def __ip_callback(self, _):
         self.read()
@@ -48,7 +48,7 @@ class PointerDriver(_indev_base.IndevBase):
     def calibrate(self):
         import touch_calibrate
 
-        if touch_calibrate.calibrate(self, self._cal):
+        if touch_calibrate.calibrate(self, self._cal):  # NOQA
             self._cal.save()
             return True
 
@@ -155,4 +155,3 @@ class PointerDriver(_indev_base.IndevBase):
 
     def reset_long_press(self):
         self._indev_drv.reset_long_press()
-

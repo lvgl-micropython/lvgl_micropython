@@ -1,5 +1,6 @@
 import sys
 import os
+import uuid
 from argparse import ArgumentParser
 from . import spawn
 from . import generate_manifest
@@ -41,7 +42,8 @@ variant = None
 
 LV_CFLAGS = ''
 
-def build_commands(_, extra_args, script_dir, lv_cflags, board):
+
+def build_commands(_, extra_args, __, lv_cflags, board):
     global variant
     global LV_CFLAGS
 
@@ -100,7 +102,15 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
 SCRIPT_PATH = ''
 
 
-def build_manifest(target, script_dir, lvgl_api, displays, indevs, expanders, frozen_manifest):
+def build_manifest(
+    target,
+    script_dir,
+    lvgl_api,
+    displays,
+    indevs,
+    expanders,
+    frozen_manifest
+):
     global SCRIPT_PATH
 
     SCRIPT_PATH = script_dir
@@ -109,7 +119,8 @@ def build_manifest(target, script_dir, lvgl_api, displays, indevs, expanders, fr
     
     manifest_path = 'lib/micropython/ports/windows/variants/manifest.py'
 
-    generate_manifest(script_dir, lvgl_api, manifest_path, displays, indevs, expanders, frozen_manifest)
+    generate_manifest(script_dir, lvgl_api, manifest_path, displays,
+                      indevs, expanders, frozen_manifest)
 
 
 def force_clean(clean_mpy_cross):
@@ -149,7 +160,8 @@ def build_sdl():
     cwd = os.getcwd()
     os.chdir(dst)
     cmd_ = [
-        f'cmake -DSDL_STATIC=ON -DSDL_SHARED=OFF -DCMAKE_BUILD_TYPE=Release {SCRIPT_PATH}/lib/SDL &&'
+        f'cmake -DSDL_STATIC=ON -DSDL_SHARED=OFF '
+        f'-DCMAKE_BUILD_TYPE=Release {SCRIPT_PATH}/lib/SDL &&'
         f'cmake --build . --config Release --parallel {os.cpu_count()}'
     ]
 
@@ -158,6 +170,7 @@ def build_sdl():
         sys.exit(res)
 
     os.chdir(cwd)
+
 
 portable_filter_path_templ = '''\
     <Filter Include="{p}">
@@ -185,13 +198,11 @@ portable_include_templ = '''\
     <ClInclude Include="{file_path}" />
 '''
 
-import uuid
 
 
 def compile(*args):  # NOQA
     main_path = 'lib/micropython/ports/unix/main.c'
     build_path = f'lib/micropython/ports/windows/build-{variant}'
-
 
     with open(main_path, 'rb') as f:
         main = f.read().decode('utf-8').split('\n')
@@ -219,25 +230,48 @@ def compile(*args):  # NOQA
     portable_filter_paths = [
         portable_filter_path_templ.format(guid=str(uuid.uuid4()), p=lvgl_path),
         portable_filter_path_templ.format(guid=str(uuid.uuid4()), p=lib_path),
-        portable_filter_path_templ.format(guid=str(uuid.uuid4()), p=lvgl_addon_include)
+        portable_filter_path_templ.format(
+            guid=str(uuid.uuid4()),
+            p=lvgl_addon_include
+        )
     ]
     portable_filter_includes = [
-        portable_filter_include_templ.format(p=lvgl_path, file_path=os.path.join(lvgl_path, 'lvgl.h')),
-        portable_filter_include_templ.format(p=lib_path, file_path=os.path.join(lib_path, 'lv_conf.h')),
-        portable_filter_include_templ.format(p=lvgl_addon_include, file_path=os.path.join(lvgl_addon_include, 'color_addons.h'))
+        portable_filter_include_templ.format(
+            p=lvgl_path,
+            file_path=os.path.join(lvgl_path, 'lvgl.h')
+        ),
+        portable_filter_include_templ.format(
+            p=lib_path,
+            file_path=os.path.join(lib_path, 'lv_conf.h')
+        ),
+        portable_filter_include_templ.format(
+            p=lvgl_addon_include,
+            file_path=os.path.join(lvgl_addon_include, 'color_addons.h')
+        )
     ]
 
     portable_filter_sources = [
-        portable_filter_source_templ.format(p=lvgl_addon_src, file_path=os.path.join(lvgl_addon_src, 'color_addons.c'))
+        portable_filter_source_templ.format(
+            p=lvgl_addon_src,
+            file_path=os.path.join(lvgl_addon_src, 'color_addons.c')
+        )
     ]
 
     portable_includes = [
-        portable_include_templ.format(file_path=os.path.join(lvgl_path, 'lvgl.h')),
-        portable_include_templ.format(file_path=os.path.join(lib_path, 'lv_conf.h')),
-        portable_include_templ.format(file_path=os.path.join(lvgl_addon_include, 'color_addons.h'))
+        portable_include_templ.format(
+            file_path=os.path.join(lvgl_path, 'lvgl.h')
+        ),
+        portable_include_templ.format(
+            file_path=os.path.join(lib_path, 'lv_conf.h')
+        ),
+        portable_include_templ.format(
+            file_path=os.path.join(lvgl_addon_include, 'color_addons.h')
+        )
     ]
     portable_sources = [
-        portable_source_templ.format(file_path=os.path.join(lvgl_addon_src, 'color_addons.c'))
+        portable_source_templ.format(
+            file_path=os.path.join(lvgl_addon_src, 'color_addons.c')
+        )
     ]
 
     def _iter_files(p):
@@ -251,14 +285,20 @@ def compile(*args):  # NOQA
                 _iter_files(file_path)
             elif file.endswith('.h'):
                 portable_filter_includes.append(
-                    portable_filter_include_templ.format(p=p, file_path=file_path)
+                    portable_filter_include_templ.format(
+                        p=p,
+                        file_path=file_path
+                    )
                 )
                 portable_includes.append(
                     portable_include_templ.format(file_path=file_path)
                 )
             elif file.endswith('.c'):
                 portable_filter_sources.append(
-                    portable_filter_source_templ.format(p=p, file_path=file_path)
+                    portable_filter_source_templ.format(
+                        p=p,
+                        file_path=file_path
+                    )
                 )
                 portable_sources.append(
                     portable_source_templ.format(file_path=file_path)
@@ -267,14 +307,16 @@ def compile(*args):  # NOQA
     _iter_files(lvgl_src_path)
 
     def _write_file(p, **kwargs):
-        with open(p, 'r') as f:
-            data = f.read()
+        with open(p, 'r') as fle:
+            data = fle.read()
 
         if f'{list(kwargs.keys())[0]}' in data:
-            with open(p, 'w') as f:
-                f.write(data.format(**kwargs))
+            with open(p, 'w') as fle:
+                fle.write(data.format(**kwargs))
 
-    lvgl_portable_vcxitems_filters_path = os.path.join(msbuild_lvgl_path, 'lvgl_portable.vcxitems.filters')
+    lvgl_portable_vcxitems_filters_path = (
+        os.path.join(msbuild_lvgl_path, 'lvgl_portable.vcxitems.filters')
+    )
     _write_file(
         lvgl_portable_vcxitems_filters_path,
         sources=''.join(portable_filter_sources),
@@ -282,29 +324,41 @@ def compile(*args):  # NOQA
         paths=''.join(portable_filter_paths)
     )
 
-    lvgl_portable_vcxitems_path = os.path.join(msbuild_lvgl_path, 'lvgl_portable.vcxitems')
+    lvgl_portable_vcxitems_path = (
+        os.path.join(msbuild_lvgl_path, 'lvgl_portable.vcxitems')
+    )
     _write_file(
         lvgl_portable_vcxitems_path,
         sources=''.join(portable_sources),
         includes=''.join(portable_includes)
     )
 
-    lvgl_windows_props_path = os.path.join(msbuild_lvgl_path, 'lvgl_windows.props')
+    lvgl_windows_props_path = (
+        os.path.join(msbuild_lvgl_path, 'lvgl_windows.props')
+    )
     _write_file(
         lvgl_windows_props_path,
         LVGL_PATH=lvgl_path
     )
 
-    lvgl_windows_vcxproj_path = os.path.join(msbuild_lvgl_path, 'lvgl_windows.vcxproj')
+    lvgl_windows_vcxproj_path = (
+        os.path.join(msbuild_lvgl_path, 'lvgl_windows.vcxproj')
+    )
     _write_file(
         lvgl_windows_vcxproj_path,
-        includes=portable_include_templ.format(file_path=os.path.join(lib_path, 'lv_conf.h'))
+        includes=portable_include_templ.format(
+            file_path=os.path.join(lib_path, 'lv_conf.h')
+        )
     )
 
-    lvgl_windows_vcxproj_filters_path = os.path.join(msbuild_lvgl_path, 'lvgl_windows.vcxproj.filters')
+    lvgl_windows_vcxproj_filters_path = (
+        os.path.join(msbuild_lvgl_path, 'lvgl_windows.vcxproj.filters')
+    )
     _write_file(
         lvgl_windows_vcxproj_filters_path,
-        includes=portable_include_templ.format(file_path=os.path.join(lib_path, 'lv_conf.h'))
+        includes=portable_include_templ.format(
+            file_path=os.path.join(lib_path, 'lv_conf.h')
+        )
     )
 
     lcd_bus_path = os.path.join(ext_mod_path, 'lcd_bus')
@@ -349,11 +403,17 @@ def compile(*args):  # NOQA
         dta = f.read()
 
     if include_paths not in dta:
-        dta = dta.replace('$(PyIncDirs);%(AdditionalIncludeDirectories)', include_paths)
+        dta = dta.replace(
+            '$(PyIncDirs);%(AdditionalIncludeDirectories)',
+            include_paths
+        )
 
     macro = '<PreprocessorDefinitions>MP_PORT_UNIX;_USE_MATH_DEFINES;'
     if macro not in dta:
-        dta = dta.replace('<PreprocessorDefinitions>_USE_MATH_DEFINES;', macro)
+        dta = dta.replace(
+            '<PreprocessorDefinitions>_USE_MATH_DEFINES;',
+            macro
+        )
 
     link = '<AdditionalDependencies>sdl2.lib;lvgl_windows.lib;Bcrypt.lib;'
     if link not in dta:
@@ -362,15 +422,24 @@ def compile(*args):  # NOQA
     with open(common_props_path, 'w') as f:
         f.write(dta)
 
-    micropython_vcxproj_path = 'lib/micropython/ports/wwindows/micropython.vcxproj'
+    micropython_vcxproj_path = (
+        'lib/micropython/ports/wwindows/micropython.vcxproj'
+    )
     with open(micropython_vcxproj_path, 'r') as f:
         dta = f.read()
 
     if includes not in dta:
-        dta = dta.replace(r'    <ClInclude Include="$(PyBaseDir)ports\windows\msvc\*.h" />', includes)
+        dta = dta.replace(
+            r'    <ClInclude Include="$(PyBaseDir)ports'
+            r'\windows\msvc\*.h" />',
+            includes
+        )
 
     if sources not in dta:
-        dta = dta.replace(r'    <ClCompile Include="$(PyVariantDir)*.c" />', sources)
+        dta = dta.replace(
+            r'    <ClCompile Include="$(PyVariantDir)*.c" />',
+            sources
+        )
 
     with open(micropython_vcxproj_path, 'w') as f:
         f.write(dta)
@@ -421,16 +490,20 @@ def compile(*args):  # NOQA
     #     with open(mpconfigvariant_common_path, 'w') as f:
     #         f.write(mpconfigvariant_common)
     #
-    # if '#define MICROPY_SCHEDULER_DEPTH              (128)' not in mpconfigvariant_common:
+    # if '#define MICROPY_SCHEDULER_DEPTH
+    # (128)' not in mpconfigvariant_common:
     #     mpconfigvariant_common += '\n\n'
-    #     mpconfigvariant_common += '#define MICROPY_SCHEDULER_DEPTH              (128)\n'
+    #     mpconfigvariant_common +=
+    #     '#define MICROPY_SCHEDULER_DEPTH              (128)\n'
     #
     #     with open(mpconfigvariant_common_path, 'w') as f:
     #         f.write(mpconfigvariant_common)
     #
-    # if '#define MICROPY_STACK_CHECK              (0)' not in mpconfigvariant_common:
+    # if '#define MICROPY_STACK_CHECK
+    # (0)' not in mpconfigvariant_common:
     #     mpconfigvariant_common += '\n'
-    #     mpconfigvariant_common += '#define MICROPY_STACK_CHECK              (0)\n'
+    #     mpconfigvariant_common +=
+    #     '#define MICROPY_STACK_CHECK              (0)\n'
     #
     #     with open(mpconfigvariant_common_path, 'w') as f:
     #         f.write(mpconfigvariant_common)

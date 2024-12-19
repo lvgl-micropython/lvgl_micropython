@@ -26,7 +26,7 @@ class Pin(io_expander_framework.Pin):
 
         cls._device = device
 
-    def __init__(self, id, mode=-1, value=None):
+    def __init__(self, id, mode=-1, value=None):  # NOQA
         if Pin._device is None:
             raise RuntimeError('The expander device has not been set')
 

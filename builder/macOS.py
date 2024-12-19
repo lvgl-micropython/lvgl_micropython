@@ -1,5 +1,4 @@
 import os
-import shutil
 import sys
 from .unix import (
     parse_args as _parse_args,
@@ -7,7 +6,6 @@ from .unix import (
     build_manifest as _build_manifest,
     force_clean as _force_clean,
     clean as _clean,
-    submodules as _submodules,
     compile as _compile,
     mpy_cross as _mpy_cross
 )
@@ -30,8 +28,17 @@ def build_commands(not_sure, extra_args, script_dir, lv_cflags, board):
     return _build_commands(not_sure, extra_args, script_dir, lv_cflags, board)
 
 
-def build_manifest(not_sure, script_dir, lvgl_api, displays, indevs, expanders, frozen_manifest):
-    _build_manifest(not_sure, script_dir, lvgl_api, displays, indevs, expanders, frozen_manifest)
+def build_manifest(
+    target,
+    script_dir,
+    lvgl_api,
+    displays,
+    indevs,
+    expanders,
+    frozen_manifest
+):
+    _build_manifest(target, script_dir, lvgl_api, displays,
+                    indevs, expanders, frozen_manifest)
 
 
 def clean():
@@ -42,7 +49,7 @@ def force_clean(clean_mpy_cross):
     _force_clean(clean_mpy_cross)
 
 
-def build_sdl(addl_commands):
+def build_sdl(_):
     pass
 
 
@@ -65,5 +72,3 @@ def compile(*args):  # NOQA
 
 def mpy_cross():
     _mpy_cross()
-
-

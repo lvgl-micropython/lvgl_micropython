@@ -18,16 +18,19 @@ class I2C(object):
             else:
                 class Lock(object):
 
-                    def acquire(self):
+                    @staticmethod
+                    def acquire():
                         pass
 
-                    def release(self):
+                    @staticmethod
+                    def release():
                         pass
 
-                    def is_locked(self):
+                    @staticmethod
+                    def is_locked():
                         return False
 
-                self._lock = Lock()
+                self._lock = Lock
 
         def __enter__(self):
             self._lock.acquire()
@@ -67,7 +70,8 @@ class I2C(object):
             self._bus.writevto(addr, vector, stop)
 
         def readfrom_mem(self, addr, memaddr, nbytes, addrsize=8):
-            return self._bus.readfrom_mem(addr, memaddr, nbytes, addrsize=addrsize)
+            return self._bus.readfrom_mem(addr, memaddr,
+                                          nbytes, addrsize=addrsize)
 
         def readfrom_mem_into(self, addr, memaddr, buf, addrsize=8):
             self._bus.readfrom_mem_into(addr, memaddr, buf, addrsize=addrsize)
@@ -126,4 +130,3 @@ class I2C(object):
 
         def write(self, buf):
             self._bus.writeto(self.dev_id, buf)
-

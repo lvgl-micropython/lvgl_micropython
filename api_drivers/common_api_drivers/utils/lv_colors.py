@@ -41,4 +41,3 @@ class _LV_COLORS:
             return LV_COLOR_MAKE(rgb=mapping[item])
 
         raise AttributeError(item)
-
