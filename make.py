@@ -75,8 +75,8 @@ argParser.add_argument(
     dest='displays',
     help=(
         'display name or path (absolute) to display driver. '
-        'Display name is the name of the source file under '
-        'driver/display (without the ".py")'
+        'Display name is the name of the directory under '
+        'api_drivers/common_api_drivers/display'
     ),
     action='append',
     default=[]
@@ -86,9 +86,21 @@ argParser.add_argument(
     'INDEV',
     dest='indevs',
     help=(
-        'indev device name or path (absolue) to indev driver. '
+        'indev ic model or path (absolue) to indev driver. '
         'Indev name is the name of the source file under '
-        'driver/indev (without the ".py")'
+        'api_drivers/common_api_drivers/indev (without the ".py")'
+    ),
+    action='append',
+    default=[]
+)
+
+argParser.add_argument(
+    'EXPANDER',
+    dest='expanders',
+    help=(
+        'io expander ic model or path (absolue) to an io expander driver. '
+        'the model is the name of the source file under '
+        'api_drivers/common_api_drivers/io_expander (without the ".py")'
     ),
     action='append',
     default=[]
@@ -102,6 +114,7 @@ board = args2.board
 frozen_manifest = args2.frozen_manifest
 displays = args2.displays
 indevs = args2.indevs
+expanders = args2.expanders
 
 
 if lv_cflags is None:
@@ -216,7 +229,7 @@ if __name__ == '__main__':
     set_mp_version(target.lower())
 
     mod.build_manifest(
-        target, SCRIPT_DIR, lvgl_api, displays, indevs, frozen_manifest
+        target, SCRIPT_DIR, lvgl_api, displays, indevs, expanders, frozen_manifest
     )
     create_lvgl_header()
 

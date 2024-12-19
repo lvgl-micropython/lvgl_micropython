@@ -100,7 +100,7 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
 SCRIPT_PATH = ''
 
 
-def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manifest):
+def build_manifest(target, script_dir, lvgl_api, displays, indevs, expanders, frozen_manifest):
     global SCRIPT_PATH
 
     SCRIPT_PATH = script_dir
@@ -109,7 +109,7 @@ def build_manifest(target, script_dir, lvgl_api, displays, indevs, frozen_manife
     
     manifest_path = 'lib/micropython/ports/windows/variants/manifest.py'
 
-    generate_manifest(script_dir, lvgl_api, manifest_path, displays, indevs, frozen_manifest)
+    generate_manifest(script_dir, lvgl_api, manifest_path, displays, indevs, expanders, frozen_manifest)
 
 
 def force_clean(clean_mpy_cross):

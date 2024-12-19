@@ -582,7 +582,7 @@ set_displays = []
 
 
 def build_manifest(
-    target, script_dir, lvgl_api, displays, indevs, frozen_manifest
+    target, script_dir, lvgl_api, displays, indevs, expanders, frozen_manifest
 ):
     _update_mphalport(target)
 
@@ -602,7 +602,7 @@ def build_manifest(
 
     set_displays.extend(generate_manifest(
         script_dir, lvgl_api, manifest_path,
-        displays, indevs, frozen_manifest,
+        displays, indevs, expanders, frozen_manifest,
         f'{script_dir}/api_drivers/common_api_drivers/frozen/other/spi3wire.py'
     ))
 
@@ -809,35 +809,14 @@ def user_c_module():
 
     data.append('')
 
-    if user_c_modules:
-        for module in user_c_modules:
-            data.append(f'include({module})')
+    for module in user_c_modules:
+        data.append(f'include({module})')
 
     with open('ext_mod/esp32_components.cmake', 'w') as f:
         f.write('\n'.join(data))
 
 
 def add_components(env, cmds):
-    # if a user adds a user_c_module they will be able to
-    # add any includes needed for a component that was downloaded from the
-    # component registry by using this code.
-
-    # set(USER_MOD_INCLUDES ${CMAKE_CURRENT_LIST_DIR})
-    #
-    # idf_component_get_property(ESP_COMP_INCLUDES comp_name INCLUDE_DIRS)
-    # idf_component_get_property(ESP_COMP_PRIV_INCLUDES comp_name PRIV_INCLUDE_DIRS)
-    # idf_component_get_property(ESP_COMP_DIR comp_name COMPONENT_DIR)
-    #
-    # if(ESP_COMP_INCLUDES)
-    #     list(TRANSFORM ESP_COMP_INCLUDES PREPEND ${ESP_COMP_DIR}/)
-    #     list(APPEND USER_MOD_INCLUDES ${ESP_COMP_INCLUDES})
-    # endif()
-    #
-    # if(ESP_COMP_PRIV_INCLUDES)
-    #     list(TRANSFORM ESP_COMP_PRIV_INCLUDES PREPEND ${ESP_COMP_DIR}/)
-    #     list(APPEND USER_MOD_INCLUDES ${ESP_COMP_PRIV_INCLUDES})
-    # endif()
-
     comp_names = []
     comps = []
 
@@ -1235,6 +1214,7 @@ def compile(*args):  # NOQA
 
     env, cmds = setup_idf_environ()
     add_components(env, cmds[:])
+    user_c_module()
 
     if ccache:
         env['IDF_CCACHE_ENABLE'] = '1'

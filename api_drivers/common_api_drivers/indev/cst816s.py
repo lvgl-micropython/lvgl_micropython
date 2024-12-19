@@ -179,10 +179,12 @@ class CST816S(pointer_framework.PointerDriver):
 
         self._device = device
 
-        if reset_pin is None:
-            self._reset_pin = None
+        if not isinstance(reset_pin, int):
+            self._reset_pin = reset_pin
         else:
             self._reset_pin = machine.Pin(reset_pin, machine.Pin.OUT)
+
+        if self._reset_pin:
             self._reset_pin.value(1)
 
         self._read_reg(_ChipID)

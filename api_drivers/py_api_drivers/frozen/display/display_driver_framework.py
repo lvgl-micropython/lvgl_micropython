@@ -7,6 +7,8 @@ from micropython import const  # NOQA
 
 import lvgl as lv  # NOQA
 import lcd_bus
+import io_expander_framework
+
 
 try:
     micropython.alloc_emergency_exception_buf(256)  # NOQA
@@ -156,14 +158,25 @@ class DisplayDriver:
 
             if backlight_pin is None:
                 self._backlight_pin = None
-            elif backlight_on_state == STATE_PWM:
-                pin = machine.Pin(backlight_pin, machine.Pin.OUT)
-                self._backlight_pin = machine.PWM(pin, freq=38000)
+            elif not isinstance(backlight_pin, int):
+                self._backlight_pin = backlight_pin
             else:
-                self._backlight_pin = (
-                    machine.Pin(backlight_pin, machine.Pin.OUT)
-                )
+                self._backlight_pin = machine.Pin(backlight_pin, machine.Pin.OUT)
+
+            if backlight_on_state == STATE_PWM:
+                if isinstance(self._backlight_pin, io_expander_framework.Pin):
+                    backlight_on_state = STATE_HIGH
+                else:
+                    self._backlight_pin = machine.PWM(
+                        self._backlight_pin, freq=38000)
+
+            if (
+                backlight_on_state != STATE_PWM and
+                self._backlight_pin is not None
+            ):
                 self._backlight_pin.value(not backlight_on_state)
+
+            self._backlight_on_state = backlight_on_state
 
             self._data_bus = data_bus
             self._disp_drv = lv.display_create(display_width, display_height)  # NOQA

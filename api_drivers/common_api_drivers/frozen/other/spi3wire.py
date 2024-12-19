@@ -39,13 +39,17 @@ class Spi3Wire:
 
         self._cs_active_high = cs_active_high
 
-        if cs > 31:
-            self._cs_enable_reg = _GPIO_ENABLE1_W1TC_REG
-            cs -= 32
-        else:
-            self._cs_enable_reg = _GPIO_ENABLE_W1TC_REG
+        if isinstance(cs, int):
+            if cs > 31:
+                self._cs_enable_reg = _GPIO_ENABLE1_W1TC_REG
+                cs -= 32
+            else:
+                self._cs_enable_reg = _GPIO_ENABLE_W1TC_REG
 
-        self._cs_mask = 1 << cs
+            self._cs_mask = 1 << cs
+        else:
+            self._cs_enable_reg = None
+            self._cs_mask = None
 
         if miso > 31:
             self._miso_enable_reg = _GPIO_ENABLE1_W1TC_REG
@@ -75,7 +79,11 @@ class Spi3Wire:
 
         self._miso_pin = machine.Pin(self._miso_pin_num, machine.Pin.OUT)
         self._sck_pin = machine.Pin(self._sck_pin_num, machine.Pin.OUT)
-        self._cs_pin = machine.Pin(self._cs_pin_num, machine.Pin.OUT)
+
+        if isinstance(self._cs_pin_num, int):
+            self._cs_pin = machine.Pin(self._cs_pin_num, machine.Pin.OUT)
+        else:
+            self._cs_pin = self._cs_pin_num
 
     @micropython.viper
     def __deinit_sck(self):
@@ -109,10 +117,13 @@ class Spi3Wire:
             self._miso_pin = None
             self.__deinit_miso()
 
-        if self._cs_pin is not None:
+        if isinstance(self._cs_pin, machine.Pin):
             del self._cs_pin
             self._cs_pin = None
             self.__deinit_cs()
+        else:
+            del self._cs_pin
+            self._cs_pin = None
 
     def __senddata(self, data, num_bits):
 

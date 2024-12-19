@@ -113,7 +113,7 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
 
 
 def build_manifest(
-    _, script_dir, lvgl_api, displays, indevs, frozen_manifest
+    _, script_dir, lvgl_api, displays, indevs, expanders, frozen_manifest
 ):
     global SCRIPT_PATH
 
@@ -125,7 +125,7 @@ def build_manifest(
 
     generate_manifest(
         script_dir, lvgl_api, manifest_path, displays,
-        indevs, frozen_manifest
+        indevs, expanders, frozen_manifest
     )
 
 

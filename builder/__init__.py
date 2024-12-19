@@ -191,7 +191,7 @@ def update_mphalport(target):
 
 def generate_manifest(
     script_dir, lvgl_api, manifest_path, displays,
-    indevs, frozen_manifest, *addl_manifest_files
+    indevs, io_expanders, frozen_manifest, *addl_manifest_files
 ):
     addl_manifest_files = list(addl_manifest_files)
 
@@ -221,11 +221,9 @@ def generate_manifest(
         f'{api_path}/frozen/indev/keypad_framework.py',
         f'{api_path}/frozen/indev/pointer_framework.py',
         f'{api_path}/fs_driver.py',
+        f'{api_path}/frozen/io_expander/io_expander_framework.py',
         f'{script_dir}/api_drivers/common_api_drivers/frozen/other/i2c.py',
-        (
-            f'{script_dir}/api_drivers/common_api_drivers/'
-            f'frozen/other/io_expander_framework.py'
-        ),
+
         (
             f'{script_dir}/api_drivers/common_api_drivers/'
             f'frozen/other/task_handler.py'
@@ -249,6 +247,26 @@ def generate_manifest(
         file_path, file_name = os.path.split(file)
         entry = f"freeze('{file_path}', '{file_name}')"
         manifest_files.append(entry)
+
+    for file in io_expanders:
+        if not os.path.exists(file):
+            tmp_file = (
+                f'{script_dir}/api_drivers/common_api_drivers/io_expander/{file.lower()}'
+            )
+
+            if not os.path.exists(tmp_file):
+                raise RuntimeError(f'IO Expander not found "{file}"')
+
+            print(tmp_file)
+
+            file_path, file_name = os.path.split(tmp_file)
+            entry = f"freeze('{file_path}', '{file_name}')"
+            manifest_files.append(entry)
+        else:
+            print(file)
+            file_path, file_name = os.path.split(file)
+            entry = f"freeze('{file_path}', '{file_name}')"
+            manifest_files.append(entry)
 
     for file in indevs:
         if not os.path.exists(file):

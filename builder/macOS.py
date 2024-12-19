@@ -30,8 +30,8 @@ def build_commands(not_sure, extra_args, script_dir, lv_cflags, board):
     return _build_commands(not_sure, extra_args, script_dir, lv_cflags, board)
 
 
-def build_manifest(not_sure, script_dir, lvgl_api, displays, indevs, frozen_manifest):
-    _build_manifest(not_sure, script_dir, lvgl_api, displays, indevs, frozen_manifest)
+def build_manifest(not_sure, script_dir, lvgl_api, displays, indevs, expanders, frozen_manifest):
+    _build_manifest(not_sure, script_dir, lvgl_api, displays, indevs, expanders, frozen_manifest)
 
 
 def clean():

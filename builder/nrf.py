@@ -55,14 +55,14 @@ def build_commands(_, extra_args, script_dir, lv_cflags, board):
 
 
 def build_manifest(
-    target, script_dir, lvgl_api, displays, indevs, frozen_manifest
+    target, script_dir, lvgl_api, displays, indevs, expanders, frozen_manifest
 ):
     update_mphalport(target)
     manifest_path = 'lib/micropython/ports/nrf/modules/manifest.py'
 
     generate_manifest(
         script_dir, lvgl_api, manifest_path,
-        displays, indevs, frozen_manifest
+        displays, indevs, expanders, frozen_manifest
     )
 
 
