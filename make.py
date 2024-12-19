@@ -28,7 +28,7 @@ argParser.add_argument(
 args1, extra_args = argParser.parse_known_args(sys.argv[1:])
 target = args1.target[0]
 
-argParser = ArgumentParser(prefix_chars='mscLBFDIV')
+argParser = ArgumentParser(prefix_chars='mscLBFDIVE')
 
 argParser.add_argument(
     'clean',
