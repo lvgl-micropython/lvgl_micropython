@@ -3,6 +3,8 @@
 #include "lcd_types.h"
 #include "modlcd_bus.h"
 #include "i2c_bus.h"
+#include "rotation.h"
+#include "bus_task.h"
 
 // esp-idf includes
 #include "esp_lcd_panel_io.h"
@@ -19,8 +21,53 @@
 
 
 mp_lcd_err_t i2c_del(mp_obj_t obj);
-mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
+mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits, bool sw_rotation);
 mp_lcd_err_t i2c_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
+mp_lcd_err_t i2c_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size, bool is_flush, bool last_flush_cmd);
+
+
+static bool i2c_bus_trans_done_cb(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
+{
+    LCD_UNUSED(panel_io);
+
+    mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)user_ctx;
+    bus_event_set_from_isr(&self->rotation->task.swap_bufs);
+    return false;
+}
+
+
+static mp_lcd_err_t i2c_rotation_init_func(void *self_in)
+{
+    mp_lcd_i2c_bus_obj_t *self = (mp_lcd_i2c_bus_obj_t *)self_in;
+
+    self->panel_io_config.on_color_trans_done = &i2c_bus_trans_done_cb;
+
+    rotation_t *rotation = self->rotation;
+    rotation_init_err_t *init_err = &rotation->init_err;
+    rotation_task_t *task = &rotation->task;
+
+
+    init_err->code = i2c_param_config(self->host, &self->bus_config);
+    if (init_err->code != LCD_OK) {
+        init_err->err_msg = MP_ERROR_TEXT("%d(i2c_param_config)");
+        bus_lock_release(&task->init_lock);
+    } else {
+        init_err->code = i2c_driver_install(self->host, I2C_MODE_MASTER, 0, 0, 0);
+        if (init_err->code != LCD_OK) {
+            init_err->err_msg = MP_ERROR_TEXT("%d(i2c_driver_install)");
+            bus_lock_release(&task->init_lock);
+        } else {
+            init_err->code = esp_lcd_new_panel_io_i2c(self->bus_handle , &self->panel_io_config, &self->panel_io_handle.panel_io);
+            if (init_err->code != LCD_OK) {
+                init_err->err_msg = MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_i2c)");
+                bus_lock_release(&task->init_lock);
+            }
+        }
+    }
+
+    return init_err->code;
+}
+
 
 
 static mp_obj_t mp_lcd_i2c_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
@@ -81,7 +128,6 @@ static mp_obj_t mp_lcd_i2c_bus_make_new(const mp_obj_type_t *type, size_t n_args
     self->bus_config.clk_flags = I2C_SCLK_SRC_FLAG_FOR_NOMAL;
 
     self->panel_io_config.dev_addr = (uint32_t)args[ARG_addr].u_int;
-    self->panel_io_config.on_color_trans_done = bus_trans_done_cb;
     self->panel_io_config.user_ctx = self;
     self->panel_io_config.control_phase_bytes = (size_t)args[ARG_control_phase_bytes].u_int;
     self->panel_io_config.dc_bit_offset = (unsigned int)args[ARG_dc_bit_offset].u_int;
@@ -91,6 +137,7 @@ static mp_obj_t mp_lcd_i2c_bus_make_new(const mp_obj_type_t *type, size_t n_args
     self->panel_io_handle.del = &i2c_del;
     self->panel_io_handle.init = &i2c_init;
     self->panel_io_handle.get_lane_count = &i2c_get_lane_count;
+    self->panel_io_handle.tx_param = &i2c_tx_param;
 
     return MP_OBJ_FROM_PTR(self);
 }
@@ -113,7 +160,7 @@ mp_lcd_err_t i2c_del(mp_obj_t obj)
 }
 
 
-mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
+mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits, bool sw_rotation)
 {
     mp_lcd_i2c_bus_obj_t *self = (mp_lcd_i2c_bus_obj_t *)obj;
 
@@ -126,22 +173,69 @@ mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
     self->panel_io_config.lcd_cmd_bits = (int)cmd_bits;
     self->panel_io_config.lcd_param_bits = (int)param_bits;
 
-    mp_lcd_err_t ret = i2c_param_config(self->host, &self->bus_config);
-    if (ret != 0) {
-        mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(i2c_param_config)"), ret);
+    esp_err_t ret;
+
+        if (sw_rotation) {
+            self->rotation = (rotation_t *)malloc(sizeof(rotation_t));
+            self->rotation->init_func = &i2c_rotation_init_func;
+
+            rotation_task_start(self);
+            ret = self->rotation->init_err.code;
+
+            if (ret != LCD_OK) {
+                mp_raise_msg_varg(&mp_type_ValueError, self->rotation->init_err.msg, self->rotation->init_err.code);
+            }
+
+        } else {
+            self->panel_io_config.on_color_trans_done = &bus_trans_done_cb;
+
+            ret = i2c_param_config(self->host, &self->bus_config);
+            if (ret != 0) {
+                mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(i2c_param_config)"), ret);
+            }
+
+            ret = i2c_driver_install(self->host, I2C_MODE_MASTER, 0, 0, 0);
+            if (ret != 0) {
+                mp_raise_msg_varg(&mp_type_OSError, MP_ERROR_TEXT("%d(i2c_driver_install)"), ret);
+            }
+
+            ret = esp_lcd_new_panel_io_i2c(self->bus_handle , &self->panel_io_config, &self->panel_io_handle.panel_io);
+            if (ret != 0) {
+                mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_i2c)"), ret);
+            }
+        }
+
+    return ret;
+}
+
+mp_lcd_err_t i2c_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size, bool is_flush, bool last_flush_cmd)
+{
+    mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
+
+    mp_lcd_err_t ret;
+
+    if (self->rotation == NULL || !is_flush) {
+        LCD_UNUSED(last_flush_cmd);
+        ret = esp_lcd_panel_io_tx_param(self->panel_io_handle.panel_io, lcd_cmd, param, param_size);
+    } else {
+        bus_lock_acquire(&self->rotation->task.tx_param_lock);
+
+        if (self->rotation->data.tx_param_count == 24) {
+            bus_lock_release(&self->rotation->task.tx_param_lock);
+            mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("tx_parameter overflow."));
+        } else {
+            uint8_t tx_param_count = self->rotation->data.tx_param_count;
+
+            self->rotation->data.param_cmd[tx_param_count] = lcd_cmd;
+            self->rotation->data.param[tx_param_count] = param;
+            self->rotation->data.param_size[tx_param_count] = param_size;
+            self->rotation->data.param_last_cmd[tx_param_count] = last_flush_cmd;
+            self->rotation->data.tx_param_count++;
+
+            bus_lock_release(&self->rotation->task.tx_param_lock);
+        }
+        ret = LCD_OK;
     }
-
-    ret = i2c_driver_install(self->host, I2C_MODE_MASTER, 0, 0, 0);
-    if (ret != 0) {
-        mp_raise_msg_varg(&mp_type_OSError, MP_ERROR_TEXT("%d(i2c_driver_install)"), ret);
-    }
-
-    ret = esp_lcd_new_panel_io_i2c(self->bus_handle , &self->panel_io_config, &self->panel_io_handle.panel_io);
-
-    if (ret != 0) {
-        mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_i2c)"), ret);
-    }
-
     return ret;
 }
 

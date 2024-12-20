@@ -15,7 +15,8 @@ if(ESP_PLATFORM)
         ${CMAKE_CURRENT_LIST_DIR}/esp32_src/spi_bus.c
         ${CMAKE_CURRENT_LIST_DIR}/esp32_src/i80_bus.c
         ${CMAKE_CURRENT_LIST_DIR}/esp32_src/rgb_bus.c
-        ${CMAKE_CURRENT_LIST_DIR}/esp32_src/rgb_bus_rotation.c
+        ${CMAKE_CURRENT_LIST_DIR}/esp32_src/rotation.c
+        ${CMAKE_CURRENT_LIST_DIR}/esp32_src/bus_task.c
     )
 
     # gets esp_lcd include paths

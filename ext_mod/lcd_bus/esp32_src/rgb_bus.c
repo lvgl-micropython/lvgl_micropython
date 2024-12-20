@@ -6,6 +6,8 @@
     #include "lcd_types.h"
     #include "modlcd_bus.h"
     #include "rgb_bus.h"
+    #include "bus_task.h"
+    #include "rotation.h"
 
     // esp-idf includes
     #include "hal/lcd_hal.h"
@@ -18,6 +20,9 @@
     #include "esp_lcd_panel_interface.h"
     #include "esp_lcd_panel_rgb.h"
     #include "esp_task.h"
+    #include "rom/ets_sys.h"
+    #include "esp_system.h"
+    #include "esp_cpu.h"
 
     // micropython includes
     #include "mphalport.h"
@@ -29,6 +34,8 @@
     #include "py/objstr.h"
     #include "py/objtype.h"
     #include "py/objexcept.h"
+    #include "py/gc.h"
+    #include "py/stackctrl.h"
 
     // stdlib includes
     #include <string.h>
@@ -36,13 +43,196 @@
     #define DEFAULT_STACK_SIZE    (5 * 1024)
 
     mp_lcd_err_t rgb_del(mp_obj_t obj);
-    mp_lcd_err_t rgb_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
+    mp_lcd_err_t rgb_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits, bool sw_rotation);
     mp_lcd_err_t rgb_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
     mp_lcd_err_t rgb_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
-    mp_lcd_err_t rgb_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
+    mp_lcd_err_t rgb_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size, bool is_flush, bool last_flush_cmd);
     mp_lcd_err_t rgb_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update);
     mp_obj_t rgb_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps);
     mp_obj_t rgb_free_framebuffer(mp_obj_t obj, mp_obj_t buf);
+
+    typedef struct {
+        esp_lcd_panel_t base;  // Base class of generic lcd panel
+        int panel_id;          // LCD panel ID
+        lcd_hal_context_t hal; // Hal layer object
+        size_t data_width;     // Number of data lines
+        size_t fb_bits_per_pixel; // Frame buffer color depth, in bpp
+        size_t num_fbs;           // Number of frame buffers
+        size_t output_bits_per_pixel; // Color depth seen from the output data line. Default to fb_bits_per_pixel, but can be changed by YUV-RGB conversion
+        size_t sram_trans_align;  // Alignment for framebuffer that allocated in SRAM
+        size_t psram_trans_align; // Alignment for framebuffer that allocated in PSRAM
+        int disp_gpio_num;     // Display control GPIO, which is used to perform action like "disp_off"
+        intr_handle_t intr;    // LCD peripheral interrupt handle
+        esp_pm_lock_handle_t pm_lock; // Power management lock
+        size_t num_dma_nodes;  // Number of DMA descriptors that used to carry the frame buffer
+        uint8_t *fbs[3]; // Frame buffers
+        uint8_t cur_fb_index;  // Current frame buffer index
+        uint8_t bb_fb_index;  // Current frame buffer index which used by bounce buffer
+    } rgb_panel_t;
+
+
+    static bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel,
+                                    const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
+    {
+        LCD_UNUSED(edata);
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)user_ctx;
+        rgb_panel_t *rgb_panel = __containerof(panel, rgb_panel_t, base);
+        void *curr_buf = (void *)rgb_panel->fbs[rgb_panel->cur_fb_index];
+
+        if (curr_buf != self->rotate_task->active_fb && !bus_event_isset_from_isr(&self->rotate_task->swap_bufs)) {
+            void *idle_fb = self->rotate_task->idle_fb;
+            self->rotate_task->idle_fb = self->rotate_task->active_fb;
+            self->rotate_task->active_fb = idle_fb;
+            bus_event_set_from_isr(&self->rotate_task->swap_bufs);
+        }
+
+        return false;
+    }
+
+    static void rgb_bus_rotate_task(void *self_in) {
+        LCD_DEBUG_PRINT("rgb_bus_rotate_task - STARTED\n")
+
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)self_in;
+
+        rotation_t *rotation = self->rotation;
+        rotation_task_t *task = &rotation->task;
+        rotation_buffer_t *buf = &rotation->buf;
+        init_err_t *init = &rotation->init;
+        rotation_data_t *data = &rotation->data;
+
+
+        esp_lcd_rgb_panel_event_callbacks_t callbacks = { .on_vsync = rgb_bus_trans_done_cb };
+
+        init->err = esp_lcd_new_rgb_panel(&self->panel_io_config, &self->panel_handle);
+        if (init->err != 0) {
+            init->err_msg = MP_ERROR_TEXT("%d(esp_lcd_new_rgb_panel)");
+            bus_lock_release(&task->init_lock);
+            return;
+        }
+
+        init->err = esp_lcd_rgb_panel_register_event_callbacks(self->panel_handle, &callbacks, self);
+        if (init->err != 0) {
+            init->err_msg = MP_ERROR_TEXT("%d(esp_lcd_rgb_panel_register_event_callbacks)");
+            bus_lock_release(&task->init_lock);
+            return;
+        }
+
+        init->err = esp_lcd_panel_reset(self->panel_handle);
+        if (init->err != 0) {
+            init->err_msg = MP_ERROR_TEXT("%d(esp_lcd_panel_reset)");
+            bus_lock_release(&task->init_lock);
+            return;
+        }
+
+        init->err = esp_lcd_panel_init(self->panel_handle);
+        if (init->err != 0) {
+            init->err_msg = MP_ERROR_TEXT("%d(esp_lcd_panel_init)");
+            bus_lock_release(&task->init_lock);
+            return;
+        }
+
+        rgb_panel_t *rgb_panel = __containerof((esp_lcd_panel_t *)self->panel_handle, rgb_panel_t, base);
+
+        buf->active = (void *)rgb_panel->fbs[0];
+        buf->idle = (void *)rgb_panel->fbs[1];
+
+        void *idle_fb;
+        bool last_update;
+
+        bus_lock_acquire(&task->lock, -1);
+
+        init->err = LCD_OK;
+        bus_lock_release(&task->init_lock);
+
+        bool exit = bus_event_isset(&task->exit);
+        while (!exit) {
+            bus_lock_acquire(&task->lock, -1);
+
+            if (buf->partial == NULL) break;
+            last_update = (bool)data->last_update;
+
+
+        #if LCD_RGB_OPTIMUM_FB_SIZE
+            rotation->optimum.flush_count += 1;
+        #endif
+
+            idle_fb = buf->idle;
+
+            rotate(buf->partial, idle_fb, data);
+
+            bus_lock_release(&task->tx_color_lock);
+
+            if (self->callback != mp_const_none) {
+                volatile uint32_t sp = (uint32_t)esp_cpu_get_sp();
+
+                void *old_state = mp_thread_get_state();
+
+                mp_state_thread_t ts;
+                mp_thread_set_state(&ts);
+                mp_stack_set_top((void*)sp);
+                mp_stack_set_limit(CONFIG_FREERTOS_IDLE_TASK_STACKSIZE - 1024);
+                mp_locals_set(mp_state_ctx.thread.dict_locals);
+                mp_globals_set(mp_state_ctx.thread.dict_globals);
+
+                mp_sched_lock();
+                gc_lock();
+
+                nlr_buf_t nlr;
+                if (nlr_push(&nlr) == 0) {
+                    mp_call_function_n_kw(self->callback, 0, 0, NULL);
+                    nlr_pop();
+                } else {
+                    ets_printf("Uncaught exception in IRQ callback handler!\n");
+                    mp_obj_print_exception(&mp_plat_print, MP_OBJ_FROM_PTR(nlr.ret_val));
+                }
+
+                gc_unlock();
+                mp_sched_unlock();
+
+                mp_thread_set_state(old_state);
+            }
+
+            if (last_update) {
+
+            #if LCD_RGB_OPTIMUM_FB_SIZE
+                if (rotation->optimum.curr_index == 254) {
+                    rotation->optimum.curr_index = 0;
+                } else {
+                    rotation->optimum.curr_index += 1;
+                }
+                if (rotation->optimum.sample_count < 255) {
+                    rotation->optimum.sample_count += 1;
+                }
+                rotation->optimum.samples[rotation->optimum.curr_index] = rotation->optimum.flush_count;
+                rotation->optimum.flush_count = 0;
+
+                bus_lock_release(&rotation->optimum.lock);
+                bus_lock_acquire(&rotation->optimum.lock, -1);
+            #endif
+
+                mp_lcd_err_t ret = esp_lcd_panel_draw_bitmap(
+                    self->panel_handle,
+                    0,
+                    0,
+                    data->width - 1,
+                    data->height - 1,
+                    idle_fb
+                );
+
+                if (ret != 0) {
+                    mp_printf(&mp_plat_print, "esp_lcd_panel_draw_bitmap error (%d)\n", ret);
+                } else {
+                    bus_event_clear(&task->swap_bufs);
+                    bus_event_wait(&task->swap_bufs);
+                    memcpy(buf->idle, buf->active, data->width * data->height * data->bytes_per_pixel);
+                }
+            }
+
+            exit = bus_event_isset(&task->exit);
+        }
+
+        LCD_DEBUG_PRINT(&mp_plat_print, "rgb_bus_copy_task - STOPPED\n")
+    }
 
     mp_obj_t mp_lcd_rgb_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
@@ -241,20 +431,22 @@
             return LCD_FAIL;
         }
 
-        rgb_bus_lock_acquire(&self->tx_color_lock, -1);
-        self->partial_buf = NULL;
-        rgb_bus_event_set(&self->copy_task_exit);
-        rgb_bus_lock_release(&self->copy_lock);
-        rgb_bus_lock_release(&self->tx_color_lock);
+        rgb_bus_lock_acquire(&self->rotation->task.tx_color_lock, -1);
+        self->rotation->buf.partial = NULL;
+        rgb_bus_event_set(&self->rotation->task.exit);
+        rgb_bus_lock_release(&self->rotation->task.lock);
+        rgb_bus_lock_release(&self->rotation->task.tx_color_lock);
 
         mp_lcd_err_t ret = esp_lcd_panel_del(self->panel_handle);
 
-        rgb_bus_lock_delete(&self->copy_lock);
-        rgb_bus_lock_delete(&self->tx_color_lock);
+        rgb_bus_lock_delete(&self->rotation->task.lock);
+        rgb_bus_lock_delete(&self->rotation->task.tx_color_lock);
 
-        rgb_bus_event_clear(&self->swap_bufs);
-        rgb_bus_event_delete(&self->swap_bufs);
-        rgb_bus_event_delete(&self->copy_task_exit);
+        rgb_bus_event_clear(&self->rotation->task.swap_bufs);
+        rgb_bus_event_delete(&self->rotation->task.swap_bufs);
+        rgb_bus_event_delete(&self->rotation->task.exit);
+
+        free(self->rotation);
 
         return ret;
     }
@@ -270,12 +462,14 @@
         return LCD_OK;
     }
 
-    mp_lcd_err_t rgb_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
+    mp_lcd_err_t rgb_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size, bool is_flush, bool last_flush_cmd)
     {
         LCD_UNUSED(obj);
         LCD_UNUSED(param);
         LCD_UNUSED(lcd_cmd);
         LCD_UNUSED(param_size);
+        LCD_UNUSED(is_flush);
+        LCD_UNUSED(last_flush_cmd);
         LCD_DEBUG_PRINT("rgb_tx_param(self, lcd_cmd=%d, param, param_size=%d)\n", lcd_cmd, param_size)
 
         return LCD_OK;
@@ -339,14 +533,17 @@
         return MP_OBJ_FROM_PTR(view);
     }
 
-    mp_lcd_err_t rgb_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
+    mp_lcd_err_t rgb_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits, bool sw_rotation)
     {
         LCD_UNUSED(cmd_bits);
         LCD_UNUSED(param_bits);
+        LCD_UNUSED(sw_rotation);
 
         LCD_DEBUG_PRINT("rgb_init(self, width=%i, height=%i, bpp=%d, buffer_size=%lu, rgb565_byte_swap=%d)\n", width, height, bpp, buffer_size, rgb565_byte_swap)
 
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
+
+        self->rotation = (rotation_t *)malloc(sizeof(rotation_t));
 
         if (bpp == 16 && rgb565_byte_swap) {
             /*
@@ -366,39 +563,30 @@
                     self->panel_io_config.data_gpio_nums[i + 8] = temp_pin;
                 }
 
-                self->rgb565_byte_swap = false;
+                self->rgb565_byte_swap = 0;
             } else {
-                self->rgb565_byte_swap = true;
+                self->rgb565_byte_swap = 1;
             }
         } else {
-            self->rgb565_byte_swap = false;
+            self->rgb565_byte_swap = 0;
         }
 
         self->panel_io_config.timings.h_res = (uint32_t)width;
         self->panel_io_config.timings.v_res = (uint32_t)height;
         self->panel_io_config.bits_per_pixel = (size_t)bpp;
 
-        self->width = width;
-        self->height = height;
-        self->bytes_per_pixel = bpp / 8;
+        self->rotation->data.width = width;
+        self->rotation->data.height = height;
+        self->rotation->data.bytes_per_pixel = bpp / 8;
 
         self->panel_io_config.flags.fb_in_psram = 1;
         self->panel_io_config.flags.double_fb = 1;
 
-        rgb_bus_lock_init(&self->copy_lock);
-        rgb_bus_lock_init(&self->tx_color_lock);
-        rgb_bus_event_init(&self->copy_task_exit);
-        rgb_bus_event_init(&self->swap_bufs);
-        rgb_bus_event_set(&self->swap_bufs);
-        rgb_bus_lock_init(&self->init_lock);
-        rgb_bus_lock_acquire(&self->init_lock, -1);
-
-
     #if LCD_RGB_OPTIMUM_FB_SIZE
-        rgb_bus_lock_init(&self->optimum_fb.lock);
-        rgb_bus_lock_acquire(&self->optimum_fb.lock, -1);
-        self->optimum_fb.samples = (uint16_t *)malloc(sizeof(uint16_t) * 255);
-        self->optimum_fb.curr_index = 254;
+        bus_lock_init(&self->rotation->optimum.lock);
+        bus_lock_acquire(&self->rotation->optimum.lock, -1);
+        self->rotation->optimum.samples = (uint16_t *)malloc(sizeof(uint16_t) * 255);
+        self->rotation->optimum.curr_index = 254;
     #endif
 
         LCD_DEBUG_PRINT("h_res=%lu\n", self->panel_io_config.timings.h_res)
@@ -406,17 +594,11 @@
         LCD_DEBUG_PRINT("bits_per_pixel=%d\n", self->panel_io_config.bits_per_pixel)
         LCD_DEBUG_PRINT("rgb565_byte_swap=%d\n", self->rgb565_byte_swap)
 
-        xTaskCreatePinnedToCore(
-                rgb_bus_copy_task, "rgb_task", DEFAULT_STACK_SIZE / sizeof(StackType_t),
-                self, ESP_TASK_PRIO_MAX - 1, &self->copy_task_handle, 0);
+        rotation_task_start(rgb_bus_rotation_task, self->rotation, self);
 
-        rgb_bus_lock_acquire(&self->init_lock, -1);
-        rgb_bus_lock_release(&self->init_lock);
-        rgb_bus_lock_delete(&self->init_lock);
-
-        if (self->init_err != LCD_OK) {
-            mp_raise_msg_varg(&mp_type_ValueError, self->init_err_msg, self->init_err);
-            return self->init_err;
+        if (self->rotation->init_err.code != LCD_OK) {
+            mp_raise_msg_varg(&mp_type_ValueError, self->rotation->init_err.msg, self->rotation->init_err.code);
+            return self->rotation->init_err.code;
         } else {
             return LCD_OK;
         }
@@ -434,24 +616,24 @@
     }
 
 
-    mp_lcd_err_t rgb_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update)
+    mp_lcd_err_t rgb_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, int rotation, bool last_update)
     {
         LCD_DEBUG_PRINT("rgb_tx_color(self, lcd_cmd=%d, color, color_size=%d, x_start=%d, y_start=%d, x_end=%d, y_end=%d)\n", lcd_cmd, color_size, x_start, y_start, x_end, y_end)
         LCD_UNUSED(color_size);
 
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
         
-        rgb_bus_lock_acquire(&self->tx_color_lock, -1);
+        bus_lock_acquire(&self->rotation->task.tx_color_lock, -1);
 
-        self->last_update = (uint8_t)last_update;
-        self->partial_buf = (uint8_t *)color;
-        self->x_start = x_start;
-        self->y_start = y_start;
-        self->x_end = x_end;
-        self->y_end = y_end;
-        self->rotation = rotation;
+        self->rotation->data.last_update = (uint8_t)last_update;
+        self->rotation->buf.partial = (void *)color;
+        self->rotation->data.x_start = x_start;
+        self->rotation->data.y_start = y_start;
+        self->rotation->data.x_end = x_end;
+        self->rotation->data.y_end = y_end;
+        self->rotation->data.rotation = (uint8_t)rotation;
 
-        rgb_bus_lock_release(&self->copy_lock);
+        bus_lock_release(&self->rotation->task.lock);
 //        if (self->callback != mp_const_none) {
 //            mp_call_function_n_kw(self->callback, 0, 0, NULL);
 //        }
@@ -465,32 +647,34 @@
     {
         mp_lcd_rgb_bus_obj_t *self = MP_OBJ_TO_PTR(self_in);
 
+        rotation_optimum_t *optimum = &self->rotation->optimum;
+
         if (attr == MP_QSTR_avg_flushes_per_update) {
             if (dest[0] == MP_OBJ_NULL) {
                 uint32_t total = 0;
 
-                rgb_bus_lock_acquire(&self->optimum_fb.lock, -1);
-                for (uint8_t i=0;i<self->optimum_fb.sample_count;i++) {
-                    total += (uint32_t)self->optimum_fb.samples[i];
+                bus_lock_acquire(&optimum->lock, -1);
+                for (uint8_t i=0;i<optimum->sample_count;i++) {
+                    total += (uint32_t)optimum->samples[i];
                 }
 
-                uint16_t avg = (uint16_t)(total / (uint32_t)self->optimum_fb.sample_count);
+                uint16_t avg = (uint16_t)(total / (uint32_t)optimum->sample_count);
 
-                rgb_bus_lock_release(&self->optimum_fb.lock);
+                bus_lock_release(&optimum->lock);
 
                 dest[0] = mp_obj_new_int_from_uint(avg);
             } else if (dest[1]) {
                 uint16_t value = (uint16_t)mp_obj_get_int_truncated(dest[1]);
 
                 if (value == 0) {
-                    rgb_bus_lock_acquire(&self->optimum_fb.lock, -1);
-                    for (uint8_t i=0;i<self->optimum_fb.sample_count;i++) {
-                        self->optimum_fb.samples[i] = 0;
+                    bus_lock_acquire(&optimum->lock, -1);
+                    for (uint8_t i=0;i<optimum->sample_count;i++) {
+                        optimum->samples[i] = 0;
                     }
 
-                    self->optimum_fb.sample_count = 0;
-                    self->optimum_fb.curr_index = 254;
-                    rgb_bus_lock_release(&self->optimum_fb.lock);
+                    optimum->sample_count = 0;
+                    optimum->curr_index = 254;
+                    bus_lock_release(&optimum->lock);
 
                     dest[0] = MP_OBJ_NULL;
                 }

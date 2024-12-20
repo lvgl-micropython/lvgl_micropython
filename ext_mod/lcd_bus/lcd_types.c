@@ -35,6 +35,9 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
     #include "py/stackctrl.h"
     #include "mphalport.h"
 
+    #include "rotation.h"
+    #include "bus_task.h"
+
     // The 2 functions below are specific to ESP32. They cat called within an ISR context
     // since the rest of the boards are either bitbang or utilize the micropython
     // builtin data busses which do not support DMA transfers the functions do not
@@ -102,13 +105,13 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
 
             void *buf = array_buf->items;
 
-            if (buf == self->buf1) {
+            if (self->view1 != NULL && buf == self->view1->items) {
                 heap_caps_free(buf);
-                self->buf1 = NULL;
+                self->view1 = NULL;
                 LCD_DEBUG_PRINT("lcd_panel_io_free_framebuffer(self, buf=1)\n")
-            } else if (buf == self->buf2) {
+            } else if (self->view2 != NULL && buf == self->view2->items) {
                 heap_caps_free(buf);
-                self->buf2 = NULL;
+                self->view2 = NULL;
                 LCD_DEBUG_PRINT("lcd_panel_io_free_framebuffer(self, buf=2)\n")
             } else {
                 mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("No matching buffer found"));
@@ -133,15 +136,17 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
     }
 
 
-    mp_lcd_err_t lcd_panel_io_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
+    mp_lcd_err_t lcd_panel_io_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size, bool is_flush, bool last_flush_cmd)
     {
         mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
 
         if (self->panel_io_handle.tx_param == NULL) {
+            LCD_UNUSED(is_flush);
+            LCD_UNUSED(last_flush_cmd);
             LCD_DEBUG_PRINT("lcd_panel_io_tx_param(self, lcd_cmd=%d, param, param_size=%d)\n", lcd_cmd, param_size)
             return esp_lcd_panel_io_tx_param(self->panel_io_handle.panel_io, lcd_cmd, param, param_size);
         } else {
-            return self->panel_io_handle.tx_param(obj, lcd_cmd, param, param_size);
+            return self->panel_io_handle.tx_param(obj, lcd_cmd, param, param_size, is_flush, last_flush_cmd);
         }
     }
 
@@ -155,17 +160,73 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
         }
 
         if (self->panel_io_handle.tx_color == NULL) {
-            LCD_UNUSED(x_start);
-            LCD_UNUSED(y_start);
-            LCD_UNUSED(x_end);
-            LCD_UNUSED(y_end);
-            LCD_UNUSED(rotation);
-            LCD_UNUSED(last_update);
 
-            LCD_DEBUG_PRINT("lcd_panel_io_tx_color(self, lcd_cmd=%d, color, color_size=%d)\n", lcd_cmd, color_size)
-            return esp_lcd_panel_io_tx_color(self->panel_io_handle.panel_io, lcd_cmd, color, color_size);
+            if (self->rotation != NULL) {
+                bus_lock_acquire(&self->rotation->task.tx_color_lock, -1);
+
+                self->rotation->data.last_update = (uint8_t)last_update;
+                self->rotation->buf.partial = (void *)color;
+                self->rotation->data.x_start = x_start;
+                self->rotation->data.y_start = y_start;
+                self->rotation->data.x_end = x_end;
+                self->rotation->data.y_end = y_end;
+                self->rotation->data.rotation = (uint8_t)rotation;
+                self->rotation->lcd_cmd = lcd_cmd;
+                self->rotation->data.width = x_end - x_start + 1;
+                self->rotation->data.height = y_end - y_start + 1;
+
+                bus_lock_release(&self->rotation->task.lock);
+                return LCD_OK;
+            } else {
+                LCD_UNUSED(x_start);
+                LCD_UNUSED(y_start);
+                LCD_UNUSED(x_end);
+                LCD_UNUSED(y_end);
+                LCD_UNUSED(rotation);
+                LCD_UNUSED(last_update);
+
+                LCD_DEBUG_PRINT("lcd_panel_io_tx_color(self, lcd_cmd=%d, color, color_size=%d)\n", lcd_cmd, color_size)
+                return esp_lcd_panel_io_tx_color(self->panel_io_handle.panel_io, lcd_cmd, color, color_size);
         } else {
             return self->panel_io_handle.tx_color(obj, lcd_cmd, color, color_size, x_start, y_start, x_end, y_end, rotation, last_update);
+        }
+    }
+
+    mp_obj_t lcd_panel_io_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps)
+    {
+        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
+
+        if (self->panel_io_handle.allocate_framebuffer == NULL) {
+            void *buf = heap_caps_calloc(1, size, caps);
+            LCD_DEBUG_PRINT("lcd_panel_io_allocate_framebuffer(self, size=%lu, caps=%lu)\n", size, caps)
+            mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE, size, buf));
+            view->typecode |= 0x80; // used to indicate writable buffer
+
+            if (buf == NULL) {
+                mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("Unable to allocate frame buffer"));
+                return mp_const_none;
+            } else {
+                if (self->view1 == NULL) {
+                    self->view1 = view;
+                    self->buffer_flags = caps;
+                } else if (self->view2 == NULL && self->buffer_flags == caps) {
+                    self->view2 = view;
+                } else {
+                    heap_caps_free(buf);
+
+                    if (self->view2 == NULL) {
+                        mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("allocation flags must be the same for both buffers"));
+                    } else {
+                        mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("Only 2 buffers can be allocated"));
+                    }
+                    return mp_const_none;
+                }
+
+
+                return MP_OBJ_FROM_PTR(view);
+            }
+        } else {
+            return self->panel_io_handle.allocate_framebuffer(obj, size, caps);
         }
     }
 
@@ -194,12 +255,12 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
 
             void *buf = array_buf->items;
 
-            if (buf == self->buf1) {
+            if (self->view1 != NULL && buf == self->view1->items) {
                 m_free(buf);
-                self->buf1 = NULL;
-            } else if (buf == self->buf2) {
+                self->view1 = NULL;
+            } else if (self->view2 != NULL && buf == self->view2->items) {
                 m_free(buf);
-                self->buf2 = NULL;
+                self->view2 = NULL;
             } else {
                 mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("No matching buffer found"));
             }
@@ -219,11 +280,11 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
     }
 
 
-    mp_lcd_err_t lcd_panel_io_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
+    mp_lcd_err_t lcd_panel_io_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size, bool is_flush, bool last_flush_cmd)
     {
         mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
 
-        return self->panel_io_handle.tx_param(obj, lcd_cmd, param, param_size);
+        return self->panel_io_handle.tx_param(obj, lcd_cmd, param, param_size, is_flush, last_flush_cmd);
     }
 
 
@@ -237,55 +298,50 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
 
         return self->panel_io_handle.tx_color(obj, lcd_cmd, color, color_size, x_start, y_start, x_end, y_end, rotation, last_update);
     }
-#endif
 
+    mp_obj_t lcd_panel_io_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps)
+    {
+        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
 
-mp_obj_t lcd_panel_io_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps)
-{
-    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
-
-    if (self->panel_io_handle.allocate_framebuffer == NULL) {
-        #ifdef ESP_IDF_VERSION
-            void *buf = heap_caps_calloc(1, size, caps);
-
+        if (self->panel_io_handle.allocate_framebuffer == NULL) {
             LCD_DEBUG_PRINT("lcd_panel_io_allocate_framebuffer(self, size=%lu, caps=%lu)\n", size, caps)
-        #else
             LCD_UNUSED(caps);
             void *buf = m_malloc(size);
-        #endif /* ESP_IDF_VERSION */
-        
-        if (buf == NULL) {
-            mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("Unable to allocate frame buffer"));
-            return mp_const_none;
-        } else {
-            if (self->buf1 == NULL) {
-                self->buf1 = buf;
-                self->buffer_flags = caps;
-            } else if (self->buf2 == NULL && self->buffer_flags == caps) {
-                self->buf2 = buf;
-            } else {
-                #ifdef ESP_IDF_VERSION
-                    heap_caps_free(buf);
-                #else
-                    m_free(buf);
-                #endif /* ESP_IDF_VERSION */
-
-                if (self->buf2 == NULL) {
-                    mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("allocation flags must be the same for both buffers"));
-                } else {
-                    mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("Only 2 buffers can be allocated"));
-                }
-                return mp_const_none;
-            }
 
             mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE, size, buf));
             view->typecode |= 0x80; // used to indicate writable buffer
-            return MP_OBJ_FROM_PTR(view);
+
+            if (buf == NULL) {
+                mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("Unable to allocate frame buffer"));
+                return mp_const_none;
+            } else {
+                if (self->view1 == NULL) {
+                    self->view1 = view;
+                    self->buffer_flags = caps;
+                } else if (self->view2 == NULL && self->buffer_flags == caps) {
+                    self->view2 = view;
+                } else {
+                    m_free(buf);
+
+                    if (self->view2 == NULL) {
+                        mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("allocation flags must be the same for both buffers"));
+                    } else {
+                        mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("Only 2 buffers can be allocated"));
+                    }
+                    return mp_const_none;
+                }
+
+
+                return MP_OBJ_FROM_PTR(view);
+            }
+        } else {
+            return self->panel_io_handle.allocate_framebuffer(obj, size, caps);
         }
-    } else {
-        return self->panel_io_handle.allocate_framebuffer(obj, size, caps);
     }
-}
+#endif
+
+
+
 
 mp_lcd_err_t lcd_panel_io_del(mp_obj_t obj)
 {
@@ -300,11 +356,11 @@ mp_lcd_err_t lcd_panel_io_del(mp_obj_t obj)
 }
 
 
-mp_lcd_err_t lcd_panel_io_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
+mp_lcd_err_t lcd_panel_io_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits, bool sw_rotation)
 {
     mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
 
-    return self->panel_io_handle.init(obj, width, height, bpp, buffer_size, rgb565_byte_swap, cmd_bits, param_bits);
+    return self->panel_io_handle.init(obj, width, height, bpp, buffer_size, rgb565_byte_swap, cmd_bits, param_bits, sw_rotation);
 }
 
 

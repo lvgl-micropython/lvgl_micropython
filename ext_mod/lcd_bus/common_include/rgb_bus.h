@@ -14,8 +14,8 @@
 
         mp_obj_t callback;
 
-        void *buf1;
-        void *buf2;
+        mp_obj_array_t *view1;
+        mp_obj_array_t *view2;
         uint32_t buffer_flags;
 
         bool trans_done;

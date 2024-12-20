@@ -82,6 +82,7 @@ class DisplayDriver:
         rgb565_byte_swap=False,
         _cmd_bits=8,
         _param_bits=8,
+        _sw_rotation=False,
         _init_bus=True
     ):
         if power_on_state not in (STATE_HIGH, STATE_LOW):
@@ -130,6 +131,7 @@ class DisplayDriver:
         self._rgb565_byte_swap = rgb565_byte_swap
         self._cmd_bits = _cmd_bits
         self._param_bits = _param_bits
+        self._sw_rotation = _sw_rotation
 
         if data_bus is None:
             self._reset_pin = None
@@ -140,46 +142,38 @@ class DisplayDriver:
             self._frame_buffer1 = frame_buffer1
             self._frame_buffer2 = frame_buffer2
         else:
-            if reset_pin is None:
-                self._reset_pin = None
-            elif not isinstance(reset_pin, int):
-                self._reset_pin = reset_pin
-            else:
+
+            if isinstance(reset_pin, int):
                 self._reset_pin = machine.Pin(reset_pin, machine.Pin.OUT)
-                self._reset_pin.value(not reset_state)
-
-            if power_pin is None:
-                self._power_pin = None
-            elif not isinstance(power_pin, int):
-                self._power_pin = power_pin
             else:
+                self._reset_pin = reset_pin
+
+            if isinstance(power_pin, int):
                 self._power_pin = machine.Pin(power_pin, machine.Pin.OUT)
-                self._power_pin.value(not power_on_state)
-
-            if backlight_pin is None:
-                self._backlight_pin = None
-            elif not isinstance(backlight_pin, int):
-                self._backlight_pin = backlight_pin
             else:
-                self._backlight_pin = machine.Pin(
-                    backlight_pin,
-                    machine.Pin.OUT
-                )
+                self._power_pin = power_pin
+
+            if isinstance(backlight_pin, int):
+                self._backlight_pin = machine.Pin(backlight_pin, machine.Pin.OUT)  # NOQA
+            else:
+                self._backlight_pin = backlight_pin
 
             if backlight_on_state == STATE_PWM:
-                if isinstance(self._backlight_pin, io_expander_framework.Pin):
-                    backlight_on_state = STATE_HIGH
+                if isinstance(self._backlight_pin, machine.Pin):
+                    self._backlight_pin = machine.PWM(self._backlight_pin, freq=38000)  # NOQA
                 else:
-                    self._backlight_pin = machine.PWM(
-                        self._backlight_pin, freq=38000)
-
-            if (
-                backlight_on_state != STATE_PWM and
-                self._backlight_pin is not None
-            ):
-                self._backlight_pin.value(not backlight_on_state)
+                    backlight_on_state = STATE_HIGH
 
             self._backlight_on_state = backlight_on_state
+
+            if self._reset_pin:
+                self._reset_pin.value(not reset_state)
+
+            if self._power_pin:
+                self._power_pin.value(not power_on_state)
+
+            if backlight_on_state != STATE_PWM and self._backlight_pin:
+                self._backlight_pin.value(not backlight_on_state)
 
             self._data_bus = data_bus
             self._disp_drv = lv.display_create(display_width, display_height)  # NOQA
@@ -238,7 +232,8 @@ class DisplayDriver:
             buffer_size,
             self._rgb565_byte_swap,
             self._cmd_bits,
-            self._param_bits
+            self._param_bits,
+            self._sw_rotation
         )
 
         self._disp_drv.set_flush_cb(self._flush_cb)
@@ -296,7 +291,7 @@ class DisplayDriver:
             self._param_buf[0] = (self._madctl(
                 self._color_byte_order, self._ORIENTATION_TABLE, ~rotation
             ))
-            self._data_bus.tx_param(_MADCTL, self._param_mv[:1])
+            self.set_params(_MADCTL, self._param_mv[:1])
 
     @staticmethod
     def get_displays():
@@ -482,7 +477,7 @@ class DisplayDriver:
         self._initilized = True
 
     def set_params(self, cmd, params=None):
-        self._data_bus.tx_param(cmd, params)
+        self._data_bus.tx_param(cmd, params, False, False)
 
     def get_params(self, cmd, params):
         self._data_bus.rx_param(cmd, params)
@@ -551,14 +546,22 @@ class DisplayDriver:
 
     def _set_memory_location(self, x1, y1, x2, y2):
         # Column addresses
-        param_buf = self._param_buf  # NOQA
+
+        if self._sw_rotation:
+            param_buf = bytearray(4)
+        else:
+            param_buf = self._param_buf
 
         param_buf[0] = (x1 >> 8) & 0xFF
         param_buf[1] = x1 & 0xFF
         param_buf[2] = (x2 >> 8) & 0xFF
         param_buf[3] = x2 & 0xFF
 
-        self._data_bus.tx_param(_CASET, self._param_mv)
+        if self._sw_rotation:
+            self._data_bus.tx_param(_CASET, param_buf, True, False)
+            param_buf = bytearray(4)
+        else:
+            self.set_params(_CASET, self._param_mv)
 
         # Page addresses
         param_buf[0] = (y1 >> 8) & 0xFF
@@ -566,7 +569,10 @@ class DisplayDriver:
         param_buf[2] = (y2 >> 8) & 0xFF
         param_buf[3] = y2 & 0xFF
 
-        self._data_bus.tx_param(_RASET, self._param_mv)
+        if self._sw_rotation:
+            self._data_bus.tx_param(_RASET, param_buf, True, True)
+        else:
+            self.set_params(_RASET, self._param_mv)
 
         return _RAMWR
 

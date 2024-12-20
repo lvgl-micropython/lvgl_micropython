@@ -44,7 +44,18 @@ MP_DEFINE_CONST_FUN_OBJ_VAR(mp_lcd_bus_get_lane_count_obj, 1, mp_lcd_bus_get_lan
 
 mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
-    enum { ARG_self, ARG_width, ARG_height, ARG_bpp, ARG_buffer_size, ARG_rgb565_byte_swap, ARG_cmd_bits, ARG_param_bits };
+    enum {
+        ARG_self,
+        ARG_width,
+        ARG_height,
+        ARG_bpp,
+        ARG_buffer_size,
+        ARG_rgb565_byte_swap,
+        ARG_cmd_bits,
+        ARG_param_bits,
+        ARG_sw_rotation
+    };
+
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_self,             MP_ARG_OBJ  | MP_ARG_REQUIRED },
         { MP_QSTR_width,            MP_ARG_INT  | MP_ARG_REQUIRED },
@@ -54,6 +65,8 @@ mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
         { MP_QSTR_rgb565_byte_swap, MP_ARG_BOOL | MP_ARG_REQUIRED },
         { MP_QSTR_cmd_bits,         MP_ARG_INT  | MP_ARG_REQUIRED },
         { MP_QSTR_param_bits,       MP_ARG_INT  | MP_ARG_REQUIRED },
+        { MP_QSTR_sw_rotation,      MP_ARG_BOOL | MP_ARG_REQUIRED },
+
     };
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
@@ -66,7 +79,8 @@ mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
         (uint32_t)args[ARG_buffer_size].u_int,
         (bool)args[ARG_rgb565_byte_swap].u_bool,
         (uint8_t)args[ARG_cmd_bits].u_int,
-        (uint8_t)args[ARG_param_bits].u_int
+        (uint8_t)args[ARG_param_bits].u_int,
+        (bool)args[ARG_sw_rotation].u_bool
     );
 
     if (ret != 0) {
@@ -75,7 +89,7 @@ mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
     return mp_const_none;
 }
 
-MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_bus_init_obj, 8, mp_lcd_bus_init);
+MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_bus_init_obj, 9, mp_lcd_bus_init);
 
 
 mp_obj_t mp_lcd_bus_free_framebuffer(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
@@ -118,11 +132,13 @@ MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_bus_allocate_framebuffer_obj, 3, mp_lcd_bus_al
 
 mp_obj_t mp_lcd_bus_tx_param(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
-    enum { ARG_self, ARG_cmd, ARG_params };
+    enum { ARG_self, ARG_cmd, ARG_params, ARG_is_flush, ARG_last_flush_cmd};
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_self,    MP_ARG_OBJ | MP_ARG_REQUIRED, { .u_obj = mp_const_none } },
-        { MP_QSTR_cmd,     MP_ARG_INT | MP_ARG_REQUIRED, { .u_int = -1            } },
-        { MP_QSTR_params,  MP_ARG_OBJ, {.u_obj = mp_const_none} },
+        { MP_QSTR_self,            MP_ARG_OBJ  | MP_ARG_REQUIRED },
+        { MP_QSTR_cmd,             MP_ARG_INT  | MP_ARG_REQUIRED },
+        { MP_QSTR_params,          MP_ARG_OBJ  | MP_ARG_REQUIRED },
+        { MP_QSTR_is_flush,        MP_ARG_BOOL | MP_ARG_REQUIRED },
+        { MP_QSTR_last_flush_cmd,  MP_ARG_BOOL | MP_ARG_REQUIRED },
     };
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
@@ -132,9 +148,23 @@ mp_obj_t mp_lcd_bus_tx_param(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
     if (args[ARG_params].u_obj != mp_const_none) {
         mp_buffer_info_t bufinfo;
         mp_get_buffer_raise(args[ARG_params].u_obj, &bufinfo, MP_BUFFER_READ);
-        ret = lcd_panel_io_tx_param(args[ARG_self].u_obj, (int)args[ARG_cmd].u_int, bufinfo.buf, (size_t)bufinfo.len);
+        ret = lcd_panel_io_tx_param(
+            args[ARG_self].u_obj,
+            (int)args[ARG_cmd].u_int,
+            bufinfo.buf,
+            (size_t)bufinfo.len,
+            (bool)args[ARG_is_flush].u_bool,
+            (bool)args[ARG_last_flush_cmd].u_bool
+        );
     } else {
-        ret = lcd_panel_io_tx_param(args[ARG_self].u_obj, (int)args[ARG_cmd].u_int, NULL, 0);
+        ret = lcd_panel_io_tx_param(
+            args[ARG_self].u_obj,
+            (int)args[ARG_cmd].u_int,
+            NULL,
+            0,
+            (bool)args[ARG_is_flush].u_bool,
+            (bool)args[ARG_last_flush_cmd].u_bool
+        );
     }
 
     if (ret != 0) {

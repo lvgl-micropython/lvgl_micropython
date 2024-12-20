@@ -2,17 +2,21 @@
 #include "lcd_types.h"
 #include "modlcd_bus.h"
 #include "i80_bus.h"
+#include "rotation.h"
+#include "bus_task.h"
 
 // micropython includes
 #include "mphalport.h"
 #include "py/obj.h"
 #include "py/runtime.h"
 
-// stdlib includes
-#include <string.h>
 
 // esp-idf includes
 #include "soc/soc_caps.h"
+
+// stdlib includes
+#include <string.h>
+
 
 #if SOC_LCD_I80_SUPPORTED
     // esp-idf includes
@@ -22,8 +26,48 @@
 
 
     mp_lcd_err_t i80_del(mp_obj_t obj);
-    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
+    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits, bool sw_rotation);
     mp_lcd_err_t i80_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
+    mp_lcd_err_t i80_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size, bool is_flush, bool last_flush_cmd);
+
+    static bool i80_bus_trans_done_cb(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
+    {
+        LCD_UNUSED(panel_io);
+
+        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)user_ctx;
+        bus_event_set_from_isr(&self->rotation->task.swap_bufs);
+        return false;
+    }
+
+
+    static mp_lcd_err_t i80_rotation_init_func(void *self_in)
+    {
+        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)self_in;
+
+        self->panel_io_config.on_color_trans_done = &i80_bus_trans_done_cb;
+
+        rotation_t *rotation = self->rotation;
+        rotation_init_err_t *init_err = &rotation->init_err;
+        rotation_task_t *task = &rotation->task;
+
+        init_err->code = esp_lcd_new_i80_bus(&self->bus_config, &self->bus_handle);
+
+        if (init_err->code != LCD_OK) {
+            init_err->err_msg = MP_ERROR_TEXT("%d(esp_lcd_new_i80_bus)");
+            bus_lock_release(&task->init_lock);
+        } else {
+
+            init_err->code = esp_lcd_new_panel_io_i80(self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io);
+
+            if (init_err->code != LCD_OK) {
+                init_err->err_msg = MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_i80)");
+                bus_lock_release(&task->init_lock);
+            }
+        }
+
+        return init_err->code;
+    }
+
 
     static mp_obj_t mp_lcd_i80_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
@@ -138,7 +182,6 @@
         self->panel_io_config.cs_gpio_num = (int)args[ARG_cs].u_int;
         self->panel_io_config.pclk_hz = (uint32_t)args[ARG_freq].u_int;
         self->panel_io_config.trans_queue_depth = 5;
-        self->panel_io_config.on_color_trans_done = &bus_trans_done_cb;
         self->panel_io_config.user_ctx = self;
         self->panel_io_config.dc_levels.dc_idle_level = (unsigned int)args[ARG_dc_idle_high].u_bool;
         self->panel_io_config.dc_levels.dc_cmd_level = (unsigned int)args[ARG_dc_cmd_high].u_bool;
@@ -184,12 +227,45 @@
         self->panel_io_handle.init = &i80_init;
         self->panel_io_handle.del = &i80_del;
         self->panel_io_handle.get_lane_count = &i80_get_lane_count;
+        self->panel_io_handle.tx_param = &i80_tx_param;
 
         return MP_OBJ_FROM_PTR(self);
     }
-    
 
-    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
+
+    mp_lcd_err_t i80_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size, bool is_flush, bool last_flush_cmd)
+    {
+        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)obj;
+
+        mp_lcd_err_t ret;
+
+        if (self->rotation == NULL || !is_flush) {
+            LCD_UNUSED(last_flush_cmd);
+            ret = esp_lcd_panel_io_tx_param(self->panel_io_handle.panel_io, lcd_cmd, param, param_size);
+        } else {
+            bus_lock_acquire(&self->rotation->task.tx_param_lock);
+
+            if (self->rotation->data.tx_param_count == 24) {
+                bus_lock_release(&self->rotation->task.tx_param_lock);
+                mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("tx_parameter overflow."));
+            } else {
+                uint8_t tx_param_count = self->rotation->data.tx_param_count;
+
+                self->rotation->data.param_cmd[tx_param_count] = lcd_cmd;
+                self->rotation->data.param[tx_param_count] = param;
+                self->rotation->data.param_size[tx_param_count] = param_size;
+                self->rotation->data.param_last_cmd[tx_param_count] = last_flush_cmd;
+                self->rotation->data.tx_param_count++;
+
+                bus_lock_release(&self->rotation->task.tx_param_lock);
+            }
+            ret = LCD_OK;
+        }
+        return ret;
+    }
+
+
+    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits, bool sw_rotation)
     {
         LCD_DEBUG_PRINT("i80_init(self, width=%i, height=%i, bpp=%i, buffer_size=%lu, rgb565_byte_swap=%i, cmd_bits=%i, param_bits=%i)\n", width, height, bpp, buffer_size, (uint8_t)rgb565_byte_swap, cmd_bits, param_bits)
 
@@ -208,16 +284,29 @@
         LCD_DEBUG_PRINT("lcd_param_bits=%d\n", self->panel_io_config.lcd_param_bits)
         LCD_DEBUG_PRINT("max_transfer_bytes=%d\n", self->bus_config.max_transfer_bytes)
 
-        esp_err_t ret = esp_lcd_new_i80_bus(&self->bus_config, &self->bus_handle);
+        esp_err_t ret;
 
-        if (ret != 0) {
-            mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_i80_bus)"), ret);
-        }
+        if (sw_rotation) {
+            self->rotation = (rotation_t *)malloc(sizeof(rotation_t));
 
-        ret = esp_lcd_new_panel_io_i80(self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io);
+            self->rotation->init_func = &i80_rotation_init_func;
 
-        if (ret != 0) {
-            mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_i80)"), ret);
+            ret = rotation_set_buffers(self);
+            if (ret != LCD_OK) mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("unable to allocate sw rotate fb"));
+
+            rotation_task_start(self);
+
+            ret = self->rotation->init_err.code;
+            if (ret != LCD_OK) mp_raise_msg_varg(&mp_type_ValueError, self->rotation->init_err.msg, self->rotation->init_err.code);
+
+        } else {
+            self->panel_io_config.on_color_trans_done = &bus_trans_done_cb;
+
+            ret = esp_lcd_new_i80_bus(&self->bus_config, &self->bus_handle);
+            if (ret != 0) mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_i80_bus)"), ret);
+
+            ret = esp_lcd_new_panel_io_i80(self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io);
+            if (ret != 0) mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_i80)"), ret);
         }
 
         return ret;
@@ -253,15 +342,23 @@
         return LCD_OK;
     }
 
-    MP_DEFINE_CONST_OBJ_TYPE(
-        mp_lcd_i80_bus_type,
-        MP_QSTR_I80Bus,
-        MP_TYPE_FLAG_NONE,
-        make_new, mp_lcd_i80_bus_make_new,
-        locals_dict, (mp_obj_dict_t *)&mp_lcd_bus_locals_dict
-    );
-
 #else
-    #include "../common_src/i80_bus.c"
+    static mp_obj_t mp_lcd_i80_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
+    {
+        LCD_UNUSED(type);
+        LCD_UNUSED(n_args);
+        LCD_UNUSED(n_kw);
+        LCD_UNUSED(all_args);
+        mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("I80 bus is not supported omn this MCU"));
+    }
 
 #endif /*SOC_LCD_I80_SUPPORTED*/
+
+
+MP_DEFINE_CONST_OBJ_TYPE(
+    mp_lcd_i80_bus_type,
+    MP_QSTR_I80Bus,
+    MP_TYPE_FLAG_NONE,
+    make_new, mp_lcd_i80_bus_make_new,
+    locals_dict, (mp_obj_dict_t *)&mp_lcd_bus_locals_dict
+);

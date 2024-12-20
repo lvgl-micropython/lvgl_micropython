@@ -16,14 +16,17 @@
     typedef struct _mp_lcd_i2c_bus_obj_t {
         mp_obj_base_t base;
 
+        rotation_t *rotation;
+
         mp_obj_t callback;
 
-        void *buf1;
-        void *buf2;
+        mp_obj_array_t *view1;
+        mp_obj_array_t *view2;
+
         uint32_t buffer_flags;
 
-        bool trans_done;
-        bool rgb565_byte_swap;
+        uint8_t trans_done : 1;
+        uint8_t rgb565_byte_swap : 1;
 
         lcd_panel_io_t panel_io_handle;
         esp_lcd_panel_io_i2c_config_t panel_io_config;
