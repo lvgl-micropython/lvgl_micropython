@@ -148,6 +148,23 @@ def setup_windows_build():
     return _windows_env
 
 
+def get_lvgl_version():
+    with open('lib/lvgl/lv_version.h', 'r') as f:
+        data = f.read()
+
+    data = data.split('LVGL_VERSION_MAJOR', 1)[-1]
+    major, data = [item.strip() for item in data.split('\n', 1)]
+    data = data.split('LVGL_VERSION_MINOR', 1)[-1]
+    minor, data = [item.strip() for item in data.split('\n', 1)]
+    data = data.split('LVGL_VERSION_PATCH', 1)[-1]
+    patch, data = [item.strip() for item in data.split('\n', 1)]
+
+    if not patch:
+        patch = '0'
+
+    return f'{major}.{minor}.{patch}'
+
+
 def set_mp_version(port):
     mpconfigport = f'lib/micropython/ports/{port}/mpconfigport.h'
 
@@ -156,9 +173,10 @@ def set_mp_version(port):
 
     if 'MICROPY_BANNER_NAME_AND_VERSION' not in data:
         data += (
-            '\n\n#include "genhdr/mpversion.h"'
-            '\n\n#define MICROPY_BANNER_NAME_AND_VERSION "LVGL MicroPython '
-            '1.23.0 on " MICROPY_BUILD_DATE\n\n'
+            '\n\n#include "genhdr/mpversion.h"\n\n'
+            '\n\n#define MICROPY_BANNER_NAME_AND_VERSION '
+            f'"LVGL ({get_lvgl_version()}) MicroPython (" MICROPY_VERSION_STRING '
+            f'") Binding compiled on " MICROPY_BUILD_DATE\n\n'
         )
 
         with open(mpconfigport, 'wb') as f:

@@ -978,7 +978,7 @@ def update_panic_handler():
         beg, end = data.split('"MPY version : "', 1)
         end = end.split('"\\r\\n"', 1)[1]
         data = (
-            f'{beg}"LVGL MPY version : 1.23.0 on " '
+            f'{beg}"LVGL MPY version : " MICROPY_VERSION_STRING " on " '
             f'MICROPY_BUILD_DATE MICROPY_BUILD_TYPE_PAREN "\\r\\n"{end}'
         )
 
