@@ -890,11 +890,11 @@ def submodules():
     cmds.insert(0, [f'cd {SCRIPT_DIR}'])
     cmds.insert(0, ['. ./export.sh'])
     cmds.insert(0, ['cd', os.path.abspath(idf_path)])
-    
+
     if 'GITHUB_RUN_ID' in os.environ:
         cmds.insert(0, [f'export "IDF_PATH={os.path.abspath(idf_path)}"'])
 
-    cmds.extend(submodules_cmd[:])
+    cmds.append(submodules_cmd[:])
 
     return_code, _ = spawn(cmds, env=env)
     if return_code != 0:
