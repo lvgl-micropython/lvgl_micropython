@@ -875,7 +875,8 @@ def submodules():
     for name, file in (
         ('berkeley-db-1.xx', 'README'),
         ('mbedtls', 'README.md'),
-        ('micropython-lib', 'README.md')
+        ('micropython-lib', 'README.md'),
+        ('tinyusb', 'README.rst')
     ):
         file = os.path.join('lib/micropython/lib', name, file)
         if not os.path.exists(file):
