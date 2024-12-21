@@ -977,10 +977,7 @@ def update_panic_handler():
     if '"MPY version : "' in data:
         beg, end = data.split('"MPY version : "', 1)
         end = end.split('"\\r\\n"', 1)[1]
-        data = (
-            f'{beg}"LVGL MPY version : " MICROPY_VERSION_STRING " on " '
-            f'MICROPY_BUILD_DATE MICROPY_BUILD_TYPE_PAREN "\\r\\n"{end}'
-        )
+        data = f'{beg}"LVGL MicroPython \\r\\n"{end}'
 
         write_file(PANICHANDLER_PATH, data)
 
