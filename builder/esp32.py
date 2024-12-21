@@ -870,19 +870,7 @@ def submodules():
     if result != 0:
         sys.exit(result)
 
-    if 'GITHUB_RUN_ID' in os.environ:
-        cmds = [
-            [f'export "IDF_PATH={os.path.abspath(idf_path)}"'],
-            ['cd', os.path.abspath(idf_path)],
-            ['. ./export.sh'],
-            [f'cd {SCRIPT_DIR}']
-        ]
-    else:
-        cmds = [
-            [f'cd {os.path.abspath(idf_path)}'],
-            [f'. ./export.sh'],
-            [f'cd {SCRIPT_DIR}']
-        ]
+    cmds = []
 
     for name, file in (
         ('berkeley-db-1.xx', 'README'),
@@ -898,6 +886,13 @@ def submodules():
     if cmds:
         cmds.insert(0, ['cd lib/micropython'])
         cmds.append(['cd ../..'])
+
+    cmds.insert(0, [f'cd {SCRIPT_DIR}'])
+    cmds.insert(0, ['. ./export.sh'])
+    cmds.insert(0, ['cd', os.path.abspath(idf_path)])
+    
+    if 'GITHUB_RUN_ID' in os.environ:
+        cmds.insert(0, [f'export "IDF_PATH={os.path.abspath(idf_path)}"'])
 
     cmds.extend(submodules_cmd[:])
 
