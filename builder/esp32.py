@@ -857,7 +857,7 @@ def submodules():
 
     cmds = [
         [f'export "IDF_PATH={os.path.abspath(idf_path)}"'],
-        ['cd', idf_path],
+        ['cd', os.path.abspath(idf_path)],
         ['./install.sh', 'all']
     ]
 
@@ -870,36 +870,42 @@ def submodules():
     if result != 0:
         sys.exit(result)
 
-    env, cmds = setup_idf_environ()
+    if 'GITHUB_RUN_ID' in os.environ:
+        cmds = [
+            [f'export "IDF_PATH={os.path.abspath(idf_path)}"'],
+            ['cd', os.path.abspath(idf_path)],
+            ['. ./export.sh'],
+            [f'cd {SCRIPT_DIR}']
+        ]
+    else:
+        cmds = [
+            [f'cd {os.path.abspath(idf_path)}'],
+            [f'. ./export.sh'],
+            [f'cd {SCRIPT_DIR}']
+        ]
 
-    wifi_lib = os.path.abspath(
-        os.path.join(idf_path, 'components/esp_wifi/lib')
-    )
-    berkeley_db = os.path.abspath('lib/micropython/lib/berkeley-db-1.xx/README')
+    for name, file in (
+        ('berkeley-db-1.xx', 'README'),
+        ('mbedtls', 'README.md'),
+        ('micropython-lib', 'README.md')
+    ):
+        file = os.path.join('lib/micropython/lib', name, file)
+        if not os.path.exists(file):
+            cmds.extend([
+                [f'git submodule sync lib/{name}'],
+                [f'git submodule update --init --depth=1 lib/{name}']
+            ])
+    if cmds:
+        cmds.insert(0, ['cd lib/micropython'])
+        cmds.append(['cd ../..'])
 
-    if not os.path.exists(berkeley_db) or not os.path.exists(wifi_lib):
-        cmds.append(['cd lib/micropython'])
-        for dep in (
-            'tinyusb',
-            'micropython-lib',
-            'protobuf-c',
-            'wiznet5k',
-            'lwip',
-            'mbedtls',
-            'axtls',
-            'berkeley-db-1.xx',
-            'btstack'
-        ):
-            path = f"lib/{dep}"
+    cmds.extend(submodules_cmd[:])
 
-            cmds.append([f'git submodule sync {path}'])
-            cmds.append([f'git submodule update --init --depth=1 {path}'])
+    return_code, _ = spawn(cmds, env=env)
+    if return_code != 0:
+        sys.exit(return_code)
 
-        return_code, _ = spawn(cmds, env=env)
-        if return_code != 0:
-            sys.exit(return_code)
-            
-            
+
 def find_esp32_ports(chip):
     from esptool.targets import CHIP_DEFS  # NOQA
     from esptool.util import FatalError  # NOQA
