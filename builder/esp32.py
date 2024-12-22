@@ -857,7 +857,7 @@ def submodules():
 
     cmds = [
         [f'export "IDF_PATH={os.path.abspath(idf_path)}"'],
-        ['cd', idf_path],
+        ['cd', os.path.abspath(idf_path)],
         ['./install.sh', 'all']
     ]
 
@@ -870,36 +870,38 @@ def submodules():
     if result != 0:
         sys.exit(result)
 
-    env, cmds = setup_idf_environ()
+    cmds = []
 
-    wifi_lib = os.path.abspath(
-        os.path.join(idf_path, 'components/esp_wifi/lib')
-    )
-    berkeley_db = os.path.abspath('lib/micropython/lib/berkeley-db-1.xx/README')
+    for name, file in (
+        ('berkeley-db-1.xx', 'README'),
+        ('mbedtls', 'README.md'),
+        ('micropython-lib', 'README.md'),
+        ('tinyusb', 'README.rst')
+    ):
+        file = os.path.join('lib/micropython/lib', name, file)
+        if not os.path.exists(file):
+            cmds.extend([
+                [f'git submodule sync lib/{name}'],
+                [f'git submodule update --init --depth=1 lib/{name}']
+            ])
+    if cmds:
+        cmds.insert(0, ['cd lib/micropython'])
+        cmds.append(['cd ../..'])
 
-    if not os.path.exists(berkeley_db) or not os.path.exists(wifi_lib):
-        cmds.append(['cd lib/micropython'])
-        for dep in (
-            'tinyusb',
-            'micropython-lib',
-            'protobuf-c',
-            'wiznet5k',
-            'lwip',
-            'mbedtls',
-            'axtls',
-            'berkeley-db-1.xx',
-            'btstack'
-        ):
-            path = f"lib/{dep}"
+    cmds.insert(0, [f'cd {SCRIPT_DIR}'])
+    cmds.insert(0, ['. ./export.sh'])
+    cmds.insert(0, ['cd', os.path.abspath(idf_path)])
 
-            cmds.append([f'git submodule sync {path}'])
-            cmds.append([f'git submodule update --init --depth=1 {path}'])
+    if 'GITHUB_RUN_ID' in os.environ:
+        cmds.insert(0, [f'export "IDF_PATH={os.path.abspath(idf_path)}"'])
 
-        return_code, _ = spawn(cmds, env=env)
-        if return_code != 0:
-            sys.exit(return_code)
-            
-            
+    cmds.append(submodules_cmd[:])
+
+    return_code, _ = spawn(cmds, env=env)
+    if return_code != 0:
+        sys.exit(return_code)
+
+
 def find_esp32_ports(chip):
     from esptool.targets import CHIP_DEFS  # NOQA
     from esptool.util import FatalError  # NOQA
@@ -977,10 +979,7 @@ def update_panic_handler():
     if '"MPY version : "' in data:
         beg, end = data.split('"MPY version : "', 1)
         end = end.split('"\\r\\n"', 1)[1]
-        data = (
-            f'{beg}"LVGL MPY version : 1.23.0 on " '
-            f'MICROPY_BUILD_DATE MICROPY_BUILD_TYPE_PAREN "\\r\\n"{end}'
-        )
+        data = f'{beg}"LVGL MicroPython \\r\\n"{end}'
 
         write_file(PANICHANDLER_PATH, data)
 
