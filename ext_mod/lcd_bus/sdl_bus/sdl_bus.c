@@ -139,7 +139,7 @@
                 .rotation=rotation,
                 .bytes_per_pixel=self->panel_io_config.bytes_per_pixel,
                 .last_update=1
-            }
+            };
             rotate(color, dst, &data);
             color = dst;
         }
