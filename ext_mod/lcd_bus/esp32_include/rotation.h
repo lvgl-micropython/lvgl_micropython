@@ -9,14 +9,11 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#include "rotate.h"
+
 
 #ifndef __ROTATION_H__
     #define __ROTATION_H__
-
-    #define ROTATION_0    (0)
-    #define ROTATION_90   (1)
-    #define ROTATION_180  (2)
-    #define ROTATION_270  (3)
 
     typedef struct _rotation_task_t {
         bus_lock_t lock;
@@ -42,27 +39,13 @@
         mp_rom_error_text_t msg;
     } rotation_init_err_t;
 
-
-    typedef struct _rotation_data_t {
-        int x_start;
-        int y_start;
-        int x_end;
-        int y_end;
-
-        uint16_t width;
-        uint16_t height;
-
-        uint8_t rotation: 2;
-        uint8_t bytes_per_pixel: 2;
-        uint8_t last_update: 1;
-
+    typedef struct _rotation_param_data_t {
         uint8_t tx_param_count;
         int param_cmd[24];
         void *param[24];
         size_t param_size[24];
         bool param_last_cmd[24];
-
-    } rotation_data_t;
+    } rotation_param_data_t;
 
 
     typedef int (*init_func_cb_t)(void *self_in);
@@ -73,6 +56,7 @@
         rotation_buffer_t buf;
         rotation_data_t data;
         rotation_init_err_t init_err;
+        rotation_param_data_t param_data;
         int lcd_cmd;
 
         init_func_cb_t init_func;

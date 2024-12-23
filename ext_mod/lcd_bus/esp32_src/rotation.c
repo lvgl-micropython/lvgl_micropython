@@ -1,6 +1,7 @@
 #include "rotation.h"
 #include "lcd_types.h"
 #include "bus_task.h"
+#include "rotate.h"
 
 
 #include "freertos/FreeRTOS.h"
@@ -27,13 +28,6 @@
 
 // stdlib includes
 #include <string.h>
-
-static uint32_t rotate(void *src, void *dst, rotation_data_t *data);
-static void rotate0(uint8_t *src, uint8_t *dst, rotation_data_t *data);
-static void rotate_8bpp(uint8_t *src, uint8_t *dst, rotation_data_t *data);
-static void rotate_16bpp(uint16_t *src, uint16_t *dst, rotation_data_t *data);
-static void rotate_24bpp(uint8_t *src, uint8_t *dst, rotation_data_t *data);
-static void rotate_32bpp(uint32_t *src, uint32_t *dst, rotation_data_t *data);
 
 
 int rotation_set_buffers(void *self_in)
@@ -123,6 +117,7 @@ static void rotate_task(void *self_in)
     rotation_task_t *task = &rotation->task;
     rotation_buffer_t *buf = &rotation->buf;
     rotation_data_t *data = &rotation->data;
+    rotation_param_data_t *param_data = &rotation->param_data;
     
     mp_lcd_err_t err = rotation->init_func(self_in);
     bus_lock_release(&task->init_lock);
@@ -181,34 +176,34 @@ static void rotate_task(void *self_in)
         } else if (self->rotation->last_update_func == NULL) {
             bus_lock_acquire(&self->rotation->task.tx_param_lock, -1);
 
-            uint8_t tx_param_count = self->rotation->data.tx_param_count;
+            uint8_t tx_param_count = param_data->tx_param_count;
             uint8_t i = 0;
 
             for (;i<tx_param_count;i++) {
                 esp_lcd_panel_io_tx_param(
                     self->panel_io_handle.panel_io,
-                    data->param_cmd[i],
-                    data->param[i],
-                    data->param_size[i]
+                    param_data->param_cmd[i],
+                    param_data->param[i],
+                    param_data->param_size[i]
                 );
 
-                if (data->param_last_cmd[i]) break;
+                if (param_data->param_last_cmd[i]) break;
             }
 
             i++;
 
             for (uint8_t j=i;j<tx_param_count;j++) {
-                data->param_cmd[j - i] = data->param_cmd[j];
-                data->param[j - i] = data->param[j];
-                data->param_size[j - i] = data->param_size[j];
-                data->param_last_cmd[j - i] = data->param_last_cmd[j];
-                data->param_cmd[j] = 0;
-                data->param[j] = NULL;
-                data->param_size[j] = 0;
-                data->param_last_cmd[j] = false;
+                param_data->param_cmd[j - i] = param_data->param_cmd[j];
+                param_data->param[j - i] = param_data->param[j];
+                param_data->param_size[j - i] = param_data->param_size[j];
+                param_data->param_last_cmd[j - i] = param_data->param_last_cmd[j];
+                param_data->param_cmd[j] = 0;
+                param_data->param[j] = NULL;
+                param_data->param_size[j] = 0;
+                param_data->param_last_cmd[j] = false;
             }
         
-            self->rotation->data.tx_param_count -= i;
+            param_data->tx_param_count -= i;
 
             bus_lock_release(&self->rotation->task.tx_param_lock);
 
@@ -257,359 +252,4 @@ void rotation_task_start(void *self_in)
 
     bus_lock_acquire(&rotation->task.init_lock, -1);
     bus_lock_release(&rotation->task.init_lock);
-}
-
-
-__attribute__((always_inline))
-static inline void copy_8bpp(uint8_t *from, uint8_t *to)
-{
-    *to++ = *from++;
-}
-
-
-__attribute__((always_inline))
-static inline void copy_16bpp(uint16_t *from, uint16_t *to)
-{
-    *to++ = *from++;
-}
-
-
-__attribute__((always_inline))
-static inline void copy_24bpp(uint8_t *from, uint8_t *to)
-{
-    *to++ = *from++;
-    *to++ = *from++;
-    *to++ = *from++;
-}
-
-
-__attribute__((always_inline))
-static inline void copy_32bpp(uint32_t *from, uint32_t *to)
-{
-    *to++ = *from++;
-}
-
-
-uint32_t rotate(void *src, void *dst, rotation_data_t *data)
-{
-    rotation_data_t rot_data;
-
-    if (data->rotation != ROTATION_0) data->y_end += 1;
-
-    if (data->rotation == ROTATION_90 || data->rotation == ROTATION_270) {
-        rot_data.x_start = MIN(data->x_start, data->height);
-        rot_data.x_end = MIN(data->x_end, data->height);
-        rot_data.y_start = MIN(data->y_start, data->width);
-        rot_data.y_end = MIN(data->y_end, data->width);
-    } else {
-        rot_data.x_start = MIN(data->x_start, data->width);
-        rot_data.x_end = MIN(data->x_end, data->width);
-        rot_data.y_start = MIN(data->y_start, data->height);
-        rot_data.y_end = MIN(data->y_end, data->height);
-    }
-
-    rot_data.height = data->height;
-    rot_data.width = data->width;
-    rot_data.rotation = data->rotation;
-    rot_data.bytes_per_pixel = data->bytes_per_pixel;
-
-    if (data->rotation == ROTATION_0) {
-        rotate0(src, dst, &rot_data);
-    } else {
-        if (data->bytes_per_pixel == 1) rotate_8bpp(src, dst, &rot_data);
-        else if (data->bytes_per_pixel == 2) rotate_16bpp(src, dst, &rot_data);
-        else if (data->bytes_per_pixel == 3) rotate_24bpp(src, dst, &rot_data);
-        else if (data->bytes_per_pixel == 4) rotate_32bpp(src, dst, &rot_data);
-    }
-
-    return (rot_data.x_end - rot_data.x_start + 1) * (rot_data.y_end - rot_data.y_start + 1) * rot_data.bytes_per_pixel;
-}
-
-
-void rotate0(uint8_t *src, uint8_t *dst, rotation_data_t *data)
-{
-    uint32_t x_start = data->x_start;
-    uint32_t y_start = data->y_start;
-    uint32_t x_end = data->x_end;
-    uint32_t y_end = data->y_end;
-
-    uint32_t dst_width = data->width;
-
-    uint8_t bytes_per_pixel = data->bytes_per_pixel;
-
-    dst += ((y_start * dst_width + x_start) * bytes_per_pixel);
-
-    if (x_start == 0 && x_end == (dst_width - 1)) {
-        memcpy(dst, src, dst_width * (y_end - y_start + 1) * bytes_per_pixel);
-    } else {
-        uint32_t src_bytes_per_line = (x_end - x_start + 1) * bytes_per_pixel;
-        uint32_t dst_bytes_per_line = dst_width * bytes_per_pixel;
-
-        for (uint32_t y=y_start;y<y_end;y++) {
-            memcpy(dst, src, src_bytes_per_line);
-            dst += dst_bytes_per_line;
-            src += src_bytes_per_line;
-        }
-    }
-}
-
-void rotate_8bpp(uint8_t *src, uint8_t *dst, rotation_data_t *data)
-{
-    uint32_t i;
-
-    uint32_t x_start = data->x_start;
-    uint32_t y_start = data->y_start;
-    uint32_t x_end = data->x_end;
-    uint32_t y_end = data->y_end;
-
-    uint32_t dst_width = data->width;
-    uint32_t dst_height = data->height;
-
-    uint32_t src_bytes_per_line = x_end - x_start + 1;
-    uint32_t offset = y_start * src_bytes_per_line + x_start;
-
-    switch (data->rotation) {
-        case ROTATION_90:
-            dst_height--;
-
-            for (uint32_t y=y_start;y<y_end;y++) {
-                i = y * src_bytes_per_line - offset;
-
-                for (uint32_t x=x_start;x<x_end;x++) {
-                    copy_8bpp(src + (i + x),
-                            dst + (((dst_height - x) * dst_width) + y));
-                }
-            }
-            break;
-
-        // MIRROR_X MIRROR_Y
-        case ROTATION_180:
-            dst_height--;
-            offset = dst_width - 1 - x_start;
-
-            for (uint32_t y=y_start;y<y_end;y++) {
-                i = ((dst_height - y) * dst_width) + offset;
-
-                for (uint32_t x = x_start; x < x_end; x++) {
-                    copy_8bpp(src, dst + i);
-                    src++;
-                    i--;
-                }
-            }
-            break;
-
-        // SWAP_XY   MIRROR_X
-        case ROTATION_270:
-            uint32_t dst_width_minus_one = dst_width - 1;
-
-            for (uint32_t y=y_start;y<y_end;y++) {
-                i = y * src_bytes_per_line - offset;
-                dst_height = dst_width_minus_one - y;
-
-                for (uint32_t x=x_start;x<x_end;x++) {
-                    copy_8bpp(src + (i + x), dst + (x * dst_width + dst_height));
-                }
-            }
-            break;
-
-        default:
-            break;
-    }
-
-}
-
-
-void rotate_16bpp(uint16_t *src, uint16_t *dst, rotation_data_t *data)
-{
-    uint32_t i;
-
-    uint32_t x_start = data->x_start;
-    uint32_t y_start = data->y_start;
-    uint32_t x_end = data->x_end;
-    uint32_t y_end = data->y_end;
-
-    uint32_t dst_width = data->width;
-    uint32_t dst_height = data->height;
-
-    uint32_t src_bytes_per_line = x_end - x_start + 1;
-    uint32_t offset = y_start * src_bytes_per_line + x_start;
-
-    switch (data->rotation) {
-        case ROTATION_90:
-            dst_height--;
-
-            for (uint32_t y=y_start;y<y_end;y++) {
-                i = y * src_bytes_per_line - offset;
-
-                for (uint32_t x=x_start;x<x_end;x++) {
-                    copy_16bpp(src + (i + x),
-                            dst + (((dst_height - x) * dst_width) + y));
-                }
-            }
-            break;
-
-        // MIRROR_X MIRROR_Y
-        case ROTATION_180:
-            dst_height--;
-            offset = dst_width - 1 - x_start;
-
-            for (uint32_t y=y_start;y<y_end;y++) {
-                i = ((dst_height - y) * dst_width) + offset;
-
-                for (uint32_t x=x_start;x<x_end;x++) {
-                    copy_16bpp(src, dst + i);
-                    src++;
-                    i--;
-                }
-            }
-            break;
-
-        // SWAP_XY   MIRROR_X
-        case ROTATION_270:
-            uint32_t dst_width_minus_one = dst_width - 1;
-
-            for (uint32_t y=y_start;y<y_end;y++) {
-                i = y * src_bytes_per_line - offset;
-                dst_height = dst_width_minus_one - y;
-
-                for (uint32_t x=x_start;x<x_end;x++) {
-                    copy_16bpp(src + (i + x), dst + (x * dst_width + dst_height));
-                }
-            }
-            break;
-
-        default:
-            break;
-    }
-}
-
-
-void rotate_24bpp(uint8_t *src, uint8_t *dst, rotation_data_t *data)
-{
-    uint32_t i;
-    uint32_t j;
-
-    uint32_t x_start = data->x_start;
-    uint32_t y_start = data->y_start;
-    uint32_t x_end = data->x_end;
-    uint32_t y_end = data->y_end;
-
-    uint32_t dst_width = data->width;
-    uint32_t dst_height = data->height;
-
-    uint32_t src_bytes_per_line = (x_end - x_start + 1) * 3;
-    uint32_t offset = y_start * src_bytes_per_line + x_start * 3;
-
-    switch (data->rotation) {
-
-        case ROTATION_90:
-            dst_height--;
-
-            for (uint32_t y=y_start;y<y_end;y++) {
-                i = y * src_bytes_per_line - offset;
-
-                for (uint32_t x=x_start;x<x_end;x++) {
-                    copy_24bpp(src + (i + (x * 3)),
-                            dst + ((((dst_height - x) * dst_width) + y) * 3));
-                }
-            }
-            break;
-
-        // MIRROR_X MIRROR_Y
-        case ROTATION_180:
-            dst_height--;
-            offset = dst_width - 1 - x_start;
-
-            for (uint32_t y=y_start;y<y_end;y++) {
-                i = (((dst_height - y) * dst_width) + offset) * 3;
-
-                for (size_t x=x_start;x<x_end;x++) {
-                    copy_24bpp(src, dst + i);
-                    src += 3;
-                    i -= 3;
-                }
-            }
-            break;
-
-        // SWAP_XY   MIRROR_X
-        case ROTATION_270:
-            for (uint32_t y=y_start;y<y_end;y++) {
-                i = y * src_bytes_per_line - offset;
-                j = dst_width - 1 - y;
-
-                for (uint32_t x=x_start;x<x_end;x++) {
-                    copy_24bpp(src + (i + (x * 3)),
-                            dst + (((x * dst_width) + j) * 3));
-                }
-            }
-            break;
-
-        default:
-            break;
-    }
-}
-
-
-void rotate_32bpp(uint32_t *src, uint32_t *dst, rotation_data_t *data)
-{
-    uint32_t i;
-
-    uint32_t x_start = data->x_start;
-    uint32_t y_start = data->y_start;
-    uint32_t x_end = data->x_end;
-    uint32_t y_end = data->y_end;
-
-    uint32_t dst_width = data->width;
-    uint32_t dst_height = data->height;
-
-    uint32_t src_bytes_per_line = x_end - x_start + 1;
-    uint32_t offset = y_start * src_bytes_per_line + x_start;
-
-    switch (data->rotation) {
-        case ROTATION_90:
-            dst_height--;
-
-            for (uint32_t y=y_start;y<y_end;y++) {
-                i = y * src_bytes_per_line - offset;
-
-                for (uint32_t x=x_start;x<x_end;x++) {
-                    copy_32bpp(src + (i + x),
-                            dst + (((dst_height - x) * dst_width) + y));
-                }
-            }
-            break;
-
-        // MIRROR_X MIRROR_Y
-        case ROTATION_180:
-            dst_height--;
-            offset = dst_width - 1 - x_start;
-
-            for (uint32_t y=y_start;y<y_end;y++) {
-                i = (dst_height - y) * dst_width + offset;
-
-                for (uint32_t x=x_start;x<x_end;x++) {
-                    copy_32bpp(src, dst + i);
-                    src++;
-                    i--;
-                }
-            }
-            break;
-
-        // SWAP_XY   MIRROR_X
-        case ROTATION_270:
-            uint32_t dst_width_minus_one = dst_width - 1;
-
-            for (uint32_t y=y_start;y<y_end;y++) {
-                i = y * src_bytes_per_line - offset;
-                dst_height = dst_width_minus_one - y;
-
-                for (uint32_t x=x_start;x<x_end;x++) {
-                    copy_32bpp(src + (i + x), dst + (x * dst_width + dst_height));
-                }
-            }
-            break;
-
-        default:
-            break;
-    }
 }

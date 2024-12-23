@@ -332,8 +332,8 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
             } else {
                 if (self->view1 == NULL) {
                     self->view1 = view;
-                    self->buffer_flags = caps;
-                } else if (self->view2 == NULL && self->buffer_flags == caps) {
+                    self->buffer_flags = size;
+                } else if (self->view2 == NULL && self->buffer_flags == size) {
                     self->view2 = view;
                 } else {
                     m_free(buf);

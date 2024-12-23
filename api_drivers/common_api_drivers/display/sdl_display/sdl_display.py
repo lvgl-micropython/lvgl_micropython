@@ -109,11 +109,10 @@ class SDLDisplay(display_driver_framework.DisplayDriver):
         buffer_size = lv.color_format_get_size(color_space)
         buffer_size *= display_width * display_height
 
+        self.__buf_size = buffer_size
+
         if frame_buffer1 is None:
             frame_buffer1 = data_bus.allocate_framebuffer(buffer_size, 0)
-
-            if frame_buffer2 is None:
-                frame_buffer2 = data_bus.allocate_framebuffer(buffer_size, 0)
         else:
             if buffer_size != len(frame_buffer1):
                 raise RuntimeError('frame buffer is not large enough')
@@ -159,7 +158,8 @@ class SDLDisplay(display_driver_framework.DisplayDriver):
             cf,
             False,
             8,
-            8
+            8,
+            True
         )
 
         self._disp_drv.set_flush_cb(self._flush_cb)
@@ -180,6 +180,7 @@ class SDLDisplay(display_driver_framework.DisplayDriver):
 
         self._disp_drv.add_event_cb(
             self._res_chg_event_cb, lv.EVENT.RESOLUTION_CHANGED, None)  # NOQA
+
         self._disp_drv.add_event_cb(
             self._release_disp_cb, lv.EVENT.DELETE, None)  # NOQA
 
@@ -199,6 +200,7 @@ class SDLDisplay(display_driver_framework.DisplayDriver):
         self._disp_drv.delete()
 
     def _res_chg_event_cb(self, _):
+        self._rotation = self._disp_drv.get_rotation()
         bpp = lv.color_format_get_size(self._disp_drv.get_color_format())
 
         hor_res = self._disp_drv.get_horizontal_resolution()
@@ -206,15 +208,18 @@ class SDLDisplay(display_driver_framework.DisplayDriver):
 
         buf_size = int(hor_res * ver_res * bpp)
 
-        self._frame_buffer1 = self._data_bus.realloc_buffer(buf_size, 1)  # NOQA
-        self._frame_buffer2 = self._data_bus.realloc_buffer(buf_size, 2)  # NOQA
+        if self.__buf_size != buf_size:
+            self.__buf_size = buf_size
 
-        self._disp_drv.set_buffers(
-            self._frame_buffer1,
-            self._frame_buffer2,
-            len(self._frame_buffer1),
-            lv.DISPLAY_RENDER_MODE.DIRECT  # NOQA
-        )
+            self._frame_buffer1 = self._data_bus.realloc_buffer(buf_size, 1)  # NOQA
+            self._frame_buffer2 = self._data_bus.realloc_buffer(buf_size, 2)  # NOQA
+
+            self._disp_drv.set_buffers(
+                self._frame_buffer1,
+                self._frame_buffer2,
+                len(self._frame_buffer1),
+                lv.DISPLAY_RENDER_MODE.DIRECT  # NOQA
+            )
 
         self._data_bus.set_window_size(
             hor_res, ver_res, self._cf, self._ignore_size_chg)

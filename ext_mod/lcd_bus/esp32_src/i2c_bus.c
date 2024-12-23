@@ -232,17 +232,17 @@ mp_lcd_err_t i2c_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_s
     } else {
         bus_lock_acquire(&self->rotation->task.tx_param_lock, -1);
 
-        if (self->rotation->data.tx_param_count == 24) {
+        if (self->rotation->param_data.tx_param_count == 24) {
             bus_lock_release(&self->rotation->task.tx_param_lock);
             mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("tx_parameter overflow."));
         } else {
-            uint8_t tx_param_count = self->rotation->data.tx_param_count;
+            uint8_t tx_param_count = self->rotation->param_data.tx_param_count;
 
-            self->rotation->data.param_cmd[tx_param_count] = lcd_cmd;
-            self->rotation->data.param[tx_param_count] = param;
-            self->rotation->data.param_size[tx_param_count] = param_size;
-            self->rotation->data.param_last_cmd[tx_param_count] = last_flush_cmd;
-            self->rotation->data.tx_param_count++;
+            self->rotation->param_data.param_cmd[tx_param_count] = lcd_cmd;
+            self->rotation->param_data.param[tx_param_count] = param;
+            self->rotation->param_data.param_size[tx_param_count] = param_size;
+            self->rotation->param_data.param_last_cmd[tx_param_count] = last_flush_cmd;
+            self->rotation->param_data.tx_param_count++;
 
             bus_lock_release(&self->rotation->task.tx_param_lock);
         }
