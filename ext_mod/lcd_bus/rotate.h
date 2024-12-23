@@ -3,6 +3,15 @@
 #ifndef __ROTATE_H__
     #define __ROTATE_H__
 
+    #ifndef MAX
+        #define MAX(a, b) (((a) > (b)) ? (a) : (b))
+    #endif
+
+    #ifndef MIN
+        #define MIN(a, b) (((a) < (b)) ? (a) : (b))
+    #endif
+
+
     #define ROTATION_0    (0)
     #define ROTATION_90   (1)
     #define ROTATION_180  (2)
