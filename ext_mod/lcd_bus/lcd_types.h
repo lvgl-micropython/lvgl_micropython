@@ -16,8 +16,8 @@
     // esp-idf includes
     #include "esp_lcd_panel_io.h"
 
-    #include "rotation.h"
     #include "bus_task.h"
+    #include "rotation.h"
 
     #define LCD_OK                 0
     #define LCD_FAIL               -1
@@ -54,14 +54,14 @@
 #endif
 
     struct _lcd_panel_io_t {
+        mp_lcd_err_t (*del)(mp_obj_t obj);
         mp_lcd_err_t (*get_lane_count)(mp_obj_t obj, uint8_t *lane_count);
-        mp_lcd_err_t (*init)(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits, bool sw_rotation);
+        mp_lcd_err_t (*init)(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits, bool sw_rotate);
         mp_lcd_err_t (*rx_param)(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
         mp_lcd_err_t (*tx_param)(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size, bool is_flush, bool last_flush_cmd);
         mp_lcd_err_t (*tx_color)(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update);
-        mp_obj_t (*allocate_framebuffer)(mp_obj_t obj, uint32_t size, uint32_t caps);
-        mp_obj_t (*free_framebuffer)(mp_obj_t obj, mp_obj_t buf);
-        mp_lcd_err_t (*del)(mp_obj_t obj);
+        mp_obj_t     (*allocate_framebuffer)(mp_obj_t obj, uint32_t size, uint32_t caps);
+        mp_obj_t     (*free_framebuffer)(mp_obj_t obj, mp_obj_t buf);
 
     #ifdef ESP_IDF_VERSION
         esp_lcd_panel_io_handle_t panel_io;
@@ -69,16 +69,15 @@
     };
 
     // typedef struct lcd_panel_io_t *lcd_panel_io_handle_t; /*!< Type of LCD panel IO handle */
-
+    mp_lcd_err_t lcd_panel_io_del(mp_obj_t obj);
     mp_lcd_err_t lcd_panel_io_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
-    mp_lcd_err_t lcd_panel_io_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits, bool sw_rotation);
+    mp_lcd_err_t lcd_panel_io_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits, bool sw_rotate);
     mp_lcd_err_t lcd_panel_io_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
     mp_lcd_err_t lcd_panel_io_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size, bool is_flush, bool last_flush_cmd);
     mp_lcd_err_t lcd_panel_io_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update);
-    mp_obj_t lcd_panel_io_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps);
-    mp_obj_t lcd_panel_io_free_framebuffer(mp_obj_t obj, mp_obj_t buf);
+    mp_obj_t     lcd_panel_io_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps);
+    mp_obj_t     lcd_panel_io_free_framebuffer(mp_obj_t obj, mp_obj_t buf);
 
-    mp_lcd_err_t lcd_panel_io_del(mp_obj_t obj);
 
     typedef struct _mp_lcd_bus_obj_t {
         mp_obj_base_t base;
@@ -94,6 +93,7 @@
         uint32_t buffer_flags;
 
     #ifdef ESP_IDF_VERSION
+        uint8_t lane_count: 5;
         uint8_t trans_done : 1;
         uint8_t rgb565_byte_swap : 1;
     #else

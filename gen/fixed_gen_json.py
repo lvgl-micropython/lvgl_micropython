@@ -15,7 +15,27 @@ import create_fake_lib_c  # NOQA
 import pycparser_monkeypatch  # NOQA
 import pycparser  # NOQA
 
+
 temp_directory = tempfile.mkdtemp(suffix='.lvgl_json')
+
+
+def dummy_list():
+    return []
+
+
+def dummy_doc(_):
+    return None
+
+
+pycparser_monkeypatch.get_enum_item_docs = dummy_doc
+pycparser_monkeypatch.get_enum_docs = dummy_doc
+pycparser_monkeypatch.get_func_docs = dummy_doc
+pycparser_monkeypatch.get_var_docs = dummy_doc
+pycparser_monkeypatch.get_union_docs = dummy_doc
+pycparser_monkeypatch.get_struct_docs = dummy_doc
+pycparser_monkeypatch.get_typedef_docs = dummy_doc
+pycparser_monkeypatch.get_macro_docs = dummy_doc
+pycparser_monkeypatch.get_macros = dummy_list
 
 
 def run(lvgl_config_path, target_header, filter_private):
@@ -111,8 +131,6 @@ def run(lvgl_config_path, target_header, filter_private):
 
     cparser = pycparser.CParser()
     ast = cparser.parse(pp_data, target_header)
-
-    ast.setup_docs(temp_directory)
 
     shutil.rmtree(temp_directory)
 

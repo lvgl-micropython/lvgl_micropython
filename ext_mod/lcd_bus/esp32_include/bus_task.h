@@ -8,6 +8,8 @@
 #ifndef __BUS_TASK_H__
     #define __BUS_TASK_H__
 
+    #define DEFAULT_STACK_SIZE    (5 * 1024)
+
     typedef struct _bus_lock_t {
         SemaphoreHandle_t handle;
         StaticSemaphore_t buffer;

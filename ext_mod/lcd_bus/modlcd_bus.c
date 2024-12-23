@@ -53,7 +53,7 @@ mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
         ARG_rgb565_byte_swap,
         ARG_cmd_bits,
         ARG_param_bits,
-        ARG_sw_rotation
+        ARG_sw_rotate
     };
 
     static const mp_arg_t allowed_args[] = {
@@ -65,7 +65,7 @@ mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
         { MP_QSTR_rgb565_byte_swap, MP_ARG_BOOL | MP_ARG_REQUIRED },
         { MP_QSTR_cmd_bits,         MP_ARG_INT  | MP_ARG_REQUIRED },
         { MP_QSTR_param_bits,       MP_ARG_INT  | MP_ARG_REQUIRED },
-        { MP_QSTR_sw_rotation,      MP_ARG_BOOL | MP_ARG_REQUIRED },
+        { MP_QSTR_sw_rotate,      MP_ARG_BOOL | MP_ARG_REQUIRED },
 
     };
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
@@ -80,7 +80,7 @@ mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
         (bool)args[ARG_rgb565_byte_swap].u_bool,
         (uint8_t)args[ARG_cmd_bits].u_int,
         (uint8_t)args[ARG_param_bits].u_int,
-        (bool)args[ARG_sw_rotation].u_bool
+        (bool)args[ARG_sw_rotate].u_bool
     );
 
     if (ret != 0) {

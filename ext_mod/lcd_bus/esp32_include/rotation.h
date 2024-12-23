@@ -1,7 +1,10 @@
 #include "bus_task.h"
-#include "lcd_types.h"
 
-#include "py/misc.h"
+// micropy includes
+#include "py/obj.h"
+#include "py/runtime.h"
+#include "mphalport.h"
+
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -10,16 +13,10 @@
 #ifndef __ROTATION_H__
     #define __ROTATION_H__
 
-#if LCD_RGB_OPTIMUM_FB_SIZE
-    typedef struct _rotation_optimum_t {
-        uint16_t flush_count;
-        uint8_t sample_count;
-        uint8_t curr_index;
-        uint16_t *samples;
-        bus_lock_t lock;
-    } rotation_optimum_t;
-#endif
-
+    #define ROTATION_0    (0)
+    #define ROTATION_90   (1)
+    #define ROTATION_180  (2)
+    #define ROTATION_270  (3)
 
     typedef struct _rotation_task_t {
         bus_lock_t lock;
@@ -41,7 +38,7 @@
 
 
     typedef struct _rotation_init_err_t {
-        mp_lcd_err_t code;
+        int code;
         mp_rom_error_text_t msg;
     } rotation_init_err_t;
 
@@ -63,13 +60,13 @@
         int param_cmd[24];
         void *param[24];
         size_t param_size[24];
-        bool param_last_cmd[24]
+        bool param_last_cmd[24];
 
     } rotation_data_t;
 
 
-    typedef mp_lcd_err_t (*init_func_cb_t)(void *self_in);
-
+    typedef int (*init_func_cb_t)(void *self_in);
+    typedef void (*last_update_cb_t)(void *self_in, void *idle_buf);
 
     typedef struct _rotation_t {
         rotation_task_t task;
@@ -79,17 +76,11 @@
         int lcd_cmd;
 
         init_func_cb_t init_func;
+        last_update_cb_t last_update_func;
 
-
-    #if LCD_RGB_OPTIMUM_FB_SIZE
-        rotation_optimum_t optimum;
-    #endif
     } rotation_t;
 
     void rotation_task_start(void *self_in);
-    mp_lcd_err_t rotation_set_buffers(void *self_in);
-
-    uint32_t rotate(void *src, void *dst, rotation_data_t *data);
-
+    int rotation_set_buffers(void *self_in);
 
 #endif

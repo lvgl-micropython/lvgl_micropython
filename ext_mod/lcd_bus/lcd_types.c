@@ -172,8 +172,14 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
                 self->rotation->data.y_end = y_end;
                 self->rotation->data.rotation = (uint8_t)rotation;
                 self->rotation->lcd_cmd = lcd_cmd;
-                self->rotation->data.width = x_end - x_start + 1;
-                self->rotation->data.height = y_end - y_start + 1;
+
+                if (rotation == ROTATION_0 || rotation == ROTATION_180) {
+                    self->rotation->data.width = x_end - x_start + 1;
+                    self->rotation->data.height = y_end - y_start + 1;
+                } else {
+                    self->rotation->data.width = y_end - y_start + 1;
+                    self->rotation->data.height = x_end - x_start + 1;
+                }
 
                 bus_lock_release(&self->rotation->task.lock);
                 return LCD_OK;
@@ -187,6 +193,7 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
 
                 LCD_DEBUG_PRINT("lcd_panel_io_tx_color(self, lcd_cmd=%d, color, color_size=%d)\n", lcd_cmd, color_size)
                 return esp_lcd_panel_io_tx_color(self->panel_io_handle.panel_io, lcd_cmd, color, color_size);
+            }
         } else {
             return self->panel_io_handle.tx_color(obj, lcd_cmd, color, color_size, x_start, y_start, x_end, y_end, rotation, last_update);
         }
@@ -228,6 +235,14 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
         } else {
             return self->panel_io_handle.allocate_framebuffer(obj, size, caps);
         }
+    }
+
+    mp_lcd_err_t lcd_panel_io_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
+    {
+        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
+
+        *lane_count = self->lane_count;
+        return LCD_OK;
     }
 
 #else
@@ -338,6 +353,14 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
             return self->panel_io_handle.allocate_framebuffer(obj, size, caps);
         }
     }
+
+    mp_lcd_err_t lcd_panel_io_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
+    {
+        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
+
+        return self->panel_io_handle.get_lane_count(obj, lane_count);
+    }
+
 #endif
 
 
@@ -361,12 +384,4 @@ mp_lcd_err_t lcd_panel_io_init(mp_obj_t obj, uint16_t width, uint16_t height, ui
     mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
 
     return self->panel_io_handle.init(obj, width, height, bpp, buffer_size, rgb565_byte_swap, cmd_bits, param_bits, sw_rotation);
-}
-
-
-mp_lcd_err_t lcd_panel_io_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
-{
-    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
-
-    return self->panel_io_handle.get_lane_count(obj, lane_count);
 }

@@ -26,8 +26,7 @@
 
 
     mp_lcd_err_t i80_del(mp_obj_t obj);
-    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits, bool sw_rotation);
-    mp_lcd_err_t i80_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
+    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits, bool sw_rotate);
     mp_lcd_err_t i80_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size, bool is_flush, bool last_flush_cmd);
 
     static bool i80_bus_trans_done_cb(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
@@ -44,26 +43,27 @@
     {
         mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)self_in;
 
-        self->panel_io_config.on_color_trans_done = &i80_bus_trans_done_cb;
+        self->panel_io_config->on_color_trans_done = &i80_bus_trans_done_cb;
 
-        rotation_t *rotation = self->rotation;
-        rotation_init_err_t *init_err = &rotation->init_err;
-        rotation_task_t *task = &rotation->task;
+        rotation_init_err_t *init_err = &self->rotation->init_err;
 
-        init_err->code = esp_lcd_new_i80_bus(&self->bus_config, &self->bus_handle);
-
+        init_err->code = esp_lcd_new_i80_bus(self->bus_config, &self->bus_handle);
         if (init_err->code != LCD_OK) {
-            init_err->err_msg = MP_ERROR_TEXT("%d(esp_lcd_new_i80_bus)");
-            bus_lock_release(&task->init_lock);
-        } else {
-
-            init_err->code = esp_lcd_new_panel_io_i80(self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io);
-
-            if (init_err->code != LCD_OK) {
-                init_err->err_msg = MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_i80)");
-                bus_lock_release(&task->init_lock);
-            }
+            init_err->msg = MP_ERROR_TEXT("%d(esp_lcd_new_i80_bus)");
+            return init_err->code;
         }
+
+        init_err->code = esp_lcd_new_panel_io_i80(self->bus_handle, self->panel_io_config, &self->panel_io_handle.panel_io);
+        if (init_err->code != LCD_OK) {
+            init_err->msg = MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_i80)");
+            return init_err->code;
+        }
+
+        free(self->bus_config);
+        self->bus_config = NULL;
+
+        free(self->panel_io_config);
+        self->panel_io_config = NULL;
 
         return init_err->code;
     }
@@ -150,83 +150,87 @@
     
         self->callback = mp_const_none;
 
-        self->bus_config.dc_gpio_num = (int)args[ARG_dc].u_int;
-        self->bus_config.wr_gpio_num = (int)args[ARG_wr].u_int;
-        self->bus_config.clk_src = LCD_CLK_SRC_PLL160M;
-        self->bus_config.data_gpio_nums[0] = args[ARG_data0].u_int;
-        self->bus_config.data_gpio_nums[1] = args[ARG_data1].u_int;
-        self->bus_config.data_gpio_nums[2] = args[ARG_data2].u_int;
-        self->bus_config.data_gpio_nums[3] = args[ARG_data3].u_int;
-        self->bus_config.data_gpio_nums[4] = args[ARG_data4].u_int;
-        self->bus_config.data_gpio_nums[5] = args[ARG_data5].u_int;
-        self->bus_config.data_gpio_nums[6] = args[ARG_data6].u_int;
-        self->bus_config.data_gpio_nums[7] = args[ARG_data7].u_int;
-        self->bus_config.data_gpio_nums[8] = args[ARG_data8].u_int;
-        self->bus_config.data_gpio_nums[9] = args[ARG_data9].u_int;
-        self->bus_config.data_gpio_nums[10] = args[ARG_data10].u_int;
-        self->bus_config.data_gpio_nums[11] = args[ARG_data11].u_int;
-        self->bus_config.data_gpio_nums[12] = args[ARG_data12].u_int;
-        self->bus_config.data_gpio_nums[13] = args[ARG_data13].u_int;
-        self->bus_config.data_gpio_nums[14] = args[ARG_data14].u_int;
-        self->bus_config.data_gpio_nums[15] = args[ARG_data15].u_int;
+        self->bus_config = (esp_lcd_i80_bus_config_t *)malloc(sizeof(esp_lcd_i80_bus_config_t));
+
+        self->bus_config->dc_gpio_num = (int)args[ARG_dc].u_int;
+        self->bus_config->wr_gpio_num = (int)args[ARG_wr].u_int;
+        self->bus_config->clk_src = LCD_CLK_SRC_PLL160M;
+        self->bus_config->data_gpio_nums[0] = args[ARG_data0].u_int;
+        self->bus_config->data_gpio_nums[1] = args[ARG_data1].u_int;
+        self->bus_config->data_gpio_nums[2] = args[ARG_data2].u_int;
+        self->bus_config->data_gpio_nums[3] = args[ARG_data3].u_int;
+        self->bus_config->data_gpio_nums[4] = args[ARG_data4].u_int;
+        self->bus_config->data_gpio_nums[5] = args[ARG_data5].u_int;
+        self->bus_config->data_gpio_nums[6] = args[ARG_data6].u_int;
+        self->bus_config->data_gpio_nums[7] = args[ARG_data7].u_int;
+        self->bus_config->data_gpio_nums[8] = args[ARG_data8].u_int;
+        self->bus_config->data_gpio_nums[9] = args[ARG_data9].u_int;
+        self->bus_config->data_gpio_nums[10] = args[ARG_data10].u_int;
+        self->bus_config->data_gpio_nums[11] = args[ARG_data11].u_int;
+        self->bus_config->data_gpio_nums[12] = args[ARG_data12].u_int;
+        self->bus_config->data_gpio_nums[13] = args[ARG_data13].u_int;
+        self->bus_config->data_gpio_nums[14] = args[ARG_data14].u_int;
+        self->bus_config->data_gpio_nums[15] = args[ARG_data15].u_int;
 
         uint8_t i = 0;
         for (; i < SOC_LCD_I80_BUS_WIDTH; i++) {
-            if (self->bus_config.data_gpio_nums[i] == -1) {
+            if (self->bus_config->data_gpio_nums[i] == -1) {
                 break;
             }
         }
 
-        self->bus_config.bus_width = (size_t) i;
+        self->bus_config->bus_width = (size_t) i;
+        self->lane_count = (uint8_t)i;
 
-        self->panel_io_config.cs_gpio_num = (int)args[ARG_cs].u_int;
-        self->panel_io_config.pclk_hz = (uint32_t)args[ARG_freq].u_int;
-        self->panel_io_config.trans_queue_depth = 5;
-        self->panel_io_config.user_ctx = self;
-        self->panel_io_config.dc_levels.dc_idle_level = (unsigned int)args[ARG_dc_idle_high].u_bool;
-        self->panel_io_config.dc_levels.dc_cmd_level = (unsigned int)args[ARG_dc_cmd_high].u_bool;
-        self->panel_io_config.dc_levels.dc_dummy_level = (unsigned int)args[ARG_dc_dummy_high].u_bool;
-        self->panel_io_config.dc_levels.dc_data_level = (unsigned int)args[ARG_dc_data_high].u_bool;
-        self->panel_io_config.flags.cs_active_high = (unsigned int)args[ARG_cs_active_high].u_bool;
-        self->panel_io_config.flags.reverse_color_bits = (unsigned int)args[ARG_reverse_color_bits].u_bool;
-        self->panel_io_config.flags.pclk_active_neg = (unsigned int)args[ARG_pclk_active_low].u_bool;
-        self->panel_io_config.flags.pclk_idle_low = (unsigned int)args[ARG_pclk_idle_low].u_bool;
+        self->panel_io_config = (esp_lcd_panel_io_i80_config_t *)malloc(sizeof(esp_lcd_panel_io_i80_config_t));
 
-        LCD_DEBUG_PRINT("dc_gpio_num=%d\n", self->bus_config.dc_gpio_num)
-        LCD_DEBUG_PRINT("wr_gpio_num=%d\n", self->bus_config.wr_gpio_num)
-        LCD_DEBUG_PRINT("clk_src=%d\n", self->bus_config.clk_src)
-        LCD_DEBUG_PRINT("data_gpio_nums[0]=%d\n", self->bus_config.data_gpio_nums[0])
-        LCD_DEBUG_PRINT("data_gpio_nums[1]=%d\n", self->bus_config.data_gpio_nums[1])
-        LCD_DEBUG_PRINT("data_gpio_nums[2]=%d\n", self->bus_config.data_gpio_nums[2])
-        LCD_DEBUG_PRINT("data_gpio_nums[3]=%d\n", self->bus_config.data_gpio_nums[3])
-        LCD_DEBUG_PRINT("data_gpio_nums[4]=%d\n", self->bus_config.data_gpio_nums[4])
-        LCD_DEBUG_PRINT("data_gpio_nums[5]=%d\n", self->bus_config.data_gpio_nums[5])
-        LCD_DEBUG_PRINT("data_gpio_nums[6]=%d\n", self->bus_config.data_gpio_nums[6])
-        LCD_DEBUG_PRINT("data_gpio_nums[7]=%d\n", self->bus_config.data_gpio_nums[7])
-        LCD_DEBUG_PRINT("data_gpio_nums[8]=%d\n", self->bus_config.data_gpio_nums[8])
-        LCD_DEBUG_PRINT("data_gpio_nums[9]=%d\n", self->bus_config.data_gpio_nums[9])
-        LCD_DEBUG_PRINT("data_gpio_nums[10]=%d\n", self->bus_config.data_gpio_nums[10])
-        LCD_DEBUG_PRINT("data_gpio_nums[11]=%d\n", self->bus_config.data_gpio_nums[11])
-        LCD_DEBUG_PRINT("data_gpio_nums[12]=%d\n", self->bus_config.data_gpio_nums[12])
-        LCD_DEBUG_PRINT("data_gpio_nums[13]=%d\n", self->bus_config.data_gpio_nums[13])
-        LCD_DEBUG_PRINT("data_gpio_nums[14]=%d\n", self->bus_config.data_gpio_nums[14])
-        LCD_DEBUG_PRINT("data_gpio_nums[15]=%d\n", self->bus_config.data_gpio_nums[15])
-        LCD_DEBUG_PRINT("bus_width=%d\n", self->bus_config.bus_width)
-        LCD_DEBUG_PRINT("cs_gpio_num=%d\n", self->panel_io_config.cs_gpio_num)
-        LCD_DEBUG_PRINT("pclk_hz=%lu\n", self->panel_io_config.pclk_hz)
-        LCD_DEBUG_PRINT("trans_queue_depth=%d\n", self->panel_io_config.trans_queue_depth)
-        LCD_DEBUG_PRINT("dc_idle_level=%d\n", self->panel_io_config.dc_levels.dc_idle_level)
-        LCD_DEBUG_PRINT("dc_cmd_level=%d\n", self->panel_io_config.dc_levels.dc_cmd_level)
-        LCD_DEBUG_PRINT("dc_dummy_level=%d\n", self->panel_io_config.dc_levels.dc_dummy_level)
-        LCD_DEBUG_PRINT("dc_data_level=%d\n", self->panel_io_config.dc_levels.dc_data_level)
-        LCD_DEBUG_PRINT("cs_active_high=%d\n", self->panel_io_config.flags.cs_active_high)
-        LCD_DEBUG_PRINT("reverse_color_bits=%d\n", self->panel_io_config.flags.reverse_color_bits)
-        LCD_DEBUG_PRINT("pclk_active_neg=%d\n", self->panel_io_config.flags.pclk_active_neg)
-        LCD_DEBUG_PRINT("pclk_idle_low=%d\n", self->panel_io_config.flags.pclk_idle_low)
+        self->panel_io_config->cs_gpio_num = (int)args[ARG_cs].u_int;
+        self->panel_io_config->pclk_hz = (uint32_t)args[ARG_freq].u_int;
+        self->panel_io_config->trans_queue_depth = 5;
+        self->panel_io_config->user_ctx = self;
+        self->panel_io_config->dc_levels.dc_idle_level = (unsigned int)args[ARG_dc_idle_high].u_bool;
+        self->panel_io_config->dc_levels.dc_cmd_level = (unsigned int)args[ARG_dc_cmd_high].u_bool;
+        self->panel_io_config->dc_levels.dc_dummy_level = (unsigned int)args[ARG_dc_dummy_high].u_bool;
+        self->panel_io_config->dc_levels.dc_data_level = (unsigned int)args[ARG_dc_data_high].u_bool;
+        self->panel_io_config->flags.cs_active_high = (unsigned int)args[ARG_cs_active_high].u_bool;
+        self->panel_io_config->flags.reverse_color_bits = (unsigned int)args[ARG_reverse_color_bits].u_bool;
+        self->panel_io_config->flags.pclk_active_neg = (unsigned int)args[ARG_pclk_active_low].u_bool;
+        self->panel_io_config->flags.pclk_idle_low = (unsigned int)args[ARG_pclk_idle_low].u_bool;
+
+        LCD_DEBUG_PRINT("dc_gpio_num=%d\n", self->bus_config->dc_gpio_num)
+        LCD_DEBUG_PRINT("wr_gpio_num=%d\n", self->bus_config->wr_gpio_num)
+        LCD_DEBUG_PRINT("clk_src=%d\n", self->bus_config->clk_src)
+        LCD_DEBUG_PRINT("data_gpio_nums[0]=%d\n", self->bus_config->data_gpio_nums[0])
+        LCD_DEBUG_PRINT("data_gpio_nums[1]=%d\n", self->bus_config->data_gpio_nums[1])
+        LCD_DEBUG_PRINT("data_gpio_nums[2]=%d\n", self->bus_config->data_gpio_nums[2])
+        LCD_DEBUG_PRINT("data_gpio_nums[3]=%d\n", self->bus_config->data_gpio_nums[3])
+        LCD_DEBUG_PRINT("data_gpio_nums[4]=%d\n", self->bus_config->data_gpio_nums[4])
+        LCD_DEBUG_PRINT("data_gpio_nums[5]=%d\n", self->bus_config->data_gpio_nums[5])
+        LCD_DEBUG_PRINT("data_gpio_nums[6]=%d\n", self->bus_config->data_gpio_nums[6])
+        LCD_DEBUG_PRINT("data_gpio_nums[7]=%d\n", self->bus_config->data_gpio_nums[7])
+        LCD_DEBUG_PRINT("data_gpio_nums[8]=%d\n", self->bus_config->data_gpio_nums[8])
+        LCD_DEBUG_PRINT("data_gpio_nums[9]=%d\n", self->bus_config->data_gpio_nums[9])
+        LCD_DEBUG_PRINT("data_gpio_nums[10]=%d\n", self->bus_config->data_gpio_nums[10])
+        LCD_DEBUG_PRINT("data_gpio_nums[11]=%d\n", self->bus_config->data_gpio_nums[11])
+        LCD_DEBUG_PRINT("data_gpio_nums[12]=%d\n", self->bus_config->data_gpio_nums[12])
+        LCD_DEBUG_PRINT("data_gpio_nums[13]=%d\n", self->bus_config->data_gpio_nums[13])
+        LCD_DEBUG_PRINT("data_gpio_nums[14]=%d\n", self->bus_config->data_gpio_nums[14])
+        LCD_DEBUG_PRINT("data_gpio_nums[15]=%d\n", self->bus_config->data_gpio_nums[15])
+        LCD_DEBUG_PRINT("bus_width=%d\n", self->bus_config->bus_width)
+        LCD_DEBUG_PRINT("cs_gpio_num=%d\n", self->panel_io_config->cs_gpio_num)
+        LCD_DEBUG_PRINT("pclk_hz=%lu\n", self->panel_io_config->pclk_hz)
+        LCD_DEBUG_PRINT("trans_queue_depth=%d\n", self->panel_io_config->trans_queue_depth)
+        LCD_DEBUG_PRINT("dc_idle_level=%d\n", self->panel_io_config->dc_levels.dc_idle_level)
+        LCD_DEBUG_PRINT("dc_cmd_level=%d\n", self->panel_io_config->dc_levels.dc_cmd_level)
+        LCD_DEBUG_PRINT("dc_dummy_level=%d\n", self->panel_io_config->dc_levels.dc_dummy_level)
+        LCD_DEBUG_PRINT("dc_data_level=%d\n", self->panel_io_config->dc_levels.dc_data_level)
+        LCD_DEBUG_PRINT("cs_active_high=%d\n", self->panel_io_config->flags.cs_active_high)
+        LCD_DEBUG_PRINT("reverse_color_bits=%d\n", self->panel_io_config->flags.reverse_color_bits)
+        LCD_DEBUG_PRINT("pclk_active_neg=%d\n", self->panel_io_config->flags.pclk_active_neg)
+        LCD_DEBUG_PRINT("pclk_idle_low=%d\n", self->panel_io_config->flags.pclk_idle_low)
 
         self->panel_io_handle.init = &i80_init;
         self->panel_io_handle.del = &i80_del;
-        self->panel_io_handle.get_lane_count = &i80_get_lane_count;
         self->panel_io_handle.tx_param = &i80_tx_param;
 
         return MP_OBJ_FROM_PTR(self);
@@ -243,7 +247,7 @@
             LCD_UNUSED(last_flush_cmd);
             ret = esp_lcd_panel_io_tx_param(self->panel_io_handle.panel_io, lcd_cmd, param, param_size);
         } else {
-            bus_lock_acquire(&self->rotation->task.tx_param_lock);
+            bus_lock_acquire(&self->rotation->task.tx_param_lock, -1);
 
             if (self->rotation->data.tx_param_count == 24) {
                 bus_lock_release(&self->rotation->task.tx_param_lock);
@@ -265,7 +269,7 @@
     }
 
 
-    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits, bool sw_rotation)
+    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits, bool sw_rotate)
     {
         LCD_DEBUG_PRINT("i80_init(self, width=%i, height=%i, bpp=%i, buffer_size=%lu, rgb565_byte_swap=%i, cmd_bits=%i, param_bits=%i)\n", width, height, bpp, buffer_size, (uint8_t)rgb565_byte_swap, cmd_bits, param_bits)
 
@@ -273,20 +277,20 @@
         self->rgb565_byte_swap = false;
 
         if (rgb565_byte_swap && bpp == 16) {
-            self->panel_io_config.flags.swap_color_bytes = 1;
+            self->panel_io_config->flags.swap_color_bytes = 1;
         }
 
-        self->panel_io_config.lcd_cmd_bits = (int)cmd_bits;
-        self->panel_io_config.lcd_param_bits = (int)param_bits;
-        self->bus_config.max_transfer_bytes = (size_t)buffer_size;
+        self->panel_io_config->lcd_cmd_bits = (int)cmd_bits;
+        self->panel_io_config->lcd_param_bits = (int)param_bits;
+        self->bus_config->max_transfer_bytes = (size_t)buffer_size;
 
-        LCD_DEBUG_PRINT("lcd_cmd_bits=%d\n", self->panel_io_config.lcd_cmd_bits)
-        LCD_DEBUG_PRINT("lcd_param_bits=%d\n", self->panel_io_config.lcd_param_bits)
-        LCD_DEBUG_PRINT("max_transfer_bytes=%d\n", self->bus_config.max_transfer_bytes)
+        LCD_DEBUG_PRINT("lcd_cmd_bits=%d\n", self->panel_io_config->lcd_cmd_bits)
+        LCD_DEBUG_PRINT("lcd_param_bits=%d\n", self->panel_io_config->lcd_param_bits)
+        LCD_DEBUG_PRINT("max_transfer_bytes=%d\n", self->bus_config->max_transfer_bytes)
 
         esp_err_t ret;
 
-        if (sw_rotation) {
+        if (sw_rotate) {
             self->rotation = (rotation_t *)malloc(sizeof(rotation_t));
 
             self->rotation->init_func = &i80_rotation_init_func;
@@ -300,13 +304,19 @@
             if (ret != LCD_OK) mp_raise_msg_varg(&mp_type_ValueError, self->rotation->init_err.msg, self->rotation->init_err.code);
 
         } else {
-            self->panel_io_config.on_color_trans_done = &bus_trans_done_cb;
+            self->panel_io_config->on_color_trans_done = &bus_trans_done_cb;
 
-            ret = esp_lcd_new_i80_bus(&self->bus_config, &self->bus_handle);
+            ret = esp_lcd_new_i80_bus(self->bus_config, &self->bus_handle);
             if (ret != 0) mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_i80_bus)"), ret);
 
-            ret = esp_lcd_new_panel_io_i80(self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io);
+            ret = esp_lcd_new_panel_io_i80(self->bus_handle, self->panel_io_config, &self->panel_io_handle.panel_io);
             if (ret != 0) mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_i80)"), ret);
+
+            free(self->bus_config);
+            self->bus_config = NULL;
+
+            free(self->panel_io_config);
+            self->panel_io_config = NULL;
         }
 
         return ret;
@@ -330,16 +340,6 @@
         }
 
         return ret;
-    }
-
-    mp_lcd_err_t i80_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
-    {
-        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)obj;
-        *lane_count = (uint8_t)self->bus_config.bus_width;
-
-        LCD_DEBUG_PRINT("i80_get_lane_count(self)-> %d\n", (uint8_t)self->bus_config.bus_width)
-
-        return LCD_OK;
     }
 
 #else
