@@ -130,15 +130,15 @@
             else dst = self->view1->items;
 
             rotation_data_t data = {
-                x_start=x_start,
-                y_start=y_start,
-                x_end=x_end,
-                y_end=y_end,
-                width=self->panel_io_config.width,
-                height=self->panel_io_config.height,
-                rotation=rotation,
-                bytes_per_pixel=self->panel_io_config.bytes_per_pixel,
-                last_update=1
+                .x_start=x_start,
+                .y_start=y_start,
+                .x_end=x_end,
+                .y_end=y_end,
+                .width=self->panel_io_config.width,
+                .height=self->panel_io_config.height,
+                .rotation=rotation,
+                .bytes_per_pixel=self->panel_io_config.bytes_per_pixel,
+                .last_update=1
             }
             rotate(color, dst, &data);
             color = dst;
