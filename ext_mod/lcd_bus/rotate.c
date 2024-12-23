@@ -2,6 +2,7 @@
 
 // stdlib includes
 #include <string.h>
+#include <stdint.h>
 
 static void rotate0(uint8_t *src, uint8_t *dst, rotation_data_t *data);
 static void rotate_8bpp(uint8_t *src, uint8_t *dst, rotation_data_t *data);

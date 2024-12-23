@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 #ifndef __ROTATE_H__
     #define __ROTATE_H__
 
