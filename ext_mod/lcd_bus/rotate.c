@@ -119,6 +119,8 @@ void rotate_8bpp(uint8_t *src, uint8_t *dst, rotation_data_t *data)
     uint32_t src_bytes_per_line = x_end - x_start + 1;
     uint32_t offset = y_start * src_bytes_per_line + x_start;
 
+    uint32_t dst_width_minus_one = dst_width - 1;
+
     switch (data->rotation) {
         case ROTATION_90:
             dst_height--;
@@ -151,8 +153,6 @@ void rotate_8bpp(uint8_t *src, uint8_t *dst, rotation_data_t *data)
 
         // SWAP_XY   MIRROR_X
         case ROTATION_270:
-            uint32_t dst_width_minus_one = dst_width - 1;
-
             for (uint32_t y=y_start;y<y_end;y++) {
                 i = y * src_bytes_per_line - offset;
                 dst_height = dst_width_minus_one - y;
@@ -184,6 +184,8 @@ void rotate_16bpp(uint16_t *src, uint16_t *dst, rotation_data_t *data)
 
     uint32_t src_bytes_per_line = x_end - x_start + 1;
     uint32_t offset = y_start * src_bytes_per_line + x_start;
+
+    uint32_t dst_width_minus_one = dst_width - 1;
 
     switch (data->rotation) {
         case ROTATION_90:
@@ -217,8 +219,6 @@ void rotate_16bpp(uint16_t *src, uint16_t *dst, rotation_data_t *data)
 
         // SWAP_XY   MIRROR_X
         case ROTATION_270:
-            uint32_t dst_width_minus_one = dst_width - 1;
-
             for (uint32_t y=y_start;y<y_end;y++) {
                 i = y * src_bytes_per_line - offset;
                 dst_height = dst_width_minus_one - y;
@@ -316,6 +316,8 @@ void rotate_32bpp(uint32_t *src, uint32_t *dst, rotation_data_t *data)
     uint32_t src_bytes_per_line = x_end - x_start + 1;
     uint32_t offset = y_start * src_bytes_per_line + x_start;
 
+    uint32_t dst_width_minus_one = dst_width - 1;
+
     switch (data->rotation) {
         case ROTATION_90:
             dst_height--;
@@ -348,8 +350,6 @@ void rotate_32bpp(uint32_t *src, uint32_t *dst, rotation_data_t *data)
 
         // SWAP_XY   MIRROR_X
         case ROTATION_270:
-            uint32_t dst_width_minus_one = dst_width - 1;
-
             for (uint32_t y=y_start;y<y_end;y++) {
                 i = y * src_bytes_per_line - offset;
                 dst_height = dst_width_minus_one - y;
