@@ -15,6 +15,8 @@
 #include "py/objarray.h"
 #include "py/binary.h"
 
+#include "rotate.h"
+
 // mp_printf(&mp_plat_print, "incomming event %d\n", event->type);
 
 #ifdef MP_PORT_UNIX
@@ -93,12 +95,14 @@
     }
 
 
-    mp_lcd_err_t sdl_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
+    mp_lcd_err_t sdl_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size, bool is_flush, bool last_flush_cmd)
     {
         LCD_UNUSED(obj);
         LCD_UNUSED(lcd_cmd);
         LCD_UNUSED(param);
         LCD_UNUSED(param_size);
+        LCD_UNUSED(is_flush);
+        LCD_UNUSED(last_flush_cmd);
         return LCD_OK;
     }
 
@@ -360,7 +364,7 @@
         if (args[ARG_buf_num].u_int == 1) {
             self->view1->items = m_realloc(self->view1->items, size);
             memset(self->view1->items, 0x00, size);
-            self->view1->len = size
+            self->view1->len = size;
             return MP_OBJ_FROM_PTR(self->view1);
         } else if (self->view2 != NULL) {
             self->view2->items = m_realloc(self->view2->items, size);
