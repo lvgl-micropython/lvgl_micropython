@@ -412,6 +412,11 @@
             mp_raise_msg_varg(&mp_type_ValueError, self->init_err_msg, self->init_err);
             return self->init_err;
         } else {
+            // add the new bus ONLY after successfull initilization of the bus
+            rgb_bus_count++;
+            m_realloc(rgb_bus_objs, rgb_bus_count * sizeof(mp_lcd_rgb_bus_obj_t *));
+            rgb_bus_objs[rgb_bus_count - 1] = self;
+        
             return LCD_OK;
         }
     }
