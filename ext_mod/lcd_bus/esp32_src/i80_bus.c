@@ -248,7 +248,7 @@
 
         // add the new bus ONLY after successfull initilization of the bus
         i80_bus_count++;
-        m_realloc(i80_bus_objs, i80_bus_count * sizeof(mp_lcd_i80_bus_obj_t *));
+        i80_bus_objs = m_realloc(i80_bus_objs, i80_bus_count * sizeof(mp_lcd_i80_bus_obj_t *));
         i80_bus_objs[i80_bus_count - 1] = self;
 
         return ret;

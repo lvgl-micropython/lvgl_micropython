@@ -414,9 +414,9 @@
         } else {
             // add the new bus ONLY after successfull initilization of the bus
             rgb_bus_count++;
-            m_realloc(rgb_bus_objs, rgb_bus_count * sizeof(mp_lcd_rgb_bus_obj_t *));
+            rgb_bus_objs = m_realloc(rgb_bus_objs, rgb_bus_count * sizeof(mp_lcd_rgb_bus_obj_t *));
             rgb_bus_objs[rgb_bus_count - 1] = self;
-        
+
             return LCD_OK;
         }
     }

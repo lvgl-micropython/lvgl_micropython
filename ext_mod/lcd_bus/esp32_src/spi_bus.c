@@ -286,7 +286,7 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
 
     // add the new bus ONLY after successfull initilization of the bus
     spi_bus_count++;
-    m_realloc(spi_bus_objs, spi_bus_count * sizeof(mp_lcd_spi_bus_obj_t *));
+    spi_bus_objs = m_realloc(spi_bus_objs, spi_bus_count * sizeof(mp_lcd_spi_bus_obj_t *));
     spi_bus_objs[spi_bus_count - 1] = self;
 
     return ret;
