@@ -270,7 +270,7 @@ def generate_manifest(
         if not os.path.exists(file):
             tmp_file = (
                 f'{script_dir}/api_drivers/common_api_drivers'
-                f'/io_expander/{file.lower()}'
+                f'/io_expander/{file.lower()}.py'
             )
 
             if not os.path.exists(tmp_file):
