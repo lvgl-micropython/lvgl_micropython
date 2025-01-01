@@ -99,6 +99,10 @@
 #define MP_HW_SPI_MAX_XFER_BYTES (4092)
 #define MP_HW_SPI_MAX_XFER_BITS (MP_HW_SPI_MAX_XFER_BYTES * 8) // Has to be an even multiple of 8
 
+
+static void machine_hw_spi_bus_deinit_internal(machine_hw_spi_bus_obj_t *self);
+
+
 typedef struct _machine_hw_spi_default_pins_t {
     int8_t sck;
     int8_t mosi;
@@ -141,6 +145,18 @@ typedef struct _machine_hw_spi_obj_t {
 
 // Static objects mapping to SPI2 (and SPI3 if available) hardware peripherals.
 static machine_hw_spi_bus_obj_t *machine_hw_spi_bus_objs[MICROPY_HW_SPI_MAX];
+
+
+void machine_hw_spi_bus_deinit_all(void)
+{
+    for (int i=0;i<MICROPY_HW_SPI_MAX;i++) {
+        if (machine_hw_spi_bus_objs[i] != NULL) {
+            machine_hw_spi_bus_deinit_internal(machine_hw_spi_bus_objs[i]);
+            m_del_obj(machine_hw_spi_bus_obj_t, machine_hw_spi_bus_objs[i]);
+            machine_hw_spi_bus_objs[i] = NULL;
+        }
+    }
+}
 
 
 void machine_hw_spi_bus_add_device(machine_hw_spi_device_obj_t *device)
@@ -248,7 +264,7 @@ static void disable_gpio(int gpio_num) {
 }
 
 
-static void machine_hw_spi_bus_deinit_internal(machine_hw_spi_bus_obj_t *self)
+void machine_hw_spi_bus_deinit_internal(machine_hw_spi_bus_obj_t *self)
 {
     if (self->state == MP_SPI_STATE_STOPPED) return;
 

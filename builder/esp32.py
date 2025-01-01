@@ -1101,6 +1101,28 @@ def update_mphalport():
 
 def update_main():
     data = read_file('esp32', MAIN_PATH)
+
+    rep_data = [
+        '#if SOC_LCD_I80_SUPPORTED',
+        '#include "../../../../ext_mod/lcd_bus/esp32_include/i80_bus.h"',
+        '#endif',
+        '',
+        '#if SOC_LCD_RGB_SUPPORTED',
+        '#include "../../../../ext_mod/lcd_bus/esp32_include/rgb_bus.h"',
+        '#endif',
+        '',
+        '#include "../../../../ext_mod/lcd_bus/esp32_include/spi_bus.h"',
+        '#include "../../../../ext_mod/lcd_bus/esp32_include/i2c_bus.h"',
+        '#include "../../../../micropy_updates/common/mp_spi_common.h"'
+        '',
+        '#if MICROPY_BLUETOOTH_NIMBLE'
+    ]
+
+    data = data.replace(
+        '#if MICROPY_BLUETOOTH_NIMBLE',
+        '\n'.join(rep_data),
+        1
+    )
     data = data.replace(
         '#if CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG',
         '#if MP_USB_SERIAL_JTAG'
@@ -1108,6 +1130,29 @@ def update_main():
     data = data.replace(
         '#elif CONFIG_USB_OTG_SUPPORTED',
         '#elif MP_USB_OTG'
+    )
+
+    rep_data = [
+        'soft_reset_exit:',
+        ' ',
+        '#if SOC_LCD_I80_SUPPORTED',
+        '    mp_lcd_i80_bus_deinit_all();',
+        '#endif',
+        '    ',
+        '#if SOC_LCD_RGB_SUPPORTED',
+        '   mp_lcd_rgb_bus_deinit_all();',
+        '#endif',
+        '    ',
+        '    mp_lcd_spi_bus_deinit_all();',
+        '    ',
+        '    mp_lcd_i2c_bus_deinit_all();',
+        '    ',
+        '    machine_hw_spi_bus_deinit_all();'
+    ]
+
+    data = data.replace(
+        'soft_reset_exit:',
+        '\n'.join(rep_data)
     )
 
     write_file(MAIN_PATH, data)
@@ -1206,6 +1251,7 @@ def build_sdkconfig(*args):
 
     with open(SDKCONFIG_PATH, 'w') as f:
         f.write('\n'.join(base_config))
+
 
 
 def compile(*args):  # NOQA

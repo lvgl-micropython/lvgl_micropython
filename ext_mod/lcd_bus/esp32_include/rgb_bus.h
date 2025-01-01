@@ -140,6 +140,9 @@
 
         extern const mp_obj_type_t mp_lcd_rgb_bus_type;
 
+        extern void mp_lcd_rgb_bus_deinit_all(void);
+
+
     #endif /* _ESP32_RGB_BUS_H_ */
 #else
     #include "../common_include/rgb_bus.h"

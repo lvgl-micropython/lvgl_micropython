@@ -18,8 +18,9 @@
 
         mp_obj_t callback;
 
-        void *buf1;
-        void *buf2;
+        mp_obj_array_t *view1;
+        mp_obj_array_t *view2;
+
         uint32_t buffer_flags;
 
         bool trans_done;
@@ -35,4 +36,7 @@
     } mp_lcd_i2c_bus_obj_t;
 
     extern const mp_obj_type_t mp_lcd_i2c_bus_type;
+
+    extern void mp_lcd_i2c_bus_deinit_all(void);
+
 #endif /* _ESP32_I2C_BUS_H_ */

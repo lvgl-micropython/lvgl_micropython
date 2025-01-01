@@ -146,6 +146,7 @@ machine_hw_spi_bus_obj_t rp2_machine_spi_bus_obj[] = {
     }
 };
 
+void machine_hw_spi_bus_deinit_all(void) {}
 
 mp_obj_t machine_spi_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
     enum { ARG_id, ARG_baudrate, ARG_polarity, ARG_phase, ARG_bits, ARG_firstbit, ARG_cs, ARG_sck, ARG_mosi, ARG_miso };

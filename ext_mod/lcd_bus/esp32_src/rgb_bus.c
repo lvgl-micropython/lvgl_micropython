@@ -41,8 +41,26 @@
     mp_lcd_err_t rgb_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
     mp_lcd_err_t rgb_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
     mp_lcd_err_t rgb_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update);
-    mp_obj_t rgb_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps);
-    mp_obj_t rgb_free_framebuffer(mp_obj_t obj, mp_obj_t buf);
+
+    static uint8_t rgb_bus_count = 0;
+    static mp_lcd_rgb_bus_obj_t **rgb_bus_objs;
+
+
+    void mp_lcd_rgb_bus_deinit_all(void)
+    {
+        // we need to copy the existing array to a new one so the order doesn't
+        // get all mucked up when objects get removed.
+        mp_lcd_rgb_bus_obj_t *objs[rgb_bus_count];
+
+        for (uint8_t i=0;i<rgb_bus_count;i++) {
+            objs[i] = rgb_bus_objs[i];
+        }
+
+        for (uint8_t i=0;i<rgb_bus_count;i++) {
+            rgb_del(MP_OBJ_FROM_PTR(objs[i]));
+        }
+    }
+
 
     mp_obj_t mp_lcd_rgb_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
@@ -223,8 +241,6 @@
         self->panel_io_handle.rx_param = &rgb_rx_param;
         self->panel_io_handle.tx_param = &rgb_tx_param;
         self->panel_io_handle.tx_color = &rgb_tx_color;
-        self->panel_io_handle.allocate_framebuffer = &rgb_allocate_framebuffer;
-        self->panel_io_handle.free_framebuffer = &rgb_free_framebuffer;
         self->panel_io_handle.init = &rgb_init;
 
         return MP_OBJ_FROM_PTR(self);
@@ -232,31 +248,66 @@
 
     mp_lcd_err_t rgb_del(mp_obj_t obj)
     {
-        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
-
         LCD_DEBUG_PRINT("rgb_del(self)\n")
 
-        if (self->view1 != NULL || self->view2 != NULL) {
-            mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("Framebuffers have not been released"));
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
+
+        if (self->panel_handle != NULL) {
+            rgb_bus_lock_acquire(&self->tx_color_lock, -1);
+            self->partial_buf = NULL;
+            rgb_bus_event_set(&self->copy_task_exit);
+            rgb_bus_lock_release(&self->copy_lock);
+            rgb_bus_lock_release(&self->tx_color_lock);
+
+            mp_lcd_err_t ret = esp_lcd_panel_del(self->panel_handle);
+
+            if (ret != 0) {
+                mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_panel_del)"), ret);
+            }
+            self->panel_handle = NULL;
+
+            rgb_bus_lock_delete(&self->copy_lock);
+            rgb_bus_lock_delete(&self->tx_color_lock);
+
+            rgb_bus_event_clear(&self->swap_bufs);
+            rgb_bus_event_delete(&self->swap_bufs);
+            rgb_bus_event_delete(&self->copy_task_exit);
+
+            if (self->view1 != NULL) {
+                heap_caps_free(self->view1->items);
+                self->view1->items = NULL;
+                self->view1->len = 0
+                self->view1 = NULL;
+                LCD_DEBUG_PRINT("rgb_free_framebuffer(self, buf=1)\n")
+            }
+
+            if (self->view2 != NULL) {
+                heap_caps_free(self->view2->items);
+                self->view2->items = NULL;
+                self->view2->len = 0
+                self->view2 = NULL;
+                LCD_DEBUG_PRINT("rgb_free_framebuffer(self, buf=1)\n")
+            }
+
+            uint8_t i = 0;
+
+            for (;i<rgb_bus_count;i++) {
+                if (rgb_bus_objs[i] == self) {
+                    rgb_bus_objs[i] = NULL;
+                    break;
+                }
+            }
+
+            for (uint8_t j=i + 1;j<rgb_bus_count;j++) {
+                rgb_bus_objs[j - i + 1] = rgb_bus_objs[j];
+            }
+
+            rgb_bus_count--;
+            rgb_bus_objs = m_realloc(rgb_bus_objs, rgb_bus_count * sizeof(mp_lcd_rgb_bus_obj_t *));
+            return ret;
+        } else {
             return LCD_FAIL;
         }
-
-        rgb_bus_lock_acquire(&self->tx_color_lock, -1);
-        self->partial_buf = NULL;
-        rgb_bus_event_set(&self->copy_task_exit);
-        rgb_bus_lock_release(&self->copy_lock);
-        rgb_bus_lock_release(&self->tx_color_lock);
-
-        mp_lcd_err_t ret = esp_lcd_panel_del(self->panel_handle);
-
-        rgb_bus_lock_delete(&self->copy_lock);
-        rgb_bus_lock_delete(&self->tx_color_lock);
-
-        rgb_bus_event_clear(&self->swap_bufs);
-        rgb_bus_event_delete(&self->swap_bufs);
-        rgb_bus_event_delete(&self->copy_task_exit);
-
-        return ret;
     }
 
     mp_lcd_err_t rgb_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
@@ -281,63 +332,6 @@
         return LCD_OK;
     }
 
-    mp_obj_t rgb_free_framebuffer(mp_obj_t obj, mp_obj_t buf)
-    {
-        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
-
-        if (self->panel_handle != NULL) {
-            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unable to free buffer"));
-            return mp_const_none;
-        }
-
-        mp_obj_array_t *array_buf = (mp_obj_array_t *)MP_OBJ_TO_PTR(buf);
-        void *item_buf = array_buf->items;
-
-        if (array_buf == self->view1) {
-            heap_caps_free(item_buf);
-            self->view1 = NULL;
-            LCD_DEBUG_PRINT("rgb_free_framebuffer(self, buf=1)\n")
-        } else if (array_buf == self->view2) {
-            heap_caps_free(item_buf);
-            self->view2 = NULL;
-            LCD_DEBUG_PRINT("rgb_free_framebuffer(self, buf=2)\n")
-        } else {
-            mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("No matching buffer found"));
-        }
-        return mp_const_none;
-    }
-
-    mp_obj_t rgb_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps)
-    {
-        LCD_DEBUG_PRINT("rgb_allocate_framebuffer(self, size=%lu, caps=%lu)\n", size, caps)
-
-        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
-
-        void *buf = heap_caps_calloc(1, size, caps);
-
-        if (buf == NULL) {
-           mp_raise_msg_varg(
-               &mp_type_MemoryError,
-               MP_ERROR_TEXT("Not enough memory available (%d)"),
-               size
-           );
-        }
-
-        mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE, size, buf));
-        view->typecode |= 0x80; // used to indicate writable buffer
-
-        if (self->view1 == NULL) {
-            self->view1 = view;
-        } else if (self->view2 == NULL) {
-            self->view2 = view;
-        } else {
-            heap_caps_free(buf);
-            mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("There is a maximum of 2 frame buffers allowed"));
-            return mp_const_none;
-        }
-
-        return MP_OBJ_FROM_PTR(view);
-    }
 
     mp_lcd_err_t rgb_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
     {

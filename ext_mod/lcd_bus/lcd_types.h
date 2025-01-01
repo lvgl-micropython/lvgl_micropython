@@ -60,9 +60,9 @@
         mp_obj_t (*free_framebuffer)(mp_obj_t obj, mp_obj_t buf);
         mp_lcd_err_t (*del)(mp_obj_t obj);
 
-        #ifdef ESP_IDF_VERSION
-            esp_lcd_panel_io_handle_t panel_io;
-        #endif
+    #ifdef ESP_IDF_VERSION
+        esp_lcd_panel_io_handle_t panel_io;
+    #endif
     };
 
     // typedef struct lcd_panel_io_t *lcd_panel_io_handle_t; /*!< Type of LCD panel IO handle */
@@ -82,8 +82,14 @@
 
         mp_obj_t callback;
 
+    #ifdef ESP_IDF_VERSION
+        mp_obj_array_t *view1;
+        mp_obj_array_t *view2;
+    #else
         void *buf1;
         void *buf2;
+    #endif
+
         uint32_t buffer_flags;
 
         bool trans_done;

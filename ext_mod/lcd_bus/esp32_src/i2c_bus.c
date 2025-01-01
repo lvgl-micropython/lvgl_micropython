@@ -23,6 +23,26 @@ mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
 mp_lcd_err_t i2c_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
 
 
+static uint8_t i2c_bus_count = 0;
+static mp_lcd_i2c_bus_obj_t **i2c_bus_objs;
+
+
+void mp_lcd_i2c_bus_deinit_all(void)
+{
+    // we need to copy the existing array to a new one so the order doesn't
+    // get all mucked up when objects get removed.
+    mp_lcd_i2c_bus_obj_t *objs[i2c_bus_count];
+
+    for (uint8_t i=0;i<i2c_bus_count;i++) {
+        objs[i] = i2c_bus_objs[i];
+    }
+
+    for (uint8_t i=0;i<i2c_bus_count;i++) {
+        spi_del(MP_OBJ_FROM_PTR(objs[i]));
+    }
+}
+
+
 static mp_obj_t mp_lcd_i2c_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
 {
     enum {
@@ -100,16 +120,57 @@ mp_lcd_err_t i2c_del(mp_obj_t obj)
 {
     mp_lcd_i2c_bus_obj_t *self = (mp_lcd_i2c_bus_obj_t *)obj;
 
-    mp_lcd_err_t ret = esp_lcd_panel_io_del(self->panel_io_handle.panel_io);
-    if (ret != 0) {
-        mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_panel_io_del)"), ret);
-    }
-    ret = i2c_driver_delete(self->host);
-    if (ret != 0) {
-        mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(i2c_driver_delete)"), ret);
-    }
+    if (self->panel_io_handle.panel_io != NULL) {
 
-    return ret;
+        mp_lcd_err_t ret = esp_lcd_panel_io_del(self->panel_io_handle.panel_io);
+        if (ret != 0) {
+            mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_panel_io_del)"), ret);
+            return ret;
+        }
+
+        ret = i2c_driver_delete(self->host);
+        if (ret != 0) {
+            mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(i2c_driver_delete)"), ret);
+            return ret;
+        }
+
+        self->panel_io_handle.panel_io = NULL;
+
+        if (self->view1 != NULL) {
+            heap_caps_free(self->view1->items);
+            self->view1->items = NULL;
+            self->view1->len = 0
+            self->view1 = NULL;
+            LCD_DEBUG_PRINT("i2c_free_framebuffer(self, buf=1)\n")
+        }
+
+        if (self->view2 != NULL) {
+            heap_caps_free(self->view2->items);
+            self->view2->items = NULL;
+            self->view2->len = 0
+            self->view2 = NULL;
+            LCD_DEBUG_PRINT("i2c_free_framebuffer(self, buf=1)\n")
+        }
+
+        uint8_t i= 0;
+        for (;i<i2c_bus_count;i++) {
+            if (i2c_bus_objs[i] == self) {
+                i2c_bus_objs[i] = NULL;
+                break;
+            }
+        }
+
+        for (uint8_t j=i + 1;j<i2c_bus_count;j++) {
+            i2c_bus_objs[j - i + 1] = i2c_bus_objs[j];
+        }
+
+        i2c_bus_count--;
+        i2c_bus_objs = m_realloc(i2c_bus_objs, i2c_bus_count * sizeof(mp_lcd_i2c_bus_obj_t *));
+
+        return ret;
+    } else {
+        return LCD_FAIL;
+    }
 }
 
 
@@ -129,18 +190,26 @@ mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
     mp_lcd_err_t ret = i2c_param_config(self->host, &self->bus_config);
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(i2c_param_config)"), ret);
+        return ret;
     }
 
     ret = i2c_driver_install(self->host, I2C_MODE_MASTER, 0, 0, 0);
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_OSError, MP_ERROR_TEXT("%d(i2c_driver_install)"), ret);
+        return ret;
     }
 
     ret = esp_lcd_new_panel_io_i2c(self->bus_handle , &self->panel_io_config, &self->panel_io_handle.panel_io);
 
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_i2c)"), ret);
+        return ret;
     }
+
+    // add the new bus ONLY after successfull initilization of the bus
+    i2c_bus_count++;
+    m_realloc(i2c_bus_objs, i2c_bus_count * sizeof(mp_lcd_i2c_bus_obj_t *));
+    spi_bus_objs[i2c_bus_count - 1] = self;
 
     return ret;
 }
