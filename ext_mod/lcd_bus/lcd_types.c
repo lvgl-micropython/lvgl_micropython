@@ -197,6 +197,7 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
 
             if (self->view1 == NULL) {
                 self->view1 = view;
+                self->buffer_flags = caps;
             } else if (self->buffer_flags != caps) {
                 mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("allocation flags must be the same for both buffers"));
                 return mp_const_none;
