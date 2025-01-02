@@ -274,7 +274,7 @@
                 return ret;
             }
 
-            self->panel_io_handle.panel_io = NULL
+            self->panel_io_handle.panel_io = NULL;
 
             if (self->view1 != NULL) {
                 heap_caps_free(self->view1->items);
@@ -292,7 +292,7 @@
                 LCD_DEBUG_PRINT("i80_free_framebuffer(self, buf=1)\n")
             }
 
-            uint8_t i= 0;
+            uint8_t i = 0;
             for (;i<i80_bus_count;i++) {
                 if (i80_bus_objs[i] == self) {
                     i80_bus_objs[i] = NULL;

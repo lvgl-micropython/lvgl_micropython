@@ -38,7 +38,7 @@ void mp_lcd_i2c_bus_deinit_all(void)
     }
 
     for (uint8_t i=0;i<i2c_bus_count;i++) {
-        spi_del(MP_OBJ_FROM_PTR(objs[i]));
+        i2c_del(MP_OBJ_FROM_PTR(objs[i]));
     }
 }
 
@@ -209,7 +209,7 @@ mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
     // add the new bus ONLY after successfull initilization of the bus
     i2c_bus_count++;
     i2c_bus_objs = m_realloc(i2c_bus_objs, i2c_bus_count * sizeof(mp_lcd_i2c_bus_obj_t *));
-    spi_bus_objs[i2c_bus_count - 1] = self;
+    i2c_bus_objs[i2c_bus_count - 1] = self;
 
     return ret;
 }
