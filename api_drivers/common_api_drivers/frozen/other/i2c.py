@@ -4,11 +4,19 @@ import machine
 class I2C(object):
     class Bus(object):
 
-        def __init__(self, host, scl, sda, freq=400000, use_locks=False):
+        def __init__(self, host, scl, sda, freq=400000, use_locks=False, pullup=False):
+
+            if pullup:
+                scl = machine.Pin(scl, pull=machine.Pin.PULL_UP)
+                sda = machine.Pin(sda, pull=machine.Pin.PULL_UP)
+            else:
+                scl = machine.Pin(scl)
+                sda = machine.Pin(sda)
+
             self._bus = machine.I2C(
                 host,
-                scl=machine.Pin(scl),
-                sda=machine.Pin(sda),
+                scl=scl,
+                sda=sda,
                 freq=freq
             )
 

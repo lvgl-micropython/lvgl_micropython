@@ -139,7 +139,7 @@ mp_lcd_err_t i2c_del(mp_obj_t obj)
         if (self->view1 != NULL) {
             heap_caps_free(self->view1->items);
             self->view1->items = NULL;
-            self->view1->len = 0
+            self->view1->len = 0;
             self->view1 = NULL;
             LCD_DEBUG_PRINT("i2c_free_framebuffer(self, buf=1)\n")
         }
@@ -147,7 +147,7 @@ mp_lcd_err_t i2c_del(mp_obj_t obj)
         if (self->view2 != NULL) {
             heap_caps_free(self->view2->items);
             self->view2->items = NULL;
-            self->view2->len = 0
+            self->view2->len = 0;
             self->view2 = NULL;
             LCD_DEBUG_PRINT("i2c_free_framebuffer(self, buf=1)\n")
         }
