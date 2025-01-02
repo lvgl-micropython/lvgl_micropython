@@ -187,6 +187,9 @@ class CST816S(pointer_framework.PointerDriver):
         if self._reset_pin:
             self._reset_pin.value(1)
 
+        self.hw_reset()
+        self.auto_sleep = False
+
         self._read_reg(_ChipID)
         print('Chip ID:', hex(self._rx_buf[0]))
         chip_id = self._rx_buf[0]
