@@ -189,7 +189,6 @@ if __name__ == '__main__':
         import builder as mod
 
     get_submodules()
-    mod.submodules()
 
     extra_args, lv_cflags, board = mod.parse_args(extra_args, lv_cflags, board)
     extra_args = mod.build_commands(
@@ -201,11 +200,11 @@ if __name__ == '__main__':
     else:
         mod.clean()
 
-
-
     if not os.path.exists('lib/micropython/mpy_cross/build/mpy-cross'):
         print('Compiling mpy-cross....')
         mod.mpy_cross()
+
+    mod.submodules()
 
     print('Generating build files....')
     set_mp_version(target.lower())
@@ -214,6 +213,7 @@ if __name__ == '__main__':
         target, SCRIPT_DIR, False, displays,
         indevs, expanders, frozen_manifest
     )
+
     create_lvgl_header()
 
     print('Compiling....')
