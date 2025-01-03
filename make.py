@@ -211,7 +211,7 @@ if __name__ == '__main__':
     set_mp_version(target.lower())
 
     mod.build_manifest(
-        target, SCRIPT_DIR, lvgl_api, displays,
+        target, SCRIPT_DIR, False, displays,
         indevs, expanders, frozen_manifest
     )
     create_lvgl_header()
