@@ -1,3 +1,8 @@
+
+#  ******* NOTICE ********
+# This module is no longer used.
+
+
 from micropython import const  # NOQA
 import machine  # NOQA
 

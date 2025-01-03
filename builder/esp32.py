@@ -682,8 +682,8 @@ def build_manifest(
 
     set_displays.extend(generate_manifest(
         script_dir, lvgl_api, manifest_path,
-        displays, indevs, expanders, frozen_manifest,
-        f'{script_dir}/api_drivers/common_api_drivers/frozen/other/spi3wire.py'
+        displays, indevs, expanders, frozen_manifest
+        # f'{script_dir}/api_drivers/common_api_drivers/frozen/other/spi3wire.py'
     ))
 
 
@@ -1213,7 +1213,8 @@ def update_main():
         '',
         '#include "../../../../ext_mod/lcd_bus/esp32_include/spi_bus.h"',
         '#include "../../../../ext_mod/lcd_bus/esp32_include/i2c_bus.h"',
-        '#include "../../../../micropy_updates/common/mp_spi_common.h"'
+        '#include "../../../../ext_mod/spi3wire/include/spi3wire.h"',
+        '#include "../../../../micropy_updates/common/mp_spi_common.h"',
         '',
         '#if MICROPY_BLUETOOTH_NIMBLE'
     ]
@@ -1238,6 +1239,8 @@ def update_main():
         '    mp_lcd_spi_bus_deinit_all();',
         '    ',
         '    mp_lcd_i2c_bus_deinit_all();',
+        '    ',
+        '    mp_spi3wire_deinit_all();',
         '    ',
         '    machine_hw_spi_bus_deinit_all();'
     ]
