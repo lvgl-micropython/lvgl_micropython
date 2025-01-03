@@ -121,28 +121,8 @@ if lv_cflags is None:
     lv_cflags = ''
 
 
-argParser = ArgumentParser(prefix_chars='-')
-argParser.add_argument(
-    '--LVGL_API',
-    dest='lvgl_api',
-    help=(
-        'Sets the API to be used. If this flag gets set '
-        'then the api that is used is the same as what the C API is for LVGL.'
-    ),
-    action='store_true',
-    default=False
-)
-
-args3, extra_args = argParser.parse_known_args(extra_args)
-
-lvgl_api = args3.lvgl_api
-
 extra_args.append(f'FROZEN_MANIFEST="{SCRIPT_DIR}/build/manifest.py"')
-
-if lvgl_api:
-    extra_args.append(f'GEN_SCRIPT=lvgl')
-else:
-    extra_args.append(f'GEN_SCRIPT=python')
+extra_args.append(f'GEN_SCRIPT=python')
 
 
 if lv_cflags is not None:
@@ -208,6 +188,9 @@ if __name__ == '__main__':
     else:
         import builder as mod
 
+    get_submodules()
+    mod.submodules()
+
     extra_args, lv_cflags, board = mod.parse_args(extra_args, lv_cflags, board)
     extra_args = mod.build_commands(
         target, extra_args, SCRIPT_DIR, lv_cflags, board)
@@ -218,9 +201,7 @@ if __name__ == '__main__':
     else:
         mod.clean()
 
-    get_submodules()
 
-    mod.submodules()
 
     if not os.path.exists('lib/micropython/mpy_cross/build/mpy-cross'):
         print('Compiling mpy-cross....')
