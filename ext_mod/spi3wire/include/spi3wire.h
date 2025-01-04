@@ -10,6 +10,11 @@
     #include "esp_lcd_panel_io_additions.h"
     #include "esp_lcd_panel_io.h"
 
+#if CONFIG_LCD_ENABLE_DEBUG_LOG
+    #define SPI3WIRE_DEBUG_PRINT(...) mp_printf(&mp_plat_print, __VA_ARGS__);
+#else
+    #define SPI3WIRE_DEBUG_PRINT(...)
+#endif
 
     typedef struct {
         mp_obj_base_t base;

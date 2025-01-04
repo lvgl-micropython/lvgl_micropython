@@ -127,7 +127,7 @@ static mp_obj_t spi3wire_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t 
 
     esp_err_t ret = esp_lcd_new_panel_io_3wire_spi(self->io_config, &self->panel_io_handle);
 
-    if (ret !- 0) {
+    if (ret != 0) {
         mp_raise_msg_varg(&mp_type_OSError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_3wire_spi)"), ret);
     }
 
@@ -161,13 +161,13 @@ static mp_obj_t spi3wire_tx_param(size_t n_args, const mp_obj_t *pos_args, mp_ma
         size_t buf_len = 0;
 
         if (args[ARG_params].u_obj != mp_const_none) {
-            mp_buffer_info_t *bufinfo;
+            mp_buffer_info_t bufinfo;
             mp_get_buffer_raise(args[ARG_params].u_obj, &bufinfo, MP_BUFFER_READ);
             buf_len = bufinfo.len;
             buf = bufinfo.buf;
         }
 
-        LCD_DEBUG_PRINT("spi3wire_tx_param(self, lcd_cmd=%d, param, param_size=%d)\n", cmd, buf_len)
+        SPI3WIRE_DEBUG_PRINT("spi3wire_tx_param(self, lcd_cmd=%d, param, param_size=%d)\n", cmd, buf_len)
 
         esp_err_t ret = esp_lcd_panel_io_tx_param(self->panel_io_handle, cmd, buf, buf_len);
 
@@ -185,7 +185,7 @@ static MP_DEFINE_CONST_FUN_OBJ_KW(spi3wire_tx_param_obj, 2, spi3wire_tx_param);
 
 mp_obj_t spi3wire_deinit(mp_obj_t obj)
 {
-    LCD_DEBUG_PRINT("spi3wire_deinit(self)\n")
+    SPI3WIRE_DEBUG_PRINT("spi3wire_deinit(self)\n")
 
     mp_spi3wire_obj_t *self = (mp_spi3wire_obj_t *)obj;
 
@@ -213,13 +213,13 @@ mp_obj_t spi3wire_deinit(mp_obj_t obj)
         spi3wire_objs = m_realloc(spi3wire_objs, spi3wire_count * sizeof(mp_spi3wire_obj_t *));
     }
 
-    return mp_const_none
+    return mp_const_none;
 }
 
 static MP_DEFINE_CONST_FUN_OBJ_1(spi3wire_deinit_obj, spi3wire_deinit);
 
 
-static const mp_rom_map_elem_t mp_spi3wire_locals_dict_table[] = {
+static const mp_rom_map_elem_t spi3wire_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_tx_param), MP_ROM_PTR(&spi3wire_tx_param_obj) },
     { MP_ROM_QSTR(MP_QSTR_init),     MP_ROM_PTR(&spi3wire_init_obj)     },
     { MP_ROM_QSTR(MP_QSTR_deinit),   MP_ROM_PTR(&spi3wire_deinit_obj)   },
@@ -238,17 +238,17 @@ MP_DEFINE_CONST_OBJ_TYPE(
 );
 
 
-static const mp_rom_map_elem_t mp_module_spi3wire_globals_table[] = {
+static const mp_rom_map_elem_t spi3wire_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_OBJ_NEW_QSTR(MP_QSTR_spi3wire) },
     { MP_ROM_QSTR(MP_QSTR_Spi3Wire), MP_ROM_PTR(&mp_spi3wire_type)     },
 };
 
-static MP_DEFINE_CONST_DICT(mp_module_spi3wire_globals, mp_module_spi3wire_globals_table);
+static MP_DEFINE_CONST_DICT(spi3wire_globals, spi3wire_globals_table);
 
 
-const mp_obj_module_t mp_module_spi3wire = {
+const mp_obj_module_t module_spi3wire = {
     .base    = {&mp_type_module},
-    .globals = (mp_obj_dict_t *)&mp_module_spi3wire_globals,
+    .globals = (mp_obj_dict_t *)&spi3wire_globals,
 };
 
-MP_REGISTER_MODULE(MP_QSTR_spi3wire, mp_module_spi3wire);
+MP_REGISTER_MODULE(MP_QSTR_spi3wire, module_spi3wire);

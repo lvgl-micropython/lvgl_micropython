@@ -252,7 +252,7 @@ def repl_args(extra_args):
     esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
 
     enable_uart_repl = esp_args.enable_uart_repl
-    uart_repl_bitrate = esp_args.enable_uart_repl
+    uart_repl_bitrate = esp_args.uart_repl_bitrate
 
     if mcu in ('esp32s3', 'esp32s2', 'esp32c3', 'esp32c6'):
         enable_cdc_repl = esp_args.enable_cdc_repl
@@ -1254,7 +1254,7 @@ def update_main():
 
 
 def build_sdkconfig(*args):
-    if custom_board_path is None:
+    if custom_board_path is not None:
         return
 
     base_config = [

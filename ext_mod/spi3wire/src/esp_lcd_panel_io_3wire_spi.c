@@ -15,6 +15,11 @@
 
 #include "esp_lcd_panel_io_additions.h"
 
+#define ESP_LCD_PANEL_IO_ADDITIONS_VER_MAJOR    1
+#define ESP_LCD_PANEL_IO_ADDITIONS_VER_MINOR    0
+#define ESP_LCD_PANEL_IO_ADDITIONS_VER_PATCH    0
+
+
 #define LCD_CMD_BYTES_MAX       (sizeof(uint32_t))  // Maximum number of bytes for LCD command
 #define LCD_PARAM_BYTES_MAX     (sizeof(uint32_t))  // Maximum number of bytes for LCD parameter
 
@@ -70,10 +75,8 @@ esp_err_t esp_lcd_new_panel_io_3wire_spi(const esp_lcd_panel_io_3wire_spi_config
 {
     ESP_RETURN_ON_FALSE(io_config && ret_io, ESP_ERR_INVALID_ARG, TAG, "Invalid argument");
     ESP_RETURN_ON_FALSE(io_config->expect_clk_speed <= PANEL_IO_3WIRE_SPI_CLK_MAX, ESP_ERR_INVALID_ARG, TAG, "Invalid Clock frequency");
-    ESP_RETURN_ON_FALSE(io_config->lcd_cmd_bytes > 0 && io_config->lcd_cmd_bytes <= LCD_CMD_BYTES_MAX, ESP_ERR_INVALID_ARG,
-                        TAG, "Invalid LCD command bytes");
-    ESP_RETURN_ON_FALSE(io_config->lcd_param_bytes > 0 && io_config->lcd_param_bytes <= LCD_PARAM_BYTES_MAX, ESP_ERR_INVALID_ARG,
-                        TAG, "Invalid LCD parameter bytes");
+    ESP_RETURN_ON_FALSE(io_config->lcd_cmd_bytes > 0 && io_config->lcd_cmd_bytes <= LCD_CMD_BYTES_MAX, ESP_ERR_INVALID_ARG, TAG, "Invalid LCD command bytes");
+    ESP_RETURN_ON_FALSE(io_config->lcd_param_bytes > 0 && io_config->lcd_param_bytes <= LCD_PARAM_BYTES_MAX, ESP_ERR_INVALID_ARG, TAG, "Invalid LCD parameter bytes");
 
     const spi_line_config_t *line_config = &io_config->line_config;
 
@@ -136,8 +139,7 @@ esp_err_t esp_lcd_new_panel_io_3wire_spi(const esp_lcd_panel_io_3wire_spi_config
     ESP_GOTO_ON_ERROR(gpio_set_level(panel_io->sda_io_num, sda_scl_idle_level), err, TAG, "Set SDA level failed");
 
     *ret_io = (esp_lcd_panel_io_handle_t)panel_io;
-    ESP_LOGI(TAG, "Panel IO create success, version: %d.%d.%d", ESP_LCD_PANEL_IO_ADDITIONS_VER_MAJOR,
-             ESP_LCD_PANEL_IO_ADDITIONS_VER_MINOR, ESP_LCD_PANEL_IO_ADDITIONS_VER_PATCH);
+    ESP_LOGI(TAG, "Panel IO create success, version: %d.%d.%d", ESP_LCD_PANEL_IO_ADDITIONS_VER_MAJOR, ESP_LCD_PANEL_IO_ADDITIONS_VER_MINOR, ESP_LCD_PANEL_IO_ADDITIONS_VER_PATCH);
     return ESP_OK;
 
 err:
