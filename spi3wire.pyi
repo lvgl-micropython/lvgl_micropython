@@ -12,7 +12,6 @@ class Spi3Wire:
         use_dc_bit: bool = True,
         dc_zero_on_data: bool = False,
         lsb_first: bool = False,
-        dc_data_high: bool = True,
         cs_high_active: bool = False,
         del_keep_cs_inactive: bool = False,
     ):
