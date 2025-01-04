@@ -54,7 +54,6 @@ static mp_obj_t spi3wire_make_new(const mp_obj_type_t *type, size_t n_args, size
         { MP_QSTR_use_dc_bit,           MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = true  } },
         { MP_QSTR_dc_zero_on_data,      MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false } },
         { MP_QSTR_lsb_first,            MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false } },
-        { MP_QSTR_dc_data_high,         MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = true  } },
         { MP_QSTR_cs_high_active,       MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false } },
         { MP_QSTR_del_keep_cs_inactive, MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false } }
     };
@@ -138,7 +137,7 @@ static mp_obj_t spi3wire_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t 
     return mp_const_none;
 }
 
-static MP_DEFINE_CONST_FUN_OBJ_KW(spi3wire_init_obj, 8, spi3wire_init);
+static MP_DEFINE_CONST_FUN_OBJ_KW(spi3wire_init_obj, 3, spi3wire_init);
 
 
 static mp_obj_t spi3wire_tx_param(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
