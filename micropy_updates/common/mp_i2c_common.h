@@ -3,6 +3,10 @@
 #include "py/obj.h"
 #include "py/runtime.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/semphr.h"
+
 #ifndef __MP_I2C_COMMON_H__
     #define __MP_I2C_COMMON_H__
 
@@ -11,7 +15,11 @@
     typedef struct _mp_machine_hw_i2c_bus_obj_t mp_machine_hw_i2c_bus_obj_t;
     typedef struct _mp_machine_hw_i2c_device_obj_t mp_machine_hw_i2c_device_obj_t;
 
-    typedef struct _i2c_bus_lock_t i2c_bus_lock_t;
+    typedef struct _i2c_bus_lock_t {
+        SemaphoreHandle_t handle;
+        StaticSemaphore_t buffer;
+    } i2c_bus_lock_t;
+
 
     struct _mp_machine_hw_i2c_bus_obj_t {
         mp_obj_base_t base;

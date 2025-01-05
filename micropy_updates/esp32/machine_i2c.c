@@ -72,12 +72,6 @@
     static mp_machine_hw_i2c_bus_obj_t machine_hw_i2c_obj[I2C_NUM_MAX];
 
 
-    struct _i2c_bus_lock_t {
-        SemaphoreHandle_t handle;
-        StaticSemaphore_t buffer;
-    };
-
-
     #define I2C_BUS_LOCK_ACQUIRE(self) xSemaphoreTake(self->lock.handle, portMAX_DELAY)
     #define I2C_BUS_LOCK_DELETE(self) vSemaphoreDelete(self->lock.handle)
     #define I2C_BUS_LOCK_RELEASE(self) xSemaphoreGive(self->lock.handle)
