@@ -34,21 +34,21 @@
 #define SPI_UNUSED(x) ((void)x)
 
 /*
-typedef enum _mp_spi_state_t {
+typedef enum _mp_machine_hw_spi_state_t {
     MP_SPI_STATE_STOPPED,
     MP_SPI_STATE_STARTED,
     MP_SPI_STATE_SENDING
-} mp_spi_state_t;
+} mp_machine_hw_spi_state_t;
 
-typedef struct _machine_hw_spi_bus_obj_t {
+typedef struct _mp_machine_hw_spi_bus_obj_t {
     uint8_t host;
     mp_obj_t sck;
     mp_obj_t mosi;
     mp_obj_t miso;
     int16_t active_devices;
-    mp_spi_state_t state;
+    mp_machine_hw_spi_state_t state;
     void *user_data;
-} machine_hw_spi_bus_obj_t;
+} mp_machine_hw_spi_bus_obj_t;
 
 
 typedef struct _machine_hw_spi_obj_t {
@@ -59,7 +59,7 @@ typedef struct _machine_hw_spi_obj_t {
     uint8_t bits;
     uint8_t firstbit;
     mp_obj_t cs;
-    machine_hw_spi_bus_obj_t *spi_bus;
+    mp_machine_hw_spi_bus_obj_t *spi_bus;
     void *user_data;
 } machine_hw_spi_obj_t;
 
@@ -68,7 +68,7 @@ typedef struct _machine_hw_spi_obj_t {
 /******************************************************************************/
 // Implementation of hard SPI for machine module
 
-static machine_hw_spi_bus_obj_t machine_hard_spi_bus_obj[] = {
+static mp_machine_hw_spi_bus_obj_t machine_hard_spi_bus_obj[] = {
     {
         .host = 1,
         .sck = MP_OBJ_NULL,
@@ -156,7 +156,7 @@ mp_obj_t machine_hard_spi_make_new(const mp_obj_type_t *type, size_t n_args, siz
     // get static peripheral object
     int spi_id = spi_find_index(args[ARG_id].u_obj);
 
-    machine_hw_spi_bus_obj_t *spi_bus = &machine_hard_spi_bus_obj[spi_id - 1];
+    mp_machine_hw_spi_bus_obj_t *spi_bus = &machine_hard_spi_bus_obj[spi_id - 1];
     machine_hw_spi_obj_t *self = m_new_obj(machine_hw_spi_obj_t);
     self->base.type = &machine_spi_type;
     self->spi_bus = spi_bus;

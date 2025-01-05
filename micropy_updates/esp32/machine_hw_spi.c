@@ -100,7 +100,7 @@
 #define MP_HW_SPI_MAX_XFER_BITS (MP_HW_SPI_MAX_XFER_BYTES * 8) // Has to be an even multiple of 8
 
 
-static void machine_hw_spi_bus_deinit_internal(machine_hw_spi_bus_obj_t *self);
+static void machine_hw_spi_bus_deinit_internal(mp_machine_hw_spi_bus_obj_t *self);
 
 
 typedef struct _machine_hw_spi_default_pins_t {
@@ -112,21 +112,21 @@ typedef struct _machine_hw_spi_default_pins_t {
 
 
 /*
-typedef enum _mp_spi_state_t {
+typedef enum _mp_machine_hw_spi_state_t {
     MP_SPI_STATE_STOPPED,
     MP_SPI_STATE_STARTED,
     MP_SPI_STATE_SENDING
-} mp_spi_state_t;
+} mp_machine_hw_spi_state_t;
 
-typedef struct _machine_hw_spi_bus_obj_t {
+typedef struct _mp_machine_hw_spi_bus_obj_t {
     uint8_t host;
     mp_obj_t sck;
     mp_obj_t mosi;
     mp_obj_t miso;
     int16_t active_devices;
-    mp_spi_state_t state;
+    mp_machine_hw_spi_state_t state;
     void *user_data;
-} machine_hw_spi_bus_obj_t;
+} mp_machine_hw_spi_bus_obj_t;
 
 
 typedef struct _machine_hw_spi_obj_t {
@@ -137,36 +137,36 @@ typedef struct _machine_hw_spi_obj_t {
     uint8_t bits;
     uint8_t firstbit;
     mp_obj_t cs;
-    machine_hw_spi_bus_obj_t *spi_bus;
+    mp_machine_hw_spi_bus_obj_t *spi_bus;
     void *user_data;
 } machine_hw_spi_obj_t;
 
 */
 
 // Static objects mapping to SPI2 (and SPI3 if available) hardware peripherals.
-static machine_hw_spi_bus_obj_t *machine_hw_spi_bus_objs[MICROPY_HW_SPI_MAX];
+static mp_machine_hw_spi_bus_obj_t *machine_hw_spi_bus_objs[MICROPY_HW_SPI_MAX];
 
 
-void machine_hw_spi_bus_deinit_all(void)
+void mp_machine_hw_spi_bus_deinit_all(void)
 {
     for (int i=0;i<MICROPY_HW_SPI_MAX;i++) {
         if (machine_hw_spi_bus_objs[i] != NULL) {
             machine_hw_spi_bus_deinit_internal(machine_hw_spi_bus_objs[i]);
-            m_del_obj(machine_hw_spi_bus_obj_t, machine_hw_spi_bus_objs[i]);
+            m_del_obj(mp_machine_hw_spi_bus_obj_t, machine_hw_spi_bus_objs[i]);
             machine_hw_spi_bus_objs[i] = NULL;
         }
     }
 }
 
 
-void machine_hw_spi_bus_add_device(machine_hw_spi_device_obj_t *device)
+void mp_machine_hw_spi_bus_add_device(mp_machine_hw_spi_device_obj_t *device)
 {
     device->spi_bus->device_count++;
-    device->spi_bus->devices = m_realloc(device->spi_bus->devices, device->spi_bus->device_count * sizeof(machine_hw_spi_device_obj_t *));
+    device->spi_bus->devices = m_realloc(device->spi_bus->devices, device->spi_bus->device_count * sizeof(mp_machine_hw_spi_device_obj_t *));
 }
 
 
-void machine_hw_spi_bus_remove_device(machine_hw_spi_device_obj_t *device)
+void mp_machine_hw_spi_bus_remove_device(mp_machine_hw_spi_device_obj_t *device)
 {
     uint8_t i;
     /*Find the device in the list*/
@@ -179,7 +179,7 @@ void machine_hw_spi_bus_remove_device(machine_hw_spi_device_obj_t *device)
     }
 
     device->spi_bus->device_count--;
-    device->spi_bus->devices = m_realloc(device->spi_bus->devices, device->spi_bus->device_count * sizeof(machine_hw_spi_device_obj_t *));
+    device->spi_bus->devices = m_realloc(device->spi_bus->devices, device->spi_bus->device_count * sizeof(mp_machine_hw_spi_device_obj_t *));
 
     if (device->spi_bus->device_count == 0) {
         device->spi_bus->deinit(device->spi_bus);
@@ -187,7 +187,7 @@ void machine_hw_spi_bus_remove_device(machine_hw_spi_device_obj_t *device)
 }
 
 
-static void machine_hw_spi_device_deinit_callback(machine_hw_spi_device_obj_t *self)
+static void machine_hw_spi_device_deinit_callback(mp_machine_hw_spi_device_obj_t *self)
 {
     if (!self->active) return;
 
@@ -210,7 +210,7 @@ static void machine_hw_spi_device_deinit_callback(machine_hw_spi_device_obj_t *s
 }
 
 
-static void machine_hw_spi_device_deinit_internal(machine_hw_spi_device_obj_t *self)
+static void machine_hw_spi_device_deinit_internal(mp_machine_hw_spi_device_obj_t *self)
 {
     if (!self->active) return;
 
@@ -231,13 +231,13 @@ static void machine_hw_spi_device_deinit_internal(machine_hw_spi_device_obj_t *s
         gpio_set_direction(cs, GPIO_MODE_INPUT);
     }
 
-    machine_hw_spi_bus_remove_device(self);
+    mp_machine_hw_spi_bus_remove_device(self);
 }
 
 
 static void machine_hw_spi_device_deinit(mp_obj_base_t *self_in)
 {
-    machine_hw_spi_device_obj_t *self = (machine_hw_spi_device_obj_t *)self_in;
+    mp_machine_hw_spi_device_obj_t *self = (mp_machine_hw_spi_device_obj_t *)self_in;
     machine_hw_spi_device_deinit_internal(self);
 }
 
@@ -264,7 +264,7 @@ static void disable_gpio(int gpio_num) {
 }
 
 
-void machine_hw_spi_bus_deinit_internal(machine_hw_spi_bus_obj_t *self)
+void machine_hw_spi_bus_deinit_internal(mp_machine_hw_spi_bus_obj_t *self)
 {
     if (self->state == MP_SPI_STATE_STOPPED) return;
 
@@ -274,7 +274,7 @@ void machine_hw_spi_bus_deinit_internal(machine_hw_spi_bus_obj_t *self)
     }
 
     self->device_count = 0;
-    self->devices = m_realloc(self->devices, self->device_count * sizeof(machine_hw_spi_device_obj_t *));
+    self->devices = m_realloc(self->devices, self->device_count * sizeof(mp_machine_hw_spi_device_obj_t *));
 
     switch (spi_bus_free((spi_host_device_t)self->host)) {
         case ESP_ERR_INVALID_ARG:
@@ -303,7 +303,7 @@ void machine_hw_spi_bus_deinit_internal(machine_hw_spi_bus_obj_t *self)
 
 static mp_obj_t machine_hw_spi_bus_deinit(mp_obj_t self_in)
 {
-    machine_hw_spi_bus_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_machine_hw_spi_bus_obj_t *self = MP_OBJ_TO_PTR(self_in);
     machine_hw_spi_bus_deinit_internal(self);
     return mp_const_none;
 }
@@ -313,7 +313,7 @@ MP_DEFINE_CONST_FUN_OBJ_1(machine_hw_spi_bus_deinit_obj, machine_hw_spi_bus_dein
 
 static void machine_hw_spi_device_transfer(mp_obj_base_t *self_in, size_t len, const uint8_t *src, uint8_t *dest)
 {
-    machine_hw_spi_device_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_machine_hw_spi_device_obj_t *self = MP_OBJ_TO_PTR(self_in);
 
     if (!self->active) {
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("SPI device is no longer attached to a bus"));
@@ -450,7 +450,7 @@ mp_obj_t machine_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, s
     bool quad = false;
     bool octal = false;
 
-    machine_hw_spi_bus_obj_t *self;
+    mp_machine_hw_spi_bus_obj_t *self;
 
     if (mosi != -1 && mosi != -1) dual = true;
 
@@ -521,8 +521,8 @@ mp_obj_t machine_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, s
 
     if (self == NULL) {
         reconfigure = true;
-        self = m_new_obj(machine_hw_spi_bus_obj_t);
-        self->base.type = &machine_hw_spi_bus_type;
+        self = m_new_obj(mp_machine_hw_spi_bus_obj_t);
+        self->base.type = &mp_machine_hw_spi_bus_type;
         self->host = host;
         self->deinit = &machine_hw_spi_bus_deinit_internal;
         machine_hw_spi_bus_objs[host - 1] = self;
@@ -562,7 +562,7 @@ mp_obj_t machine_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, s
 }
 
 
-void machine_hw_spi_bus_initilize(machine_hw_spi_bus_obj_t *bus)
+void mp_machine_hw_spi_bus_initilize(mp_machine_hw_spi_bus_obj_t *bus)
 {
     if (bus->state != MP_SPI_STATE_STOPPED) return;
 
@@ -614,10 +614,10 @@ void machine_hw_spi_bus_initilize(machine_hw_spi_bus_obj_t *bus)
 
 
 spi_host_device_t machine_hw_spi_get_host(mp_obj_t in) {
-    if (mp_obj_get_type(in) != &machine_hw_spi_bus_type) {
+    if (mp_obj_get_type(in) != &mp_machine_hw_spi_bus_type) {
         mp_raise_ValueError(MP_ERROR_TEXT("expecting a SPI object"));
     }
-    machine_hw_spi_bus_obj_t *self = (machine_hw_spi_bus_obj_t *)in;
+    mp_machine_hw_spi_bus_obj_t *self = (mp_machine_hw_spi_bus_obj_t *)in;
     return (spi_host_device_t)self->host;
 }
 
@@ -641,8 +641,8 @@ mp_obj_t machine_hw_spi_device_make_new(const mp_obj_type_t *type, size_t n_args
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    machine_hw_spi_device_obj_t *self = m_new_obj(machine_hw_spi_device_obj_t);
-    self->base.type = &machine_hw_spi_device_type;
+    mp_machine_hw_spi_device_obj_t *self = m_new_obj(mp_machine_hw_spi_device_obj_t);
+    self->base.type = &mp_machine_hw_spi_device_type;
 
     int cs =  (int)args[ARG_cs].u_int;
 
@@ -675,7 +675,7 @@ mp_obj_t machine_hw_spi_device_make_new(const mp_obj_type_t *type, size_t n_args
     spi_device_handle_t spi_device = NULL;
 
     if (self->spi_bus->state == MP_SPI_STATE_STOPPED) {
-        machine_hw_spi_bus_initilize(self->spi_bus);
+        mp_machine_hw_spi_bus_initilize(self->spi_bus);
     }
 
     esp_err_t ret = spi_bus_add_device((spi_host_device_t)self->spi_bus->host, &devcfg, &spi_device);
@@ -695,7 +695,7 @@ mp_obj_t machine_hw_spi_device_make_new(const mp_obj_type_t *type, size_t n_args
             return mp_const_none;
     }
 
-    machine_hw_spi_bus_add_device(self);
+    mp_machine_hw_spi_bus_add_device(self);
     self->active = true;
 
     return MP_OBJ_FROM_PTR(self);
@@ -709,7 +709,7 @@ static const mp_machine_spi_p_t machine_hw_spi_device_p = {
 
 
 MP_DEFINE_CONST_OBJ_TYPE(
-    machine_hw_spi_device_type,
+    mp_machine_hw_spi_device_type,
     MP_QSTR_Device,
     MP_TYPE_FLAG_NONE,
     make_new, machine_hw_spi_device_make_new,
@@ -727,7 +727,7 @@ MP_DEFINE_CONST_DICT(machine_spi_bus_locals_dict, machine_spi_bus_locals_dict_ta
 
 
 MP_DEFINE_CONST_OBJ_TYPE(
-    machine_hw_spi_bus_type,
+    mp_machine_hw_spi_bus_type,
     MP_QSTR_Bus,
     MP_TYPE_FLAG_NONE,
     make_new, machine_hw_spi_bus_make_new,
@@ -737,8 +737,8 @@ MP_DEFINE_CONST_OBJ_TYPE(
 
 static const mp_rom_map_elem_t machine_spi_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),  MP_OBJ_NEW_QSTR(MP_QSTR_SPI)   },
-    { MP_ROM_QSTR(MP_QSTR_Bus),       (mp_obj_t)&machine_hw_spi_bus_type },
-    { MP_ROM_QSTR(MP_QSTR_Device),    (mp_obj_t)&machine_hw_spi_device_type }
+    { MP_ROM_QSTR(MP_QSTR_Bus),       (mp_obj_t)&mp_machine_hw_spi_bus_type },
+    { MP_ROM_QSTR(MP_QSTR_Device),    (mp_obj_t)&mp_machine_hw_spi_device_type }
 };
 
 MP_DEFINE_CONST_DICT(machine_spi_locals_dict, machine_spi_locals_dict_table);

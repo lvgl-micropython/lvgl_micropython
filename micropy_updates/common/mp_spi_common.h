@@ -6,16 +6,16 @@
 #ifndef __MP_SPI_COMMON_H__
     #define __MP_SPI_COMMON_H__
 
-    typedef enum _mp_spi_state_t {
+    typedef enum _mp_machine_hw_spi_state_t {
         MP_SPI_STATE_STOPPED,
         MP_SPI_STATE_STARTED,
         MP_SPI_STATE_SENDING
-    } mp_spi_state_t;
+    } mp_machine_hw_spi_state_t;
 
-    typedef struct _machine_hw_spi_bus_obj_t machine_hw_spi_bus_obj_t;
-    typedef struct _machine_hw_spi_device_obj_t machine_hw_spi_device_obj_t;
+    typedef struct _mp_machine_hw_spi_bus_obj_t mp_machine_hw_spi_bus_obj_t;
+    typedef struct _mp_machine_hw_spi_device_obj_t mp_machine_hw_spi_device_obj_t;
 
-    struct _machine_hw_spi_bus_obj_t {
+    struct _mp_machine_hw_spi_bus_obj_t {
         mp_obj_base_t base;
         uint8_t host;
         mp_obj_t sck;
@@ -31,13 +31,13 @@
         bool quad;
         bool octal;
         uint8_t device_count;
-        machine_hw_spi_device_obj_t **devices;
-        mp_spi_state_t state;
+        mp_machine_hw_spi_device_obj_t **devices;
+        mp_machine_hw_spi_state_t state;
         const void *user_data;
-        void (*deinit)(machine_hw_spi_bus_obj_t *bus);
+        void (*deinit)(mp_machine_hw_spi_bus_obj_t *bus);
     };
 
-    struct _machine_hw_spi_device_obj_t {
+    struct _mp_machine_hw_spi_device_obj_t {
         mp_obj_base_t base;
         uint32_t freq;
         uint8_t polarity;
@@ -49,17 +49,17 @@
         bool octal;
         bool active;
         mp_obj_t cs;
-        machine_hw_spi_bus_obj_t *spi_bus;
+        mp_machine_hw_spi_bus_obj_t *spi_bus;
         void *user_data;
-        void (*deinit)(machine_hw_spi_device_obj_t *device);
+        void (*deinit)(mp_machine_hw_spi_device_obj_t *device);
     };
 
-    void machine_hw_spi_bus_initilize(machine_hw_spi_bus_obj_t *bus);
-    void machine_hw_spi_bus_add_device(machine_hw_spi_device_obj_t *device);
-    void machine_hw_spi_bus_remove_device(machine_hw_spi_device_obj_t *device);
+    void mp_machine_hw_spi_bus_initilize(mp_machine_hw_spi_bus_obj_t *bus);
+    void mp_machine_hw_spi_bus_add_device(mp_machine_hw_spi_device_obj_t *device);
+    void mp_machine_hw_spi_bus_remove_device(mp_machine_hw_spi_device_obj_t *device);
 
-    extern const mp_obj_type_t machine_hw_spi_device_type;
-    extern const mp_obj_type_t machine_hw_spi_bus_type;
+    extern const mp_obj_type_t mp_machine_hw_spi_device_type;
+    extern const mp_obj_type_t mp_machine_hw_spi_bus_type;
 
     void machine_hw_spi_bus_deinit_all(void);
 

@@ -52,21 +52,21 @@ const mp_obj_type_t machine_sdcard_type;
 
 
 /*
-typedef enum _mp_spi_state_t {
+typedef enum _mp_machine_hw_spi_state_t {
     MP_SPI_STATE_STOPPED,
     MP_SPI_STATE_STARTED,
     MP_SPI_STATE_SENDING
-} mp_spi_state_t;
+} mp_machine_hw_spi_state_t;
 
-typedef struct _machine_hw_spi_bus_obj_t {
+typedef struct _mp_machine_hw_spi_bus_obj_t {
     uint8_t host;
     mp_obj_t sck;
     mp_obj_t mosi;
     mp_obj_t miso;
     int16_t active_devices;
-    mp_spi_state_t state;
+    mp_machine_hw_spi_state_t state;
     void *user_data;
-} machine_hw_spi_bus_obj_t;
+} mp_machine_hw_spi_bus_obj_t;
 
 
 typedef struct _machine_hw_spi_obj_t {
@@ -77,7 +77,7 @@ typedef struct _machine_hw_spi_obj_t {
     uint8_t bits;
     uint8_t firstbit;
     mp_obj_t cs;
-    machine_hw_spi_bus_obj_t *spi_bus;
+    mp_machine_hw_spi_bus_obj_t *spi_bus;
     void *user_data;
 } machine_hw_spi_obj_t;
 
@@ -93,7 +93,7 @@ typedef struct _sdcard_obj_t {
     sdmmc_card_t card;
     sdspi_device_config_t dev_config;
     sdspi_dev_handle_t sdspi_handle;
-    machine_hw_spi_device_obj_t spi_device;
+    mp_machine_hw_spi_device_obj_t spi_device;
 } sdcard_card_obj_t;
 
 
@@ -171,7 +171,7 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
     sdcard_card_obj_t *self = mp_obj_malloc_with_finaliser(sdcard_card_obj_t, &machine_sdcard_type);
 
     if (args[ARG_spi_bus].u_obj != mp_const_none) {
-        machine_hw_spi_bus_obj_t *spi_bus = MP_OBJ_TO_PTR(args[ARG_spi_bus].u_obj);
+        mp_machine_hw_spi_bus_obj_t *spi_bus = MP_OBJ_TO_PTR(args[ARG_spi_bus].u_obj);
         slot_num = (int)spi_bus->host;
         is_spi = true;
         self->spi_device.spi_bus = spi_bus;
@@ -218,12 +218,12 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
         };
 
         if (self->spi_device.spi_bus->state == MP_SPI_STATE_STOPPED) {
-            machine_hw_spi_bus_initilize(self->spi_device.spi_bus);
+            mp_machine_hw_spi_bus_initilize(self->spi_device.spi_bus);
         }
 
         check_esp_err(sdspi_host_init_device(&self->dev_config, &self->sdspi_handle));
 
-        machine_hw_spi_bus_add_device(&self->spi_device);
+        mp_machine_hw_spi_bus_add_device(&self->spi_device);
     } else {
         // SD/MMC interface
         sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
@@ -256,7 +256,7 @@ static mp_obj_t sd_deinit(mp_obj_t self_in) {
 
             if (!self->spi_device.active) return mp_const_none;
 
-            machine_hw_spi_bus_remove_device(&self->spi_device);
+            mp_machine_hw_spi_bus_remove_device(&self->spi_device);
             self->spi_device.active = false;
 
             if (self->spi_device.spi_bus->device_count == 0) {
