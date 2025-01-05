@@ -647,22 +647,22 @@
 
     // ********************** machine.I2C ************************
 
-    static const mp_rom_map_elem_t i2c_globals_dict_table[] = {
+    static const mp_rom_map_elem_t i2c_locals_dict_table[] = {
         { MP_ROM_QSTR(MP_QSTR___name__),  MP_OBJ_NEW_QSTR(MP_QSTR_I2C)   },
         { MP_ROM_QSTR(MP_QSTR_Bus),       (mp_obj_t)&mp_machine_hw_i2c_bus_type },
         { MP_ROM_QSTR(MP_QSTR_Device),    (mp_obj_t)&mp_machine_hw_i2c_device_type }
     };
 
 
-    static MP_DEFINE_CONST_DICT(i2c_globals_dict, i2c_globals_dict_table);
+    static MP_DEFINE_CONST_DICT(i2c_locals_dict, i2c_locals_dict_table);
 
-
-    const mp_obj_module_t mp_module_i2c = {
-        .base    = {&mp_type_module},
-        .globals = (mp_obj_dict_t *)&i2c_globals_dict,
-    };
-
-    MP_REGISTER_MODULE(MP_QSTR_I2C, mp_module_i2c);
+    
+    MP_DEFINE_CONST_OBJ_TYPE(
+        machine_i2c_type,
+        MP_QSTR_I2C,
+        MP_TYPE_FLAG_NONE,
+        locals_dict, &i2c_locals_dict
+    );
 #else
     void mp_machine_hw_i2c_bus_deinit_all(void) {}
 
