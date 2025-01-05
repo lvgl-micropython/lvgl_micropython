@@ -561,10 +561,10 @@
 
     static mp_obj_t i2c_device_write(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
     {
-        enum { ARG_self, ARG_num_bytes, ARG_buf };
+        enum { ARG_self, ARG_buf };
         static const mp_arg_t allowed_args[] = {
-            { MP_QSTR_self,         MP_ARG_OBJ | MP_ARG_REQUIRED },
-            { MP_QSTR_buf,          MP_ARG_OBJ | MP_ARG_REQUIRED },
+            { MP_QSTR_self, MP_ARG_OBJ | MP_ARG_REQUIRED },
+            { MP_QSTR_buf, MP_ARG_OBJ | MP_ARG_REQUIRED }
         };
         mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
         mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
