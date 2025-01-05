@@ -232,7 +232,7 @@
         mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
         // Get I2C bus
-        uint8_t i2c_id = (uint8_t)args[ARG_host].u_int;
+        int i2c_id = (int)args[ARG_host].u_int;
         if (!(I2C_NUM_0 <= i2c_id && i2c_id < I2C_NUM_MAX)) {
             mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("I2C(%u) doesn't exist"), i2c_id);
         }
@@ -245,7 +245,7 @@
         }
         // Created for the first time, set default pins
         self->base.type = &mp_machine_hw_i2c_bus_type;
-        self->port = i2c_id;
+        self->port = (uint8_t)i2c_id;
         self->active = 0;
         self->device_count = 0;
 
@@ -426,7 +426,7 @@
         uint32_t memaddr = 0;
 
         for (int i=(int)(self->reg_bits / 8) - 1;i>-1;i--) {
-            memaddr |= (uint32_t)(((uint8_t *)write_bufinfo.buf[i]) << ((~i + (self->reg_bits / 8)) * 8));
+            memaddr |= (uint32_t)(((uint8_t *)write_bufinfo.buf)[i]) << (uint8_t)((~i + (int)(self->reg_bits / 8)) * 8);
         }
 
         int ret = device_read(self, self->device_id, memaddr, self->reg_bits, (uint8_t *)read_bufinfo.buf, read_bufinfo.len);
