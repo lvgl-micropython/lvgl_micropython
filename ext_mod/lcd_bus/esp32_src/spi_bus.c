@@ -159,7 +159,7 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     self->panel_io_handle.get_lane_count = &spi_get_lane_count;
 
     self->spi_device.active = true;
-    self->spi_device.base.type = &machine_hw_spi_device_type;
+    self->spi_device.base.type = &mp_machine_hw_spi_device_type;
     self->spi_device.spi_bus = spi_bus;
     self->spi_device.deinit = &spi_deinit_callback;
     self->spi_device.user_data = self;
