@@ -61,7 +61,7 @@
     extern const mp_obj_type_t mp_machine_hw_spi_device_type;
     extern const mp_obj_type_t mp_machine_hw_spi_bus_type;
 
-    void machine_hw_spi_bus_deinit_all(void);
+    void mp_machine_hw_spi_bus_deinit_all(void);
 
 #endif /* __MP_SPI_COMMON_H__ */
 

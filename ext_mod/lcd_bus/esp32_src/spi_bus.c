@@ -62,7 +62,7 @@ typedef struct _machine_hw_spi_obj_t {
 mp_lcd_err_t spi_del(mp_obj_t obj);
 mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
 mp_lcd_err_t spi_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
-void spi_deinit_callback(machine_hw_spi_device_obj_t *device);
+void spi_deinit_callback(mp_machine_hw_spi_device_obj_t *device);
 
 
 static uint8_t spi_bus_count = 0;
@@ -129,7 +129,7 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     mp_lcd_spi_bus_obj_t *self = m_new_obj(mp_lcd_spi_bus_obj_t);
     self->base.type = &mp_lcd_spi_bus_type;
 
-    machine_hw_spi_bus_obj_t *spi_bus = MP_OBJ_TO_PTR(args[ARG_spi_bus].u_obj);
+    mp_machine_hw_spi_bus_obj_t *spi_bus = MP_OBJ_TO_PTR(args[ARG_spi_bus].u_obj);
 
     self->callback = mp_const_none;
 
@@ -180,7 +180,7 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
 }
 
 
-void spi_deinit_callback(machine_hw_spi_device_obj_t *device)
+void spi_deinit_callback(mp_machine_hw_spi_device_obj_t *device)
 {
     mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)device->user_data;
     spi_del(MP_OBJ_FROM_PTR(self));
@@ -234,7 +234,7 @@ mp_lcd_err_t spi_del(mp_obj_t obj)
         spi_bus_objs = m_realloc(spi_bus_objs, spi_bus_count * sizeof(mp_lcd_spi_bus_obj_t *));
 
 
-        machine_hw_spi_bus_remove_device(&self->spi_device);
+        mp_machine_hw_spi_bus_remove_device(&self->spi_device);
         self->spi_device.active = false;
 
         if (self->spi_device.spi_bus->device_count == 0) {
@@ -258,7 +258,7 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
     }
 
     if (self->spi_device.spi_bus->state == MP_SPI_STATE_STOPPED) {
-        machine_hw_spi_bus_initilize(self->spi_device.spi_bus);
+        mp_machine_hw_spi_bus_initilize(self->spi_device.spi_bus);
     }
 
     if (bpp == 16) {
@@ -282,7 +282,7 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
         return ret;
     }
 
-    machine_hw_spi_bus_add_device(&self->spi_device);
+    mp_machine_hw_spi_bus_add_device(&self->spi_device);
 
     // add the new bus ONLY after successfull initilization of the bus
     spi_bus_count++;
