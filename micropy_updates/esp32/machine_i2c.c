@@ -76,7 +76,7 @@
     #define I2C_BUS_LOCK_DELETE(self) vSemaphoreDelete(self->lock.handle)
     #define I2C_BUS_LOCK_RELEASE(self) xSemaphoreGive(self->lock.handle)
     #define I2C_BUS_LOCK_INIT(self) { \
-        lock->handle = xSemaphoreCreateBinaryStatic(&self->lock.buffer); \
+        self->lock.handle = xSemaphoreCreateBinaryStatic(&self->lock.buffer); \
         xSemaphoreGive(self->lock.handle); \
     }
 
@@ -206,7 +206,7 @@
 
     static void i2c_bus_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
     {
-        machine_hw_i2c_obj_t *self = MP_OBJ_TO_PTR(self_in);
+        mp_machine_hw_i2c_bus_obj_t *self = MP_OBJ_TO_PTR(self_in);
         int h, l;
         i2c_get_period(self->port, &h, &l);
         mp_printf(print, "I2C(%u, scl=%u, sda=%u, freq=%u)",
@@ -232,7 +232,7 @@
         mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
         // Get I2C bus
-        uint8_t i2c_id = (uint8_t)args[ARG_host].u_int);
+        uint8_t i2c_id = (uint8_t)args[ARG_host].u_int;
         if (!(I2C_NUM_0 <= i2c_id && i2c_id < I2C_NUM_MAX)) {
             mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("I2C(%u) doesn't exist"), i2c_id);
         }
@@ -244,7 +244,7 @@
             mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("I2C host is already in use (%u)"), i2c_id);
         }
         // Created for the first time, set default pins
-        self->base.type = &mp_machine_i2c_bus_type;
+        self->base.type = &mp_machine_hw_i2c_bus_type;
         self->port = i2c_id;
         self->active = 0;
         self->device_count = 0;
@@ -329,7 +329,7 @@
 
         // Create buffer with memory address
         uint8_t memaddr_buf[4];
-        size_t memaddr_len = fill_memaddr_buf(&memaddr_buf[0], memaddr, addrsize);
+        size_t memaddr_len = get_memaddr_buf(&memaddr_buf[0], memaddr, addrsize);
 
         // Create partial write buffers
         mp_machine_i2c_buf_t bufs[2] = {
@@ -373,7 +373,7 @@
     {
         if (self->bus == NULL) return;
 
-        uint8_t i = 0
+        uint8_t i = 0;
 
         for (;i<self->bus->device_count;i++) {
             if (self->bus->devices[i] == self) {
@@ -425,8 +425,8 @@
 
         uint32_t memaddr = 0;
 
-        for (uint8_t i=(self->reg_bits / 8) - 1;i>-1;i--) {
-            memaddr |= (uint32_t)(((uint8_t)write_bufinfo.buf[i]) << ((~i + (self.reg_bits / 8)) * 8));
+        for (int i=(int)(self->reg_bits / 8) - 1;i>-1;i--) {
+            memaddr |= (uint32_t)(((uint8_t *)write_bufinfo.buf[i]) << ((~i + (self->reg_bits / 8)) * 8));
         }
 
         int ret = device_read(self, self->device_id, memaddr, self->reg_bits, (uint8_t *)read_bufinfo.buf, read_bufinfo.len);
@@ -547,7 +547,7 @@
             vstr_init_len(&vstr, num_bytes);
 
             // do the transfer
-            ret = device_readfrom(self, self->device_id, (uint8_t *)vstr.buf, vstr.len);
+            ret = device_readfrom(self, self->device_id, (uint8_t *)vstr.buf, vstr.len, true);
             if (ret < 0) {
                 mp_raise_OSError(-ret);
             }
@@ -575,7 +575,7 @@
         mp_buffer_info_t bufinfo;
         mp_get_buffer_raise(args[ARG_buf].u_obj, &bufinfo, MP_BUFFER_READ);
 
-        ret = device_writeto(self, self->device_id, (uint8_t *)bufinfo.buf, bufinfo.len, true);
+        int ret = device_writeto(self, self->device_id, (uint8_t *)bufinfo.buf, bufinfo.len, true);
         if (ret < 0) {
             mp_raise_OSError(-ret);
         }
@@ -623,7 +623,6 @@
 
 
     static const mp_rom_map_elem_t i2c_device_locals_dict_table[] = {
-        { MP_ROM_QSTR(MP_QSTR_init),           MP_ROM_PTR(&machine_i2c_init_obj)          },
         { MP_ROM_QSTR(MP_QSTR_write_readinto), MP_ROM_PTR(&i2c_device_write_readinto_obj) },
         { MP_ROM_QSTR(MP_QSTR_read_mem),       MP_ROM_PTR(&i2c_device_read_mem_obj)       },
         { MP_ROM_QSTR(MP_QSTR_write_mem),      MP_ROM_PTR(&i2c_device_write_mem_obj)      },
