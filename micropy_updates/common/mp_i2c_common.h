@@ -33,13 +33,13 @@
         uint32_t timeout_us;
         uint8_t use_locks : 1;
         uint8_t pullup : 1;
+        i2c_bus_lock_t lock;
     };
 
     struct _mp_machine_hw_i2c_device_obj_t {
         mp_obj_base_t base;
         uint16_t device_id;
         uint8_t reg_bits;
-        i2c_bus_lock_t lock;
         mp_machine_hw_i2c_bus_obj_t *bus;
     };
 
