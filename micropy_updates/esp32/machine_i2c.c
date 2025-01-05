@@ -589,10 +589,10 @@
     mp_obj_t i2c_device_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
 
         // Parse args
-        enum { ARG_bus, ARG_device_id, ARG_reg_bits };
+        enum { ARG_bus, ARG_dev_id, ARG_reg_bits };
         static const mp_arg_t allowed_args[] = {
             { MP_QSTR_bus,       MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_OBJ },
-            { MP_QSTR_device_id, MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
+            { MP_QSTR_dev_id, MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
             { MP_QSTR_reg_bits,  MP_ARG_KW_ONLY | MP_ARG_INT, { .u_int = 8 } }
         };
 
@@ -611,7 +611,7 @@
         self->base.type = &mp_machine_hw_i2c_device_type;
 
         self->bus = (mp_machine_hw_i2c_bus_obj_t *)args[ARG_bus].u_obj;
-        self->device_id = (uint16_t)args[ARG_device_id].u_int;
+        self->device_id = (uint16_t)args[ARG_dev_id].u_int;
         self->reg_bits =  (uint8_t)args[ARG_reg_bits].u_int;
 
         self->bus->device_count++;
