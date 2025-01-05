@@ -157,7 +157,7 @@ class CST816S(pointer_framework.PointerDriver):
         self._tx_buf[0] = reg
         self._rx_buf[0] = 0x00
 
-        self._device.write_readinto(self._tx_mv[:1], self._rx_mv)
+        self._device.write_readinto(self._tx_mv[:1], self._rx_mv[:1])
 
     def _write_reg(self, reg, value):
         self._tx_buf[0] = reg

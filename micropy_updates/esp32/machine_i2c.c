@@ -40,30 +40,15 @@
 #if MICROPY_PY_MACHINE_I2C || MICROPY_PY_MACHINE_SOFTI2C
     #include "../../../../micropy_updates/common/mp_i2c_common.h"
 
-    #ifndef MICROPY_HW_I2C0_SCL
-        #define MICROPY_HW_I2C0_SCL (GPIO_NUM_18)
-        #define MICROPY_HW_I2C0_SDA (GPIO_NUM_19)
-    #endif
-
-    #ifndef MICROPY_HW_I2C1_SCL
-        #if CONFIG_IDF_TARGET_ESP32
-            #define MICROPY_HW_I2C1_SCL (GPIO_NUM_25)
-            #define MICROPY_HW_I2C1_SDA (GPIO_NUM_26)
-        #else
-            #define MICROPY_HW_I2C1_SCL (GPIO_NUM_9)
-            #define MICROPY_HW_I2C1_SDA (GPIO_NUM_8)
-        #endif
-    #endif
-
     #if CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32S3
-        #define I2C_SCLK_FREQ XTAL_CLK_FREQ
+        #define SCLK_I2C_FREQ XTAL_CLK_FREQ
     #elif CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2
-        #define I2C_SCLK_FREQ APB_CLK_FREQ
+        #define SCLK_I2C_FREQ APB_CLK_FREQ
     #else
         #error "unsupported I2C for ESP32 SoC variant"
     #endif
 
-    #define I2C_DEFAULT_TIMEOUT_US (50000) // 50ms
+    #define DEFAULT_I2C_TIMEOUT_US (50000) // 50ms
 
 
     static void device_deinit_internal(mp_machine_hw_i2c_device_obj_t *self);
@@ -136,7 +121,7 @@
 
         i2c_param_config(self->port, &conf);
 
-        int timeout = I2C_SCLK_FREQ / 1000000 * timeout_us;
+        int timeout = SCLK_I2C_FREQ / 1000000 * timeout_us;
 
         i2c_set_timeout(self->port, (timeout > I2C_LL_MAX_TIMEOUT) ? I2C_LL_MAX_TIMEOUT : timeout);
         i2c_driver_install(self->port, I2C_MODE_MASTER, 0, 0, 0);
@@ -210,7 +195,7 @@
         int h, l;
         i2c_get_period(self->port, &h, &l);
         mp_printf(print, "I2C(%u, scl=%u, sda=%u, freq=%u)",
-            self->port, self->scl, self->sda, I2C_SCLK_FREQ / (h + l));
+            self->port, self->scl, self->sda, SCLK_I2C_FREQ / (h + l));
     }
 
 
@@ -226,7 +211,7 @@
             { MP_QSTR_freq,      MP_ARG_INT,  { .u_int = 400000} },
             { MP_QSTR_use_locks, MP_ARG_BOOL, { .u_bool = false } },
             { MP_QSTR_pullup,    MP_ARG_BOOL, { .u_bool = false } },
-            { MP_QSTR_timeout,   MP_ARG_INT,  { .u_int = I2C_DEFAULT_TIMEOUT_US } },
+            { MP_QSTR_timeout,   MP_ARG_INT,  { .u_int = DEFAULT_I2C_TIMEOUT_US } },
         };
         mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
         mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
@@ -423,17 +408,16 @@
         mp_buffer_info_t read_bufinfo;
         mp_get_buffer_raise(args[ARG_write_buf].u_obj, &read_bufinfo, MP_BUFFER_WRITE);
 
-        uint32_t memaddr = 0;
-
-        for (int i=(int)(self->reg_bits / 8) - 1;i>-1;i--) {
-            memaddr |= (uint32_t)(((uint8_t *)write_bufinfo.buf)[i]) << (uint8_t)((~i + (int)(self->reg_bits / 8)) * 8);
-        }
-
-        int ret = device_read(self, self->device_id, memaddr, self->reg_bits, (uint8_t *)read_bufinfo.buf, read_bufinfo.len);
+        int ret = device_writeto(self, self->device_id, (uint8_t *)write_bufinfo.buf, write_bufinfo.len, false);
         if (ret < 0) {
             mp_raise_OSError(-ret);
         }
 
+        ret = device_readfrom(self, self->device_id, (uint8_t *)read_bufinfo.buf, read_bufinfo.len, true);
+        if (ret < 0) {
+            mp_raise_OSError(-ret);
+        }
+        
         return mp_const_none;
     }
 
@@ -656,7 +640,7 @@
 
     static MP_DEFINE_CONST_DICT(i2c_locals_dict, i2c_locals_dict_table);
 
-    
+
     MP_DEFINE_CONST_OBJ_TYPE(
         machine_i2c_type,
         MP_QSTR_I2C,
