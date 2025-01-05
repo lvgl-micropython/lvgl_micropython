@@ -72,7 +72,7 @@
     static mp_machine_hw_i2c_bus_obj_t machine_hw_i2c_obj[I2C_NUM_MAX];
 
 
-    static struct _i2c_bus_lock_t {
+    struct _i2c_bus_lock_t {
         SemaphoreHandle_t handle;
         StaticSemaphore_t buffer;
     };
