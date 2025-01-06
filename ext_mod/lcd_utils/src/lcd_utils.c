@@ -9,7 +9,7 @@ static mp_obj_t spi_mode_to_polarity_phase(mp_obj_t mode)
 {
     uint8_t spi_mode = (uint8_t)mp_obj_get_int_truncated(mode);
     uint8_t polarity = (spi_mode >> 1) & 0x1;
-    uint8_t phase = spi_mode & 0x01;
+    uint8_t phase = spi_mode & 0x1;
     mp_obj_t tuple[2] = {
         mp_obj_new_int_from_uint(polarity),
         mp_obj_new_int_from_uint(phase),
@@ -24,6 +24,8 @@ static mp_obj_t spi_polarity_phase_to_mode(mp_obj_t polarity, mp_obj_t phase)
 {
     uint8_t spi_polarity = (uint8_t)mp_obj_get_int_truncated(polarity);
     uint8_t spi_phase = (uint8_t)mp_obj_get_int_truncated(phase);
+    uint8_t spi_mode = ((spi_polarity & 0x1) << 1) | (spi_phase & 0x1);
+
     return mp_obj_new_int_from_uint(spi_mode);
 }
 
