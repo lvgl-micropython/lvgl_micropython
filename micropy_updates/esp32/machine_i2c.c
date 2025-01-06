@@ -417,7 +417,7 @@
         if (ret < 0) {
             mp_raise_OSError(-ret);
         }
-        
+
         return mp_const_none;
     }
 
