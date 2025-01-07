@@ -1,3 +1,5 @@
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 # This file is to be given as "make USER_C_MODULES=..." when building Micropython port
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)

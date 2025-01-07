@@ -1,4 +1,6 @@
-import time 
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
+import time
 
 
 def init(self):

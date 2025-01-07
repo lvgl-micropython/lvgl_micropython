@@ -1,3 +1,5 @@
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 # this driver uses a special i2c bus implimentation I have written.
 # This implimentation takes into consideration the ESP32 and it having
 # threading available. It also has some convience methods built into it

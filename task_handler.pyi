@@ -1,34 +1,6 @@
-##############################################################################
-# Event Loop module: advancing tick count and scheduling lvgl task handler.
-# Import after lvgl module.
-# This should be imported and used by display driver.
-# Display driver should first check if an event loop is already running.
-#
-# Usage example with SDL:
-#
-#        SDL.init(auto_refresh=False)
-#        # Register SDL display driver.
-#        # Register SDL mouse driver
-#        event_loop = lv_utils.event_loop()
-#
-#
-# uasyncio example with SDL:
-#
-#        SDL.init(auto_refresh=False)
-#        # Register SDL display driver.
-#        # Register SDL mouse driver
-#        event_loop = lv_utils.event_loop(asynchronous=True)
-#        uasyncio.Loop.run_forever()
-#
-# uasyncio example with ili9341:
-#
-#        event_loop = lv_utils.event_loop(asynchronous=True) # Optional!
-#        self.disp = ili9341(asynchronous=True)
-#        uasyncio.Loop.run_forever()
-#
 # MIT license; Copyright (c) 2021 Amir Gonnen
-#
-##############################################################################
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 from typing import Callable, ClassVar, Optional
 from machine import Timer
 

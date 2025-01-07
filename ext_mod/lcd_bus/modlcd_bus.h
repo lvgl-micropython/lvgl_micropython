@@ -1,3 +1,5 @@
+// Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 #ifndef _MODLCD_BUS_H_
     #define _MODLCD_BUS_H_
 

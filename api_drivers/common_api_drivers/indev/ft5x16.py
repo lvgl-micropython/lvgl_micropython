@@ -1,3 +1,5 @@
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 # FT5216/FT5316
 
 from micropython import const  # NOQA

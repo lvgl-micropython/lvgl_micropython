@@ -1,3 +1,4 @@
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
 #  ******* NOTICE ********
 # This module is no longer used.

@@ -1,11 +1,6 @@
-/**
- * @file lv_sdl_window.h
- *
- */
+// Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
-/*********************
- *      INCLUDES
- *********************/
+
 #include "sdl_bus.h"
 #include "lcd_types.h"
 #include "py/obj.h"

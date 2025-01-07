@@ -1,7 +1,4 @@
-/**
- * @file lv_conf.h
- * Configuration file for v9.1.1-dev
- */
+// Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
 #ifndef __MICROPY_CONFIG__
 #define __MICROPY_CONFIG__

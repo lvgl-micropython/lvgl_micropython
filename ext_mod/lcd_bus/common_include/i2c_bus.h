@@ -1,3 +1,5 @@
+// Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 #ifndef _I2C_BUS_H_
     #define _I2C_BUS_H_
 

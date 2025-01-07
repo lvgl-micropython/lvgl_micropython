@@ -1,3 +1,5 @@
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 import display_driver_framework
 from micropython import const  # NOQA
 

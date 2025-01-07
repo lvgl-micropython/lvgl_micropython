@@ -1,3 +1,4 @@
+// Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
 // local includes
 #include "lcd_types.h"

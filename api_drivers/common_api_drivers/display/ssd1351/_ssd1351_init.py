@@ -1,4 +1,4 @@
-
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
 def init(self):
     param_buf = bytearray(14)

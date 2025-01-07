@@ -1,3 +1,5 @@
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 from micropython import const  # NOQA
 import lvgl as lv
 import micropython  # NQQA  # NOQA

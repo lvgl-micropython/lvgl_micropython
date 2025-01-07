@@ -1,3 +1,5 @@
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 from typing import Optional
 
 # this class is used as a template for writing the mechanism that is

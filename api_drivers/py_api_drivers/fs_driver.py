@@ -1,9 +1,10 @@
-'''
-Original author: mhepp(https://forum.lvgl.io/u/mhepp/summary)
-'''
+# Original author: mhepp(https://forum.lvgl.io/u/mhepp/summary)
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 
 import lvgl as lv
 import struct
+
 
 def _fs_open_cb(drv, path, mode):
 

@@ -1,3 +1,5 @@
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 from typing import Optional, Tuple, TYPE_CHECKING
 import _indev_base
 import lcd_utils as _lcd_utils

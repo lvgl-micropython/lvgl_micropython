@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
 import os
 import sys

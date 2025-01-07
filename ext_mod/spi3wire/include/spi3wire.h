@@ -1,4 +1,4 @@
-
+// Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
 #ifndef __SPI3WIRE_H__
     #define __SPI3WIRE_H__

@@ -1,3 +1,5 @@
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 from typing import Any, Callable, Optional, Union, ClassVar, Final
 import array
 import spi as _spi

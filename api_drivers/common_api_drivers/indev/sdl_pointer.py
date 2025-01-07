@@ -1,3 +1,5 @@
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 from micropython import const  # NOQA
 import pointer_framework
 import lvgl as lv  # NOQA

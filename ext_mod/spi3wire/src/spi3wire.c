@@ -1,3 +1,5 @@
+// Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 #include "py/obj.h"
 #include "py/runtime.h"
 #include "esp_lcd_panel_io_additions.h"

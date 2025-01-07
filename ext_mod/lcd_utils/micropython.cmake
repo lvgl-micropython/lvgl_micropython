@@ -1,3 +1,5 @@
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 # Create an INTERFACE library for our C module.
 
 add_library(usermod_lcd_utils INTERFACE)

@@ -1,3 +1,5 @@
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 from typing import Optional, Tuple, Union, ClassVar, Callable, List, Any
 from typing import TYPE_CHECKING
 

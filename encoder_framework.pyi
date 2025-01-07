@@ -1,3 +1,5 @@
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 from typing import Union, Optional, Tuple, ClassVar
 from typing import TYPE_CHECKING
 

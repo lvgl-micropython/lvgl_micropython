@@ -1,3 +1,5 @@
+// Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 #ifndef _ESP32_I80_BUS_H_
     #define _ESP32_I80_BUS_H_
 

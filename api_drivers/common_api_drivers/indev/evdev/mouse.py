@@ -1,3 +1,5 @@
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 '''
 # LVGL indev driver for evdev mouse device
 # (for the unix micropython port)

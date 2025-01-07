@@ -1,3 +1,5 @@
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 # These are here as a reference of the most common commands that displays use.
 # this module is not meant to be loaded or imported. It is a complete waste
 # of memory if that is done. Most of the init commands are a fire once and done

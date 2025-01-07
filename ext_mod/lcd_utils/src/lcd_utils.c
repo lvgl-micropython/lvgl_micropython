@@ -1,3 +1,5 @@
+// Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 #include "../include/remap.h"
 #include "../include/binary_float.h"
 

@@ -1,3 +1,6 @@
+# MIT license; Copyright (c) 2021 Amir Gonnen
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 # TODO
 # - Array conversion improvements:
 #   - return custom iterable object instead of Blob when converting to array

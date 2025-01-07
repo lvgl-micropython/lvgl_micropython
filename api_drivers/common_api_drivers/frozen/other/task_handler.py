@@ -1,3 +1,7 @@
+# MIT license; Copyright (c) 2021 Amir Gonnen
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
+
 import lvgl as lv  # NOQA
 import micropython  # NOQA
 import sys

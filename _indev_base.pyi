@@ -1,3 +1,5 @@
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 from typing import Optional, ClassVar, TYPE_CHECKING, Union
 
 

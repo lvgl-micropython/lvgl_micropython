@@ -1,3 +1,5 @@
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
 from typing import Optional, TYPE_CHECKING
 
 import _indev_base
