@@ -39,6 +39,9 @@
 
 #if MICROPY_PY_MACHINE_I2C || MICROPY_PY_MACHINE_SOFTI2C
     #include "../../../../micropy_updates/common/mp_i2c_common.h"
+    #include "sdkconfig.h"
+
+    #define MP_MACHINE_I2C_FLAG_WRITE2   (0x08)
 
     #if CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32S3
         #define SCLK_I2C_FREQ XTAL_CLK_FREQ
@@ -65,6 +68,11 @@
         xSemaphoreGive(self->lock.handle); \
     }
 
+    #if CONFIG_LCD_ENABLE_DEBUG_LOG
+        #define I2C_DEBUG_PRINT(...) mp_printf(&mp_plat_print, __VA_ARGS__);
+    #else
+        #define I2C_DEBUG_PRINT(...)
+    #endif
 
     // ********************** machine.I2C.Bus ************************
 
@@ -150,6 +158,15 @@
                 ++bufs;
             }
 
+            if (flags & MP_MACHINE_I2C_FLAG_WRITE2) {
+                i2c_master_start(cmd);
+                i2c_master_write_byte(cmd, addr << 1, true);
+                i2c_master_write(cmd, bufs->buf, bufs->len, true);
+                data_len += bufs->len;
+                --n;
+                ++bufs;
+            }
+
             i2c_master_start(cmd);
             i2c_master_write_byte(cmd, addr << 1 | (flags & MP_MACHINE_I2C_FLAG_READ), true);
 
@@ -168,7 +185,6 @@
                 i2c_master_stop(cmd);
             }
 
-            // TODO proper timeout
             esp_err_t err = i2c_master_cmd_begin(self->port, cmd, 100 * (1 + data_len) / portTICK_PERIOD_MS);
             i2c_cmd_link_delete(cmd);
 
@@ -408,12 +424,43 @@
         mp_buffer_info_t read_bufinfo;
         mp_get_buffer_raise(args[ARG_write_buf].u_obj, &read_bufinfo, MP_BUFFER_WRITE);
 
-        int ret = device_writeto(self, self->device_id, (uint8_t *)write_bufinfo.buf, write_bufinfo.len, false);
-        if (ret < 0) {
-            mp_raise_OSError(-ret);
+        uint8_t * write_buf = (uint8_t *)write_bufinfo.buf;
+        uint32_t memaddr = 0;
+
+        if ((self->reg_bits & 7) != 0 || self->reg_bits > 32) {
+            mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("invalid mem address size (%u)"), self->reg_bits);
         }
 
-        ret = device_readfrom(self, self->device_id, (uint8_t *)read_bufinfo.buf, read_bufinfo.len, true);
+        for (int i=(int)(self->reg_bits / 8);i>-1;i--) {
+            memaddr |= (uint32_t)(write_buf[i] << ((~i + (int)(self->reg_bits / 8)) * 8));
+        }
+
+        uint8_t memaddr_buf[4];
+        size_t memaddr_len = get_memaddr_buf(&memaddr_buf[0], memaddr, self->reg_bits);
+
+        size_t num_bufs = 2;
+
+        unsigned int flags = MP_MACHINE_I2C_FLAG_WRITE1 | MP_MACHINE_I2C_FLAG_READ | MP_MACHINE_I2C_FLAG_STOP;
+
+        mp_machine_i2c_buf_t bufs[3] = {
+            {.len = memaddr_len, .buf = memaddr_buf},
+            {.len = 0, .buf = NULL},
+            {.len = 0, .buf = NULL}
+        };
+
+        if ((size_t)(self->reg_bits / 8) < write_bufinfo.len) {
+            bufs[1].buf = write_buf + (self->reg_bits / 8);
+            bufs[1].len = write_bufinfo.len - (size_t)(self->reg_bits / 8);
+            num_bufs += 1;
+            flags |= MP_MACHINE_I2C_FLAG_WRITE2;
+        }
+
+        bufs[num_bufs - 1].buf = read_bufinfo.buf;
+        bufs[num_bufs - 1].len = read_bufinfo.len;
+
+        if (self->bus == NULL) mp_raise_OSError(1);
+
+        int ret = i2c_bus_transfer((mp_obj_base_t *)self->bus, self->device_id, num_bufs, bufs, flags);
         if (ret < 0) {
             mp_raise_OSError(-ret);
         }
