@@ -7,7 +7,7 @@ import machine  # NOQA
 
 
 I2C_ADDR = 0x1A
-BITS = 8
+BITS = 16
 
 # 4 byte read
 # PROJECT_ID = byte2 << 8 | byte3
@@ -80,7 +80,7 @@ class CST328(pointer_framework.PointerDriver):
         startup_rotation=pointer_framework.lv.DISPLAY_ROTATION._0,
         debug=False
     ):
-        self._tx_buf = bytearray(2)
+        self._tx_buf = bytearray(3)
         self._tx_mv = memoryview(self._tx_buf)
         self._rx_buf = bytearray(6)
         self._rx_mv = memoryview(self._rx_buf)

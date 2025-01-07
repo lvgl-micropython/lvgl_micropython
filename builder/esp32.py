@@ -1217,7 +1217,6 @@ def update_main():
         '#include "../../../../ext_mod/lcd_bus/esp32_include/i2c_bus.h"',
         '#include "../../../../ext_mod/spi3wire/include/spi3wire.h"',
         '#include "../../../../micropy_updates/common/mp_spi_common.h"',
-        '#include "../../../../micropy_updates/common/mp_i2c_common.h"',
         '',
         '#if MICROPY_BLUETOOTH_NIMBLE'
     ]
@@ -1246,8 +1245,6 @@ def update_main():
         '    mp_spi3wire_deinit_all();',
         '    ',
         '    mp_machine_hw_spi_bus_deinit_all();'
-        '    ',
-        '    mp_machine_hw_i2c_bus_deinit_all();'
     ]
 
     data = data.replace(
