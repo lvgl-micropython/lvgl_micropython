@@ -319,13 +319,12 @@ static void machine_hw_spi_device_transfer(mp_obj_base_t *self_in, size_t len, c
 
         transaction.flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA;
         transaction.length = bits_to_send;
-
         if (self->dual) {
-            transaction.flags |= SPI_TRANS_MODE_DIO;
+            transaction.flags |= SPI_TRANS_MODE_DIO | SPI_TRANS_MULTILINE_ADDR;
         } else if (self->quad) {
-            transaction.flags |= SPI_TRANS_MODE_QIO;
+            transaction.flags |= SPI_TRANS_MODE_QIO | SPI_TRANS_MULTILINE_ADDR;
         } else if (self->octal) {
-            transaction.flags |= SPI_TRANS_MODE_OCT;
+            transaction.flags |= SPI_TRANS_MODE_OCT _ SPI_TRANS_MULTILINE_ADDR;
         }
 
         spi_device_transmit(spi_device, &transaction);
@@ -558,7 +557,7 @@ void mp_machine_hw_spi_bus_initilize(mp_machine_hw_spi_bus_obj_t *bus)
         .data5_io_num = (int)mp_obj_get_int(bus->data5),
         .data6_io_num = (int)mp_obj_get_int(bus->data6),
         .data7_io_num = (int)mp_obj_get_int(bus->data7),
-        .flags = flags,
+        .flags = SPICOMMON_BUSFLAG_MASTER,
         .max_transfer_sz = SPI_LL_DMA_MAX_BIT_LEN / 8
     };
 
@@ -639,12 +638,18 @@ mp_obj_t machine_hw_spi_device_make_new(const mp_obj_type_t *type, size_t n_args
     self->quad = quad;
     self->octal = octal;
 
+    uint8_t flags = 0;
+
+    if (self->firstbit == MICROPY_PY_MACHINE_SPI_LSB) flags |= SPI_DEVICE_TXBIT_LSBFIRST | SPI_DEVICE_RXBIT_LSBFIRST;
+
+    if (dual || quad |m| octal) flags != SPI_DEVICE_HALFDUPLEX;
+
     spi_device_interface_config_t devcfg = {
         .clock_speed_hz = (uint32_t)spi_get_actual_clock(APB_CLK_FREQ, args[ARG_freq].u_int, 0),
         .mode = self->phase | (self->polarity << 1),
         .spics_io_num = cs,
         .queue_size = 2,
-        .flags = self->firstbit == MICROPY_PY_MACHINE_SPI_LSB ? SPI_DEVICE_TXBIT_LSBFIRST | SPI_DEVICE_RXBIT_LSBFIRST : 0,
+        .flags = ,
         .pre_cb = NULL
     };
 
