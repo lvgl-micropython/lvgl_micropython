@@ -5,7 +5,6 @@ from micropython import const  # NOQA
 _SET_CONTRAST = const(0x81)
 _SET_ENTIRE_ON = const(0xA4)
 _SET_NORM_INV = const(0xA6)
-_SET_DISP = const()
 _DISP_OFF = const(0xAE)
 _DISP_ON = const(0xAF)
 _SET_MEM_ADDR = const(0x20)
