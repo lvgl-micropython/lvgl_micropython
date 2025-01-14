@@ -324,7 +324,7 @@ static void machine_hw_spi_device_transfer(mp_obj_base_t *self_in, size_t len, c
         } else if (self->quad) {
             transaction.flags |= SPI_TRANS_MODE_QIO | SPI_TRANS_MULTILINE_ADDR;
         } else if (self->octal) {
-            transaction.flags |= SPI_TRANS_MODE_OCT _ SPI_TRANS_MULTILINE_ADDR;
+            transaction.flags |= SPI_TRANS_MODE_OCT | SPI_TRANS_MULTILINE_ADDR;
         }
 
         spi_device_transmit(spi_device, &transaction);
