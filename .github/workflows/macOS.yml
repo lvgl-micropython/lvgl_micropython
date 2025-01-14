@@ -6,7 +6,42 @@ on:
   pull_request:
 
 jobs:
-  build:
+
+  build_macos:
+    if: ${{ github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name }}
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Dependencies
+      run: |
+        brew install --force ninja 
+        brew install --force sdl2
+        git submodule update --init -- lib/pycparser
+        git submodule update --init --jobs 4 -- lib/micropython        
+        git submodule update --init --jobs 4 -- lib/lvgl
+
+    # - name: Build STM32 port
+    #   run: python3 make.py stm32 submodules clean mpy_cross BOARD=STM32H7B3I_DK DISPLAY=rgb_display INDEV=gt911
+
+    # - name: Build Raspberry Pi PICO port
+    #   run: python3 make.py rp2 submodules clean mpy_cross BOARD=RPI_PICO DISPLAY=rgb_display INDEV=gt911
+
+    - name: Build macOS port
+      run: python3 make.py macOS DISPLAY=sdl_display INDEV=sdl_pointer
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: lvgl_micropy_macos
+        path: build/lvgl_micropy_macos
+        if-no-files-found: ignore
+
+  build_esp32:
     if: ${{ github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name }}
     runs-on: macos-latest
 
@@ -23,7 +58,6 @@ jobs:
     - name: Install Dependencies
       run: |
         brew install --force ninja 
-        brew install --force sdl2
         git submodule update --init -- lib/pycparser
         git submodule update --init --jobs 4 -- lib/micropython        
         git submodule update --init --jobs 4 -- lib/lvgl        
@@ -53,15 +87,6 @@ jobs:
     # - name: Build Raspberry Pi PICO port
     #   run: python3 make.py rp2 submodules clean mpy_cross BOARD=RPI_PICO DISPLAY=rgb_display INDEV=gt911
 
-    - name: Get build datetime
-      id: datetime
-      uses: Kaven-Universe/github-action-current-date-time@v1
-      with:
-        format: "YYYY_MM_DD HH_mm_ss_SSS"
-
-    - name: Build macOS port
-      run: python3 make.py macOS DISPLAY=sdl_display INDEV=sdl_pointer
-
     - name: Setup ESP-IDF
       run: |
         export "IDF_PATH=${GITHUB_WORKSPACE}/lib/esp-idf"
@@ -69,10 +94,3 @@ jobs:
 
     - name: Build ESP32 port
       run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT DISPLAY=rgb_display INDEV=gt911
-
-
-    - uses: actions/upload-artifact@v4
-      with:
-        name: lvgl_micropy_macos-${{ steps.datetime.outputs.month }}.${{ steps.datetime.outputs.day }}.${{ steps.datetime.outputs.year }}-${{ steps.datetime.outputs.hours }}_${{ steps.datetime.outputs.minutes }}_${{ steps.datetime.outputs.seconds }}
-        path: build/lvgl_micropy_macos
-        if-no-files-found: ignore
