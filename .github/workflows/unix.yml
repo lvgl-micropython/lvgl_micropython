@@ -2,8 +2,6 @@
 
 name: Unix build
 
-
-
 on:
   push:
   pull_request:
@@ -17,7 +15,7 @@ jobs:
 
     - uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: '3.11'
 
     - name: Install Deps
       run: |
@@ -50,13 +48,34 @@ jobs:
         export "IDF_PATH=${GITHUB_WORKSPACE}/lib/esp-idf"
         . ./lib/esp-idf/export.sh
 
-    - name: Build ESP32 port
-      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT DISPLAY=rgb_display INDEV=gt911 --ccache
+    - name: Build ESP32_GENERIC_S3
+      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 DISPLAY=all INDEV=all EXPANDER=all --ccache --no-scrub
+
+    - name: Build ESP32_GENERIC_S3 SPIRAM_OCT
+      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT DISPLAY=all INDEV=all EXPANDER=all --ccache --no-scrub
+
+    - name: Build ESP32_GENERIC_S3 SPIRAM_OCT
+      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT --flash-size=8 DISPLAY=all INDEV=all EXPANDER=all --ccache --no-scrub
+
+    - name: Build ESP32_GENERIC_S3 SPIRAM_OCT
+      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT --flash-size=8 --octal-flash DISPLAY=all INDEV=all EXPANDER=all --ccache --no-scrub
+
+    - name: Build ESP32_GENERIC_S3 SPIRAM_OCT
+      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT --flash-size=16 --octal-flash DISPLAY=all INDEV=all EXPANDER=all --ccache --no-scrub
+
+    - name: Build ESP32_GENERIC_S2 SPIRAM_OCT
+      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S2 BOARD_VARIANT=SPIRAM_OCT DISPLAY=all INDEV=all EXPANDER=all --ccache --no-scrub
 
     - uses: actions/upload-artifact@v4
       with:
-        name: lvgl_micropy_ESP32_GENERIC_S3-8
-        path: build/lvgl_micropy_ESP32_GENERIC_S3-8.bin
+        name: lvgl_micropy_ESP32
+        path:
+          lvgl_micropy_ESP32_GENERIC_S3-4.bin
+          lvgl_micropy_ESP32_GENERIC_S3-SPIRAM_OCT-4.bin
+          lvgl_micropy_ESP32_GENERIC_S3-SPIRAM_OCT-8.bin
+          lvgl_micropy_ESP32_GENERIC_S3-SPIRAM_OCT_OCTFLASH-8.bin
+          lvgl_micropy_ESP32_GENERIC_S3-SPIRAM_OCT_OCTFLASH-16.bin
+          lvgl_micropy_ESP32_GENERIC_S2-4.bin
         if-no-files-found: ignore
 
   build_unix:
@@ -67,13 +86,13 @@ jobs:
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: '3.11'
 
     - name: Install Deps
       run: |
         sudo apt-get update && sudo apt-get install --assume-yes --allow-downgrades --allow-remove-essential --allow-change-held-packages build-essential pkg-config cmake ninja-build libffi-dev gnome-desktop-testing libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev fcitx-libs-dev libpipewire-0.3-dev libwayland-dev libdecor-0-dev
         git submodule update --init -- lib/pycparser
-        git submodule update --init --jobs 4 -- lib/micropython        
+        git submodule update --init --jobs 4 -- lib/micropython
         git submodule update --init --jobs 4 -- lib/lvgl        
         git submodule update --init --jobs 4 -- lib/SDL
         cd lib/SDL
@@ -104,7 +123,7 @@ jobs:
   #
   #  - uses: actions/setup-python@v5
   #    with:
-  #      python-version: '3.10'
+  #      python-version: '3.11'
   #
   #  - name: Install Deps
   #    run: |

@@ -11,7 +11,13 @@ import queue
 _windows_env = None
 
 
+DO_NOT_SCRUB_BUILD_FOLDER = False
+
+
 def scrub_build_folder():
+    if DO_NOT_SCRUB_BUILD_FOLDER:
+        return
+
     for f in os.listdir('build'):
         f = os.path.join('build', f)
         for pattern in ('.h', 'manifest.py', '.board'):
@@ -267,6 +273,40 @@ def generate_manifest(
         file_path, file_name = os.path.split(file)
         entry = f"freeze('{file_path}', '{file_name}')"
         manifest_files.append(entry)
+
+    if 'all' in io_expanders:
+        io_expanders.remove('all')
+        path = f'{script_dir}/api_drivers/common_api_drivers/io_expander'
+
+        for file in os.listdir(path):
+            if file.endswith('.py'):
+                name = file[:-3]
+                io_expanders.append(name)
+
+    if 'all' in indevs:
+        indevs.remove('all')
+        path = f'{script_dir}/api_drivers/common_api_drivers/ndev'
+        for file in os.listdir(path):
+            if (
+                file == 'focaltech_touch.py' or
+                file == 'evdev' or
+                'extension' in file or
+                'settings' in file
+            ):
+                continue
+
+            if file.endswith('.py'):
+                name = file[:-3]
+                indevs.append(name)
+
+    if 'all' in displays:
+        displays.remove('all')
+        path = f'{script_dir}/api_drivers/common_api_drivers/ndev'
+        for file in os.listdir(path):
+            if file.endswith('.py'):
+                continue
+
+            displays.append(file)
 
     for file in io_expanders:
         if not os.path.exists(file):

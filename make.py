@@ -29,7 +29,7 @@ argParser.add_argument(
 args1, extra_args = argParser.parse_known_args(sys.argv[1:])
 target = args1.target[0]
 
-argParser = ArgumentParser(prefix_chars='mscLBFDIVE')
+argParser = ArgumentParser(prefix_chars='-mscLBFDIVE')
 
 argParser.add_argument(
     'clean',
@@ -107,6 +107,14 @@ argParser.add_argument(
     default=[]
 )
 
+argParser.add_argument(
+    '--no-scrub',
+    dest='no_scrub',
+    default=False,
+    action='store_true'
+)
+
+
 args2, extra_args = argParser.parse_known_args(extra_args)
 
 lv_cflags = args2.lv_cflags
@@ -116,6 +124,7 @@ frozen_manifest = args2.frozen_manifest
 displays = args2.displays
 indevs = args2.indevs
 expanders = args2.expanders
+builder.DO_NOT_SCRUB_BUILD_FOLDER = args2.no_scrub
 
 
 if lv_cflags is None:
