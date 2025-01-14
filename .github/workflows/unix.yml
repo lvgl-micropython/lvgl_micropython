@@ -69,13 +69,7 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: lvgl_micropy_ESP32
-        path:
-          lvgl_micropy_ESP32_GENERIC_S3-4.bin
-          lvgl_micropy_ESP32_GENERIC_S3-SPIRAM_OCT-4.bin
-          lvgl_micropy_ESP32_GENERIC_S3-SPIRAM_OCT-8.bin
-          lvgl_micropy_ESP32_GENERIC_S3-SPIRAM_OCT_OCTFLASH-8.bin
-          lvgl_micropy_ESP32_GENERIC_S3-SPIRAM_OCT_OCTFLASH-16.bin
-          lvgl_micropy_ESP32_GENERIC_S2-4.bin
+        path: build/*.bin
         if-no-files-found: ignore
 
   build_unix:
