@@ -285,7 +285,7 @@ def generate_manifest(
 
     if 'all' in indevs:
         indevs.remove('all')
-        path = f'{script_dir}/api_drivers/common_api_drivers/ndev'
+        path = f'{script_dir}/api_drivers/common_api_drivers/indev'
         for file in os.listdir(path):
             if (
                 file == 'focaltech_touch.py' or
