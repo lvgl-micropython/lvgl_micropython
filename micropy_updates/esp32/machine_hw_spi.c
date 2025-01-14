@@ -362,11 +362,11 @@ static void machine_hw_spi_device_transfer(mp_obj_base_t *self_in, size_t len, c
             }
 
             if (self->dual) {
-                transaction->flags |= SPI_TRANS_MODE_DIO;
+                transaction->flags |= SPI_TRANS_MODE_DIO | SPI_TRANS_MULTILINE_ADDR;
             } else if (self->quad) {
-                transaction->flags |= SPI_TRANS_MODE_QIO;
+                transaction->flags |= SPI_TRANS_MODE_QIO | SPI_TRANS_MULTILINE_ADDR;
             } else if (self->octal) {
-                transaction->flags |= SPI_TRANS_MODE_OCT;
+                transaction->flags |= SPI_TRANS_MODE_OCT | SPI_TRANS_MULTILINE_ADDR;
             }
 
             spi_device_queue_trans(spi_device, transaction, portMAX_DELAY);
@@ -642,7 +642,7 @@ mp_obj_t machine_hw_spi_device_make_new(const mp_obj_type_t *type, size_t n_args
 
     if (self->firstbit == MICROPY_PY_MACHINE_SPI_LSB) flags |= SPI_DEVICE_TXBIT_LSBFIRST | SPI_DEVICE_RXBIT_LSBFIRST;
 
-    if (dual || quad |m| octal) flags != SPI_DEVICE_HALFDUPLEX;
+    if (dual || quad || octal) flags != SPI_DEVICE_HALFDUPLEX;
 
     spi_device_interface_config_t devcfg = {
         .clock_speed_hz = (uint32_t)spi_get_actual_clock(APB_CLK_FREQ, args[ARG_freq].u_int, 0),
