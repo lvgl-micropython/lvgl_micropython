@@ -301,7 +301,7 @@ def generate_manifest(
 
     if 'all' in displays:
         displays.remove('all')
-        path = f'{script_dir}/api_drivers/common_api_drivers/ndev'
+        path = f'{script_dir}/api_drivers/common_api_drivers/display'
         for file in os.listdir(path):
             if file.endswith('.py'):
                 continue
