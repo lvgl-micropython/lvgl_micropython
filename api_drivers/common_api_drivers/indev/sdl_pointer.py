@@ -9,10 +9,10 @@ import micropython  # NOQA
 class SDLPointer(pointer_framework.PointerDriver):
     def __init__(
         self,
-        *args,
+        *_,
         startup_rotation=pointer_framework.lv.DISPLAY_ROTATION._0,  # NOQA
         debug=False,
-        **kwargs
+        **__
     ):  # NOQA
         super().__init__(
             touch_cal=None, startup_rotation=startup_rotation, debug=debug
@@ -25,12 +25,12 @@ class SDLPointer(pointer_framework.PointerDriver):
         self.__wheel_y = 0
         self.__scroll_obj = None
         self.__button_state = self.RELEASED
-        self.set_mode(lv.INDEV_MODE.EVENT)
+        self.set_mode(lv.INDEV_MODE.EVENT)  # NOQA
 
         self._py_disp_drv._data_bus.register_mouse_callback(self._mouse_cb)  # NOQA
 
     def set_mode(self, mode):
-        self._indev_drv.set_mode(mode)
+        self._indev_drv.set_mode(mode)  # NOQA
 
     def _get_object(self):
         if not self.__wheel_x and not self.__wheel_y:
@@ -47,14 +47,14 @@ class SDLPointer(pointer_framework.PointerDriver):
             obj = lv.indev_search_obj(self._disp_drv.get_layer_bottom(), point)
 
         if obj:
-            dir_flags = obj.get_scroll_dir()
+            dir_flags = obj.get_scroll_dir()  # NOQA
 
-            if self.__wheel_x and dir_flags | lv.DIR.HOR == dir_flags:
+            if self.__wheel_x and dir_flags | lv.DIR.HOR == dir_flags:  # NOQA
                 pass
             else:
                 self.__wheel_x = 0
 
-            if self.__wheel_y and dir_flags | lv.DIR.VER == dir_flags:
+            if self.__wheel_y and dir_flags | lv.DIR.VER == dir_flags:  # NOQA
                 pass
             else:
                 self.__wheel_y = 0

@@ -4,7 +4,7 @@ from micropython import const  # NOQA
 
 import lvgl as lv  # NOQA
 import lcd_bus  # NOQA
-import rgb_display_framework
+import rgb_display_framework  # NOQA
 
 
 STATE_HIGH = rgb_display_framework.STATE_HIGH

@@ -279,6 +279,9 @@ def generate_manifest(
         path = f'{script_dir}/api_drivers/common_api_drivers/io_expander'
 
         for file in os.listdir(path):
+            if '.wip' in file:
+                continue
+
             if file.endswith('.py'):
                 name = file[:-3]
                 io_expanders.append(name)
@@ -287,6 +290,9 @@ def generate_manifest(
         indevs.remove('all')
         path = f'{script_dir}/api_drivers/common_api_drivers/indev'
         for file in os.listdir(path):
+            if '.wip' in file:
+                continue
+
             if (
                 file == 'focaltech_touch.py' or
                 file == 'evdev' or
@@ -304,6 +310,9 @@ def generate_manifest(
         path = f'{script_dir}/api_drivers/common_api_drivers/display'
         for file in os.listdir(path):
             if file.endswith('.py'):
+                continue
+
+            if '.wip' in file:
                 continue
 
             displays.append(file)

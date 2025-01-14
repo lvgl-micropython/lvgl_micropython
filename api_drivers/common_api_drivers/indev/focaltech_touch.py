@@ -59,7 +59,7 @@ class FocalTechTouch(pointer_framework.PointerDriver):
 
         self._read_reg(_PANEL_ID_REG)
         print("Touch Device ID: 0x%02x" % self._rx_buf[0])
-        ven_id = self._rx_buf[0]
+        ven_id = self._rx_buf[0]  # NOQA
 
         self._read_reg(_CHIPID_REG)
         print("Touch Chip ID: 0x%02x" % self._rx_buf[0])

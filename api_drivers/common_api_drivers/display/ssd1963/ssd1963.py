@@ -18,5 +18,3 @@ BYTE_ORDER_BGR = display_driver_framework.BYTE_ORDER_BGR
 
 class SSD1963(display_driver_framework.DisplayDriver):
     pass
-
-

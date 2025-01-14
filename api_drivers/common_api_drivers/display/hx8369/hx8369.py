@@ -3,7 +3,6 @@
 import display_driver_framework
 from micropython import const  # NOQA
 
-import lvgl as lv
 import time
 
 TYPE_A = 1

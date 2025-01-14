@@ -72,7 +72,7 @@ class SSD1306(display_driver_framework.DisplayDriver):
 
                     break
                 except MemoryError:
-                    frame_buffer1 = data_bus.free_framebuffer(frame_buffer1)
+                    frame_buffer1 = data_bus.free_framebuffer(frame_buffer1)  # NOQA
 
             if frame_buffer1 is None:
                 raise MemoryError(
@@ -119,7 +119,7 @@ class SSD1306(display_driver_framework.DisplayDriver):
         return self._power
 
     def set_power(self, value):
-        self._power = bool(value)
+        self._power = bool(value)  # NOQA
 
         if self._power:
             self.set_params(_DISP_ON)

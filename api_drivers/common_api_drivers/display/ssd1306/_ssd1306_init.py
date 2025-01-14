@@ -1,6 +1,6 @@
 # Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
-from micropython import const
+from micropython import const  # NOQA
 
 _SET_CONTRAST = const(0x81)
 _SET_ENTIRE_ON = const(0xA4)

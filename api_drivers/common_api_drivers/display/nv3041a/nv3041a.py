@@ -115,7 +115,7 @@ class NV3041A(display_driver_framework.DisplayDriver):
 
                         break
                     except MemoryError:
-                        frame_buffer1 = data_bus.free_framebuffer(frame_buffer1)
+                        frame_buffer1 = data_bus.free_framebuffer(frame_buffer1)  # NOQA
 
                 if frame_buffer1 is None:
                     raise MemoryError(

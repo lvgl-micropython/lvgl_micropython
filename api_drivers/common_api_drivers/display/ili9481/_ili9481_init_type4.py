@@ -74,13 +74,11 @@ def init(self):
     param_buf[11] = 0x0C
     self.set_params(_GAMMASET, param_mv[:12])
 
-
     param_buf[0] = 0x00
     self.set_params(_IFMODE, param_mv[:1])
 
     param_buf[0] = 0xA0
     self.set_params(0xE4, param_mv[:1])
-
 
     param_buf[0] = 0x01
     self.set_params(0xF0, param_mv[:1])

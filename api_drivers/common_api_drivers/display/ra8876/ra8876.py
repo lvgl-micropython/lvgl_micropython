@@ -207,14 +207,12 @@ class RA8876(display_driver_framework.DisplayDriver):
             offset_x=offset_x,
             offset_y=offset_y,
             color_byte_order=color_byte_order,
-            color_space=lv.COLOR_FORMAT.RGB565,
+            color_space=lv.COLOR_FORMAT.RGB565,  # NOQA
             rgb565_byte_swap=rgb565_byte_swap
         )
 
-    def invert_colors(self, value):
+    def set_invert_colors(self, value):
         raise NotImplementedError
-
-    invert_colors = property(None, invert_colors)
 
     @property
     def orientation(self):
@@ -226,21 +224,21 @@ class RA8876(display_driver_framework.DisplayDriver):
 
     def _wait(self):
         if self._wait_pin is not None:
-            start_time = time.ticks_ms()
+            start_time = time.ticks_ms()  # NOQA
 
             while (
                 self._wait_pin.value() != self._wait_state and
-                time.ticks_diff(time.ticks_ms(), start_time) < self.WAIT_TIMEOUT
+                time.ticks_diff(time.ticks_ms(), start_time) < self.WAIT_TIMEOUT  # NOQA
             ):
-                time.sleep_ms(1)
+                time.sleep_ms(1)  # NOQA
 
     def reset(self):
         if self._reset_pin is None:
             self.set_params(_SRR)
-            time.sleep_ms(20)
+            time.sleep_ms(20)  # NOQA
         else:
             display_driver_framework.DisplayDriver.reset(self)
-            time.sleep_ms(50)
+            time.sleep_ms(50)  # NOQA
 
     def init( # NOQA
         self,
@@ -256,9 +254,9 @@ class RA8876(display_driver_framework.DisplayDriver):
         vstr=12,  # vertical start position
         vpwr=10,  # VSYNC pulse width
     ): 
-        time.sleep_ms(100)
+        time.sleep_ms(100)  # NOQA
         self.reset()
-        time.sleep_ms(100)
+        time.sleep_ms(100)  # NOQA
         self._wait()
 
         buf = self._param_buf
@@ -350,10 +348,10 @@ class RA8876(display_driver_framework.DisplayDriver):
         # reconfigure PLL generator 
         buf[0] = 0x00
         self.set_params(_CCR, mv)
-        time.sleep_us(10)
+        time.sleep_us(10)  # NOQA
         buf[0] = 0x80
         self.set_params(_CCR, mv)
-        time.sleep_us(10)
+        time.sleep_us(10)  # NOQA
 
         # configure SDRAM
         if dram_ic == IS42SM16160D:
@@ -402,7 +400,7 @@ class RA8876(display_driver_framework.DisplayDriver):
         self.set_params(_SDRCR, mv)
 
         self._wait()
-        time.sleep_ms(10)
+        time.sleep_ms(10)  # NOQA
 
         # set chip config register
         lane_count = self._data_bus.get_lane_count()

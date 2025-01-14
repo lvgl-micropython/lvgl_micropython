@@ -16,14 +16,14 @@ def init(self):
     param_buf[0] = 0x01
     self.set_params(0xE0, param_mv[:1])
 
-    time.sleep_ms(10)
+    time.sleep_ms(10)  # NOQA
     param_buf[0] = 0x03
     self.set_params(0xE0, param_mv[:1])
 
-    time.sleep_ms(10)
+    time.sleep_ms(10)  # NOQA
     self.set_params(0x01)
 
-    time.sleep_ms(100)
+    time.sleep_ms(100)  # NOQA
     param_buf[0] = 0x03
     param_buf[1] = 0x33
     param_buf[2] = 0x33
@@ -64,7 +64,7 @@ def init(self):
     param_buf[0] = 0x01
     self.set_params(0xBA, param_mv[:1])
 
-    param_buf[0] = 0x21 | TFT_MAD_COLOR_ORDER
+    param_buf[0] = 0x21  # | TFT_MAD_COLOR_ORDER
     self.set_params(0x36, param_mv[:1])
 
     param_buf[0] = 0x00
@@ -76,7 +76,7 @@ def init(self):
     param_buf[3] = 0x01
     self.set_params(0xBC, param_mv[:4])
 
-    time.sleep_ms(10)
+    time.sleep_ms(10)  # NOQA
     self.set_params(0x29)
 
     param_buf[0] = 0x06

@@ -75,7 +75,7 @@ def init(self):
     param_buf[0] = 0x78
     self.set_params(0xC2, param_mv[:1])
 
-    time.sleep_ms(20)
+    time.sleep_ms(20)  # NOQA
 
     param_buf[:3] = bytearray([0x00, 0x1B, 0x02])
     self.set_params(0xE0, param_mv[:3])

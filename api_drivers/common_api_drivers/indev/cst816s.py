@@ -171,7 +171,7 @@ class CST816S(pointer_framework.PointerDriver):
         device,
         reset_pin=None,
         touch_cal=None,
-        startup_rotation=pointer_framework.lv.DISPLAY_ROTATION._0,
+        startup_rotation=pointer_framework.lv.DISPLAY_ROTATION._0,  # NOQA
         debug=False
     ):
         self._tx_buf = bytearray(2)

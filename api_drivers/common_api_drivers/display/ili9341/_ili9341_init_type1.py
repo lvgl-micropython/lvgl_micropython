@@ -86,7 +86,7 @@ def init(self):
     param_buf[0] = pixel_format
     self.set_params(_COLMOD, param_mv[:1])
 
-    param_buf[:2] = bytearray([0x00, 0x13]) # 0x18 ??
+    param_buf[:2] = bytearray([0x00, 0x13])  # 0x18 ??
     self.set_params(_FRMCTR1, param_mv[:2])
 
     param_buf[:3] = bytearray([0x08, 0x82, 0x27])

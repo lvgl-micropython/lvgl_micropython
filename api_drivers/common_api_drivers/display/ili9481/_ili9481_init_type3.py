@@ -28,7 +28,7 @@ _DISPMODE = const(0xB4)
 _SWRESET = const(0x01)
 
 
-def init(self1):
+def init(self):
     param_buf = bytearray(12)
     param_mv = memoryview(param_buf)
 
@@ -60,7 +60,6 @@ def init(self1):
     param_buf[0] = 0x03
     self.set_params(_VCOMCTL1, param_mv[:1])
 
-
     param_buf[0] = 0x00
     param_buf[1] = 0x14
     param_buf[2] = 0x33
@@ -74,7 +73,6 @@ def init(self1):
     param_buf[10] = 0x0F
     param_buf[11] = 0x00
     self.set_params(_GAMMASET, param_mv[:12])
-
 
     param_buf[0] = 0x00
     self.set_params(_IFMODE, param_mv[:1])

@@ -165,14 +165,14 @@ class SDLKeyboard(keypad_framework.KeypadDriver):
         self.__current_state = self.RELEASED
 
         self.group = lv.group_create()
-        self.group.set_default()
+        self.group.set_default()  # NOQA
         self.set_group(self.group)
-        self.set_mode(lv.INDEV_MODE.EVENT)
+        self.set_mode(lv.INDEV_MODE.EVENT)  # NOQA
 
         self._py_disp_drv._data_bus.register_keypad_callback(self._keypad_cb)  # NOQA
 
     def set_mode(self, mode):
-        self._indev_drv.set_mode(mode)
+        self._indev_drv.set_mode(mode)  # NOQA
 
     def _keypad_cb(self, *args):
         _, state, key, mod = args
@@ -201,21 +201,21 @@ class SDLKeyboard(keypad_framework.KeypadDriver):
             else:
                 mapping = {
                     KEYPAD_0: KEY_INSERT,
-                    KEYPAD_1: lv.KEY.END,
-                    KEYPAD_2: lv.KEY.DOWN,
-                    KEYPAD_3: lv.KEY.PREV,
-                    KEYPAD_4: lv.KEY.LEFT,
+                    KEYPAD_1: lv.KEY.END,  # NOQA
+                    KEYPAD_2: lv.KEY.DOWN,  # NOQA
+                    KEYPAD_3: lv.KEY.PREV,  # NOQA
+                    KEYPAD_4: lv.KEY.LEFT,  # NOQA
                     KEYPAD_5: KEY_5,
-                    KEYPAD_6: lv.KEY.RIGHT,
-                    KEYPAD_7: lv.KEY.HOME,
-                    KEYPAD_8: lv.KEY.UP,
-                    KEYPAD_9: lv.KEY.NEXT,
-                    KEYPAD_PERIOD: lv.KEY.DEL,
+                    KEYPAD_6: lv.KEY.RIGHT,  # NOQA
+                    KEYPAD_7: lv.KEY.HOME,  # NOQA
+                    KEYPAD_8: lv.KEY.UP,  # NOQA
+                    KEYPAD_9: lv.KEY.NEXT,  # NOQA
+                    KEYPAD_PERIOD: lv.KEY.DEL,  # NOQA
                     KEYPAD_DIVIDE: KEY_SLASH,
                     KEYPAD_MULTIPLY: KEY_ASTERISK,
                     KEYPAD_MINUS: KEY_MINUS,
                     KEYPAD_PLUS: KEY_PLUS,
-                    KEYPAD_ENTER: lv.KEY.ENTER,
+                    KEYPAD_ENTER: lv.KEY.ENTER,  # NOQA
                     KEYPAD_EQUALS: KEY_EQUALS
                 }
 
@@ -224,19 +224,19 @@ class SDLKeyboard(keypad_framework.KeypadDriver):
             return
         else:
             mapping = {
-                KEY_BACKSPACE: lv.KEY.BACKSPACE,
-                KEY_TAB: lv.KEY.NEXT,
-                KEY_RETURN: lv.KEY.ENTER,
-                KEY_ESCAPE: lv.KEY.ESC,
-                KEY_DELETE: lv.KEY.DEL,
-                KEY_UP: lv.KEY.UP,
-                KEY_DOWN: lv.KEY.DOWN,
-                KEY_RIGHT: lv.KEY.RIGHT,
-                KEY_LEFT: lv.KEY.LEFT,
-                KEY_HOME: lv.KEY.HOME,
-                KEY_END: lv.KEY.END,
-                KEY_PAGEDOWN: lv.KEY.PREV,
-                KEY_PAGEUP: lv.KEY.NEXT
+                KEY_BACKSPACE: lv.KEY.BACKSPACE,  # NOQA
+                KEY_TAB: lv.KEY.NEXT,  # NOQA
+                KEY_RETURN: lv.KEY.ENTER,  # NOQA
+                KEY_ESCAPE: lv.KEY.ESC,  # NOQA
+                KEY_DELETE: lv.KEY.DEL,  # NOQA
+                KEY_UP: lv.KEY.UP,  # NOQA
+                KEY_DOWN: lv.KEY.DOWN,  # NOQA
+                KEY_RIGHT: lv.KEY.RIGHT,  # NOQA
+                KEY_LEFT: lv.KEY.LEFT,  # NOQA
+                KEY_HOME: lv.KEY.HOME,  # NOQA
+                KEY_END: lv.KEY.END,  # NOQA
+                KEY_PAGEDOWN: lv.KEY.PREV,  # NOQA
+                KEY_PAGEUP: lv.KEY.NEXT  # NOQA
             }
             self.__last_key = mapping.get(key, key)
 

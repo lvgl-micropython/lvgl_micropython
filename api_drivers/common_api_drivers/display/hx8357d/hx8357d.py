@@ -13,5 +13,3 @@ BYTE_ORDER_BGR = display_driver_framework.BYTE_ORDER_BGR
 
 class HX8357D(display_driver_framework.DisplayDriver):
     pass
-
-

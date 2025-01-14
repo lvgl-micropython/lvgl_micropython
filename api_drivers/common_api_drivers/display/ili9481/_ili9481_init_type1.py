@@ -112,5 +112,3 @@ def init(self):
     time.sleep_ms(120)  # NOQA
     self.set_params(_DISPON)
     time.sleep_ms(25)  # NOQA
-
-    display_driver_framework.DisplayDriver.init(self)

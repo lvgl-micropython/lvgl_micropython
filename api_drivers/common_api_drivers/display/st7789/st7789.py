@@ -78,4 +78,3 @@ class ST7789(display_driver_framework.DisplayDriver):
             _param_bits=8,
             _init_bus=True
         )
-

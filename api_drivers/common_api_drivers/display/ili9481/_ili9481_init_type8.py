@@ -50,7 +50,6 @@ def init(self):
     param_buf[1] = 0x11
     self.set_params(_RDNVSTAT, param_mv[:2])
 
-
     param_buf[0] = 0x00
     param_buf[1] = 0x3B
     param_buf[2] = 0x00
