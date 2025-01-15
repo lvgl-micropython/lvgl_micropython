@@ -104,6 +104,7 @@
             uint8_t rotation: 2;
             uint8_t bytes_per_pixel: 2;
             uint8_t last_update: 1;
+            uint8_t rgb565_dither: 1;
 
             rgb_bus_lock_t copy_lock;
             rgb_bus_event_t copy_task_exit;

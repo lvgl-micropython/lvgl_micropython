@@ -22,6 +22,7 @@
     #include "esp_lcd_panel_ops.h"
 
     #include "rgb_bus.h"
+    #include "rgb565_dither.h"
 
     #include <string.h>
 
@@ -122,7 +123,7 @@
 
     static void rotate0(uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start,
                         uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height,
-                        uint8_t bytes_per_pixel);
+                        uint8_t bytes_per_pixel, uint8_t rgb565_dither);
 
     static void rotate_8bpp(uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start,
                         uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height,
@@ -130,7 +131,7 @@
 
     static void rotate_16bpp(uint16_t *src, uint16_t *dst, uint32_t x_start, uint32_t y_start,
                         uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height,
-                        uint8_t rotate);
+                        uint8_t rotate, uint8_t rgb565_dither);
 
     static void rotate_24bpp(uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start,
                         uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height,
@@ -233,7 +234,7 @@
                 self->x_start, self->y_start,
                 self->x_end, self->y_end,
                 self->width, self->height,
-                bytes_per_pixel, self->rotation);
+                bytes_per_pixel, self->rotation, self->rgb565_dither);
 
             rgb_bus_lock_release(&self->tx_color_lock);
 
@@ -310,7 +311,6 @@
     }
 
 
-
     __attribute__((always_inline))
     static inline void copy_8bpp(uint8_t *from, uint8_t *to)
     {
@@ -339,12 +339,12 @@
 
     void copy_pixels(void *dst, void *src, uint32_t x_start, uint32_t y_start,
             uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height,
-            uint32_t bytes_per_pixel, uint8_t rotate)
+            uint32_t bytes_per_pixel, uint8_t rotate, uint8_t rgb565_dither)
     {
         if (rotate == RGB_BUS_ROTATION_0) {
             rotate0(src, dst, MIN(x_start, dst_width), MIN(y_start, dst_height),
                     MIN(x_end, dst_width), MIN(y_end, dst_height),
-                    dst_width, dst_height, bytes_per_pixel);
+                    dst_width, dst_height, bytes_per_pixel, rgb565_dither);
         } else {
             y_end += 1;
             if (rotate == RGB_BUS_ROTATION_90 || rotate == RGB_BUS_ROTATION_270) {
@@ -362,7 +362,7 @@
             if (bytes_per_pixel == 1) {
                 rotate_8bpp(src, dst, x_start, y_start, x_end, y_end, dst_width, dst_height, rotate);
             } else if (bytes_per_pixel == 2) {
-                rotate_16bpp(src, dst, x_start, y_start, x_end, y_end, dst_width, dst_height, rotate);
+                rotate_16bpp(src, dst, x_start, y_start, x_end, y_end, dst_width, dst_height, rotate, rgb565_dither);
             } else if (bytes_per_pixel == 3) {
                 rotate_24bpp(src, dst, x_start, y_start, x_end, y_end, dst_width, dst_height, rotate);
             } else if (bytes_per_pixel == 4) {
@@ -374,20 +374,30 @@
 
     void rotate0(uint8_t *src, uint8_t *dst, uint32_t x_start, uint32_t y_start,
                 uint32_t x_end, uint32_t y_end, uint32_t dst_width,
-                uint32_t dst_height, uint8_t bytes_per_pixel)
+                uint32_t dst_height, uint8_t bytes_per_pixel, uint8_t rgb565_dither)
     {
         dst += ((y_start * dst_width + x_start) * bytes_per_pixel);
-
-        if(x_start == 0 && x_end == (dst_width - 1)){
+        if(x_start == 0 && x_end == (dst_width - 1) && !rgb565_dither) {
             memcpy(dst, src, dst_width * (y_end - y_start + 1) * bytes_per_pixel);
         } else {
             uint32_t src_bytes_per_line = (x_end - x_start + 1) * bytes_per_pixel;
             uint32_t dst_bytes_per_line = dst_width * bytes_per_pixel;
 
-            for(uint32_t y = y_start; y < y_end; y++){
-                memcpy(dst, src, src_bytes_per_line);
-                dst += dst_bytes_per_line;
-                src += src_bytes_per_line;
+            if (rgb565_dither) {
+                for(uint32_t y = y_start; y < y_end; y++) {
+                    for (uint32_t x=0;x<x_end;x++) {
+                        rgb565_dither_pixel(CALC_THRESHOLD(x, y), src + (x * 2));
+                        dst + (x * 2) = src + (x * 2);
+                    }
+                    dst += dst_bytes_per_line;
+                    src += src_bytes_per_line;
+                }
+            } else {
+                for(uint32_t y = y_start; y < y_end; y++) {
+                    memcpy(dst, src, src_bytes_per_line);
+                    dst += dst_bytes_per_line;
+                    src += src_bytes_per_line;
+                }
             }
         }
     }
@@ -453,7 +463,7 @@
 
     void rotate_16bpp(uint16_t *src, uint16_t *dst, uint32_t x_start, uint32_t y_start,
                     uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height,
-                    uint8_t rotate)
+                    uint8_t rotate, uint8_t rgb565_dither)
     {
         uint32_t i;
         uint32_t j;
@@ -461,50 +471,101 @@
         uint32_t src_bytes_per_line = x_end - x_start + 1;
         uint32_t offset = y_start * src_bytes_per_line + x_start;
 
-        switch (rotate) {
-            case RGB_BUS_ROTATION_90:
-                for (uint32_t y = y_start; y < y_end; y++) {
-                    for (uint32_t x = x_start; x < x_end; x++) {
-                        i = y * src_bytes_per_line + x - offset;
-                        j = (dst_height - 1 - x) * dst_width + y;
-                        copy_16bpp(src + i, dst + j);
+        if (rgb565_dither) {
+            switch (rotate) {
+                case RGB_BUS_ROTATION_90:
+                    for (uint32_t y = y_start; y < y_end; y++) {
+                        for (uint32_t x = x_start; x < x_end; x++) {
+                            i = y * src_bytes_per_line + x - offset;
+                            j = (dst_height - 1 - x) * dst_width + y;
+                            rgb565_dither_pixel(CALC_THRESHOLD(x, y), src + i);
+                            copy_16bpp(src + i, dst + j);
+                        }
                     }
-                }
-                break;
+                    break;
 
-            // MIRROR_X MIRROR_Y
-            case RGB_BUS_ROTATION_180:
-                LCD_UNUSED(j);
-                LCD_UNUSED(src_bytes_per_line);
-                LCD_UNUSED(offset);
+                // MIRROR_X MIRROR_Y
+                case RGB_BUS_ROTATION_180:
+                    LCD_UNUSED(j);
+                    LCD_UNUSED(src_bytes_per_line);
+                    LCD_UNUSED(offset);
 
-                for (uint32_t y = y_start; y < y_end; y++) {
-                    i = (dst_height - 1 - y) * dst_width + (dst_width - 1 - x_start);
-                    for (uint32_t x = x_start; x < x_end; x++) {
-                        copy_16bpp(src, dst + i);
-                        src++;
-                        i--;
+                    for (uint32_t y = y_start; y < y_end; y++) {
+                        i = (dst_height - 1 - y) * dst_width + (dst_width - 1 - x_start);
+                        for (uint32_t x = x_start; x < x_end; x++) {
+                            rgb565_dither_pixel(CALC_THRESHOLD(x, y), src);
+                            copy_16bpp(src, dst + i);
+                            src++;
+                            i--;
+                        }
                     }
-                }
-                break;
+                    break;
 
-            // SWAP_XY   MIRROR_X
-            case RGB_BUS_ROTATION_270:
-                for (uint32_t y = y_start; y < y_end; y++) {
-                    for (uint32_t x = x_start; x < x_end; x++) {
-                        i = y * src_bytes_per_line + x - offset;
-                        j = (x * dst_width + dst_width - 1 - y);
-                        copy_16bpp(src + i, dst + j);
+                // SWAP_XY   MIRROR_X
+                case RGB_BUS_ROTATION_270:
+                    for (uint32_t y = y_start; y < y_end; y++) {
+                        for (uint32_t x = x_start; x < x_end; x++) {
+                            i = y * src_bytes_per_line + x - offset;
+                            j = (x * dst_width + dst_width - 1 - y);
+                            rgb565_dither_pixel(CALC_THRESHOLD(x, y), src + i);
+                            copy_16bpp(src + i, dst + j);
+                        }
                     }
-                }
-                break;
+                    break;
 
-            default:
-                LCD_UNUSED(i);
-                LCD_UNUSED(j);
-                LCD_UNUSED(src_bytes_per_line);
-                LCD_UNUSED(offset);
-                break;
+                default:
+                    LCD_UNUSED(i);
+                    LCD_UNUSED(j);
+                    LCD_UNUSED(src_bytes_per_line);
+                    LCD_UNUSED(offset);
+                    break;
+            }
+        } else {
+            switch (rotate) {
+                case RGB_BUS_ROTATION_90:
+                    for (uint32_t y = y_start; y < y_end; y++) {
+                        for (uint32_t x = x_start; x < x_end; x++) {
+                            i = y * src_bytes_per_line + x - offset;
+                            j = (dst_height - 1 - x) * dst_width + y;
+                            copy_16bpp(src + i, dst + j);
+                        }
+                    }
+                    break;
+
+                // MIRROR_X MIRROR_Y
+                case RGB_BUS_ROTATION_180:
+                    LCD_UNUSED(j);
+                    LCD_UNUSED(src_bytes_per_line);
+                    LCD_UNUSED(offset);
+
+                    for (uint32_t y = y_start; y < y_end; y++) {
+                        i = (dst_height - 1 - y) * dst_width + (dst_width - 1 - x_start);
+                        for (uint32_t x = x_start; x < x_end; x++) {
+                            copy_16bpp(src, dst + i);
+                            src++;
+                            i--;
+                        }
+                    }
+                    break;
+
+                // SWAP_XY   MIRROR_X
+                case RGB_BUS_ROTATION_270:
+                    for (uint32_t y = y_start; y < y_end; y++) {
+                        for (uint32_t x = x_start; x < x_end; x++) {
+                            i = y * src_bytes_per_line + x - offset;
+                            j = (x * dst_width + dst_width - 1 - y);
+                            copy_16bpp(src + i, dst + j);
+                        }
+                    }
+                    break;
+
+                default:
+                    LCD_UNUSED(i);
+                    LCD_UNUSED(j);
+                    LCD_UNUSED(src_bytes_per_line);
+                    LCD_UNUSED(offset);
+                    break;
+            }
         }
     }
 

@@ -33,6 +33,8 @@
     #include "py/objtype.h"
     #include "py/objexcept.h"
 
+    #include "rgb565_dither.h"
+
     // stdlib includes
     #include <string.h>
 
@@ -101,6 +103,7 @@
             ARG_pclk_idle_high,
             ARG_pclk_active_low,
             ARG_refresh_on_demand,
+            ARG_rgb565_dither
         };
 
         const mp_arg_t allowed_args[] = {
@@ -137,6 +140,7 @@
             { MP_QSTR_pclk_idle_high,     MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
             { MP_QSTR_pclk_active_low,    MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
             { MP_QSTR_refresh_on_demand,  MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
+            { MP_QSTR_rgb565_dither,      MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
         };
 
         mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
@@ -147,6 +151,8 @@
         self->base.type = &mp_lcd_rgb_bus_type;
 
         self->callback = mp_const_none;
+
+        self->rgb565_dither = (uint8_t)args[ARG_rgb565_dither].u_bool;
 
         self->bus_config.pclk_hz = (uint32_t)args[ARG_freq].u_int;
         self->bus_config.hsync_pulse_width = (uint32_t)args[ARG_hsync_pulse_width].u_int;
@@ -344,6 +350,8 @@
         LCD_DEBUG_PRINT("rgb_init(self, width=%i, height=%i, bpp=%d, buffer_size=%lu, rgb565_byte_swap=%d)\n", width, height, bpp, buffer_size, rgb565_byte_swap)
 
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
+
+        if (bpp != 16 && self->rgb565_dither) self->rgb565_dither = 0;
 
         if (bpp == 16 && rgb565_byte_swap) {
             /*

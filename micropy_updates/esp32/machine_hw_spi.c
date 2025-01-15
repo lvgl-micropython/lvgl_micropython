@@ -649,7 +649,7 @@ mp_obj_t machine_hw_spi_device_make_new(const mp_obj_type_t *type, size_t n_args
         .mode = self->phase | (self->polarity << 1),
         .spics_io_num = cs,
         .queue_size = 2,
-        .flags = ,
+        .flags = flags,
         .pre_cb = NULL
     };
 
