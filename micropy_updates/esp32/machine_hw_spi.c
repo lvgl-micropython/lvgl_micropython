@@ -642,7 +642,7 @@ mp_obj_t machine_hw_spi_device_make_new(const mp_obj_type_t *type, size_t n_args
 
     if (self->firstbit == MICROPY_PY_MACHINE_SPI_LSB) flags |= SPI_DEVICE_TXBIT_LSBFIRST | SPI_DEVICE_RXBIT_LSBFIRST;
 
-    if (dual || quad || octal) flags != SPI_DEVICE_HALFDUPLEX;
+    if (dual || quad || octal) flags |= SPI_DEVICE_HALFDUPLEX;
 
     spi_device_interface_config_t devcfg = {
         .clock_speed_hz = (uint32_t)spi_get_actual_clock(APB_CLK_FREQ, args[ARG_freq].u_int, 0),
