@@ -9,7 +9,6 @@
     static uint8_t *green_thresh;
     static uint8_t *blue_thresh;
 
-    bool rgb565_dither_init(void);
 
     static inline void rgb565_dither_pixel(uint8_t treshold_id, uint16_t *pixel)
     {
@@ -17,6 +16,7 @@
                   ((((*pixel >> 3) & 0xFC) + green_thresh[treshold_id]) << 3) |
                   ((((*pixel & 0x1F) << 3) + blue_thresh[treshold_id]) >> 3));
     }
+
 
     static inline bool rgb565_dither_init(void)
     {
