@@ -331,11 +331,12 @@ def generate_manifest(
 
             file_path, file_name = os.path.split(tmp_file)
             entry = f"freeze('{file_path}', '{file_name}')"
-            manifest_files.append(entry)
         else:
             print(file)
             file_path, file_name = os.path.split(file)
             entry = f"freeze('{file_path}', '{file_name}')"
+
+        if entry not in manifest_files:
             manifest_files.append(entry)
 
     for file in indevs:
@@ -356,7 +357,9 @@ def generate_manifest(
                 print(focaltech_touch)
                 directory, file_name = os.path.split(focaltech_touch)
                 entry = f"freeze('{directory}', '{file_name}')"
-                manifest_files.append(entry)
+
+                if entry not in manifest_files:
+                    manifest_files.append(entry)
 
             file = tmp_file
 
@@ -367,12 +370,16 @@ def generate_manifest(
         if os.path.exists(extension):
             print(extension)
             entry = f"freeze('{directory}', '{extension_file}')"
-            manifest_files.append(entry)
+
+            if entry not in manifest_files:
+                manifest_files.append(entry)
 
         print(file)
         file_path, file_name = os.path.split(file)
         entry = f"freeze('{file_path}', '{file_name}')"
-        manifest_files.append(entry)
+
+        if entry not in manifest_files:
+            manifest_files.append(entry)
 
     display_paths = []
 
@@ -394,13 +401,15 @@ def generate_manifest(
                 print(os.path.join(tmp_file, file_name))
 
                 entry = f"freeze('{tmp_file}', '{file_name}')"
-                manifest_files.append(entry)
+                if entry not in manifest_files:
+                    manifest_files.append(entry)
         else:
             print(file)
             file_path, file_name = os.path.split(file)
             entry = f"freeze('{file_path}', '{file_name}')"
-            manifest_files.append(entry)
-
+            if entry not in manifest_files:
+                manifest_files.append(entry)
+    
     manifest_files = '\n'.join(manifest_files)
 
     with open('build/manifest.py', 'w') as f:
