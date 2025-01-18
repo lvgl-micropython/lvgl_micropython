@@ -3,9 +3,9 @@
 
     #define CALC_THRESHOLD(x, y)  (uint8_t)((y & 7) << 3) + (x & 7)
 
-    extern uint8_t *red_thresh;
-    extern uint8_t *green_thresh;
-    extern uint8_t *blue_thresh;
+    uint8_t *red_thresh;
+    uint8_t *green_thresh;
+    uint8_t *blue_thresh;
 
     bool rgb565_dither_init(void);
 
