@@ -409,7 +409,7 @@ def generate_manifest(
             entry = f"freeze('{file_path}', '{file_name}')"
             if entry not in manifest_files:
                 manifest_files.append(entry)
-    
+
     manifest_files = '\n'.join(manifest_files)
 
     with open('build/manifest.py', 'w') as f:

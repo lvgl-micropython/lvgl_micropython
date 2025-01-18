@@ -9,7 +9,7 @@
 
     bool rgb565_dither_init(void);
 
-    static inline rgb565_dither_pixel(uint8_t treshold_id, uint16_t *pixel)
+    static inline void rgb565_dither_pixel(uint8_t treshold_id, uint16_t *pixel)
     {
         *pixel = (((((*pixel >> 8) & 0xF8) + red_thresh[treshold_id]) << 8) |
                   ((((*pixel >> 3) & 0xFC) + green_thresh[treshold_id]) << 3) |
