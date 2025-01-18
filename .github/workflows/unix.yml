@@ -20,9 +20,9 @@ jobs:
     - name: Install Deps
       #        sudo apt-get update && sudo apt-get install --assume-yes --allow-downgrades --allow-remove-essential --allow-change-held-packages build-essential pkg-config cmake ninja-build ccache
       run: |
-        git submodule update --init -- lib/pycparser
-        git submodule update --init --jobs 4 -- lib/micropython        
-        git submodule update --init --jobs 4 -- lib/lvgl
+        git submodule update --init --depth 1 -- lib/pycparser
+        git submodule update --init --depth 1 --jobs 4 -- lib/micropython        
+        git submodule update --init --depth 1 --jobs 4 -- lib/lvgl
 
     - name: Cached Deps
       id: cache-deps
@@ -36,9 +36,9 @@ jobs:
     - name: Get Build Deps
       if: steps.cache-deps.outputs.cache-hit != 'true'
       run: |
-        git submodule update --init --jobs 4 -- lib/esp-idf
+        git submodule update --init --depth 1 --jobs 4 -- lib/esp-idf
         cd lib/esp-idf
-        git submodule update --init --jobs 4 -- components/bt/host/nimble/nimble components/esp_wifi components/esptool_py/esptool components/lwip/lwip components/mbedtls/mbedtls components/bt/controller/lib_esp32 components/bt/controller/lib_esp32c3_family
+        git submodule update --init --depth 1 --jobs 4 -- components/bt/host/nimble/nimble components/esp_wifi components/esptool_py/esptool components/lwip/lwip components/mbedtls/mbedtls components/bt/controller/lib_esp32 components/bt/controller/lib_esp32c3_family
         cd ../..
         export "IDF_PATH=${GITHUB_WORKSPACE}/lib/esp-idf"
         ./lib/esp-idf/install.sh all

@@ -144,7 +144,7 @@
 
     static void copy_pixels(void *dst, void *src, uint32_t x_start, uint32_t y_start,
                         uint32_t x_end, uint32_t y_end, uint32_t dst_width, uint32_t dst_height,
-                        uint32_t bytes_per_pixel, uint8_t rotate);
+                        uint32_t bytes_per_pixel, uint8_t rotate, uint8_t rgb565_dither);
 
 
     static bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel,
@@ -386,7 +386,7 @@
             if (rgb565_dither) {
                 for(uint32_t y = y_start; y < y_end; y++) {
                     for (uint32_t x=0;x<x_end;x++) {
-                        rgb565_dither_pixel(CALC_THRESHOLD(x, y), src + (x * 2));
+                        rgb565_dither_pixel(CALC_THRESHOLD(x, y), (uint16_t *)src + (x * 2));
                         dst + (x * 2) = src + (x * 2);
                     }
                     dst += dst_bytes_per_line;
