@@ -1120,7 +1120,8 @@ def update_mpconfigport():
                 '#ifdef MICROPY_HW_ESP_USB_SERIAL_JTAG',
                 '#undef MICROPY_HW_ESP_USB_SERIAL_JTAG',
                 '#endif',
-                f'#define MICROPY_HW_ESP_USB_SERIAL_JTAG  ({int(enable_jtag_repl.lower() == "y")})'
+                f'#define MICROPY_HW_ESP_USB_SERIAL_JTAG  ({int(enable_jtag_repl.lower() == "y")})',
+                '#define USB_SERIAL_JTAG_PACKET_SZ_BYTES 	(64)'
             ])
 
         repl_data.extend([
