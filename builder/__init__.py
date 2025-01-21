@@ -256,6 +256,13 @@ def generate_manifest(
         )
     ]
 
+    toml_gen_driver = f'{script_dir}/build/display.py'
+    if os.path.exists(toml_gen_driver):
+        print(toml_gen_driver)
+        file_path, file_name = os.path.split(toml_gen_driver)
+        entry = f"freeze('{file_path}', '{file_name}')"
+        manifest_files.append(entry)
+
     for file in frozen_manifest_files:
         if not os.path.exists(file):
             raise RuntimeError(f'File not found "{file}"')

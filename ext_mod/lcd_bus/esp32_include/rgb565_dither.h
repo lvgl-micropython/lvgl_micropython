@@ -16,7 +16,7 @@
     {
         *pixel = (((((*pixel >> 8) & 0xF8) + red_thresh[treshold_id]) << 8) |
                   ((((*pixel >> 3) & 0xFC) + green_thresh[treshold_id]) << 3) |
-                  ((((*pixel & 0x1F) << 3) + blue_thresh[treshold_id]) >> 3)) ;
+                  ((((*pixel & 0x1F) << 3) + blue_thresh[treshold_id]) >> 3));
     }
 
 #endif
