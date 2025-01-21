@@ -13,6 +13,35 @@ if sys.platform.startswith('win'):
 SCRIPT_DIR = os.path.abspath(os.path.dirname(sys.argv[0]))
 MPY_DIR = os.path.join(SCRIPT_DIR, 'micropython')
 
+argParser = ArgumentParser(prefix_chars='T')
+argParser.add_argument(
+    'TOML',
+    dest='toml',
+    help='use a toml file to setup the build.',
+    action='store',
+    default=None
+)
+toml_args, extra_args = argParser.parse_known_args(sys.argv[1:])
+
+
+if toml_args.toml is not None:
+    toml_path = toml_args.toml
+    build_path = os.path.join(SCRIPT_DIR, 'build')
+    if not os.path.exists(build_path):
+        os.mkdir(build_path)
+
+    driver_out_path = os.path.join(build_path, 'display.py')
+
+    from builder import toml_reader
+
+    build_command = toml_reader.run(toml_path, driver_out_path)
+
+    build_command = set(build_command)
+    extra_args = set(extra_args)
+
+    extra_args = list(extra_args.union(build_command))
+
+
 argParser = ArgumentParser(prefix_chars='-')
 argParser.add_argument(
     'target',
@@ -26,7 +55,7 @@ argParser.add_argument(
 )
 
 
-args1, extra_args = argParser.parse_known_args(sys.argv[1:])
+args1, extra_args = argParser.parse_known_args(extra_args)
 target = args1.target[0]
 
 argParser = ArgumentParser(prefix_chars='-mscLBFDIVE')
