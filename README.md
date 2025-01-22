@@ -87,6 +87,8 @@ used to be.
       - [*Model/Variant*](#model/variant)
       - [*Model/Variant specific options*](#model/variant-specific-options)
         - [*ESP32 options*](#esp32-options)
+          - [*Custom Boards*](https://github.com/lvgl-micropython/lvgl_micropython/tree/main/custom_board_and_toml_examples/README.md#custom-boards)
+          - [*TOML Example*](https://github.com/lvgl-micropython/lvgl_micropython/tree/main/custom_board_and_toml_examples/README.md#toml-example)
     - [*Global Options (optional)*](#global-options-(optional))
       - [*Input/Output*](#input/output)
       - [*Other global options*](#other-global-options)
@@ -586,49 +588,9 @@ Options specific to the ESP32-S2, ESP32-S3, ESP32-C3 and ESP32-C6 processors:
 * `--enable-cdc-repl={y/n}`: Enable/disable REPL output over CDC on the USB pins
 * `--enable-jtag-repl={y/n}`: Enable/disable REPL output over JTAG on the USB pins
 
+* `--custom-board-path={path to custom board}`: [Custom Board](https://github.com/lvgl-micropython/lvgl_micropython/tree/main/custom_board_and_toml_examples/README.md#custom-boards) 
+* `--toml={path to .toml file}`: [TOML Example](https://github.com/lvgl-micropython/lvgl_micropython/tree/main/custom_board_and_toml_examples/README.md#toml-example)
 
-This next option is abailable for all ESP32 series MCU's I placed it here instead of above 
-because it is going to need some in depth explaining. This is for advanced users.
-
-* `--custom-board-path`
-
-I added the ability to provide a path to a custom board. There are a few requirememnts for 
-this to work properly. The path needs to point to the folder that holds the board specification 
-files. Here is a list of required files.
-
-* `board.json`: This file outlines what the board is. At a minimum the file needs to contain the following.
-                ```
-                {
-                    "mcu": "{MCU}"
-                }
-                ```
-                where `{MCU}` is one of the follwing:
-
-  * esp32
-  * esp32s2
-  * exp32s3
-  * exp32c3
-  * exp32c6
-
-* `sdkconfig.board`: This file contains all of the ESP-IDF specific config settings. If you don't know 
-                     what needs to be set in here then please ask me for assistance.
-* `mpconfigboard.h`: MicroPython config settings. If you don't know what needs to be set in here then
-                     please ask me for assistance.
-* `mpconfigboard.cmake`: Build script. At a minimum the following should be in the build script.
-                         `{MCU}` is replaced with one of the options from the list of MCU's above.
-                         `{BOARD_CONATINING_FOLDER}` if the name of the folder these files are located in.
-```
-set(IDF_TARGET {MCU})
-
-set(SDKCONFIG_DEFAULTS
-    boards/sdkconfig.base
-    ${SDKCONFIG_IDF_VERSION_SPECIFIC}
-    boards/{BOARD_CONATINING_FOLDER}/sdkconfig.board
-)
-```
-
-* `partition.csv`: This file dictates what the partitions are supposed to be on the ESP32. As for assistance
-                   If you do not know how to create one of these.
 
 <br>
 

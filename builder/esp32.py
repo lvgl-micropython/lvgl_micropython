@@ -528,31 +528,6 @@ def esp32_args(extra_args):
 
 def parse_args(extra_args, lv_cflags, brd):
     global board
-    global custom_board_path
-
-    esp_argParser = ArgumentParser(prefix_chars='-')
-    esp_argParser.add_argument(
-        '--custom-board-path',
-        dest='custom_board_path',
-        default=None,
-        action='store'
-    )
-    esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
-
-    custom_board_path = esp_args.custom_board_path
-
-    if custom_board_path is not None:
-        if not os.path.exists(custom_board_path):
-            raise RuntimeError(
-                'Supplied custom board path does not exist.'
-            )
-        parent_folder_name = os.path.split(custom_board_path)[-1]
-
-        dst_path = f'lib/micropython/ports/esp32/boards/{parent_folder_name}'
-        shutil.copytree(custom_board_path, dst_path)
-
-        if brd is None:
-            brd = parent_folder_name
 
     if brd is None:
         brd = 'ESP32_GENERIC'
