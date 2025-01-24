@@ -110,13 +110,13 @@ def submodules():
             out = out.split('export LDFLAGS="', 1)[-1]
             ldflags = out.split('"', 1)[0]
         else:
-            ldflags = f'-L{alt_path}opt/libffi/lib'
+            ldflags = f'"-L{alt_path}opt/libffi/lib"'
 
         if 'export CPPFLAGS=' in out:
             out = out.split('export CPPFLAGS="', 1)[-1]
             cflags = out.split('"', 1)[0]
         else:
-            cflags = f'-I{alt_path}opt/libffi/include'
+            cflags = f'"-I{alt_path}opt/libffi/include"'
 
         ret, out = spawn([[brew_path, 'info', 'sdl2']], out_to_screen=False)
 
@@ -128,11 +128,11 @@ def submodules():
             print(out)
             raise RuntimeError('sdl2 is not installed')
 
-        ldflags += f' -L{alt_path}lib'
-        cflags += f' -I{alt_path}include'
+        ldflags += f' "-L{alt_path}lib"'
+        cflags += f' "-I{alt_path}include"'
 
-        os.environ['LDFLAGS'] = f'"{ldflags}"'
-        os.environ['CFLAGS'] = f'"{cflags}"'
+        os.environ['LDFLAGS'] = f'{ldflags}'
+        os.environ['CFLAGS'] = f'{cflags}'
 
     berkeley_db = os.path.abspath('lib/micropython/lib/berkeley-db-1.xx/README')
 
