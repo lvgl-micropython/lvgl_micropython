@@ -26,7 +26,5 @@ MP_DEFINE_CONST_OBJ_TYPE(
     mp_lcd_i2c_bus_type,
     MP_QSTR_I2CBus,
     MP_TYPE_FLAG_NONE,
-    make_new, mp_lcd_i2c_bus_make_new,
-    locals_dict, (mp_obj_dict_t *)&mp_lcd_bus_locals_dict
+    make_new, mp_lcd_i2c_bus_make_new
 );
-

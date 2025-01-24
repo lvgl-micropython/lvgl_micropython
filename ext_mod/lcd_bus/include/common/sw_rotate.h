@@ -8,6 +8,12 @@
 #ifndef __SW_ROTATE_H__
     #define __SW_ROTATE_H__
 
+
+    #define LCD_ROTATION_0    (0)
+    #define LCD_ROTATION_90   (1)
+    #define LCD_ROTATION_180  (2)
+    #define LCD_ROTATION_270  (3)
+
     typedef struct _mp_lcd_sw_rotation_data_t {
         uint32_t x_start: 16;
         uint32_t y_start: 16;
@@ -19,6 +25,7 @@
         uint8_t rotation: 3;
         uint8_t last_update: 1;
         uint8_t rgb565_dither: 1;
+        int cmd;
     } mp_lcd_sw_rotation_data_t;
 
 

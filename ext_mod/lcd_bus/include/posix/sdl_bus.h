@@ -46,7 +46,7 @@
             uint8_t rgb565_byte_swap: 1;
             uint8_t sw_rotate: 1;
 
-            mp_lcd_sw_rotation_t *sw_rot;
+            mp_lcd_sw_rotation_t sw_rot;
 
             panel_io_config_t *panel_io_config;
             SDL_Window *window;

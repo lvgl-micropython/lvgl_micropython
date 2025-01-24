@@ -153,6 +153,8 @@
         LCD_DEBUG_PRINT("vsync_pulse_width=%d\n", panel_config->video_timing.vsync_pulse_width)
         LCD_DEBUG_PRINT("pclk_hz[10]=%d\n", bus_config->pclk_hz)
 
+        self->lanes = (uint8_t)bus_config->num_data_lanes;
+
         self->panel_io_handle.get_lane_count = &dsi_get_lane_count;
         self->panel_io_handle.del = &dsi_del;
         self->panel_io_handle.tx_color = &dsi_tx_color;

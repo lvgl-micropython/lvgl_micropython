@@ -1,14 +1,9 @@
 // Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
+#include "py/obj.h"
+
 #ifndef _MODLCD_BUS_H_
     #define _MODLCD_BUS_H_
-
-    #include "lcd_types.h"
-
-    // micropython includes
-    #include "py/obj.h"
-    #include "py/runtime.h"
-    #include "py/objarray.h"
 
     extern const mp_obj_fun_builtin_var_t mp_lcd_bus_init_obj;
     extern const mp_obj_fun_builtin_var_t mp_lcd_bus_get_lane_count_obj;

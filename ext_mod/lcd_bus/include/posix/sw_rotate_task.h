@@ -1,5 +1,5 @@
-#ifndef __POSIX_SW_ROTATE_TASK_H__
-    #define __POSIX_SW_ROTATE_TASK_H__
+#ifndef __SW_ROTATE_TASK_H__
+    #define __SW_ROTATE_TASK_H__
 
     #define mp_lcd_task_handle_t  TaskHandle_t
     
@@ -13,4 +13,4 @@
         StaticEventGroup_t buffer;
     } mp_lcd_event_t;
 
-#endif /* __POSIX_SW_ROTATE_TASK_H__ */
+#endif /* __SW_ROTATE_TASK_H__ */

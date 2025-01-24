@@ -15,14 +15,6 @@
 
     struct _mp_lcd_rgb_bus_obj_t {
         struct _mp_lcd_bus_obj_t;
-
-        void *panel_io_config;
-        void *bus_config;
-
-        /* specific to bus */
-        void *bus_handle;
-
     };
-
 
 #endif /* _RGB_BUS_H_ */

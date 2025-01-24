@@ -6,18 +6,22 @@ add_library(usermod_lcd_bus INTERFACE)
 
 if(ESP_PLATFORM)
     set(LCD_INCLUDES
-        ${CMAKE_CURRENT_LIST_DIR}
-        ${CMAKE_CURRENT_LIST_DIR}/esp32_include
+        ${CMAKE_CURRENT_LIST_DIR}/include
+        ${CMAKE_CURRENT_LIST_DIR}/include/esp32
     )
 
     set(LCD_SOURCES
-        ${CMAKE_CURRENT_LIST_DIR}/modlcd_bus.c
-        ${CMAKE_CURRENT_LIST_DIR}/lcd_types.c
-        ${CMAKE_CURRENT_LIST_DIR}/esp32_src/i2c_bus.c
-        ${CMAKE_CURRENT_LIST_DIR}/esp32_src/spi_bus.c
-        ${CMAKE_CURRENT_LIST_DIR}/esp32_src/i80_bus.c
-        ${CMAKE_CURRENT_LIST_DIR}/esp32_src/rgb_bus.c
-        ${CMAKE_CURRENT_LIST_DIR}/esp32_src/rgb_bus_rotation.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/esp32/i2c_bus.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/esp32/spi_bus.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/esp32/i80_bus.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/esp32/rgb_bus.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/esp32/lcd_bus_utils.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/esp32/lcd_types.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/esp32/sw_rotate_task.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/common/lcd_framebuf.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/common/modlcd_bus.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/common/rgb565_dither.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/common/sw_rotate.c
     )
 
     # gets esp_lcd include paths
@@ -32,19 +36,22 @@ if(ESP_PLATFORM)
 
 else()
     set(LCD_INCLUDES
-        ${CMAKE_CURRENT_LIST_DIR}
-        ${CMAKE_CURRENT_LIST_DIR}/common_include
-        ${CMAKE_CURRENT_LIST_DIR}/sdl_bus
+        ${CMAKE_CURRENT_LIST_DIR}/include
+        ${CMAKE_CURRENT_LIST_DIR}/include/other_mcus
     )
 
     set(LCD_SOURCES
-        ${CMAKE_CURRENT_LIST_DIR}/lcd_types.c
-        ${CMAKE_CURRENT_LIST_DIR}/modlcd_bus.c
-        ${CMAKE_CURRENT_LIST_DIR}/common_src/i2c_bus.c
-        ${CMAKE_CURRENT_LIST_DIR}/common_src/spi_bus.c
-        ${CMAKE_CURRENT_LIST_DIR}/common_src/i80_bus.c
-        ${CMAKE_CURRENT_LIST_DIR}/common_src/rgb_bus.c
-        ${CMAKE_CURRENT_LIST_DIR}/sdl_bus/sdl_bus.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/other_mcus/i2c_bus.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/other_mcus/spi_bus.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/other_mcus/i80_bus.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/other_mcus/rgb_bus.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/other_mcus/lcd_bus_utils.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/other_mcus/lcd_types.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/other_mcus/sw_rotate_task.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/common/lcd_framebuf.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/common/modlcd_bus.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/common/rgb565_dither.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/common/sw_rotate.c
     )
 
 endif(ESP_PLATFORM)

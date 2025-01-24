@@ -274,13 +274,10 @@ static mp_obj_t mp_lcd_led_bus_make_new(const mp_obj_type_t *type, size_t n_args
             return mp_const_none;
     }
 
+    self->lanes = 1;
+
     self->panel_io_handle.get_lane_count = &led_get_lane_count;
     self->panel_io_handle.del = &led_del;
-    self->panel_io_handle.rx_param = &led_rx_param;
-    self->panel_io_handle.tx_param = &led_tx_param;
-    self->panel_io_handle.tx_color = &led_tx_color;
-    self->panel_io_handle.allocate_framebuffer = &led_allocate_framebuffer;
-    self->panel_io_handle.free_framebuffer = &led_free_framebuffer;
     self->panel_io_handle.init = &led_init;
 
     return MP_OBJ_FROM_PTR(self);
@@ -293,15 +290,6 @@ mp_lcd_err_t led_del(mp_obj_t obj)
     return LCD_OK;
 }
 
-mp_lcd_err_t led_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
-{
-    LCD_UNUSED(obj);
-    LCD_UNUSED(param);
-    LCD_UNUSED(lcd_cmd);
-    LCD_UNUSED(param_size);
-
-    return LCD_OK;
-}
 
 mp_lcd_err_t led_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
 {
@@ -311,59 +299,6 @@ mp_lcd_err_t led_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_s
     LCD_UNUSED(param_size);
 
     return LCD_OK;
-}
-
-mp_obj_t led_free_framebuffer(mp_obj_t obj, mp_obj_t buf)
-{
-    mp_lcd_led_bus_obj_t *self = (mp_lcd_led_bus_obj_t *)obj;
-
-    if (self->panel_handle != NULL) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unable to free buffer"));
-        return mp_const_none;
-    }
-
-    mp_obj_array_t *array_buf = (mp_obj_array_t *)MP_OBJ_TO_PTR(buf);
-
-    if (array_buf == self->view1) {
-        heap_caps_free(array_buf->items);
-        self->view1 = NULL;
-    } else if (array_buf == self->view2) {
-        heap_caps_free(array_buf->items);
-        self->view2 = NULL;
-    } else {
-        mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("No matching buffer found"));
-    }
-    return mp_const_none;
-}
-
-mp_obj_t led_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps)
-{
-    mp_lcd_led_bus_obj_t *self = (mp_lcd_led_bus_obj_t *)obj;
-
-    void *buf = heap_caps_calloc(1, 1, MALLOC_CAP_INTERNAL);
-    mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE, 1, buf));
-    view->typecode |= 0x80; // used to indicate writable buffer
-
-    if (self->view1 == NULL) {
-        self->buffer_size = size;
-        self->view1 = view;
-    } else if (self->buffer_size != size) {
-        heap_caps_free(buf);
-        mp_raise_msg_varg(
-            &mp_type_MemoryError,
-            MP_ERROR_TEXT("Frame buffer sizes do not match (%d)"),
-            size
-        );
-        return mp_const_none;
-    } else if (self->view2 == NULL) {
-        self->view2 = view;
-    } else {
-        heap_caps_free(buf);
-        mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("There is a maximum of 2 frame buffers allowed"));
-        return mp_const_none;
-    }
-
-    return MP_OBJ_FROM_PTR(view);
 }
 
 
@@ -486,15 +421,6 @@ mp_lcd_err_t led_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
 
     return LCD_OK;
 }
-
-mp_lcd_err_t led_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
-{
-    mp_lcd_led_bus_obj_t *self = (mp_lcd_led_bus_obj_t *)obj;
-    *lane_count = 1;
-
-    return LCD_OK;
-}
-
 
 mp_lcd_err_t led_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update)
 {

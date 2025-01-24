@@ -12,6 +12,25 @@ uint8_t *green_thresh = NULL;
 uint8_t *blue_thresh = NULL;
 
 
+void rgb565_dither_free(void)
+{
+    if (red_thresh != NULL) {
+        free(red_thresh);
+        red_thresh = NULL;
+    }
+
+    if (green_thresh != NULL) {
+        free(green_thresh);
+        green_thresh = NULL;
+    }
+
+    if (blue_thresh != NULL) {
+        free(blue_thresh);
+        blue_thresh = NULL;
+    }
+}
+
+
 bool rgb565_dither_init(void)
 {
     if (red_thresh == NULL) {

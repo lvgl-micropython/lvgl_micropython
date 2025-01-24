@@ -26,25 +26,75 @@
 
     mp_lcd_err_t i80_del(mp_obj_t obj);
     mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
-    mp_lcd_err_t i80_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
 
-
-    static uint8_t i80_bus_count = 0;
-    static mp_lcd_i80_bus_obj_t **i80_bus_objs;
-
-
-    void mp_lcd_i80_bus_deinit_all(void)
+    
+    static bool i80_trans_done_cb(esp_lcd_panel_handle_t panel,
+                            const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
     {
-        // we need to copy the existing array to a new one so the order doesn't
-        // get all mucked up when objects get removed.
-        mp_lcd_i80_bus_obj_t *objs[i80_bus_count];
+        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)user_ctx;
+    
+        if (self->trans_done == 0) {
+            if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
+                mp_lcd_flush_ready_cb(self->callback);
+            }
+            self->trans_done = 1;
+        }
+    
+        return false;
+    }
 
-        for (uint8_t i=0;i<i80_bus_count;i++) {
-            objs[i] = i80_bus_objs[i];
+
+    static void i80_tx_param_cb(void* self_in, int cmd, uint8_t *params, size_t params_len)
+    {
+        esp_lcd_panel_io_tx_param(self->panel_io_handle.panel_io, cmd, params, params_len);
+    }
+    
+    
+    static bool i80_init_cb(void *self_in)
+    {
+        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)self_in;
+
+        mp_lcd_sw_rotation_init_t *init = &self->sw_rot.init;
+
+        init->err = esp_lcd_new_i80_bus(self->bus_config, &self->bus_handle);
+
+        if (init->err != LCD_OK) {
+            init->err_msg = MP_ERROR_TEXT("%d(esp_lcd_new_i80_bus)");
+            return false;
         }
 
-        for (uint8_t i=0;i<i80_bus_count;i++) {
-            i80_del(MP_OBJ_FROM_PTR(objs[i]));
+        init->err = esp_lcd_new_panel_io_i80(self->bus_handle, self->panel_io_config, &self->panel_io_handle.panel_io);
+
+        if (init->err !=LCD_OK) {
+            init->err_msg = MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_i80)");
+            return false;
+        }
+
+        free(self->panel_io_config);
+        free(self->bus_config);
+        self->panel_io_config = NULL;
+        self->bus_config = NULL;
+
+        return true;
+    }
+    
+    
+    static void i80_flush_cb(void *self_in, uint8_t last_update, int cmd, uint8_t *idle_fb)
+    {
+        LCD_UNUSED(last_update);
+        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)self_in;
+        mp_lcd_sw_rotation_buffers_t *buffers = &self->sw_rot.buffers;
+
+    
+        if (idle_fb == buffers->idle) {
+            buffers->idle = buffers->active;
+            buffers->active = idle_fb;
+        }
+    
+        mp_lcd_err_t ret = esp_lcd_panel_io_tx_color(self->panel_io_handle.panel_io, cmd, idle_fb, self->fb1->len);
+    
+        if (ret != LCD_OK) {
+            mp_printf(&mp_plat_print, "esp_lcd_panel_draw_bitmap error (%d)\n", ret);
         }
     }
 
@@ -164,6 +214,7 @@
         }
 
         bus_config->bus_width = (size_t) i;
+        self->lanes = (uint8_t)i;
 
         panel_io_config->cs_gpio_num = (int)args[ARG_cs].u_int;
         panel_io_config->pclk_hz = (uint32_t)args[ARG_freq].u_int;
@@ -213,15 +264,14 @@
 
         self->panel_io_handle.init = &i80_init;
         self->panel_io_handle.del = &i80_del;
-        self->panel_io_handle.get_lane_count = &i80_get_lane_count;
 
         return MP_OBJ_FROM_PTR(self);
     }
     
 
-    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
+    mp_lcd_err_t i80_init(mp_obj_t obj, uint8_t cmd_bits, uint8_t param_bits)
     {
-        LCD_DEBUG_PRINT("i80_init(self, width=%i, height=%i, bpp=%i, buffer_size=%lu, rgb565_byte_swap=%i, cmd_bits=%i, param_bits=%i)\n", width, height, bpp, buffer_size, (uint8_t)rgb565_byte_swap, cmd_bits, param_bits)
+        LCD_DEBUG_PRINT("i80_init(self, cmd_bits=%i, param_bits=%i)\n", cmd_bits, param_bits)
 
         mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)obj;
 
@@ -229,41 +279,24 @@
             return LCD_FAIL;
         }
 
-        self->rgb565_byte_swap = false;
-
-        if (rgb565_byte_swap && bpp == 16) {
+        if (self->rgb565_byte_swap && self->sw_rot.data.bytes_per_pixel == 2) {
             self->panel_io_config.flags.swap_color_bytes = 1;
+            self->rgb565_byte_swap = false;
         }
+
+        self->sw_rot.data.dst_width = 0;
+        self->sw_rot.data.dst_height = 0;
+        self->sw_rot.init.cb = &i80_init_cb;
+        self->sw_rot.flush_cb = &i80_flush_cb;
+        self->sw_rot.tx_params.cb = &i80_tx_param_cb;
 
         self->panel_io_config->lcd_cmd_bits = (int)cmd_bits;
         self->panel_io_config->lcd_param_bits = (int)param_bits;
-        self->bus_config->max_transfer_bytes = (size_t)buffer_size;
+        self->bus_config->max_transfer_bytes = self->fb1->len;
 
         LCD_DEBUG_PRINT("lcd_cmd_bits=%d\n", self->panel_io_config->lcd_cmd_bits)
         LCD_DEBUG_PRINT("lcd_param_bits=%d\n", self->panel_io_config->lcd_param_bits)
         LCD_DEBUG_PRINT("max_transfer_bytes=%d\n", self->bus_config->max_transfer_bytes)
-
-        esp_err_t ret = esp_lcd_new_i80_bus(self->bus_config, &self->bus_handle);
-
-        if (ret != 0) {
-            mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_i80_bus)"), ret);
-        }
-
-        ret = esp_lcd_new_panel_io_i80(self->bus_handle, self->panel_io_config, &self->panel_io_handle.panel_io);
-
-        if (ret != 0) {
-            mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_i80)"), ret);
-        }
-
-        // add the new bus ONLY after successfull initilization of the bus
-        i80_bus_count++;
-        i80_bus_objs = m_realloc(i80_bus_objs, i80_bus_count * sizeof(mp_lcd_i80_bus_obj_t *));
-        i80_bus_objs[i80_bus_count - 1] = self;
-        
-        free(self->panel_io_config);
-        free(self->bus_config);
-        self->panel_io_config = NULL;
-        self->bus_config = NULL;
 
         return ret;
     }
@@ -277,63 +310,23 @@
 
         if (self->panel_io_handle.panel_io != NULL) {
             mp_lcd_err_t ret = esp_lcd_panel_io_del(self->panel_io_handle.panel_io);
-            if (ret != 0) {
+            if (ret != LCD_OK) {
                 mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_panel_io_del)"), ret);
                 return ret;
             }
 
             ret = esp_lcd_del_i80_bus(self->bus_handle);
-            if (ret != 0) {
+            if (ret != LCD_OK) {
                 mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_del_i80_bus)"), ret);
                 return ret;
             }
 
             self->panel_io_handle.panel_io = NULL;
 
-            if (self->view1 != NULL) {
-                heap_caps_free(self->view1->items);
-                self->view1->items = NULL;
-                self->view1->len = 0;
-                self->view1 = NULL;
-                LCD_DEBUG_PRINT("i80_free_framebuffer(self, buf=1)\n")
-            }
-
-            if (self->view2 != NULL) {
-                heap_caps_free(self->view2->items);
-                self->view2->items = NULL;
-                self->view2->len = 0;
-                self->view2 = NULL;
-                LCD_DEBUG_PRINT("i80_free_framebuffer(self, buf=1)\n")
-            }
-
-            uint8_t i = 0;
-            for (;i<i80_bus_count;i++) {
-                if (i80_bus_objs[i] == self) {
-                    i80_bus_objs[i] = NULL;
-                    break;
-                }
-            }
-
-            for (uint8_t j=i + 1;j<i80_bus_count;j++) {
-                i80_bus_objs[j - i + 1] = i80_bus_objs[j];
-            }
-
-            i80_bus_count--;
-            i80_bus_objs = m_realloc(i80_bus_objs, i80_bus_count * sizeof(mp_lcd_i80_bus_obj_t *));
             return ret;
         } else {
             return LCD_FAIL;
         }
-    }
-
-    mp_lcd_err_t i80_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
-    {
-        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)obj;
-        *lane_count = (uint8_t)self->bus_config.bus_width;
-
-        LCD_DEBUG_PRINT("i80_get_lane_count(self)-> %d\n", (uint8_t)self->bus_config.bus_width)
-
-        return LCD_OK;
     }
 
     MP_DEFINE_CONST_OBJ_TYPE(
