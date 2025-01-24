@@ -90,7 +90,6 @@ def is_homebrew_arm(cmd):
     return False, cmd[0][0]
 
 
-
 def submodules():
     is_arm, brew_path = is_homebrew_arm([['brew', 'config']])
 
@@ -101,6 +100,7 @@ def submodules():
             sys.exit(ret)
 
         if 'Installed\n' not in out:
+            print(out)
             raise RuntimeError('libffi is not installed')
 
         out = out.split('Installed\n', 1)[-1]
@@ -125,6 +125,7 @@ def submodules():
             sys.exit(ret)
 
         if 'Installed\n' not in out:
+            print(out)
             raise RuntimeError('sdl2 is not installed')
 
         ldflags += f' -L{alt_path}lib'
