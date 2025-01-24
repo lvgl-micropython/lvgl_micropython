@@ -18,7 +18,7 @@
     void mp_lcd_event_wait(mp_lcd_event_t *event);
 
     /* lock */
-    bool mp_lcd_lock_acquire(mp_lcd_lock_t *lock);
+    void mp_lcd_lock_acquire(mp_lcd_lock_t *lock);
     void mp_lcd_lock_release(mp_lcd_lock_t *lock);
     void mp_lcd_lock_init(mp_lcd_lock_t *lock);
     void mp_lcd_lock_delete(mp_lcd_lock_t *lock);

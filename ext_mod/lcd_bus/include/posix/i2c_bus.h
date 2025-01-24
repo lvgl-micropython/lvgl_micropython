@@ -1,16 +1,13 @@
 // Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
+#include "py/obj.h"
+
 #ifndef _I2C_BUS_H_
     #define _I2C_BUS_H_
 
-    //local_includes
+    #include "common/lcd_common_types.h"
     #include "common/modlcd_bus.h"
-    #include "common/lcd_framebuf.h"
-    #include "common/sw_rotate.h"
-
-    // micropython includes
-    #include "py/obj.h"
-    #include "py/runtime.h"
+    #include "lcd_types.h"
 
 
     struct _mp_lcd_i2c_bus_obj_t {

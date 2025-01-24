@@ -1,11 +1,10 @@
 // Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
-// local includes
+#include "common/modlcd_bus.h"
+#include "common/lcd_common_types.h"
 #include "lcd_types.h"
-#include "modlcd_bus.h"
-#include "rgb_bus.h"
+#include "i2c_bus.h"
 
-// micropython includes
 #include "py/obj.h"
 #include "py/runtime.h"
 

@@ -1,15 +1,12 @@
 // Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
-/* includes */
-// local includes
+#include "common/modlcd_bus.h"
+#include "common/lcd_common_types.h"
 #include "lcd_types.h"
-#include "modlcd_bus.h"
-#include "i80_bus.h"
+#include "i2c_bus.h"
 
-// micropython includes
 #include "py/obj.h"
 #include "py/runtime.h"
-#include "py/objarray.h"
 
 
 static mp_obj_t mp_lcd_i80_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)

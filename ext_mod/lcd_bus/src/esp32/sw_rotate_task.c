@@ -7,11 +7,12 @@
 
 #include "common/rgb565_dither"
 #include "common/lcd_common_types.h"
-#include "common/sw_rotate.h"
 #include "common/sw_rotate_task_common.h"
+#include "sw_rotate_task.h"
+#include "common/sw_rotate.h"
 
 #include "lcd_types.h"
-#include "sw_rotate_task.h"
+
 
 #define LCD_DEFAULT_STACK_SIZE    (5 * 1024)
 #define LCDBUS_BIT_0 (1 << 0)
@@ -72,9 +73,9 @@ void mp_lcd_event_set_from_isr(mp_lcd_event_t *event)
 }
 
 
-bool mp_lcd_lock_acquire(mp_lcd_lock_t *lock)
+void mp_lcd_lock_acquire(mp_lcd_lock_t *lock)
 {
-    return pdTRUE == xSemaphoreTake(lock->handle, portMAX_DELAY);
+    xSemaphoreTake(lock->handle, portMAX_DELAY);
 }
 
 

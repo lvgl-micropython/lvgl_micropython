@@ -279,8 +279,8 @@
             return LCD_FAIL;
         }
 
-        if (self->rgb565_byte_swap && self->sw_rot.data.bytes_per_pixel == 2) {
-            self->panel_io_config.flags.swap_color_bytes = 1;
+        if (self->sw_rot.data.bytes_per_pixel != 2) {
+            // self->panel_io_config.flags.swap_color_bytes = 1;
             self->rgb565_byte_swap = false;
         }
 
@@ -298,7 +298,7 @@
         LCD_DEBUG_PRINT("lcd_param_bits=%d\n", self->panel_io_config->lcd_param_bits)
         LCD_DEBUG_PRINT("max_transfer_bytes=%d\n", self->bus_config->max_transfer_bytes)
 
-        return ret;
+        return LCD_OK;
     }
 
 
