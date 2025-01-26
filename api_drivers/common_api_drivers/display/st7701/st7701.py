@@ -210,6 +210,7 @@ class ST7701(rgb_display_framework.RGBDisplayDriver):
             _cmd_bits=8,
             _param_bits=8,
             _init_bus=False,
+            _sw_rotate=True
         )
 
     def _spi_3wire_init(self, type):  # NOQA

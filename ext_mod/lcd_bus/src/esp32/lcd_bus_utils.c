@@ -22,7 +22,7 @@ mp_lcd_err_t mp_lcd_allocate_rotation_buffers(mp_lcd_bus_obj_t *self)
 
     if (fb2 != NULL) caps != MALLOC_CAP_DMA;
 
-    if (!self->sw_rotate && !self->rgb565_byte_swap && fb2 != NULL) {
+    if (!self->sw_rotate && !self->sw_rot.data.rgb565_swap && fb2 != NULL) {
         if (!(fb1->caps & MALLOC_CAP_DMA)) {
             free(fb1->items);
 

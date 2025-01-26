@@ -29,8 +29,6 @@
 
     };
 
-    extern void mp_lcd_rgb_bus_deinit_all(void);
-
 #endif /* _RGB_BUS_H_ */
 #else
     #include "../other_mcus/rgb_bus.h"

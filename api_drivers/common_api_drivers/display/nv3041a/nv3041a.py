@@ -95,6 +95,9 @@ class NV3041A(display_driver_framework.DisplayDriver):
             buf_size = display_width * display_height * lv.color_format_get_size(color_space)
 
             if frame_buffer1 is None:
+                if frame_buffer2 is not None:
+                    frame_buffer2.free()
+
                 gc.collect()
 
                 for flags in (
@@ -104,18 +107,16 @@ class NV3041A(display_driver_framework.DisplayDriver):
                     lcd_bus.MEMORY_SPIRAM
                 ):
                     try:
-                        frame_buffer1 = (
-                            data_bus.allocate_framebuffer(buf_size, flags)
-                        )
+                        frame_buffer1 = lcd_bus.framebuffer(buf_size, flags)
 
                         if (flags | lcd_bus.MEMORY_DMA) == flags:
-                            frame_buffer2 = (
-                                data_bus.allocate_framebuffer(buf_size, flags)
-                            )
+                            frame_buffer2 = lcd_bus.framebuffer(buf_size, flags)
 
                         break
                     except MemoryError:
-                        frame_buffer1 = data_bus.free_framebuffer(frame_buffer1)  # NOQA
+                        if frame_buffer1 is not None:
+                            frame_buffer1.free()
+                            frame_buffer1 = None
 
                 if frame_buffer1 is None:
                     raise MemoryError(
@@ -151,11 +152,7 @@ class NV3041A(display_driver_framework.DisplayDriver):
             offset_y,
             color_byte_order,
             color_space,  # NOQA
-            # we don't need to sue RGB565 byte swap so we override it
-            rgb565_byte_swap=False,
-            _cmd_bits=_cmd_bits,
-            _param_bits=8,
-            _init_bus=True
+            _cmd_bits=_cmd_bits
         )
 
     def _flush_ready_cb(self, *_):
@@ -169,7 +166,7 @@ class NV3041A(display_driver_framework.DisplayDriver):
 
     def set_params(self, cmd, params=None):
         cmd = self.__cmd_modifier(cmd)
-        self._data_bus.tx_param(cmd, params)
+        self._data_bus.tx_param(cmd, params, False)
 
     def _set_memory_location(self, x1: int, y1: int, x2: int, y2: int):
         return self._dummy_set_memory_location(x1, y1, x2, y2)
@@ -182,7 +179,7 @@ class NV3041A(display_driver_framework.DisplayDriver):
         param_buf[2] = (x2 >> 8) & 0xFF
         param_buf[3] = x2 & 0xFF
 
-        self._data_bus.tx_param(self.__caset, self._param_mv)
+        self._data_bus.tx_param(self.__caset, self._param_mv, True)
 
     def _flush_cb(self, _, area, color_p):
         x1 = area.x1 + self._offset_x
@@ -202,5 +199,9 @@ class NV3041A(display_driver_framework.DisplayDriver):
         # Divide buffer in 2 chunks:
         first_chunk = int(size / 2)
 
-        self._data_bus.tx_color(self.__ramwr, data_view[:first_chunk], x1, y1, x2, y2, self._rotation, False)
-        self._data_bus.tx_color(self.__ramwrc, data_view[first_chunk:], x1, y1, x2, y2, self._rotation, self._disp_drv.flush_is_last())
+        self._data_bus.tx_color(self.__ramwr, data_view[:first_chunk], x1, y1,
+                                x2, y2, self._rotation, False,
+                                self._rgb565_dither)
+        self._data_bus.tx_color(self.__ramwrc, data_view[first_chunk:], x1, y1,
+                                x2, y2, self._rotation, self._disp_drv.flush_is_last(),
+                                self._rgb565_dither)

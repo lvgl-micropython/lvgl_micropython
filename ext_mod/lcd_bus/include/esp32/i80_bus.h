@@ -23,8 +23,6 @@
         esp_lcd_i80_bus_handle_t bus_handle;
     };
 
-
-    extern void mp_lcd_i80_bus_deinit_all(void);
 #endif /* _I80_BUS_H_ */
 
 #else

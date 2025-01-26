@@ -15,7 +15,7 @@ class SDLPointer(pointer_framework.PointerDriver):
         **__
     ):  # NOQA
         super().__init__(
-            touch_cal=None, startup_rotation=startup_rotation, debug=debug
+            startup_rotation=startup_rotation, debug=debug
         )
 
         self.__current_state = self.RELEASED
@@ -36,7 +36,7 @@ class SDLPointer(pointer_framework.PointerDriver):
         if not self.__wheel_x and not self.__wheel_y:
             return
 
-        point = lv.point_t({'x': self.__x, 'y': self.__y})
+        point = lv.point_t({'x': self.__x, 'y': self.__y})  # NOQA
 
         obj = lv.indev_search_obj(self._disp_drv.get_layer_sys(), point)
         if not obj:

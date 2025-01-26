@@ -28,7 +28,5 @@
         mp_machine_hw_spi_device_obj_t spi_device;
     };
 
-
-    extern void mp_lcd_spi_bus_deinit_all(void);
 #endif /* _SPI_BUS_H_ */
 

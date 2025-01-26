@@ -126,7 +126,7 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
     {
         mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
 
-        if (self->rgb565_byte_swap) {
+        if (self->sw_rot.data.rgb565_swap) {
             rgb565_byte_swap((uint16_t *)color, (uint32_t)(color_size / 2));
         }
 
@@ -184,7 +184,7 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
     {
         mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
 
-        if (self->rgb565_byte_swap) {
+        if (self->sw_rot.data.rgb565_swap) {
             rgb565_byte_swap((uint16_t *)color, (uint32_t)(color_size / 2));
         }
 

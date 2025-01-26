@@ -5,6 +5,9 @@ import display_driver_framework
 from micropython import const  # NOQA
 import micropython  # NOQA
 
+import lcd_bus
+
+
 # Window has been shown
 _SDL_WINDOWEVENT_SHOWN = const(1)
 # Window has been hidden
@@ -90,42 +93,34 @@ class SDLDisplay(display_driver_framework.DisplayDriver):
             data_bus=None,
             display_width=display_width,
             display_height=display_height,
-            frame_buffer1=frame_buffer1,
-            frame_buffer2=frame_buffer2,
-            reset_pin=None,
-            reset_state=display_driver_framework.STATE_HIGH,
-            power_pin=None,
-            power_on_state=display_driver_framework.STATE_HIGH,
-            backlight_pin=None,
-            backlight_on_state=display_driver_framework.STATE_HIGH,
             offset_x=offset_x,
             offset_y=offset_y,
-            color_byte_order=display_driver_framework.BYTE_ORDER_RGB,
             color_space=color_space,
-            rgb565_byte_swap=False,
-            _init_bus=False
+            _init_bus=False,
+            _sw_rotate=True
         )
 
         self._data_bus = data_bus
 
-        buffer_size = lv.color_format_get_size(color_space)
-        buffer_size *= display_width * display_height
+        buffer_size = int(display_width * display_height *
+                          lv.color_format_get_size(color_space) / 10)
 
         if frame_buffer1 is None:
-            frame_buffer1 = data_bus.allocate_framebuffer(buffer_size, 0)
+            frame_buffer1 = lcd_bus.framebuffer(buffer_size, 0)
 
-            if frame_buffer2 is None:
-                frame_buffer2 = data_bus.allocate_framebuffer(buffer_size, 0)
-        else:
-            if buffer_size != len(frame_buffer1):
-                raise RuntimeError('frame buffer is not large enough')
+            if frame_buffer2 is not None:
+                frame_buffer2.free()
 
-        if frame_buffer2 is not None:
-            if len(frame_buffer1) != len(frame_buffer2):
-                raise RuntimeError('Frame buffer sizes are not equal.')
+            frame_buffer2 = lcd_bus.framebuffer(buffer_size, 0)
 
         self._frame_buffer1 = frame_buffer1
         self._frame_buffer2 = frame_buffer2
+
+        self._fb1_mv = memoryview(frame_buffer1)
+        if frame_buffer2 is not None:
+            self._fb2_mv = memoryview(frame_buffer2)
+        else:
+            self._fb2_mv = None
 
         self._disp_drv = lv.display_create(display_width, display_height)  # NOQA
 
@@ -149,34 +144,36 @@ class SDLDisplay(display_driver_framework.DisplayDriver):
             lv.COLOR_FORMAT.RAW_ALPHA: _SDL_PIXELFORMAT_RGBA8888  # NOQA
         }
 
-        cf = self._cf = mapping.get(color_space, None)
-
-        if cf is None:
+        if color_space not in mapping:
             raise RuntimeError('Color format is not supported')
+
+        cf = self._cf = mapping[color_space]
 
         data_bus.init(
             display_width,
             display_height,
             lv.color_format_get_size(color_space) * 8,
             cf,
-            False,
             8,
-            8
+            8,
+            self._frame_buffer1,
+            self._frame_buffer2,
+            True,
+            False,
         )
 
         self._disp_drv.set_flush_cb(self._flush_cb)
 
         self._disp_drv.set_buffers(
-            frame_buffer1,
-            frame_buffer2,
+            self._fb1_mv,
+            self._fb2_mv,
             len(frame_buffer1),
-            lv.DISPLAY_RENDER_MODE.DIRECT  # NOQA
+            lv.DISPLAY_RENDER_MODE.PARTIAL  # NOQA
         )
 
         self._ignore_size_chg = False
 
         data_bus.register_callback(self._flush_ready_cb)
-
         data_bus.register_quit_callback(self._quit_cb)
         data_bus.register_window_callback(self._windows_event_cb)
 
@@ -208,12 +205,16 @@ class SDLDisplay(display_driver_framework.DisplayDriver):
 
         buf_size = int(hor_res * ver_res * bpp)
 
-        self._frame_buffer1 = self._data_bus.realloc_buffer(buf_size, 1)  # NOQA
-        self._frame_buffer2 = self._data_bus.realloc_buffer(buf_size, 2)  # NOQA
+        self._data_bus.realloc_buffer(buf_size, 1)  # NOQA
+
+        self._fb1_mv = memoryview(self._frame_buffer1)
+
+        if self._frame_buffer2 is not None:
+            self._fb2_mv = memoryview(self._frame_buffer2)
 
         self._disp_drv.set_buffers(
-            self._frame_buffer1,
-            self._frame_buffer2,
+            self._fb1_mv,
+            self._fb2_mv,
             len(self._frame_buffer1),
             lv.DISPLAY_RENDER_MODE.DIRECT  # NOQA
         )

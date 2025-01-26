@@ -386,7 +386,7 @@ mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
     self->panel_io_config.lcd_cmd_bits = (int)cmd_bits;
     self->panel_io_config.lcd_param_bits = (int)param_bits;
 
-    if (self->rgb565_byte_swap) {
+    if (self->sw_rot.data.rgb565_swap) {
         if (self->bus_config.bus_width == 8) {
             self->write_color = write_rgb565_swap8;
         } else {
@@ -414,7 +414,7 @@ mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
      * byte awapping that is done. So since the correct function is now set we
      * can set this flag to false so the global operation will nt occur.
      */
-    self->rgb565_byte_swap = false;
+    self->sw_rot.data.rgb565_swap = false;
 
     return LCD_OK;
 }

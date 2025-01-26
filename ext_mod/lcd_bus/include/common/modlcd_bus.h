@@ -17,6 +17,8 @@
 
     extern const mp_obj_dict_t mp_lcd_bus_locals_dict;
 
+    void mp_lcd_bus_shutdown(void);
+
 #endif /* _MODLCD_BUS_H_ */
 
 

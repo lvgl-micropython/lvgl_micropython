@@ -88,12 +88,12 @@ static void lcd_framebuf_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
         mp_map_t *locals_map = &MP_OBJ_TYPE_GET_SLOT(mp_lcd_framebuf_type, locals_dict)->map;
         mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
         if (elem != NULL) {
-            mp_convert_member_lookup(self_in, mp_lcd_framebuf_type, elem->value, dest);
+            mp_convert_member_lookup(self_in, &mp_lcd_framebuf_type, MP_OBJ_FROM_PTR(elem->value), dest);
         } else {
-            locals_map = &MP_OBJ_TYPE_GET_SLOT(mp_type_bytearray, locals_dict)->map;
+            locals_map = &MP_OBJ_TYPE_GET_SLOT(&mp_type_bytearray, locals_dict)->map;
             elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
             if (elem != NULL) {
-                mp_convert_member_lookup(self_in, mp_type_bytearray, elem->value, dest);
+                mp_convert_member_lookup(self_in, &mp_type_bytearray, MP_OBJ_FROM_PTR(elem->value), dest);
             }
         }
     }
@@ -102,31 +102,31 @@ static void lcd_framebuf_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
 
 static mp_obj_t lcd_framebuf_iterator_new(mp_obj_t self_in, mp_obj_iter_buf_t *iter_buf)
 {
-    return ((mp_getiter_fun_t)MP_OBJ_TYPE_GET_SLOT(mp_type_bytearray, iter))(self_in, iter_buf);
+    return ((mp_getiter_fun_t)MP_OBJ_TYPE_GET_SLOT(&mp_type_bytearray, iter))(self_in, iter_buf);
 }
 
 
 static mp_obj_t lcd_framebuf_unary_op(mp_unary_op_t op, mp_obj_t o_in)
 {
-    return ((mp_unary_op_fun_t)MP_OBJ_TYPE_GET_SLOT(mp_type_bytearray, unary_op))(op, o_in);
+    return ((mp_unary_op_fun_t)MP_OBJ_TYPE_GET_SLOT(&mp_type_bytearray, unary_op))(op, o_in);
 }
 
 
 static mp_obj_t lcd_framebuf_binary_op(mp_binary_op_t op, mp_obj_t lhs_in, mp_obj_t rhs_in)
 {
-    return ((mp_binary_op_fun_t)MP_OBJ_TYPE_GET_SLOT(mp_type_bytearray, binary_op))(op, lhs_in, rhs_in);
+    return ((mp_binary_op_fun_t)MP_OBJ_TYPE_GET_SLOT(&mp_type_bytearray, binary_op))(op, lhs_in, rhs_in);
 }
 
 
 static mp_obj_t lcd_framebuf_subscr(mp_obj_t self_in, mp_obj_t index_in, mp_obj_t value)
 {
-    return ((mp_subscr_fun_t)MP_OBJ_TYPE_GET_SLOT(mp_type_bytearray, subscr))(self_in, index_in, value);
+    return ((mp_subscr_fun_t)MP_OBJ_TYPE_GET_SLOT(&mp_type_bytearray, subscr))(self_in, index_in, value);
 }
 
 
 static mp_obj_t lcd_framebuf_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags)
 {
-    return ((mp_buffer_fun_t)MP_OBJ_TYPE_GET_SLOT(mp_type_bytearray, buffer))(self_in, bufinfo, flags);
+    return ((mp_buffer_fun_t)MP_OBJ_TYPE_GET_SLOT(&mp_type_bytearray, buffer))(self_in, bufinfo, flags);
 }
 
 
@@ -150,5 +150,6 @@ MP_DEFINE_CONST_OBJ_TYPE(
     subscr, lcd_framebuf_subscr,
     buffer, lcd_framebuf_get_buffer,
     attr, lcd_framebuf_attr,
-    locals_dict, &lcd_framebuf_locals_dict
+    locals_dict, &lcd_framebuf_locals_dict,
+    parent, &mp_type_bytearray
 );

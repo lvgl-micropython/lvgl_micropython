@@ -281,7 +281,7 @@
 
         if (self->sw_rot.data.bytes_per_pixel != 2) {
             // self->panel_io_config.flags.swap_color_bytes = 1;
-            self->rgb565_byte_swap = false;
+            self->sw_rot.data.rgb565_swap = 0;
         }
 
         self->sw_rot.data.dst_width = 0;

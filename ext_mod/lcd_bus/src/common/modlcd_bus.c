@@ -39,10 +39,6 @@ void mp_lcd_bus_shutdown(void)
     }
 }
 
-mp_obj_t mp_lcd_bus_deinit(mp_obj_t obj)
-
-
-
 
 mp_obj_t mp_lcd_bus_get_lane_count(mp_obj_t self_in)
 {
@@ -58,13 +54,14 @@ MP_DEFINE_CONST_FUN_OBJ_1(mp_lcd_bus_get_lane_count_obj, mp_lcd_bus_get_lane_cou
 
 mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
-    enum { ARG_self, ARG_width, ARG_height, ARG_bpp, ARG_cmd_bits, ARG_param_bits,
-           ARG_fb1, ,ARG_fb2, ARG_sw_rotate, ARG_rgb565_byte_swap };
+    enum { ARG_self, ARG_width, ARG_height, ARG_bpp, ARG_color_format, ARG_cmd_bits,
+        ARG_param_bits, ARG_fb1, ,ARG_fb2, ARG_sw_rotate, ARG_rgb565_byte_swap };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_self,             MP_ARG_OBJ  | MP_ARG_REQUIRED },
         { MP_QSTR_width,            MP_ARG_INT  | MP_ARG_REQUIRED },
         { MP_QSTR_height,           MP_ARG_INT  | MP_ARG_REQUIRED },
         { MP_QSTR_bpp,              MP_ARG_INT  | MP_ARG_REQUIRED },
+        { MP_QSTR_color_format,     MP_ARG_INT  | MP_ARG_REQUIRED },
         { MP_QSTR_cmd_bits,         MP_ARG_INT  | MP_ARG_REQUIRED },
         { MP_QSTR_param_bits,       MP_ARG_INT  | MP_ARG_REQUIRED },
         { MP_QSTR_fb1,              MP_ARG_OBJ  | MP_ARG_REQUIRED },
@@ -106,8 +103,9 @@ mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
     self->sw_rot.data->dst_width = (uint32_t)width;
     self->sw_rot.data->dst_height = (uint32_t)height;
     self->sw_rot.data->bytes_per_pixel = bpp / 8;
+    self->sw_rot.data.color_format = (uint32_t)args[ARG_color_format].u_int;
 
-    self->rgb565_byte_swap = (bool)args[ARG_rgb565_byte_swap].u_bool;
+    self->sw_rot.data.rgb565_swap = (bool)args[ARG_rgb565_byte_swap].u_bool;
 
     self->sw_rotate = (uint8_t)args[ARG_sw_rotate].u_bool;
 
@@ -132,7 +130,7 @@ mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
     }
 
     if (mp_lcd_start_rotate_task(self)) {
-        if ((self->sw_rotate || self->rgb565_byte_swap) && self->sw_rot.buffers.active == NULL) {
+        if ((self->sw_rotate || self->sw_rot.data.rgb565_swap) && self->sw_rot.buffers.active == NULL) {
             ret = mp_lcd_allocate_rotation_buffers(self);
             if (ret == LCD_ERR_NO_MEM) {
                 mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("Not enough memory to allocate frame buffers"));
@@ -157,14 +155,17 @@ mp_obj_t mp_lcd_bus_tx_param(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_self,       MP_ARG_OBJ  | MP_ARG_REQUIRED },
         { MP_QSTR_cmd,        MP_ARG_INT  | MP_ARG_REQUIRED },
-        { MP_QSTR_flush_next, MP_ARG_BOOL | MP_ARG_REQUIRED },
         { MP_QSTR_params,     MP_ARG_OBJ  | MP_ARG_REQUIRED },
+        { MP_QSTR_flush_next, MP_ARG_BOOL | MP_ARG_REQUIRED },
     };
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    if (mp_obj_is_type(args[ARG_self].u_obj, &mp_lcd_rgb_bus_type)) {
-        mp_printf(&mp_plat_print, "Transmitting parameters is not supported for the RGB Bus\n");
+    if (
+        mp_obj_is_type(args[ARG_self].u_obj, &mp_lcd_rgb_bus_type) ||
+        mp_obj_is_type(args[ARG_self].u_obj, &mp_lcd_sdl_bus_type)) {
+
+        mp_printf(&mp_plat_print, "Transmitting parameters is not supported\n");
         return mp_const_none;
     }
 
@@ -196,9 +197,8 @@ mp_obj_t mp_lcd_bus_tx_param(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
     }
 
     mp_lcd_lock_release(&tx_params->lock);
-
+    mp_lcd_lock_acquire(&self->sw_rot.handles.tx_color_lock);
     self->sw_rot.buffers.partial = NULL;
-
     mp_lcd_lock_release(&self->sw_rot.handles.copy_lock);
 
     return mp_const_none;
@@ -233,7 +233,7 @@ mp_obj_t mp_lcd_bus_tx_color(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
 
     mp_lcd_sw_rotation_data_t *data = &self->sw_rot.data;
 
-    rgb_bus_lock_acquire(&self->sw_rot.handles.tx_color_lock);
+    mp_lcd_lock_acquire(&self->sw_rot.handles.tx_color_lock);
 
     data->cmd = (int)args[ARG_cmd].u_int;
     self->sw_rot.buffers.partial = (uint8_t *)bufinfo.buf;
@@ -245,7 +245,10 @@ mp_obj_t mp_lcd_bus_tx_color(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
     data->last_update = (uint8_t)((bool)args[ARG_last_update].u_bool);
     data->rgb565_dither = (uint8_t)((bool)args[ARG_rgb565_dither].u_bool);
 
-    if (!mp_obj_is_type(args[ARG_self].u_obj, &mp_lcd_rgb_bus_type)) {
+    if (
+        !mp_obj_is_type(args[ARG_self].u_obj, &mp_lcd_rgb_bus_type) &&
+        !mp_obj_is_type(args[ARG_self].u_obj, &mp_lcd_sdl_bus_type)) {
+
         data->dst_width = data->x_end - data->x_start;
         data->dst_height = data->y_end - data->y_start;
     }

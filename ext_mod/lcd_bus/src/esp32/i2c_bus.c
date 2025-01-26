@@ -205,7 +205,7 @@ mp_lcd_err_t i2c_init(mp_obj_t obj, uint8_t cmd_bits, uint8_t param_bits)
     mp_lcd_i2c_bus_obj_t *self = (mp_lcd_i2c_bus_obj_t *)obj;
 
     if (self->sw_rot.data.bytes_per_pixel == 2) {
-        self->rgb565_byte_swap = false;
+        self->sw_rot.data.rgb565_swap = 0;
    
     self->panel_io_config->lcd_cmd_bits = (int)cmd_bits;
     self->panel_io_config->lcd_param_bits = (int)param_bits;

@@ -25,6 +25,8 @@
         uint8_t rotation: 3;
         uint8_t last_update: 1;
         uint8_t rgb565_dither: 1;
+        uint8_t rgb565_swap: 1;
+        uint32_t color_format;
         int cmd;
     } mp_lcd_sw_rotation_data_t;
 

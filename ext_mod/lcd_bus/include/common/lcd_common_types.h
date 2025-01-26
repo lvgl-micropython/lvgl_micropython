@@ -24,11 +24,13 @@
     extern const mp_obj_type_t mp_lcd_i80_bus_type;
     extern const mp_obj_type_t mp_lcd_rgb_bus_type;
     extern const mp_obj_type_t mp_lcd_spi_bus_type;
+    extern const mp_obj_type_t mp_lcd_sdl_bus_type;
 
     typedef struct _mp_lcd_i2c_bus_obj_t mp_lcd_i2c_bus_obj_t;
     typedef struct _mp_lcd_i80_bus_obj_t mp_lcd_i80_bus_obj_t;
     typedef struct _mp_lcd_rgb_bus_obj_t mp_lcd_rgb_bus_obj_t;
     typedef struct _mp_lcd_spi_bus_obj_t mp_lcd_spi_bus_obj_t;
+    typedef struct _mp_lcd_sdl_bus_obj_t mp_lcd_sdl_bus_obj_t;
 
     typedef struct _lcd_panel_io_t lcd_panel_io_t;
 
@@ -54,7 +56,6 @@
         mp_lcd_framebuf_t *fb2;
 
         uint8_t trans_done: 1;
-        uint8_t rgb565_byte_swap: 1;
         uint8_t sw_rotate: 1;
         uint8_t lanes: 5;
 

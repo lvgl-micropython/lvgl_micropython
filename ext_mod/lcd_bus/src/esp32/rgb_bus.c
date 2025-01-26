@@ -1,10 +1,11 @@
 // Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
+#include "py/obj.h"
 
 #include "soc/soc_caps.h"
 
 #if SOC_LCD_RGB_SUPPORTED
-    // esp-idf includes
+
     #include "hal/lcd_hal.h"
     #include "esp_pm.h"
     #include "esp_intr_alloc.h"
@@ -15,25 +16,10 @@
     #include "esp_lcd_panel_interface.h"
     #include "esp_lcd_panel_rgb.h"
 
-
-    // micropython includes
-    #include "mphalport.h"
-    #include "py/obj.h"
-    #include "py/runtime.h"
-    #include "py/objarray.h"
-    #include "py/binary.h"
-    #include "py/objint.h"
-    #include "py/objstr.h"
-    #include "py/objtype.h"
-    #include "py/objexcept.h"
-
-    // local includes
-    #include "common/lcd_common_types.h"
     #include "common/modlcd_bus.h"
+    #include "common/lcd_common_types.h"
+    #include "lcd_types.h"
     #include "rgb_bus.h"
-
-    // stdlib includes
-    #include <string.h>
 
 
     mp_lcd_err_t rgb_del(mp_obj_t obj);
@@ -70,11 +56,11 @@
         rgb_panel_t *rgb_panel = __containerof(panel, rgb_panel_t, base);
         uint8_t *curr_buf = rgb_panel->fbs[rgb_panel->cur_fb_index];
 
-        if (curr_buf != buffers->active && !mp_lcdbus_event_isset_from_isr(&self->sw_rot.handles.swap_bufs)) {
+        if (curr_buf != buffers->active && !mp_lcd_event_isset_from_isr(&self->sw_rot.handles.swap_bufs)) {
             uint8_t *idle_fb = buffers->idle;
             buffers->idle = buffers->active;
             buffers->active = idle_fb;
-            mp_lcdbus_event_set_from_isr(&self->sw_rot.handles.swap_bufs);
+            mp_lcd_event_set_from_isr(&self->sw_rot.handles.swap_bufs);
         }
 
         return false;
@@ -379,9 +365,9 @@
 
         self->sw_rotate = 1;
 
-        if (self->sw_rot.data.bytes_per_pixel != 2) self->rgb565_byte_swap = 0;
+        if (self->sw_rot.data.bytes_per_pixel != 2) self->sw_rot.data.rgb565_swap = 0;
 
-        if (self->rgb565_byte_swap && self->panel_io_config->data_width == 16) {
+        if (self->sw_rot.data.rgb565_swap && self->panel_io_config->data_width == 16) {
             /*
             We change the pins aound when the bus width is 16 and wanting to
             swap bytes. This does the same thing as moving the bytes around in
@@ -398,7 +384,7 @@
                 self->panel_io_config->data_gpio_nums[i + 8] = temp_pin;
             }
 
-            self->rgb565_byte_swap = false;
+            self->sw_rot.data.rgb565_swap = 0;
         }
 
         self->panel_io_config->timings.h_res = self->sw_rot.data.dst_width;
@@ -414,7 +400,7 @@
         LCD_DEBUG_PRINT("h_res=%lu\n", self->panel_io_config->timings.h_res)
         LCD_DEBUG_PRINT("v_res=%lu\n", self->panel_io_config->timings.v_res)
         LCD_DEBUG_PRINT("bits_per_pixel=%d\n", self->panel_io_config->bits_per_pixel)
-        LCD_DEBUG_PRINT("rgb565_byte_swap=%d\n", self->rgb565_byte_swap)
+        LCD_DEBUG_PRINT("rgb565_byte_swap=%d\n", self->sw_rot.data.rgb565_swap)
 
         return LCD_OK;
     }

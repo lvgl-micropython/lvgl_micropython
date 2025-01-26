@@ -296,7 +296,7 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint8_t cmd_bits, uint8_t param_bits)
     }
 
     if (self->sw_rot.data.bytes_per_pixel != 2) {
-        self->rgb565_byte_swap = false;
+        self->sw_rot.data.rgb565_swap = false;
     }
 
     self->panel_io_config->trans_queue_depth = 10;

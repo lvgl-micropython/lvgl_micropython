@@ -166,32 +166,27 @@
     }
     
 
-    mp_lcd_err_t dsi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
+    mp_lcd_err_t dsi_init(mp_obj_t obj, uint8_t cmd_bits, uint8_t param_bits)
     {
-        LCD_DEBUG_PRINT("dsi_init(self, width=%i, height=%i, bpp=%i, buffer_size=%lu, rgb565_byte_swap=%i, cmd_bits=%i, param_bits=%i)\n", width, height, bpp, buffer_size, (uint8_t)rgb565_byte_swap, cmd_bits, param_bits)
+        LCD_DEBUG_PRINT("dsi_init(self, cmd_bits=%i, param_bits=%i)\n", cmd_bits, param_bits)
 
         mp_lcd_dsi_bus_obj_t *self = (mp_lcd_dsi_bus_obj_t *)obj;
 
-        switch(bpp) {
-            case 16:
+        switch(self->sw_rot.data.bytes_per_pixel) {
+            case 2:
                 self->panel_config.pixel_format = LCD_COLOR_PIXEL_FORMAT_RGB565;
-                self->rgb565_byte_swap = rgb565_byte_swap;
                 break;
-            case 18:
-                self->panel_config.pixel_format = LCD_COLOR_PIXEL_FORMAT_RGB666;
-                self->rgb565_byte_swap = false;
-                break;
-            case 24:
+            case 3:
                 self->panel_config.pixel_format = LCD_COLOR_PIXEL_FORMAT_RGB888;
-                self->rgb565_byte_swap = false;
+                self->sw_rot.data.rgb565_swap = 0;
                 break;
             default:
                 mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("unsopported bits per pixel.(%d)"), bpp);
                 return LCD_ERR_INVALID_ARG;
         }
 
-        self->panel_config->video_timing.h_size = (uint32_t)width;
-        self->panel_config->video_timing.v_size = (uint32_t)height;
+        self->panel_config->video_timing.h_size = self->sw_rot.data.dst_width;
+        self->panel_config->video_timing.v_size = self->sw_rot.data.dst_height;
 
         self->panel_io_config->lcd_cmd_bits = (int)cmd_bits;
         self->panel_io_config->lcd_param_bits = (int)param_bits;

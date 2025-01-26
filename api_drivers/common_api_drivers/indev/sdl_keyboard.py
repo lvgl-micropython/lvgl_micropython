@@ -174,9 +174,7 @@ class SDLKeyboard(keypad_framework.KeypadDriver):
     def set_mode(self, mode):
         self._indev_drv.set_mode(mode)  # NOQA
 
-    def _keypad_cb(self, *args):
-        _, state, key, mod = args
-
+    def _keypad_cb(self, _, state, key, mod):
         if KEYPAD_0 <= key <= KEYPAD_EQUALS:
             if mod == MOD_KEY_NUM:
                 mapping = {

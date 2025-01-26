@@ -13,6 +13,8 @@ SRC_USERMOD_C += $(MOD_DIR)/src/common/lcd_framebuf.c
 SRC_USERMOD_C += $(MOD_DIR)/src/common/modlcd_bus.c
 SRC_USERMOD_C += $(MOD_DIR)/src/common/rgb565_dither.c
 SRC_USERMOD_C += $(MOD_DIR)/src/common/sw_rotate.c
+SRC_USERMOD_C += $(MOD_DIR)/src/common/sw_rotate_task_common.c
+
 
 ifneq (,$(findstring -Wno-missing-field-initializers, $(CFLAGS_USERMOD)))
     CFLAGS_USERMOD += -Wno-missing-field-initializers

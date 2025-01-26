@@ -51,6 +51,9 @@ class SSD1306(display_driver_framework.DisplayDriver):
 
         if frame_buffer1 is None:
 
+            if frame_buffer2 is not None:
+                frame_buffer2.free()
+
             gc.collect()
 
             for flags in (
@@ -60,18 +63,15 @@ class SSD1306(display_driver_framework.DisplayDriver):
                 lcd_bus.MEMORY_SPIRAM
             ):
                 try:
-                    frame_buffer1 = (
-                        data_bus.allocate_framebuffer(buf_size, flags)
-                    )
+                    frame_buffer1 = lcd_bus.framebuffer(buf_size, flags)
 
                     if (flags | lcd_bus.MEMORY_DMA) == flags:
-                        frame_buffer2 = (
-                            data_bus.allocate_framebuffer(buf_size, flags)
-                        )
-
+                        frame_buffer2 = lcd_bus.framebuffer(buf_size, flags)
                     break
                 except MemoryError:
-                    frame_buffer1 = data_bus.free_framebuffer(frame_buffer1)  # NOQA
+                    if frame_buffer1 is not None:
+                        frame_buffer1.free()
+                        frame_buffer1 = None
 
             if frame_buffer1 is None:
                 raise MemoryError(
@@ -92,17 +92,13 @@ class SSD1306(display_driver_framework.DisplayDriver):
             frame_buffer2=frame_buffer2,
             reset_pin=reset_pin,
             reset_state=reset_state,
-            power_pin=None,
             backlight_pin=backlight_pin,
             backlight_on_state=backlight_on_state,
             offset_x=offset_x,
             offset_y=offset_y,
-            color_byte_order=display_driver_framework.BYTE_ORDER_RGB,
             color_space=color_space,  # NOQA
             rgb565_byte_swap=rgb565_byte_swap,
-            _cmd_bits=8,
-            _param_bits=8,
-            _init_bus=True
+            _sw_rotate=True
         )
 
         self._power_pin = power_pin
@@ -126,7 +122,6 @@ class SSD1306(display_driver_framework.DisplayDriver):
             self.set_params(_DISP_OFF)
 
     def _flush_cb(self, _, area, color_p):
-
         x1 = 0
         x2 = self.display_width - 1
 
@@ -140,11 +135,11 @@ class SSD1306(display_driver_framework.DisplayDriver):
 
         self._param_buf[0] = x1
         self._param_buf[1] = x2
-        self.set_params(_SET_COL_ADDR, self._param_mv[:2])
+        self._data_bus.tx_param(_SET_COL_ADDR, self._param_mv[:2], False)
 
         self._param_buf[0] = y1
         self._param_buf[1] = y2
-        self.set_params(_SET_PAGE_ADDR, self._param_mv[:2])
+        self._data_bus.tx_param(_SET_PAGE_ADDR, self._param_mv[:2], True)
 
         size = (
             (area.x2 - area.x1 + 1) *
@@ -156,4 +151,5 @@ class SSD1306(display_driver_framework.DisplayDriver):
         # what converts from the C_Array object the binding passes into a
         # memoryview object that can be passed to the bus drivers
         data_view = color_p.__dereference__(size)
-        self._data_bus.tx_color(0, data_view, x1, y1, x2, y2, self._rotation, self._disp_drv.flush_is_last())
+        self._data_bus.tx_color(0, data_view, x1, y1, x2, y2, self._rotation,
+                                self._disp_drv.flush_is_last(), self._rgb565_dither)

@@ -26,5 +26,6 @@
 
 
     bool mp_lcd_start_rotate_task(void *self_in);
+    void mp_lcd_sw_rotate_task(void *self_in)
 
 #endif /* __SW_ROTATE_TASK_COMMON_H__ */

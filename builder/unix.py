@@ -233,95 +233,84 @@ MAKEFILE_PATH = 'lib/micropython/ports/unix/Makefile'
 def update_makefile():
     data = read_file(REAL_PORT, MAKEFILE_PATH)
 
-    if 'machine_timer.c' not in data:
-        code = [
-            'modjni.c \\',
-            '\tmachine_timer.c \\',
-            '\tmachine_sdl.c \\',
-            ''
-        ]
-        data = data.replace('modjni.c \\\n', '\n'.join(code))
+    code = [
+        'modjni.c \\',
+        '\tmachine_timer.c \\',
+        '\tmachine_sdl.c \\',
+        ''
+    ]
+    data = data.replace('modjni.c \\\n', '\n'.join(code))
 
-        write_file(MAKEFILE_PATH, data)
+    write_file(MAKEFILE_PATH, data)
 
 
 def update_modmachine():
     data = read_file(REAL_PORT, MODMACHINE_PATH)
 
-    if 'MICROPY_PY_MACHINE_EXTRA_GLOBALS' not in data:
-        data += (
-            '\n#define MICROPY_PY_MACHINE_EXTRA_GLOBALS    '
-            '    { MP_ROM_QSTR(MP_QSTR_Timer), MP_ROM_PTR(&machine_timer_type) }, \n\n'  # NOQA
-        # NOQA
-        )
+    data += (
+        '\n#define MICROPY_PY_MACHINE_EXTRA_GLOBALS    '
+        '    { MP_ROM_QSTR(MP_QSTR_Timer), MP_ROM_PTR(&machine_timer_type) }, \n\n'  # NOQA
+    )
 
-        write_file(MODMACHINE_PATH, data)
+    write_file(MODMACHINE_PATH, data)
 
 
 def update_main():
 
     data = read_file(REAL_PORT, MAIN_PATH)
 
-    if 'machine_timer.h' not in data:
-        code = [
-            '#include "input.h"',
-            '#include "machine_timer.h"'
-        ]
-        data = data.replace('#include "input.h"', '\n'.join(code))
+    code = [
+        '#include "input.h"',
+        '#include "machine_sdl.h"',
+        '#include "machine_timer.h"',
+        '#include "../../../../ext_mod/lcd_bus/include/common/modlcd_bus.h"'
+    ]
 
-    if 'machine_sdl.h' not in data:
-        code = [
-            '#include "input.h"',
-            '#include "machine_sdl.h"'
-        ]
-        data = data.replace('#include "input.h"', '\n'.join(code))
+    data = data.replace('#include "input.h"', '\n'.join(code))
 
-    if 'machine_timer_deinit_all()' not in data:
-        data = data.replace(
-            '#if MICROPY_PY_SYS_ATEXIT',
-            'machine_timer_deinit_all();\n    #if MICROPY_PY_SYS_ATEXIT'
-        )
+    code = [
+        'mp_lcd_bus_shutdown();',
+        '    deinit_sdl();',
+        '    machine_timer_deinit_all();',
+        '    ',
+        '    #if MICROPY_PY_SYS_ATEXIT',
 
-    if 'deinit_sdl()' not in data:
-        data = data.replace(
-            '#if MICROPY_PY_SYS_ATEXIT',
-            'deinit_sdl();\n    #if MICROPY_PY_SYS_ATEXIT'
-        )
+    ]
 
-    if 'init_sdl()' not in data:
-        data = data.replace(
-            'mp_init();',
-            'mp_init();\n    init_sdl();'
-        )
+    data = data.replace('#if MICROPY_PY_SYS_ATEXIT', '\n'.join(code))
 
-    if '*mp_repl_get_ps3' not in data:
-        code = [
-            'char *mp_repl_get_ps3(void)',
-            '{',
-            '    return "";',
-            '}',
-            '',
-            '',
-            'static int do_repl(void) {'
-        ]
+    code = [
+        'mp_init();',
+        '    init_sdl();'
+    ]
+    data = data.replace('mp_init();', '\n'.join(code))
 
-        data = data.replace('static int do_repl(void) {', '\n'.join(code))
+    code = [
+        'char *mp_repl_get_ps3(void)',
+        '{',
+        '    return "";',
+        '}',
+        '',
+        '',
+        'static int do_repl(void) {'
+    ]
 
-    if 'EWOULDBLOCK' not in data:
-        code = [
-            'if (errno != EWOULDBLOCK) {',
-            '                return 0;',
-            '            } else {',
-            '                while (line == NULL && errno == EWOULDBLOCK) {',
-            '                    mp_handle_pending(true);',
-            '                    usleep(1000);',
-            '                    line = prompt(mp_repl_get_ps3());',
-            '                }',
-            '                if (line == NULL) return 0;',
-            '            }',
-        ]
+    data = data.replace('static int do_repl(void) {', '\n'.join(code))
 
-        data = data.replace('// EOF\n            return 0;', '\n'.join(code))
+    code = [
+        'if (errno != EWOULDBLOCK) {',
+        '                return 0;',
+        '            } else {',
+        '                while (line == NULL && errno == EWOULDBLOCK) {',
+        '                    mp_handle_pending(true);',
+        '                    usleep(1000);',
+        '                    line = prompt(mp_repl_get_ps3());',
+        '                }',
+        '                if (line == NULL) return 0;',
+        '            }',
+    ]
+
+    data = data.replace('// EOF\n            return 0;', '\n'.join(code))
 
     data = data.split('\n')
 
@@ -352,77 +341,63 @@ def update_input():
 
 
 def update_unix_mphal():
-
     data = read_file(REAL_PORT, UNIX_MPHAL_PATH)
 
-    if 'EWOULDBLOCK' not in data:
-        code = [
-            'int flags = fcntl(STDIN_FILENO, F_GETFL);',
-            '    flags |= O_NONBLOCK;',
-            '    fcntl(STDIN_FILENO, F_SETFL, flags);',
-            '',
-            '    for (;;) {',
-            '        MP_THREAD_GIL_EXIT();',
-            '        ret = read(STDIN_FILENO, &c, 1);',
-            '        MP_THREAD_GIL_ENTER();',
-            '        if (ret == -1) {',
-            '            int err = errno;',
-            '',
-            '            if (err == EINTR) {',
-            '                mp_handle_pending(true);',
-            '                continue;',
-            '            } else {',
-            '                while (ret == -1 && err == EWOULDBLOCK) {',
-            '                    mp_handle_pending(true);',
-            '                    usleep(1000);',
-            '                    ret = read(STDIN_FILENO, &c, 1);',
-            '                    if (ret == -1) err = errno;',
-            '                }',
-            '                if (ret == -1) continue;',
-            '                break;',
-            '            }',
-            '        }',
-            '        break;',
-            '    }',
-            ''
-        ]
+    code = [
+        'int flags = fcntl(STDIN_FILENO, F_GETFL);',
+        '    flags |= O_NONBLOCK;',
+        '    fcntl(STDIN_FILENO, F_SETFL, flags);',
+        '',
+        '    for (;;) {',
+        '        MP_THREAD_GIL_EXIT();',
+        '        ret = read(STDIN_FILENO, &c, 1);',
+        '        MP_THREAD_GIL_ENTER();',
+        '        if (ret == -1) {',
+        '            int err = errno;',
+        '',
+        '            if (err == EINTR) {',
+        '                mp_handle_pending(true);',
+        '                continue;',
+        '            } else {',
+        '                while (ret == -1 && err == EWOULDBLOCK) {',
+        '                    mp_handle_pending(true);',
+        '                    usleep(1000);',
+        '                    ret = read(STDIN_FILENO, &c, 1);',
+        '                    if (ret == -1) err = errno;',
+        '                }',
+        '                if (ret == -1) continue;',
+        '                break;',
+        '            }',
+        '        }',
+        '        break;',
+        '    }',
+        ''
+    ]
 
-        data = data.replace(
-            'MP_HAL_RETRY_SYSCALL(ret, read(STDIN_FILENO, &c, 1), {});',
-            '\n'.join(code)
-        )
+    data = data.replace(
+        'MP_HAL_RETRY_SYSCALL(ret, read(STDIN_FILENO, &c, 1), {});',
+        '\n'.join(code)
+    )
 
-        write_file(UNIX_MPHAL_PATH, data)
+    write_file(UNIX_MPHAL_PATH, data)
 
 
 def update_mpconfigvariant_common():
 
     data = read_file(REAL_PORT, MPCONFIGVARIANT_COMMON_PATH)
 
-    if (
-        '#define MICROPY_MALLOC_USES_ALLOCATED_SIZE (1)' in
-        data
-    ):
-        data = data.replace(
-            '#define MICROPY_MALLOC_USES_ALLOCATED_SIZE (1)',
-            '#define MICROPY_MALLOC_USES_ALLOCATED_SIZE (0)'
-        )
-
-    if '#define MICROPY_MEM_STATS              (1)' in data:
-        data = data.replace(
-            '#define MICROPY_MEM_STATS              (1)',
-            '#define MICROPY_MEM_STATS              (0)'
-        )
-
-    macros = (
-        '#define MICROPY_SCHEDULER_DEPTH              (128)',
-        '#define MICROPY_STACK_CHECK              (0)'
+    data = data.replace(
+        '#define MICROPY_MALLOC_USES_ALLOCATED_SIZE (1)',
+        '#define MICROPY_MALLOC_USES_ALLOCATED_SIZE (0)'
     )
 
-    for macro in macros:
-        if macro not in data:
-            data += '\n\n'
-            data += macro + '\n'
+    data = data.replace(
+        '#define MICROPY_MEM_STATS              (1)',
+        '#define MICROPY_MEM_STATS              (0)'
+    )
+
+    data += '\nn#define MICROPY_SCHEDULER_DEPTH              (128)\n'
+    data += '\n#define MICROPY_STACK_CHECK              (0)\n'
 
     write_file(MPCONFIGVARIANT_COMMON_PATH, data)
 

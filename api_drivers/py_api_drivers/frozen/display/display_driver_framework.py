@@ -84,7 +84,8 @@ class DisplayDriver:
         rgb565_byte_swap=False,
         _cmd_bits=8,
         _param_bits=8,
-        _init_bus=True
+        _init_bus=True,
+        _sw_rotate=False
     ):
         if power_on_state not in (STATE_HIGH, STATE_LOW):
             raise RuntimeError(
@@ -104,6 +105,8 @@ class DisplayDriver:
 
         if not lv.is_initialized():
             lv.init()
+
+        self._rgb565_dither = False
 
         self.display_width = display_width
         self.display_height = display_height
@@ -132,6 +135,7 @@ class DisplayDriver:
         self._rgb565_byte_swap = rgb565_byte_swap
         self._cmd_bits = _cmd_bits
         self._param_bits = _param_bits
+        self._sw_rotate = _sw_rotate
 
         if data_bus is None:
             self._reset_pin = None
@@ -146,6 +150,8 @@ class DisplayDriver:
                 self._reset_pin = None
             elif not isinstance(reset_pin, int):
                 self._reset_pin = reset_pin
+            elif reset_pin == -1:
+                self._reset_pin = None
             else:
                 self._reset_pin = machine.Pin(reset_pin, machine.Pin.OUT)
                 self._reset_pin.value(not reset_state)
@@ -154,6 +160,8 @@ class DisplayDriver:
                 self._power_pin = None
             elif not isinstance(power_pin, int):
                 self._power_pin = power_pin
+            elif power_pin == -1:
+                self._power_pin = None
             else:
                 self._power_pin = machine.Pin(power_pin, machine.Pin.OUT)
                 self._power_pin.value(not power_on_state)
@@ -162,24 +170,25 @@ class DisplayDriver:
                 self._backlight_pin = None
             elif not isinstance(backlight_pin, int):
                 self._backlight_pin = backlight_pin
+            elif backlight_pin == -1:
+                self._backlight_pin = None
             else:
                 self._backlight_pin = machine.Pin(
                     backlight_pin,
                     machine.Pin.OUT
                 )
 
-            if backlight_on_state == STATE_PWM:
-                if isinstance(self._backlight_pin, io_expander_framework.Pin):
+            if self._backlight_pin is not None:
+                if (
+                    isinstance(self._backlight_pin, io_expander_framework.Pin) and
+                    backlight_on_state == STATE_PWM
+                ):
                     backlight_on_state = STATE_HIGH
-                else:
-                    self._backlight_pin = machine.PWM(
-                        self._backlight_pin, freq=38000)
 
-            if (
-                backlight_on_state != STATE_PWM and
-                self._backlight_pin is not None
-            ):
-                self._backlight_pin.value(not backlight_on_state)
+                if backlight_on_state == STATE_PWM:
+                    self._backlight_pin = machine.PWM(self._backlight_pin, freq=38000)
+                else:
+                    self._backlight_pin.value(not backlight_on_state)
 
             self._backlight_on_state = backlight_on_state
 
@@ -189,6 +198,9 @@ class DisplayDriver:
             self._disp_drv.set_driver_data(self)
 
             if frame_buffer1 is None:
+                if frame_buffer2 is not None:
+                    frame_buffer2.free()
+
                 buf_size = int(
                     display_width *
                     display_height *
@@ -204,18 +216,14 @@ class DisplayDriver:
                     lcd_bus.MEMORY_SPIRAM
                 ):
                     try:
-                        frame_buffer1 = (
-                            data_bus.allocate_framebuffer(buf_size, flags)
-                        )
+                        frame_buffer1 = lcd_bus.framebuffer(buf_size, flags)
 
                         if (flags | lcd_bus.MEMORY_DMA) == flags:
-                            frame_buffer2 = (
-                                data_bus.allocate_framebuffer(buf_size, flags)
-                            )
-
+                            frame_buffer2 = lcd_bus.framebuffer(buf_size, flags)
                         break
                     except MemoryError:
-                        frame_buffer1 = data_bus.free_framebuffer(frame_buffer1)
+                        if frame_buffer1 is not None:
+                            frame_buffer1.free()
 
                 if frame_buffer1 is None:
                     raise MemoryError(
@@ -225,22 +233,29 @@ class DisplayDriver:
             self._frame_buffer1 = frame_buffer1
             self._frame_buffer2 = frame_buffer2
 
+            self._fb1_mv = memoryview(frame_buffer1)
+            if frame_buffer2 is not None:
+                self._fb2_mv = memoryview(frame_buffer2)
+            else:
+                self._fb2_mv = None
+
             self._init_disp_bus = _init_bus
 
             if _init_bus:
                 self._init_bus()
 
     def _init_bus(self):
-        buffer_size = len(self._frame_buffer1)
-
         self._data_bus.init(
             self.display_width,
             self.display_height,
             lv.color_format_get_size(self._color_space) * 8,
-            buffer_size,
-            self._rgb565_byte_swap,
+            self._color_space,
             self._cmd_bits,
-            self._param_bits
+            self._param_bits,
+            self._frame_buffer1,
+            self._frame_buffer2,
+            self._sw_rotate,
+            self._rgb565_byte_swap
         )
 
         self._disp_drv.set_flush_cb(self._flush_cb)
@@ -256,8 +271,8 @@ class DisplayDriver:
             render_mode = lv.DISPLAY_RENDER_MODE.PARTIAL  # NOQA
 
         self._disp_drv.set_buffers(
-            self._frame_buffer1,
-            self._frame_buffer2,
+            self._fb1_mv,
+            self._fb2_mv,
             len(self._frame_buffer1),
             render_mode
         )
@@ -294,7 +309,7 @@ class DisplayDriver:
 
         self._rotation = rotation
 
-        if not isinstance(self._data_bus, lcd_bus.RGBBus) and self._initilized:
+        if not self._sw_rotate and self._initilized:
             self._param_buf[0] = (self._madctl(
                 self._color_byte_order, self._ORIENTATION_TABLE, ~rotation
             ))
@@ -484,10 +499,11 @@ class DisplayDriver:
         self._initilized = True
 
     def set_params(self, cmd, params=None):
-        self._data_bus.tx_param(cmd, params)
+        self._data_bus.tx_param(cmd, params, False)
 
     def get_params(self, cmd, params):
-        self._data_bus.rx_param(cmd, params)
+        # self._data_bus.rx_param(cmd, params)
+        raise NotImplementedError
 
     def get_power(self):
         if self._power_pin is None:
@@ -537,6 +553,12 @@ class DisplayDriver:
 
         return not value
 
+    def get_rgb565_dither(self):
+        return self._rgb565_dither
+
+    def set_rgb565_dither(self, value):
+        self._rgb565_dither = bool(value)
+
     def set_backlight(self, value):
         if self._backlight_pin is None:
             return
@@ -560,7 +582,7 @@ class DisplayDriver:
         param_buf[2] = (x2 >> 8) & 0xFF
         param_buf[3] = x2 & 0xFF
 
-        self._data_bus.tx_param(_CASET, self._param_mv)
+        self._data_bus.tx_param(_CASET, self._param_mv, False)
 
         # Page addresses
         param_buf[0] = (y1 >> 8) & 0xFF
@@ -568,7 +590,7 @@ class DisplayDriver:
         param_buf[2] = (y2 >> 8) & 0xFF
         param_buf[3] = y2 & 0xFF
 
-        self._data_bus.tx_param(_RASET, self._param_mv)
+        self._data_bus.tx_param(_RASET, self._param_mv, True)
 
         return _RAMWR
 
@@ -591,8 +613,9 @@ class DisplayDriver:
         # what converts from the C_Array object the binding passes into a
         # memoryview object that can be passed to the bus drivers
         data_view = color_p.__dereference__(size)
-        self._data_bus.tx_color(cmd, data_view, x1, y1, x2, y2,
-                                self._rotation, self._disp_drv.flush_is_last())
+        self._data_bus.tx_color(cmd, data_view, x1, y1, x2, y2, self._rotation,
+                                self._disp_drv.flush_is_last(),
+                                self._rgb565_dither)
 
     # we always register this callback no matter what. This is what tells LVGL
     # that the buffer is able to be written to. If this callback doesn't get

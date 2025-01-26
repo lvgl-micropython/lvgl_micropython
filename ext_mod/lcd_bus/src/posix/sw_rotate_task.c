@@ -1,18 +1,6 @@
-#include <stdint.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <stdlib.h>
-
-#include <string.h>
 
 #include <pthread.h>
-#include <unistd.h>
 
-#include <termios.h>
-#include <fcntl.h>
-
-
-#include "common/rgb565_dither"
 #include "common/lcd_common_types.h"
 #include "common/sw_rotate.h"
 #include "common/sw_rotate_task_common.h"
@@ -142,3 +130,30 @@ void mp_lcd_lock_delete(mp_lcd_lock_t *lock)
 }
 
 
+static void* sw_rotate_task(void* self_in)
+{
+    mp_lcd_sw_rotate_task(self_in);
+    return NULL;
+}
+
+
+bool mp_lcd_start_rotate_task(void *self_in)
+{
+    mp_lcd_obj_t *self = (mp_lcd_obj_t *)self_in;
+
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    pthread_create(&self->sw_rot.handles.task_handle, &attr, &sw_rotate_task, NULL);
+
+    mp_lcd_lock_acquire(&self->sw_rot.handles.init_lock);
+    mp_lcd_lock_release(&self->sw_rot.handles.init_lock);
+    mp_lcd_lock_delete(&self->sw_rot.handles.init_lock);
+
+    if (self->sw_rot.init.err != LCD_OK) {
+        mp_raise_msg_varg(&mp_type_OSError, self->sw_rot.init.err_msg, self->sw_rot.init.err);
+        return false;
+    } else {
+        return true;
+    }
+}

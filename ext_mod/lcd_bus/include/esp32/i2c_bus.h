@@ -26,6 +26,5 @@
 
     };
 
-    extern void mp_lcd_i2c_bus_deinit_all(void);
 
 #endif /* _I2C_BUS_H_ */
