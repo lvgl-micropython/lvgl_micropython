@@ -1,4 +1,4 @@
-#include "lcd_framebuf.h"
+#include "common/lcd_framebuf.h"
 
 // micropython includes
 #include "py/obj.h"

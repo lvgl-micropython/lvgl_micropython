@@ -1,4 +1,4 @@
-#include "common/rgb565_dither"
+#include "common/rgb565_dither.h"
 #include "common/lcd_common_types.h"
 #include "common/sw_rotate_task_common.h"
 #include "sw_rotate_task.h"

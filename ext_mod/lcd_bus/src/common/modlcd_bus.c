@@ -1,7 +1,7 @@
 // Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
 // local includes
-#include "modlcd_bus.h"
+#include "common/modlcd_bus.h"
 #include "spi_bus.h"
 #include "i2c_bus.h"
 #include "i80_bus.h"

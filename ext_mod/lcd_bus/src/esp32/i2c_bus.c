@@ -7,7 +7,7 @@
 #include "driver/i2c.h"
 
 
-#include "common/lcd_commmon_types.h"
+#include "common/lcd_common_types.h"
 #include "common/modlcd_bus.h"
 #include "lcd_types.h"
 #include "i2c_bus.h"
