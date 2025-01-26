@@ -1,9 +1,7 @@
-#ifdef ESP_IDF_VERSION
-    #include "esp32/bus_task.h"
-#elif defined(MP_PORT_UNIX)
-    #include "posix/bus_task.h"
-#else
-    #include "other_mcus/bus_task.h"
+
+#include "sw_rotate_task_common.h"
+#include "sw_rotate_task.h"
+
 
 #ifndef __SW_ROTATE_H__
     #define __SW_ROTATE_H__

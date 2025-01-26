@@ -21,4 +21,4 @@
 
     extern const mp_obj_type_t mp_lcd_framebuf_type;
 
-#endif __LCD_FRAMEBUF_H__
+#endif /* __LCD_FRAMEBUF_H__ */
