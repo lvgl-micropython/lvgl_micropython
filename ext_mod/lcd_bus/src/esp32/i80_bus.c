@@ -2,12 +2,12 @@
 
 
 // local includes
-#include "common/lcd_types.h"
+#include "common/lcd_common_types.h"
+#include "lcd_types.h"
 #include "common/modlcd_bus.h"
-#include "esp32/i80_bus.h"
+#include "i80_bus.h"
 
 // micropython includes
-#include "mphalport.h"
 #include "py/obj.h"
 #include "py/runtime.h"
 

@@ -658,5 +658,3 @@ void rotate_32bpp(uint32_t *src, uint32_t *dst, mp_lcd_sw_rotation_data_t *copy_
             break;
     }
 }
-
-#endif
