@@ -1,3 +1,7 @@
+#include "common/lcd_bus_utils.h"
+#include "common/lcd_framebuf.h"
+#include "common/lcd_common_types.h"
+#include "lcd_types.h"
 
 
 mp_lcd_err_t mp_lcd_verify_frame_buffers(mp_lcd_framebuf_t *fb1, mp_lcd_framebuf_t *fb2)
@@ -16,11 +20,11 @@ mp_lcd_err_t mp_lcd_allocate_rotation_buffers(mp_lcd_bus_obj_t *self)
     mp_lcd_framebuf_t *fb1 = self->fb1;
     mp_lcd_framebuf_t *fb2 = self->fb2;
     
-    mp_lcd_sw_rotation_buffers_t *buffers = &self->sw_rotate.buffers;
+    mp_lcd_sw_rotation_buffers_t *buffers = &self->sw_rot.buffers;
 
     uint32_t caps = MALLOC_CAP_SPIRAM;
 
-    if (fb2 != NULL) caps != MALLOC_CAP_DMA;
+    if (fb2 != NULL) caps |= MALLOC_CAP_DMA;
 
     if (!self->sw_rotate && !self->sw_rot.data.rgb565_swap && fb2 != NULL) {
         if (!(fb1->caps & MALLOC_CAP_DMA)) {
@@ -40,7 +44,7 @@ mp_lcd_err_t mp_lcd_allocate_rotation_buffers(mp_lcd_bus_obj_t *self)
             }
         }
     } else {
-        if (fb1->caps != MALLOC_CAP_INTERNAL || fb1->caps != MALLOC_CAP_SPIRAM) {
+        if (fb1->caps & MALLOC_CAP_INTERNAL || fb1->caps & MALLOC_CAP_SPIRAM) {
             free(fb1->items);
             fb1->items = heap_caps_malloc(fb1->len, MALLOC_CAP_INTERNAL);
             fb1->caps = MALLOC_CAP_INTERNAL;
@@ -78,7 +82,7 @@ mp_lcd_err_t mp_lcd_allocate_rotation_buffers(mp_lcd_bus_obj_t *self)
 
 void mp_lcd_free_rotation_buffers(mp_lcd_bus_obj_t *self)
 {
-    mp_lcd_sw_rotation_buffers_t *buffers = &self->sw_rotate.buffers;
+    mp_lcd_sw_rotation_buffers_t *buffers = &self->sw_rot.buffers;
 
     if (buffers->idle != buffers->active) {
         free(buffers->idle);

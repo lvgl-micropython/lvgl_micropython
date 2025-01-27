@@ -13,7 +13,7 @@ static mp_lcd_sdl_bus_obj_t *last_instance = NULL;
 
 
 mp_lcd_err_t sdl_del(mp_obj_t obj);
-mp_lcd_err_t sdl_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size,  bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
+mp_lcd_err_t sdl_init(mp_obj_t obj, uint8_t cmd_bits, uint8_t param_bits);
 
 
 int flush_thread(void *self_in);
@@ -37,14 +37,18 @@ static mp_obj_t scheduled_flush_cb(mp_obj_t self_in)
 {
     mp_lcd_sdl_bus_obj_t *self = (mp_lcd_sdl_bus_obj_t *)MP_OBJ_TO_PTR(self_in);
 
-    int pitch = self->panel_io_config.width * data->bytes_per_pixel;
+    int pitch = self->width * self->sw_rot.data.bytes_per_pixel;
 
     SDL_UpdateTexture(self->texture, NULL, self->sw_rot.buffers.active, pitch);
     SDL_RenderClear(self->renderer);
     SDL_RenderCopy(self->renderer, self->texture, NULL, NULL);
     SDL_RenderPresent(self->renderer);
     mp_lcd_event_set_from_isr(&self->sw_rot.handles.swap_bufs);
+
+    return mp_const_none;
 }
+
+MP_DEFINE_CONST_FUN_OBJ_1(scheduled_flush_cb_obj, scheduled_flush_cb);
 
 
 static void sdl_flush_cb(void *self_in, uint8_t last_update, int cmd, uint8_t *idle_fb)
@@ -59,7 +63,7 @@ static void sdl_flush_cb(void *self_in, uint8_t last_update, int cmd, uint8_t *i
         buffers->idle = buffers->active;
         buffers->active = idle_fb;
 
-        mp_sched_schedule(mp_obj_t function, MP_OBJ_FROM_PTR(self));
+        mp_sched_schedule(MP_OBJ_FROM_PTR(&scheduled_flush_cb_obj), MP_OBJ_FROM_PTR(self));
 
         mp_lcd_event_clear(&self->sw_rot.handles.swap_bufs);
         mp_lcd_event_wait(&self->sw_rot.handles.swap_bufs);
@@ -94,8 +98,8 @@ static mp_obj_t mp_lcd_sdl_bus_make_new(const mp_obj_type_t *type, size_t n_args
 
     self->flags = args[ARG_flags].u_int;
 
-    self->panel_io_handle.del = sdl_del;
-    self->panel_io_handle.init = sdl_init;
+    self->panel_io_handle.del = &sdl_del;
+    self->panel_io_handle.init = &sdl_init;
 
     self->pointer_event = (pointer_event_t){
         .x=0,
@@ -110,26 +114,6 @@ static mp_obj_t mp_lcd_sdl_bus_make_new(const mp_obj_type_t *type, size_t n_args
     self->inited = false;
 
     return MP_OBJ_FROM_PTR(self);
-}
-
-
-mp_lcd_err_t sdl_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
-{
-    LCD_UNUSED(obj);
-    LCD_UNUSED(lcd_cmd);
-    LCD_UNUSED(param);
-    LCD_UNUSED(param_size);
-    return LCD_OK;
-}
-
-
-mp_lcd_err_t sdl_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
-{
-    LCD_UNUSED(obj);
-    LCD_UNUSED(lcd_cmd);
-    LCD_UNUSED(param);
-    LCD_UNUSED(param_size);
-    return LCD_OK;
 }
 
 
@@ -161,21 +145,21 @@ mp_lcd_err_t sdl_del(mp_obj_t obj)
 }
 
 
-mp_lcd_err_t sdl_init(mp_obj_t obj, uint8_t cmd_bits, uint8_t param_bits)
+mp_lcd_err_t sdl_init(mp_obj_t self_in, uint8_t cmd_bits, uint8_t param_bits)
 {
     LCD_UNUSED(cmd_bits);
     LCD_UNUSED(param_bits);
 
-    mp_lcd_sdl_bus_obj_t *self = MP_OBJ_TO_PTR(obj);
+    mp_lcd_sdl_bus_obj_t *self = MP_OBJ_TO_PTR(self_in);
     mp_lcd_sw_rotation_data_t *data = &self->sw_rot.data;
 
     self->sw_rot.data.rgb565_swap = false;
 
-    (uint16_t) width = (uint16_t)data->dst_width;
-    (uint16_t) height = (uint16_t)data->dst_height;
+    uint16_t width = (uint16_t)data->dst_width;
+    uint16_t height = (uint16_t)data->dst_height;
 
-    self->panel_io_config.width = width;
-    self->panel_io_config.height = height;
+    self->width = width;
+    self->height = height;
     self->sw_rotate = 1;
 
     self->sw_rot.buffers.active = (uint8_t *)malloc((size_t) (data->dst_width * data->dst_height * data->bytes_per_pixel));
@@ -215,7 +199,7 @@ static mp_obj_t mp_lcd_sdl_poll_events(mp_obj_t self_in)
     SDL_Event event;
 
     while (SDL_PollEvent(&event) > 0) {
-        mp_lcd_sdl_bus_obj_t *self = last_instance;
+        self = last_instance;
 
         while (self != NULL) {
             if (process_event(self, &event) == 1) break;
@@ -286,11 +270,11 @@ static mp_obj_t mp_lcd_sdl_set_window_size(size_t n_args, const mp_obj_t *pos_ar
 
     mp_lcd_lock_acquire(&self->sw_rot.handles.tx_color_lock);
 
-    uint16_t width = (uint16_t)args[ARG_width].u_int
-    uint16_t height = (uint16_t)args[ARG_height].u_int
+    uint16_t width = (uint16_t)args[ARG_width].u_int;
+    uint16_t height = (uint16_t)args[ARG_height].u_int;
 
-    self->panel_io_config.width = width;
-    self->panel_io_config.height = height;
+    self->width = width;
+    self->height = height;
 
     self->sw_rot.data.dst_width = (uint32_t)width;
     self->sw_rot.data.dst_height = (uint32_t)height;
@@ -509,11 +493,11 @@ int process_event(mp_lcd_sdl_bus_obj_t *self, SDL_Event * event)
                     switch(event->caxis.axis) {
                         case 0:  // AXIS_LEFT_X
                         case 2:  // AXIS_RIGHT_X
-                            self->pointer_event.x = (int32_t)(self->panel_io_config.width / 10 * (event->caxis.value / 32767));
+                            self->pointer_event.x = (int32_t)(self->width / 10 * (event->caxis.value / 32767));
                             break;
                         case 1:  // AXIS_LEFT_Y
                         case 3:  // AXIS_RIGHT_Y
-                            self->pointer_event.y = (int32_t)(self->panel_io_config.height / 10 * (event->caxis.value / 32767));
+                            self->pointer_event.y = (int32_t)(self->height / 10 * (event->caxis.value / 32767));
                             break;
                         default:
                             return 0;
@@ -536,10 +520,10 @@ int process_event(mp_lcd_sdl_bus_obj_t *self, SDL_Event * event)
                 case SDL_JOYAXISMOTION:
                     switch(event->caxis.axis) {
                         case 0:  // AXIS_X
-                            self->pointer_event.x = (int32_t)(self->panel_io_config.width / 10 * (event->jaxis.value / 32767));
+                            self->pointer_event.x = (int32_t)(self->width / 10 * (event->jaxis.value / 32767));
                             break;
                         case 1:  // AXIS_Y
-                            self->pointer_event.y = (int32_t)(self->panel_io_config.height / 10 * (event->jaxis.value / 32767));
+                            self->pointer_event.y = (int32_t)(self->height / 10 * (event->jaxis.value / 32767));
                             break;
                         default:
                             return 0;
@@ -609,6 +593,7 @@ int process_event(mp_lcd_sdl_bus_obj_t *self, SDL_Event * event)
     }
     return 0;
 }
+
 
 static const mp_rom_map_elem_t mp_lcd_sdl_bus_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_lane_count),       MP_ROM_PTR(&mp_lcd_bus_get_lane_count_obj)       },

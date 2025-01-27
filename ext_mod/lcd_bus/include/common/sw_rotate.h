@@ -1,6 +1,9 @@
 
 #include "sw_rotate_task_common.h"
 #include "sw_rotate_task.h"
+#include "lcd_common_types.h"
+
+#include "py/misc.h"
 
 
 #ifndef __SW_ROTATE_H__
@@ -11,6 +14,9 @@
     #define LCD_ROTATION_90   (1)
     #define LCD_ROTATION_180  (2)
     #define LCD_ROTATION_270  (3)
+
+    #define LCD_MIN(v1, v2)   v1 <= v2 ? v1 : v2
+
 
     typedef struct _mp_lcd_sw_rotation_data_t {
         uint32_t x_start: 16;
@@ -59,11 +65,11 @@
         mp_lcd_sw_rotate_tx_param_t *params;
         uint8_t len;
         mp_lcd_lock_t lock;
-        mp_lcd_tx_param_cb_t tx_param_cb;
+        mp_lcd_tx_param_cb_t cb;
     } mp_lcd_sw_rotate_tx_params_t;
 
 
-    typedef bool (*mp_lcd_sw_rotation_init_cb_t)(void *self_in)
+    typedef bool (*mp_lcd_sw_rotation_init_cb_t)(void *self_in);
 
     typedef struct _mp_lcd_sw_rotation_init_t {
          mp_lcd_err_t err;
@@ -72,7 +78,7 @@
     } mp_lcd_sw_rotation_init_t;
 
 
-    typedef void (*mp_lcd_sw_rotate_flush_cb_t)(void *self_in, uint8_t last_update, uint8_t *idle_fb);
+    typedef void (*mp_lcd_sw_rotate_flush_cb_t)(void *self_in, int cmd, uint8_t last_update, uint8_t *idle_fb);
 
 
     typedef struct _mp_lcd_sw_rotation_t {
@@ -85,6 +91,6 @@
     } mp_lcd_sw_rotation_t;
 
 
-    static void mp_lcd_sw_rotation(void *dst, void *src, mp_lcd_sw_rotation_data_t *data);
+    void mp_lcd_sw_rotate(void *dst, void *src, mp_lcd_sw_rotation_data_t *copy_data);
 
 #endif /* __SW_ROTATE_H__ */

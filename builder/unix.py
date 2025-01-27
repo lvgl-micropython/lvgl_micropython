@@ -396,7 +396,7 @@ def update_mpconfigvariant_common():
         '#define MICROPY_MEM_STATS              (0)'
     )
 
-    data += '\nn#define MICROPY_SCHEDULER_DEPTH              (128)\n'
+    data += '\n#define MICROPY_SCHEDULER_DEPTH              (128)\n'
     data += '\n#define MICROPY_STACK_CHECK              (0)\n'
 
     write_file(MPCONFIGVARIANT_COMMON_PATH, data)

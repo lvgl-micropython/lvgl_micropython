@@ -12,18 +12,22 @@
 #include "lcd_types.h"
 #include "i2c_bus.h"
 
+
 mp_lcd_err_t i2c_del(mp_obj_t obj);
-mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
+mp_lcd_err_t i2c_init(mp_obj_t obj, uint8_t cmd_bits, uint8_t param_bits);
 
 
-static bool i2c_trans_done_cb(esp_lcd_panel_handle_t panel,
-                        const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
+static bool i2c_trans_done_cb(esp_lcd_panel_io_handle_t panel,
+                              esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
 {
+    LCD_UNUSED(panel);
+    LCD_UNUSED(edata);
+
     mp_lcd_i2c_bus_obj_t *self = (mp_lcd_i2c_bus_obj_t *)user_ctx;
     
     if (self->trans_done == 0) {
         if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
-            mp_lcd_flush_ready_cb(self->callback);
+            mp_lcd_flush_ready_cb(self->callback, true);
         }
         self->trans_done = 1;
     }
@@ -34,6 +38,7 @@ static bool i2c_trans_done_cb(esp_lcd_panel_handle_t panel,
 
 static void i2c_tx_param_cb(void* self_in, int cmd, uint8_t *params, size_t params_len)
 {
+    mp_lcd_i2c_bus_obj_t *self = (mp_lcd_i2c_bus_obj_t *)self_in;
     esp_lcd_panel_io_tx_param(self->panel_io_handle.panel_io, cmd, params, params_len);
 }
     
@@ -72,13 +77,12 @@ static bool i2c_init_cb(void *self_in)
 }
     
     
-static void i2c_flush_cb(void *self_in, uint8_t last_update, int cmd, uint8_t *idle_fb)
+static void i2c_flush_cb(void *self_in, int cmd, uint8_t last_update, uint8_t *idle_fb)
 {
     LCD_UNUSED(last_update);
     mp_lcd_i2c_bus_obj_t *self = (mp_lcd_i2c_bus_obj_t *)self_in;
     mp_lcd_sw_rotation_buffers_t *buffers = &self->sw_rot.buffers;
 
-    
     if (idle_fb == buffers->idle) {
         buffers->idle = buffers->active;
         buffers->active = idle_fb;
@@ -87,7 +91,7 @@ static void i2c_flush_cb(void *self_in, uint8_t last_update, int cmd, uint8_t *i
     mp_lcd_err_t ret = esp_lcd_panel_io_tx_color(self->panel_io_handle.panel_io, cmd, idle_fb, self->fb1->len);
     
     if (ret != LCD_OK) {
-        mp_printf(&mp_plat_print, "esp_lcd_panel_draw_bitmap error (%d)\n", ret);
+        mp_printf(&mp_plat_print, "esp_lcd_panel_io_tx_color error (%d)\n", ret);
     }
 }
 
@@ -142,7 +146,7 @@ static mp_obj_t mp_lcd_i2c_bus_make_new(const mp_obj_type_t *type, size_t n_args
     esp_lcd_panel_io_i2c_config_t *panel_io_config = self->panel_io_config;
 
     self->bus_config = malloc(sizeof(i2c_config_t));
-    i2c_config_t *bus_config = self->bus_config
+    i2c_config_t *bus_config = self->bus_config;
 
 
     self->host = args[ARG_host].u_int;
@@ -157,7 +161,7 @@ static mp_obj_t mp_lcd_i2c_bus_make_new(const mp_obj_type_t *type, size_t n_args
     bus_config->clk_flags = I2C_SCLK_SRC_FLAG_FOR_NOMAL;
 
     panel_io_config->dev_addr = (uint32_t)args[ARG_addr].u_int;
-    panel_io_config->on_color_trans_done = bus_trans_done_cb;
+    panel_io_config->on_color_trans_done = &i2c_trans_done_cb;
     panel_io_config->user_ctx = self;
     panel_io_config->control_phase_bytes = (size_t)args[ARG_control_phase_bytes].u_int;
     panel_io_config->dc_bit_offset = (unsigned int)args[ARG_dc_bit_offset].u_int;
@@ -204,8 +208,7 @@ mp_lcd_err_t i2c_init(mp_obj_t obj, uint8_t cmd_bits, uint8_t param_bits)
 {
     mp_lcd_i2c_bus_obj_t *self = (mp_lcd_i2c_bus_obj_t *)obj;
 
-    if (self->sw_rot.data.bytes_per_pixel == 2) {
-        self->sw_rot.data.rgb565_swap = 0;
+    if (self->sw_rot.data.bytes_per_pixel != 2) self->sw_rot.data.rgb565_swap = 0;
    
     self->panel_io_config->lcd_cmd_bits = (int)cmd_bits;
     self->panel_io_config->lcd_param_bits = (int)param_bits;
@@ -216,14 +219,6 @@ mp_lcd_err_t i2c_init(mp_obj_t obj, uint8_t cmd_bits, uint8_t param_bits)
     self->sw_rot.flush_cb = &i2c_flush_cb;
     self->sw_rot.tx_params.cb = &i2c_tx_param_cb;
 
-    return LCD_OK;
-}
-
-
-mp_lcd_err_t i2c_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
-{
-    LCD_UNUSED(obj);
-    *lane_count = 1;
     return LCD_OK;
 }
 

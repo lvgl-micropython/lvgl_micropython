@@ -1,9 +1,9 @@
 // Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
-#include "common/modlcd_bus.h"
 #include "common/lcd_common_types.h"
 #include "lcd_types.h"
-#include "i2c_bus.h"
+#include "common/modlcd_bus.h"
+#include "i80_bus.h"
 
 #include "py/obj.h"
 #include "py/runtime.h"
@@ -26,5 +26,6 @@ MP_DEFINE_CONST_OBJ_TYPE(
     MP_QSTR_I80Bus,
     MP_TYPE_FLAG_NONE,
     make_new, mp_lcd_i80_bus_make_new,
+    locals_dict, (mp_obj_dict_t *)&mp_lcd_bus_locals_dict
 );
 

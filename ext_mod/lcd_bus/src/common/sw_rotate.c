@@ -8,9 +8,9 @@
 static void rotate0(uint8_t *src, uint8_t *dst, mp_lcd_sw_rotation_data_t *copy_data);
 static void rotate_8bpp(uint8_t *src, uint8_t *dst, mp_lcd_sw_rotation_data_t *copy_data);
 static void rotate_16bpp(uint16_t *src, uint16_t *dst, mp_lcd_sw_rotation_data_t *copy_data);
-static void rotate_16bpp_swap_dither(uint16_t *src, mp_lcd_sw_rotation_data_t *copy_data);
-static void rotate_16bpp_dither(uint16_t *src, mp_lcd_sw_rotation_data_t *copy_data);
-static void rotate_16bpp_swap(uint16_t *src, mp_lcd_sw_rotation_data_t *copy_data);
+static void rotate_16bpp_swap_dither(uint16_t *src, uint16_t *dst, mp_lcd_sw_rotation_data_t *copy_data);
+static void rotate_16bpp_dither(uint16_t *src, uint16_t *dst, mp_lcd_sw_rotation_data_t *copy_data);
+static void rotate_16bpp_swap(uint16_t *src, uint16_t *dst, mp_lcd_sw_rotation_data_t *copy_data);
 static void rotate_24bpp(uint8_t *src, uint8_t *dst, mp_lcd_sw_rotation_data_t *copy_data);
 static void rotate_32bpp(uint32_t *src, uint32_t *dst, mp_lcd_sw_rotation_data_t *copy_data);
 
@@ -47,26 +47,26 @@ static inline void copy_32bpp(uint32_t *from, uint32_t *to)
 
 void mp_lcd_sw_rotate(void *dst, void *src, mp_lcd_sw_rotation_data_t *copy_data)
 {
-    uint8_t rotate = copy_data->rotate;
+    uint8_t rotation = copy_data->rotation;
     uint8_t bytes_per_pixel = copy_data->bytes_per_pixel;
 
-    if (rotate == LCD_ROTATION_0) {
-        copy_data->x_start = MIN(copy_data->x_start, copy_data->dst_width);
-        copy_data->y_start = MIN(copy_data->y_start, copy_data->dst_height);
-        copy_data->x_end = MIN(copy_data->x_end, copy_data->dst_width);
-        copy_data->y_end = MIN(copy_data->y_end, copy_data->dst_height);
+    if (rotation == LCD_ROTATION_0) {
+        copy_data->x_start = LCD_MIN(copy_data->x_start, copy_data->dst_width);
+        copy_data->y_start = LCD_MIN(copy_data->y_start, copy_data->dst_height);
+        copy_data->x_end = LCD_MIN(copy_data->x_end, copy_data->dst_width);
+        copy_data->y_end = LCD_MIN(copy_data->y_end, copy_data->dst_height);
     } else {
-        y_end += 1;
-        if (rotate == LCD_ROTATION_90 || rotate == LCD_ROTATION_270) {
-            copy_data->x_start = MIN(copy_data->x_start, copy_data->dst_height);
-            copy_data->x_end = MIN(copy_data->x_end, copy_data->dst_height);
-            copy_data->y_start = MIN(copy_data->y_start, copy_data->dst_width);
-            copy_data->y_end = MIN(copy_data->y_end, copy_data->dst_width);
+       copy_data->y_end += 1;
+        if (rotation == LCD_ROTATION_90 || rotation == LCD_ROTATION_270) {
+            copy_data->x_start = LCD_MIN(copy_data->x_start, copy_data->dst_height);
+            copy_data->x_end = LCD_MIN(copy_data->x_end, copy_data->dst_height);
+            copy_data->y_start = LCD_MIN(copy_data->y_start, copy_data->dst_width);
+            copy_data->y_end = LCD_MIN(copy_data->y_end, copy_data->dst_width);
         } else {
-            copy_data->x_start = MIN(copy_data->x_start, copy_data->dst_width);
-            copy_data->x_end = MIN(copy_data->x_end, copy_data->dst_width);
-            copy_data->y_start = MIN(copy_data->y_start, copy_data->dst_height);
-            copy_data->y_end = MIN(copy_data->y_end, copy_data->dst_height);
+            copy_data->x_start = LCD_MIN(copy_data->x_start, copy_data->dst_width);
+            copy_data->x_end = LCD_MIN(copy_data->x_end, copy_data->dst_width);
+            copy_data->y_start = LCD_MIN(copy_data->y_start, copy_data->dst_height);
+            copy_data->y_end = LCD_MIN(copy_data->y_end, copy_data->dst_height);
         }
     }
 
@@ -83,7 +83,7 @@ void mp_lcd_sw_rotate(void *dst, void *src, mp_lcd_sw_rotation_data_t *copy_data
         } else {
             rotate_16bpp(src, dst, copy_data);
         }
-    } else if (rotate == LCD_ROTATION_0) {
+    } else if (rotation == LCD_ROTATION_0) {
         rotate0(src, dst, copy_data);
     } else {
         switch(bytes_per_pixel) {
@@ -95,7 +95,7 @@ void mp_lcd_sw_rotate(void *dst, void *src, mp_lcd_sw_rotation_data_t *copy_data
                 break;
             case 4:
                 rotate_32bpp(src, dst, copy_data);
-                break
+                break;
         }
     }
 }
@@ -109,7 +109,6 @@ void rotate0(uint8_t *src, uint8_t *dst, mp_lcd_sw_rotation_data_t *copy_data)
     uint32_t y_end = copy_data->y_end;
 
     uint32_t dst_width = copy_data->dst_width;
-    uint32_t dst_height = copy_data->dst_height;
 
     dst += ((y_start * dst_width + x_start) * copy_data->bytes_per_pixel);
     if(x_start == 0 && x_end == (dst_width - 1) && !copy_data->rgb565_dither) {
@@ -142,7 +141,7 @@ void rotate_8bpp(uint8_t *src, uint8_t *dst, mp_lcd_sw_rotation_data_t *copy_dat
     uint32_t src_bytes_per_line = x_end - x_start + 1;
     uint32_t offset = y_start * src_bytes_per_line + x_start;
 
-    switch (copy_data->rotate) {
+    switch (copy_data->rotation) {
         case LCD_ROTATION_90:
             for (uint32_t y = y_start; y < y_end; y++) {
                 for (uint32_t x = x_start; x < x_end; x++) {
@@ -191,7 +190,7 @@ void rotate_8bpp(uint8_t *src, uint8_t *dst, mp_lcd_sw_rotation_data_t *copy_dat
 }
 
 
-void rotate_16bpp_swap_dither(uint16_t *src, mp_lcd_sw_rotation_data_t *copy_data)
+void rotate_16bpp_swap_dither(uint16_t *src, uint16_t *dst, mp_lcd_sw_rotation_data_t *copy_data)
 {
     uint32_t x_start = copy_data->x_start;
     uint32_t y_start = copy_data->y_start;
@@ -207,17 +206,14 @@ void rotate_16bpp_swap_dither(uint16_t *src, mp_lcd_sw_rotation_data_t *copy_dat
     uint32_t src_bytes_per_line = x_end - x_start + 1;
     uint32_t offset = y_start * src_bytes_per_line + x_start;
 
-    switch (copy_data->rotate) {
+    switch (copy_data->rotation) {
         case LCD_ROTATION_0:
             for(uint32_t y = y_start; y < y_end; y++) {
                 for (uint32_t x = x_start; x < x_end; x++) {
-                    rgb565_dither_pixel(CALC_THRESHOLD(x, y), src + x);
-                    
-                    *(dst + x) = (*(src + x) << 8) | (*(src + x) >> 8);
-                    
+                    rgb565_dither_byte_swap_pixel(CALC_THRESHOLD(x, y), src + x, dst + x);
                     // copy_16bpp(src + x, dst + x);
                 }
-                dst += dst_bytes_per_line;
+                dst += dst_width;
                 src += src_bytes_per_line;
             }
             break;    
@@ -227,10 +223,7 @@ void rotate_16bpp_swap_dither(uint16_t *src, mp_lcd_sw_rotation_data_t *copy_dat
                 for (uint32_t x = x_start; x < x_end; x++) {
                     i = y * src_bytes_per_line + x - offset;
                     j = (dst_height - 1 - x) * dst_width + y;
-                    rgb565_dither_pixel(CALC_THRESHOLD(x, y), src + i);
-                    
-                    *(dst + j) = (*(src + i) << 8) | (*(src + i) >> 8);
-
+                    rgb565_dither_byte_swap_pixel(CALC_THRESHOLD(x, y), src + i, dst + j);
                     // copy_16bpp(src + i, dst + j);
                 }
             }
@@ -245,10 +238,8 @@ void rotate_16bpp_swap_dither(uint16_t *src, mp_lcd_sw_rotation_data_t *copy_dat
             for (uint32_t y = y_start; y < y_end; y++) {
                 i = (dst_height - 1 - y) * dst_width + (dst_width - 1 - x_start);
                 for (uint32_t x = x_start; x < x_end; x++) {
-                    rgb565_dither_pixel(CALC_THRESHOLD(x, y), src);
-                    
-                    *(dst + i) = (*src << 8) | (*src >> 8);
-                    
+                    rgb565_dither_byte_swap_pixel(CALC_THRESHOLD(x, y), src, dst + i);
+
                     // copy_16bpp(src, dst + i);
                     src++;
                     i--;
@@ -262,10 +253,8 @@ void rotate_16bpp_swap_dither(uint16_t *src, mp_lcd_sw_rotation_data_t *copy_dat
                 for (uint32_t x = x_start; x < x_end; x++) {
                     i = y * src_bytes_per_line + x - offset;
                     j = (x * dst_width + dst_width - 1 - y);
-                    rgb565_dither_pixel(CALC_THRESHOLD(x, y), src + i);
-                    
-                    *(dst + j) = (*(src + i) << 8) | (*(src + i) >> 8);
-                    
+                    rgb565_dither_byte_swap_pixel(CALC_THRESHOLD(x, y), src + i, dst + j);
+
                     // copy_16bpp(src + i, dst + j);
                 }
             }
@@ -281,7 +270,7 @@ void rotate_16bpp_swap_dither(uint16_t *src, mp_lcd_sw_rotation_data_t *copy_dat
 }
 
 
-void rotate_16bpp_dither(uint16_t *src, mp_lcd_sw_rotation_data_t *copy_data)
+void rotate_16bpp_dither(uint16_t *src, uint16_t *dst, mp_lcd_sw_rotation_data_t *copy_data)
 {
     uint32_t x_start = copy_data->x_start;
     uint32_t y_start = copy_data->y_start;
@@ -297,7 +286,7 @@ void rotate_16bpp_dither(uint16_t *src, mp_lcd_sw_rotation_data_t *copy_data)
     uint32_t src_bytes_per_line = x_end - x_start + 1;
     uint32_t offset = y_start * src_bytes_per_line + x_start;
 
-    switch (copy_data->rotate) {
+    switch (copy_data->rotation) {
         case LCD_ROTATION_0:
             for(uint32_t y = y_start; y < y_end; y++) {
                 for (uint32_t x = x_start; x < x_end; x++) {
@@ -305,7 +294,7 @@ void rotate_16bpp_dither(uint16_t *src, mp_lcd_sw_rotation_data_t *copy_data)
 
                     // copy_16bpp(src + x, dst + x);
                 }
-                dst += dst_bytes_per_line;
+                dst += dst_width;
                 src += src_bytes_per_line;
             }
             break;    
@@ -363,7 +352,7 @@ void rotate_16bpp_dither(uint16_t *src, mp_lcd_sw_rotation_data_t *copy_data)
 }
 
 
-void rotate_16bpp_swap(uint16_t *src, mp_lcd_sw_rotation_data_t *copy_data)
+void rotate_16bpp_swap(uint16_t *src, uint16_t *dst, mp_lcd_sw_rotation_data_t *copy_data)
 {
     uint32_t x_start = copy_data->x_start;
     uint32_t y_start = copy_data->y_start;
@@ -379,7 +368,7 @@ void rotate_16bpp_swap(uint16_t *src, mp_lcd_sw_rotation_data_t *copy_data)
     uint32_t src_bytes_per_line = x_end - x_start + 1;
     uint32_t offset = y_start * src_bytes_per_line + x_start;
 
-    switch (copy_data->rotate) {
+    switch (copy_data->rotation) {
         case LCD_ROTATION_0:
             for(uint32_t y = y_start; y < y_end; y++) {
                 for (uint32_t x = x_start; x < x_end; x++) {
@@ -387,7 +376,7 @@ void rotate_16bpp_swap(uint16_t *src, mp_lcd_sw_rotation_data_t *copy_data)
                     
                     // copy_16bpp(src + x, dst + x);
                 }
-                dst += dst_bytes_per_line;
+                dst += dst_width;
                 src += src_bytes_per_line;
             }
             break;    
@@ -447,7 +436,7 @@ void rotate_16bpp_swap(uint16_t *src, mp_lcd_sw_rotation_data_t *copy_data)
 }
 
 
-void rotate_16bpp(uint16_t *src, mp_lcd_sw_rotation_data_t *copy_data)
+void rotate_16bpp(uint16_t *src, uint16_t *dst, mp_lcd_sw_rotation_data_t *copy_data)
 {
     uint32_t x_start = copy_data->x_start;
     uint32_t y_start = copy_data->y_start;
@@ -463,7 +452,7 @@ void rotate_16bpp(uint16_t *src, mp_lcd_sw_rotation_data_t *copy_data)
     uint32_t src_bytes_per_line = x_end - x_start + 1;
     uint32_t offset = y_start * src_bytes_per_line + x_start;
 
-    switch (copy_data->rotate) {
+    switch (copy_data->rotation) {
         case LCD_ROTATION_0:
             if(x_start == 0 && x_end == (dst_width - 1)) {
                 memcpy(dst, src, dst_width * (y_end - y_start + 1) * 2);
@@ -544,7 +533,7 @@ void rotate_24bpp(uint8_t *src, uint8_t *dst, mp_lcd_sw_rotation_data_t *copy_da
     uint32_t src_bytes_per_line = (x_end - x_start + 1) * 3;
     uint32_t offset = y_start * src_bytes_per_line + x_start * 3;
 
-    switch (copy_data->rotate) {
+    switch (copy_data->rotation) {
         case LCD_ROTATION_90:
             for (uint32_t y = y_start; y < y_end; y++) {
                 for (uint32_t x = x_start; x < x_end; x++) {
@@ -610,7 +599,7 @@ void rotate_32bpp(uint32_t *src, uint32_t *dst, mp_lcd_sw_rotation_data_t *copy_
     uint32_t src_bytes_per_line = x_end - x_start + 1;
     uint32_t offset = y_start * src_bytes_per_line + x_start;
 
-    switch (copy_data->rotate) {
+    switch (copy_data->rotation) {
         case LCD_ROTATION_90:
             for (uint32_t y = y_start; y < y_end; y++) {
                 for (uint32_t x = x_start; x < x_end; x++) {

@@ -2,12 +2,13 @@
 #include <pthread.h>
 
 #include "common/lcd_common_types.h"
-#include "common/sw_rotate.h"
 #include "common/sw_rotate_task_common.h"
+#include "common/sw_rotate.h"
 #include "sw_rotate_task.h"
-
 #include "lcd_types.h"
 
+#include "py/gc.h"
+#include "py/stackctrl.h"
 
 void mp_lcd_event_init(mp_lcd_event_t *event)
 {
@@ -130,6 +131,39 @@ void mp_lcd_lock_delete(mp_lcd_lock_t *lock)
 }
 
 
+void mp_lcd_flush_ready_cb(mp_obj_t cb, bool wake)
+{
+    LCD_UNUSED(wake);
+    // Calling micropython from ISR
+    // See: https://github.com/micropython/micropython/issues/4895
+    void *old_state = mp_thread_get_state();
+    int stack_top;
+
+    mp_state_thread_t ts; // local thread state for the ISR
+    mp_thread_set_state(&ts);
+    mp_stack_set_top((void *) &stack_top); // need to include in root-pointer scan
+    mp_stack_set_limit(2 * 8192); // tune based on ISR thread stack size
+    mp_locals_set(mp_state_ctx.thread.dict_locals); // use main thread's locals
+    mp_globals_set(mp_state_ctx.thread.dict_globals); // use main thread's globals
+
+    mp_sched_lock(); // prevent VM from switching to another MicroPython thread
+    gc_lock(); // prevent memory allocation
+
+    nlr_buf_t nlr;
+    if (nlr_push(&nlr) == 0) {
+        mp_call_function_n_kw(cb, 0, 0, NULL);
+        nlr_pop();
+    } else {
+        mp_obj_print_exception(&mp_plat_print, MP_OBJ_FROM_PTR(nlr.ret_val));  // changed to &mp_plat_print to fit this context
+    }
+
+    gc_unlock();
+    mp_sched_unlock();
+
+    mp_thread_set_state(old_state);
+}
+
+
 static void* sw_rotate_task(void* self_in)
 {
     mp_lcd_sw_rotate_task(self_in);
@@ -139,7 +173,7 @@ static void* sw_rotate_task(void* self_in)
 
 bool mp_lcd_start_rotate_task(void *self_in)
 {
-    mp_lcd_obj_t *self = (mp_lcd_obj_t *)self_in;
+    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)self_in;
 
     pthread_attr_t attr;
     pthread_attr_init(&attr);

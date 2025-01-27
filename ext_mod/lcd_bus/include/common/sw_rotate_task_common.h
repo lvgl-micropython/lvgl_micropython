@@ -1,5 +1,8 @@
 #include "sw_rotate_task.h"
 
+#include "py/obj.h"
+
+
 #ifndef __SW_ROTATE_TASK_COMMON_H__
     #define __SW_ROTATE_TASK_COMMON_H__
 
@@ -26,6 +29,7 @@
 
 
     bool mp_lcd_start_rotate_task(void *self_in);
-    void mp_lcd_sw_rotate_task(void *self_in)
+    void mp_lcd_sw_rotate_task(void *self_in);
+    void mp_lcd_flush_ready_cb(mp_obj_t callback, bool wake);
 
 #endif /* __SW_ROTATE_TASK_COMMON_H__ */

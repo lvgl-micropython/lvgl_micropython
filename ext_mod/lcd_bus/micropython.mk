@@ -37,7 +37,6 @@ ifneq (,$(findstring unix, $(LV_PORT)))
     SRC_USERMOD_C += $(MOD_DIR)/src/posix/i80_bus.c
     SRC_USERMOD_C += $(MOD_DIR)/src/posix/rgb_bus.c
     SRC_USERMOD_C += $(MOD_DIR)/src/posix/lcd_bus_utils.c
-    SRC_USERMOD_C += $(MOD_DIR)/src/posix/lcd_types.c
     SRC_USERMOD_C += $(MOD_DIR)/src/posix/sw_rotate_task.c
     SRC_USERMOD_C += $(MOD_DIR)/src/posix/sdl_bus.c
 else
@@ -56,7 +55,6 @@ else
 		SRC_USERMOD_C += $(MOD_DIR)/src/posix/i80_bus.c
 		SRC_USERMOD_C += $(MOD_DIR)/src/posix/rgb_bus.c
 		SRC_USERMOD_C += $(MOD_DIR)/src/posix/lcd_bus_utils.c
-		SRC_USERMOD_C += $(MOD_DIR)/src/posix/lcd_types.c
 		SRC_USERMOD_C += $(MOD_DIR)/src/posix/sw_rotate_task.c
 		SRC_USERMOD_C += $(MOD_DIR)/src/posix/sdl_bus.c
 	else
@@ -67,7 +65,6 @@ else
 		SRC_USERMOD_C += $(MOD_DIR)/src/other_mcus/i80_bus.c
 		SRC_USERMOD_C += $(MOD_DIR)/src/other_mcus/rgb_bus.c
 		SRC_USERMOD_C += $(MOD_DIR)/src/other_mcus/lcd_bus_utils.c
-		SRC_USERMOD_C += $(MOD_DIR)/src/other_mcus/lcd_types.c
 		SRC_USERMOD_C += $(MOD_DIR)/src/other_mcus/sw_rotate_task.c
 		SRC_USERMOD_C += $(MOD_DIR)/src/other_mcus/sdl_bus.c
     endif

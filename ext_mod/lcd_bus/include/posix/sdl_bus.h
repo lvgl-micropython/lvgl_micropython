@@ -2,9 +2,6 @@
 
 #include "py/obj.h"
 
-
-#ifdef MP_PORT_UNIX
-
 #ifndef _SDL_BUS_H
     #define _SDL_BUS_H
 
@@ -14,6 +11,9 @@
     #include "SDL_thread.h"
 
     #include "common/lcd_common_types.h"
+    #include "common/sw_rotate_task_common.h"
+    #include "common/sw_rotate.h"
+    #include "lcd_types.h"
 
 
     typedef struct {
@@ -23,7 +23,19 @@
     } pointer_event_t;
 
     struct _mp_lcd_sdl_bus_obj_t {
-        struct _mp_lcd_bus_obj_t;
+        mp_obj_base_t base;
+        lcd_panel_io_t panel_io_handle;
+
+        mp_obj_t callback;
+
+        mp_lcd_framebuf_t *fb1;
+        mp_lcd_framebuf_t *fb2;
+
+        uint8_t trans_done: 1;
+        uint8_t sw_rotate: 1;
+        uint8_t lanes: 5;
+
+        mp_lcd_sw_rotation_t sw_rot;
 
         uint16_t width;
         uint16_t height;
@@ -43,8 +55,7 @@
         bool ignore_size_chg;
         bool inited;
 
-        mp_lcd_sdl_bus_obj_t* prev_instance
+        mp_lcd_sdl_bus_obj_t* prev_instance;
     };
 
 #endif /* _SDL_BUS_H */
-#endif /* MP_PORT_UNIX */

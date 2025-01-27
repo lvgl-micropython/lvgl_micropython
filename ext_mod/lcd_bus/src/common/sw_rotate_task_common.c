@@ -3,6 +3,7 @@
 #include "common/sw_rotate_task_common.h"
 #include "sw_rotate_task.h"
 #include "common/sw_rotate.h"
+#include "common/lcd_bus_utils.h"
 
 #include "lcd_types.h"
 
@@ -30,6 +31,7 @@ void mp_lcd_sw_rotate_task(void *self_in)
     uint8_t count = 0;
     mp_lcd_sw_rotate_tx_param_t param;
     uint8_t dither = data->rgb565_dither;
+    int cmd;
 
     mp_lcd_lock_acquire(&handles->copy_lock);
 
@@ -40,12 +42,12 @@ void mp_lcd_sw_rotate_task(void *self_in)
     while (!exit) {
         mp_lcd_lock_acquire(&handles->copy_lock);
 
-        if (tx_params->tx_param_cb != NULL) {
-            mp_lcd_lock_acquire(&tx_params->lock)
+        if (tx_params->cb != NULL) {
+            mp_lcd_lock_acquire(&tx_params->lock);
             count = 0;
             while (tx_params->len) {
                 param = tx_params->params[count];
-                tx_params->tx_param_cb(self_in, param.cmd, param.params, param.params_len);
+                tx_params->cb(self_in, param.cmd, param.params, param.params_len);
                 tx_params->len--;
                 count++;
                 if (param.flush_next) break;
@@ -83,27 +85,29 @@ void mp_lcd_sw_rotate_task(void *self_in)
                 }
             }
 
-            if (self->sw_rotate || dither || data->rgb565_swap) {
-                last_update = data->last_update;
+            cmd = data->cmd;
+            last_update = data->last_update;
 
+            if (self->sw_rotate || dither || data->rgb565_swap) {
                 idle_fb = buffers->idle;
 
                 mp_lcd_sw_rotate((void *)idle_fb, (void *)buffers->partial, data);
                 self->trans_done = 1;
 
                 mp_lcd_lock_release(&handles->tx_color_lock);
-                if (self->callback != mp_const_none) flush_ready_cb(self->callback);
-
-                sw_rot->flush_cb(self_in, last_update, idle_fb);
+                if (self->callback != mp_const_none) mp_lcd_flush_ready_cb(self->callback, false);
             } else {
+                idle_fb = buffers->partial;
                 self->trans_done = 0;
                 mp_lcd_lock_release(&handles->tx_color_lock);
-                sw_rot->flush_cb(self_in, last_update, buffers->partial);
             }
+
+            sw_rot->flush_cb(self_in, cmd, last_update, idle_fb);
         }
 
         exit = mp_lcd_event_isset(&handles->copy_task_exit);
     }
+    mp_lcd_lock_release(&handles->copy_lock);
 
     LCD_DEBUG_PRINT(&mp_plat_print, "mp_lcd_sw_rotate_task - STOPPED\n")
 }

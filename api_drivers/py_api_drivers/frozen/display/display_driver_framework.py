@@ -46,10 +46,10 @@ class DisplayDriver:
     _INVOFF = 0x20
 
     _ORIENTATION_TABLE = (
-        _MADCTL_MX,
+        0x0,
         _MADCTL_MV,
-        _MADCTL_MY,
-        _MADCTL_MY | _MADCTL_MX | _MADCTL_MV
+        _MADCTL_MX | _MADCTL_MY,
+        _MADCTL_MV | _MADCTL_MX | _MADCTL_MY
     )
 
     _displays = []

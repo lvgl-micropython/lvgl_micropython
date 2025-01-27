@@ -25,8 +25,8 @@ if(ESP_PLATFORM)
         ${CMAKE_CURRENT_LIST_DIR}/src/esp32/spi_bus.c
         ${CMAKE_CURRENT_LIST_DIR}/src/esp32/i80_bus.c
         ${CMAKE_CURRENT_LIST_DIR}/src/esp32/rgb_bus.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/esp32/sdl_bus.c
         ${CMAKE_CURRENT_LIST_DIR}/src/esp32/lcd_bus_utils.c
-        ${CMAKE_CURRENT_LIST_DIR}/src/esp32/lcd_types.c
         ${CMAKE_CURRENT_LIST_DIR}/src/esp32/sw_rotate_task.c
     )
 

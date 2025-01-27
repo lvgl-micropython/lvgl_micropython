@@ -25,17 +25,19 @@
 
 
     mp_lcd_err_t i80_del(mp_obj_t obj);
-    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
+    mp_lcd_err_t i80_init(mp_obj_t obj, uint8_t cmd_bits, uint8_t param_bits);
 
-    
-    static bool i80_trans_done_cb(esp_lcd_panel_handle_t panel,
-                            const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
+
+    static bool i80_trans_done_cb(esp_lcd_panel_io_handle_t panel,
+                            esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
     {
+        LCD_UNUSED(panel);
+        LCD_UNUSED(edata);
         mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)user_ctx;
     
         if (self->trans_done == 0) {
             if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
-                mp_lcd_flush_ready_cb(self->callback);
+                mp_lcd_flush_ready_cb(self->callback, true);
             }
             self->trans_done = 1;
         }
@@ -46,6 +48,7 @@
 
     static void i80_tx_param_cb(void* self_in, int cmd, uint8_t *params, size_t params_len)
     {
+        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)self_in;
         esp_lcd_panel_io_tx_param(self->panel_io_handle.panel_io, cmd, params, params_len);
     }
     
@@ -53,7 +56,6 @@
     static bool i80_init_cb(void *self_in)
     {
         mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)self_in;
-
         mp_lcd_sw_rotation_init_t *init = &self->sw_rot.init;
 
         init->err = esp_lcd_new_i80_bus(self->bus_config, &self->bus_handle);
@@ -79,7 +81,7 @@
     }
     
     
-    static void i80_flush_cb(void *self_in, uint8_t last_update, int cmd, uint8_t *idle_fb)
+    static void i80_flush_cb(void *self_in, int cmd, uint8_t last_update, uint8_t *idle_fb)
     {
         LCD_UNUSED(last_update);
         mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)self_in;
@@ -184,7 +186,7 @@
         esp_lcd_panel_io_i80_config_t *panel_io_config = self->panel_io_config;
         
         self->bus_config = malloc(sizeof(esp_lcd_i80_bus_config_t));
-        esp_lcd_i80_bus_config_t *bus_config = self->bus_config
+        esp_lcd_i80_bus_config_t *bus_config = self->bus_config;
 
         bus_config->dc_gpio_num = (int)args[ARG_dc].u_int;
         bus_config->wr_gpio_num = (int)args[ARG_wr].u_int;
@@ -219,7 +221,7 @@
         panel_io_config->cs_gpio_num = (int)args[ARG_cs].u_int;
         panel_io_config->pclk_hz = (uint32_t)args[ARG_freq].u_int;
         panel_io_config->trans_queue_depth = 5;
-        panel_io_config->on_color_trans_done = &bus_trans_done_cb;
+        panel_io_config->on_color_trans_done = &i80_trans_done_cb;
         panel_io_config->user_ctx = self;
         panel_io_config->dc_levels.dc_idle_level = (unsigned int)args[ARG_dc_idle_high].u_bool;
         panel_io_config->dc_levels.dc_cmd_level = (unsigned int)args[ARG_dc_cmd_high].u_bool;

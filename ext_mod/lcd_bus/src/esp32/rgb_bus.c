@@ -21,6 +21,8 @@
     #include "lcd_types.h"
     #include "rgb_bus.h"
 
+    #include <string.h>
+
 
     mp_lcd_err_t rgb_del(mp_obj_t obj);
     mp_lcd_err_t rgb_init(mp_obj_t obj, uint8_t cmd_bits, uint8_t param_bits);
@@ -109,7 +111,7 @@
     }
 
 
-    static void rgb_flush_cb(void *self_in, uint8_t last_update, int cmd, uint8_t *idle_fb)
+    static void rgb_flush_cb(void *self_in, int cmd, uint8_t last_update, uint8_t *idle_fb)
     {
         LCD_UNUSED(cmd);
 
@@ -242,7 +244,7 @@
             .flags.de_idle_high = (uint32_t)args[ARG_de_idle_high].u_bool,
             .flags.pclk_active_neg = (uint32_t)args[ARG_pclk_active_low].u_bool,
             .flags.pclk_idle_high = (uint32_t)args[ARG_pclk_idle_high].u_bool
-        }
+        };
 
         panel_io_config->clk_src = LCD_CLK_SRC_PLL160M;
         panel_io_config->timings = timings;
@@ -323,11 +325,7 @@
         LCD_DEBUG_PRINT("double_fb=%d\n", panel_io_config->flags.double_fb)
         LCD_DEBUG_PRINT("data_width=%d\n", panel_io_config->data_width)
 
-        self->panel_io_handle.get_lane_count = &rgb_get_lane_count;
         self->panel_io_handle.del = &rgb_del;
-        self->panel_io_handle.rx_param = &rgb_rx_param;
-        self->panel_io_handle.tx_param = &rgb_tx_param;
-        self->panel_io_handle.tx_color = &rgb_tx_color;
         self->panel_io_handle.init = &rgb_init;
 
         return MP_OBJ_FROM_PTR(self);
@@ -358,8 +356,6 @@
     {
         LCD_UNUSED(cmd_bits);
         LCD_UNUSED(param_bits);
-        LCD_UNUSED(sw_rotate);
-
 
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
 
@@ -410,7 +406,7 @@
         mp_lcd_rgb_bus_type,
         MP_QSTR_RGBBus,
         MP_TYPE_FLAG_NONE,
-        make_new, mp_lcd_rgb_bus_make_new,
+        make_new, rgb_make_new,
         locals_dict, (mp_obj_dict_t *)&mp_lcd_bus_locals_dict
     );
 

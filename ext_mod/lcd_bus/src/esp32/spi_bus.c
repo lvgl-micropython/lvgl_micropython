@@ -68,18 +68,22 @@ void spi_deinit_callback(mp_machine_hw_spi_device_obj_t *device);
 
 static void spi_tx_param_cb(void* self_in, int cmd, uint8_t *params, size_t params_len)
 {
+    mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)self_in;
     esp_lcd_panel_io_tx_param(self->panel_io_handle.panel_io, cmd, params, params_len);
 }
 
 
-static bool spi_trans_done_cb(esp_lcd_panel_handle_t panel,
-                        const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
+static bool spi_trans_done_cb(esp_lcd_panel_io_handle_t panel,
+                              esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
 {
+    LCD_UNUSED(panel);
+    LCD_UNUSED(edata);
+
     mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)user_ctx;
 
     if (self->trans_done == 0) {
         if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
-            mp_lcd_flush_ready_cb(self->callback);
+            mp_lcd_flush_ready_cb(self->callback, true);
         }
         self->trans_done = 1;
     }
@@ -106,7 +110,7 @@ static bool spi_init_cb(void *self_in)
 }
 
 
-static void spi_flush_cb(void *self_in, uint8_t last_update, int cmd, uint8_t *idle_fb)
+static void spi_flush_cb(void *self_in, int cmd, uint8_t last_update, uint8_t *idle_fb)
 {
     LCD_UNUSED(last_update);
     mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)self_in;
@@ -174,8 +178,6 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     self->panel_io_config = malloc(sizeof(esp_lcd_panel_io_spi_config_t));
     esp_lcd_panel_io_spi_config_t *panel_io_config = self->panel_io_config;
 
-    self->bus_config = malloc(sizeof(spi_bus_config_t));
-    spi_bus_config_t *bus_config = self->bus_config;
 
     self->callback = mp_const_none;
 
@@ -187,7 +189,7 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     panel_io_config->dc_gpio_num = (int)args[ARG_dc].u_int;
     panel_io_config->spi_mode = (int)args[ARG_spi_mode].u_int;
     panel_io_config->pclk_hz = (unsigned int)args[ARG_freq].u_int;
-    panel_io_config->on_color_trans_done = &bus_trans_done_cb;
+    panel_io_config->on_color_trans_done = &spi_trans_done_cb;
     panel_io_config->user_ctx = self;
     panel_io_config->flags.dc_low_on_data = (unsigned int)args[ARG_dc_low_on_data].u_bool;
     panel_io_config->flags.lsb_first = (unsigned int)args[ARG_lsb_first].u_bool;
@@ -251,21 +253,6 @@ mp_lcd_err_t spi_del(mp_obj_t obj)
         }
 
         self->panel_io_handle.panel_io = NULL;
-
-        uint8_t i= 0;
-        for (;i<spi_bus_count;i++) {
-            if (spi_bus_objs[i] == self) {
-                spi_bus_objs[i] = NULL;
-                break;
-            }
-        }
-
-        for (uint8_t j=i + 1;j<spi_bus_count;j++) {
-            spi_bus_objs[j - i + 1] = spi_bus_objs[j];
-        }
-
-        spi_bus_count--;
-        spi_bus_objs = m_realloc(spi_bus_objs, spi_bus_count * sizeof(mp_lcd_spi_bus_obj_t *));
 
         mp_machine_hw_spi_bus_remove_device(&self->spi_device);
         self->spi_device.active = false;
