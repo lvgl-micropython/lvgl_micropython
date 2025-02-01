@@ -63,35 +63,9 @@ class DisplayDriver:
     _backup_set_memory_location: Optional[Callable] = ...
     _rotation: int = ...
     _spi_3wire: spi3wire.Spi3Wire | None = ...
+    _spi_3wire_shared_pins: bool = ...
     _sw_rotate: bool = ...
     _rgb565_dither: bool = ...
-
-    # Default values of "power" and "backlight" are reversed logic! 0 means ON.
-    # You can change this by setting backlight_on and power_on arguments.
-    #
-    # For the ESP32 the allocation of the frame buffers can be done one of 2
-    # ways depending on what is wanted in terms of performance VS memory use
-    # If a single frame buffer is used then using a DMA transfer is pointless
-    # to do. The frame buffer in this casse can be allocated as simple as
-    #
-    # buf = bytearray(buffer_size)
-    #
-    # If the user wants to be able to specify if the frame buffer is to be
-    # created in internal memory (SRAM) or in external memory (PSRAM/SPIRAM)
-    # this can be done using the heap_caps module.
-    #
-    # internal memory:
-    # buf = heap_caps.malloc(buffer_size, heap_caps.CAP_INTERNAL)
-    #
-    # external memory:
-    # buf = heap_caps.malloc(buffer_size, heap_caps.CAP_SPIRAM)
-    #
-    # If wanting to use DMA memory then use the bitwise OR "|" operator to add
-    # the DMA flag to the last parameter of the malloc function
-    #
-    # buf = heap_caps.malloc(
-    #     buffer_size, heap_caps.CAP_INTERNAL | heap_caps.CAP_DMA
-    # )
 
     @staticmethod
     def get_default() -> "DisplayDriver":
@@ -120,6 +94,7 @@ class DisplayDriver:
         color_space: int = lv.COLOR_FORMAT.RGB888,  # NOQA
         rgb565_byte_swap: bool = False,
         spi_3wire: spi3wire.Spi3Wire | None = None,
+        spi_3wire_shared_pins: bool = False,
         _cmd_bits: int = 8,
         _param_bits: int = 8,
         _init_bus: bool = True,
@@ -286,22 +261,11 @@ class DisplayDriver:
     def _dummy_set_memory_location(self, *_, **__) -> int:  # NOQA
         ...
 
-    # this function is handeled in the viper code emitter. This will
-    # increase the performance to near C code execution times. While this is
-    # not really heavy lifting in terms of work being done every cycle counts
-    # and it adds up over time. Need to keep things running as fast as possible.
-
     def _set_memory_location(self, x1: int, y1: int, x2: int, y2: int) -> int:
         ...
 
     def _flush_cb(self, disp: lv.display_driver_t, area: lv.area_t, color_p: lv.CArray) -> None:  # NOQA
         ...
-
-    # we always register this callback no matter what. This is what tells LVGL
-    # that the buffer is able to be written to. If this callback doesn't get
-    # registered then the flush function is going to block until the buffer
-    # gets emptied. Everything is handeled internally in the bus driver if
-    # using DMA and double buffer or a single buffer.
 
     def _flush_ready_cb(self, *param) -> None:
         ...

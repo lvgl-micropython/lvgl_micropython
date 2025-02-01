@@ -1,7 +1,7 @@
 import os
 
 try:
-    import tomlib as toml
+    import tomllib as toml
 except ImportError:
     try:
         import toml
@@ -241,7 +241,7 @@ io_expanders = [file[:-3] for file in os.listdir(io_expander_path) if file.endsw
 def run(toml_path, output_file):
 
     if not os.path.exists(toml_path):
-        raise RuntimeError(f'inable to locate .toml ({toml_path})')
+        raise RuntimeError(f'Unable to locate .toml ({toml_path})')
 
     try:
         with open(toml_path, 'r') as f:

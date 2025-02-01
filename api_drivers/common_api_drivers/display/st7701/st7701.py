@@ -4,15 +4,15 @@ from micropython import const  # NOQA
 
 import lvgl as lv  # NOQA
 import lcd_bus  # NOQA
-import rgb_display_framework  # NOQA
+import display_driver_framework  # NOQA
 
 
-STATE_HIGH = rgb_display_framework.STATE_HIGH
-STATE_LOW = rgb_display_framework.STATE_LOW
-STATE_PWM = rgb_display_framework.STATE_PWM
+STATE_HIGH = display_driver_framework.STATE_HIGH
+STATE_LOW = display_driver_framework.STATE_LOW
+STATE_PWM = display_driver_framework.STATE_PWM
 
-BYTE_ORDER_RGB = rgb_display_framework.BYTE_ORDER_RGB
-BYTE_ORDER_BGR = rgb_display_framework.BYTE_ORDER_BGR
+BYTE_ORDER_RGB = display_driver_framework.BYTE_ORDER_RGB
+BYTE_ORDER_BGR = display_driver_framework.BYTE_ORDER_BGR
 
 # SET _CND2BKxSEL TO 0X00
 _Command1 = const(0x00)
@@ -159,7 +159,7 @@ TYPE_HD371001C40 = 15
 TYPE_HD458002C40 = 16
 
 
-class ST7701(rgb_display_framework.RGBDisplayDriver):
+class ST7701(display_driver_framework.DisplayDriver):
     _INVOFF = 0x20  # Color Inversion Off
     _INVON = 0x21  # Color Inversion On
 

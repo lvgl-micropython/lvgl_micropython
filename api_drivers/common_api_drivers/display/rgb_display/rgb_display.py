@@ -1,18 +1,18 @@
 # Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
-import rgb_display_framework  # NOQA
+import display_driver_framework  # NOQA
 import lvgl as lv
 
 
-STATE_HIGH = rgb_display_framework.STATE_HIGH
-STATE_LOW = rgb_display_framework.STATE_LOW
-STATE_PWM = rgb_display_framework.STATE_PWM
+STATE_HIGH = display_driver_framework.STATE_HIGH
+STATE_LOW = display_driver_framework.STATE_LOW
+STATE_PWM = display_driver_framework.STATE_PWM
 
-BYTE_ORDER_RGB = rgb_display_framework.BYTE_ORDER_RGB
-BYTE_ORDER_BGR = rgb_display_framework.BYTE_ORDER_BGR
+BYTE_ORDER_RGB = display_driver_framework.BYTE_ORDER_RGB
+BYTE_ORDER_BGR = display_driver_framework.BYTE_ORDER_BGR
 
 
-class RGBDisplay(rgb_display_framework.RGBDisplayDriver):
+class RGBDisplay(display_driver_framework.DisplayDriver):
 
     def __init__(
         self,
@@ -60,4 +60,4 @@ class RGBDisplay(rgb_display_framework.RGBDisplayDriver):
         )
 
     def init(self):
-        rgb_display_framework.RGBDisplayDriver.init(self, None)
+        display_driver_framework.DisplayDriver.init(self, None)

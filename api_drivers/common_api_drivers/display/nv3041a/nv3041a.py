@@ -1,7 +1,6 @@
 # Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
 import display_driver_framework
-import rgb_display_framework  # NOQA
 from micropython import const  # NOQA
 import lcd_bus
 import lvgl as lv
@@ -33,7 +32,7 @@ _RAMWRC = const(0x3C)
 _MADCTL = const(0x36)
 
 
-class NV3041A_RGB(rgb_display_framework.RGBDisplayDriver):
+class NV3041A_RGB(display_driver_framework.DisplayDriver):
     pass
 
 
