@@ -1,0 +1,6 @@
+{
+    "mcu": "esp32s3",
+    "product": "Custom ESP32-S3 display board",
+    "url": "https://www.come_manufacturer.com/board.html",
+    "vendor": "Vendor name of board"
+}

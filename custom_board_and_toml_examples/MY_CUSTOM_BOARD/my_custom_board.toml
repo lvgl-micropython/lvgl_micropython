@@ -1,0 +1,59 @@
+
+[MCU.esp32]
+BOARD = "MY_CUSTOM_BOARD"
+
+
+[I80Bus.display_bus]
+data0 = 9
+data1 = 46
+data2 = 3
+data3 = 8
+data4 = 18
+data5 = 17
+data6 = 16
+data7 = 15
+dc = 0
+wr = 47
+cs = -1
+freq = 20000000
+
+
+[I2C.Bus.i2c_bus]
+host = 0
+scl = 5
+sda = 6
+freq = 100000
+
+
+[I2C.Device.indev_device]
+bus = "i2c_bus"
+dev_id = "ft6x36.I2C_ADDR"
+reg_bits = "ft6x36.BITS"
+
+
+[ST7796.display]
+data_bus = "display_bus"
+display_width = 320
+display_height = 480
+backlight_pin = 45
+color_byte_order = "st7789.BYTE_ORDER_BGR"
+color_space = "lv.COLOR_FORMAT.RGB565"
+rgb565_byte_swap = true
+
+[ST7796.display.init]
+params = []
+
+[FT6x36.indev]
+device = "indev_device"
+
+[display.set_color_inversion]
+params = [true]
+
+[display.set_rotation]
+params = ["lv.DISPLAY_ROTATION._90"]
+
+[display.set_backlight]
+params = [100]
+
+[task_handler.TaskHandler]
+params=[]

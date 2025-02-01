@@ -4,6 +4,7 @@
 import os
 import sys
 import builder
+import shutil
 
 from argparse import ArgumentParser
 
@@ -13,19 +14,43 @@ if sys.platform.startswith('win'):
 SCRIPT_DIR = os.path.abspath(os.path.dirname(sys.argv[0]))
 MPY_DIR = os.path.join(SCRIPT_DIR, 'micropython')
 
-argParser = ArgumentParser(prefix_chars='T')
+
+argParser = ArgumentParser(prefix_chars='-')
 argParser.add_argument(
-    'TOML',
+    '--custom-board-path',
+    dest='custom_board_path',
+    default=None,
+    action='store'
+)
+args, extra_args = argParser.parse_known_args(sys.argv[1:])
+
+custom_board_path = args.custom_board_path
+
+if custom_board_path is not None:
+    if not os.path.exists(custom_board_path):
+        raise RuntimeError(
+            'Supplied custom board path does not exist.'
+        )
+
+    for file in os.listdir(custom_board_path):
+        if file.endswith('.toml'):
+            extra_args.insert(0, f'--toml={os.path.join(custom_board_path, file)}')
+            break
+
+
+argParser = ArgumentParser(prefix_chars='-')
+argParser.add_argument(
+    '--toml',
     dest='toml',
     help='use a toml file to setup the build.',
     action='store',
     default=None
 )
-toml_args, extra_args = argParser.parse_known_args(sys.argv[1:])
+args, extra_args = argParser.parse_known_args(extra_args)
 
 
-if toml_args.toml is not None:
-    toml_path = toml_args.toml
+if args.toml is not None:
+    toml_path = args.toml
     build_path = os.path.join(SCRIPT_DIR, 'build')
     if not os.path.exists(build_path):
         os.mkdir(build_path)
@@ -154,6 +179,15 @@ displays = args2.displays
 indevs = args2.indevs
 expanders = args2.expanders
 builder.DO_NOT_SCRUB_BUILD_FOLDER = args2.no_scrub
+
+
+if custom_board_path is not None:
+    board_name = os.path.split(custom_board_path)[-1]
+    dst_path = f'lib/micropython/ports/{target}/boards/{board_name}'
+    shutil.copytree(custom_board_path, dst_path)
+
+    if board is None or board != board_name:
+        board = board_name
 
 
 if lv_cflags is None:
