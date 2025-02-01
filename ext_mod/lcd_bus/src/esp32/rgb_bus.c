@@ -74,6 +74,10 @@
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)self_in;
         mp_lcd_sw_rotation_init_t *init = &self->sw_rot.init;
 
+        free(self->sw_rot.data.buffers.active);
+        self->sw_rot.data.buffers.active = NULL;
+        self->sw_rot.data.buffers.idle = NULL;
+
         esp_lcd_rgb_panel_event_callbacks_t callbacks = { .on_vsync = rgb_trans_done_cb };
 
         init->err = esp_lcd_new_rgb_panel(self->panel_io_config, &self->panel_handle);
@@ -392,6 +396,11 @@
 
         self->panel_io_config->flags.fb_in_psram = 1;
         self->panel_io_config->flags.double_fb = 1;
+
+
+        uint8_t *tmp_buf = (uint8_t *)malloc(1);
+        self->sw_rot.data.buffers.active = tmp_buf;
+        self->sw_rot.data.buffers.idle = tmp_buf;
 
         LCD_DEBUG_PRINT("h_res=%lu\n", self->panel_io_config->timings.h_res)
         LCD_DEBUG_PRINT("v_res=%lu\n", self->panel_io_config->timings.v_res)
