@@ -134,19 +134,20 @@ static mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_
         return mp_const_none;
     }
 
-    if (mp_lcd_start_rotate_task(self)) {
-        if ((self->sw_rotate || self->sw_rot.data.rgb565_swap) && self->sw_rot.buffers.active == NULL) {
-            ret = mp_lcd_allocate_rotation_buffers(self);
-            if (ret == LCD_ERR_NO_MEM) {
-                mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("Not enough memory to allocate frame buffers"));
-                return mp_const_none;
-            }
+    if ((self->sw_rotate || self->sw_rot.data.rgb565_swap) && self->sw_rot.buffers.active == NULL) {
+        ret = mp_lcd_allocate_rotation_buffers(self);
+        if (ret == LCD_ERR_NO_MEM) {
+            mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("Not enough memory to allocate frame buffers"));
+            return mp_const_none;
         }
     }
 
-    running_bus_count += 1;
-    running_busses = realloc(running_busses, running_bus_count * (sizeof(mp_lcd_bus_obj_t *)));
-    running_busses[running_bus_count - 1] = self;
+    if (mp_lcd_start_rotate_task(self)) {
+        LCD_DEBUG_PRINT("mp_lcd_sw_rotate_task, running...\n")
+        running_bus_count += 1;
+        running_busses = realloc(running_busses, running_bus_count * (sizeof(mp_lcd_bus_obj_t *)));
+        running_busses[running_bus_count - 1] = self;
+    }
 
     return mp_const_none;
 }
@@ -191,7 +192,10 @@ static mp_obj_t mp_lcd_bus_tx_param(size_t n_args, const mp_obj_t *pos_args, mp_
         mp_get_buffer_raise(args[ARG_params].u_obj, &bufinfo, MP_BUFFER_READ);
 
         tx_params->params[tx_params->len - 1].cmd = (int)args[ARG_cmd].u_int;
-        tx_params->params[tx_params->len - 1].params = (uint8_t *)bufinfo.buf;
+
+        tx_params->params[tx_params->len - 1].params = (uint8_t *)malloc(bufinfo.len);
+        memcpy(tx_params->params[tx_params->len - 1].params, bufinfo.buf, bufinfo.len);
+
         tx_params->params[tx_params->len - 1].params_len = (size_t)bufinfo.len;
         tx_params->params[tx_params->len - 1].flush_next = (bool)args[ARG_flush_next].u_bool;
     } else {

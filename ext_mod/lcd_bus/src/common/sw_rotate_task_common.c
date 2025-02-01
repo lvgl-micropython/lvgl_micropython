@@ -20,11 +20,14 @@ void mp_lcd_sw_rotate_task(void *self_in)
     mp_lcd_sw_rotation_handles_t *handles = &sw_rot->handles;
     mp_lcd_sw_rotate_tx_params_t *tx_params = &sw_rot->tx_params;
     mp_lcd_sw_rotation_init_t *init = &sw_rot->init;
+    LCD_DEBUG_PRINT("mp_lcd_sw_rotate_task - starting bus init\n")
+
 
     if (!init->cb(self_in)) {
         mp_lcd_lock_release(&handles->init_lock);
         return;
     }
+    LCD_DEBUG_PRINT("mp_lcd_sw_rotate_task - finished bus init\n")
 
     uint8_t *idle_fb;
     uint8_t last_update;
