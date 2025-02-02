@@ -21,7 +21,6 @@ void mp_lcd_sw_rotate_task(void *self_in)
     mp_lcd_sw_rotate_tx_params_t *tx_params = &sw_rot->tx_params;
     mp_lcd_sw_rotation_init_t *init = &sw_rot->init;
 
-
     LCD_DEBUG_PRINT("mp_lcd_sw_rotate_task - starting bus init\n")
     if (!init->cb(self_in)) {
         LCD_DEBUG_PRINT(init->err_msg, init->err)
