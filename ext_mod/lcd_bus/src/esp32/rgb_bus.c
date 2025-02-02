@@ -80,24 +80,29 @@
 
         esp_lcd_rgb_panel_event_callbacks_t callbacks = { .on_vsync = rgb_trans_done_cb };
 
+        LCD_DEBUG_PRINT("esp_lcd_new_rgb_panel\n")
+
         init->err = esp_lcd_new_rgb_panel(self->panel_io_config, &self->panel_handle);
         if (init->err != 0) {
             init->err_msg = MP_ERROR_TEXT("%d(esp_lcd_new_rgb_panel)");
             return false;
         }
 
+        LCD_DEBUG_PRINT("esp_lcd_rgb_panel_register_event_callbacks\n")
         init->err = esp_lcd_rgb_panel_register_event_callbacks(self->panel_handle, &callbacks, self);
         if (init->err != 0) {
             init->err_msg = MP_ERROR_TEXT("%d(esp_lcd_rgb_panel_register_event_callbacks)");
             return false;
         }
 
+        LCD_DEBUG_PRINT("esp_lcd_panel_reset\n")
         init->err = esp_lcd_panel_reset(self->panel_handle);
         if (self->sw_rot.init.err != 0) {
             init->err_msg = MP_ERROR_TEXT("%d(esp_lcd_panel_reset)");
             return false;
         }
 
+        LCD_DEBUG_PRINT("esp_lcd_panel_init\n")
         init->err = esp_lcd_panel_init(self->panel_handle);
         if (init->err != 0) {
             init->err_msg = MP_ERROR_TEXT("%d(esp_lcd_panel_init)");
