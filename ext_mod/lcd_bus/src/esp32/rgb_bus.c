@@ -74,9 +74,9 @@
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)self_in;
         mp_lcd_sw_rotation_init_t *init = &self->sw_rot.init;
 
-        free(self->sw_rot.data.buffers.active);
-        self->sw_rot.data.buffers.active = NULL;
-        self->sw_rot.data.buffers.idle = NULL;
+        free(self->sw_rot.buffers.active);
+        self->sw_rot.buffers.active = NULL;
+        self->sw_rot.buffers.idle = NULL;
 
         esp_lcd_rgb_panel_event_callbacks_t callbacks = { .on_vsync = rgb_trans_done_cb };
 

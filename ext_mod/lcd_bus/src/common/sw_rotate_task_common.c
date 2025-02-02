@@ -112,5 +112,5 @@ void mp_lcd_sw_rotate_task(void *self_in)
     }
     mp_lcd_lock_release(&handles->copy_lock);
 
-    LCD_DEBUG_PRINT(&mp_plat_print, "mp_lcd_sw_rotate_task - STOPPED\n")
+    LCD_DEBUG_PRINT("mp_lcd_sw_rotate_task - STOPPED\n")
 }
