@@ -143,10 +143,15 @@ void rotate_8bpp(uint8_t *src, uint8_t *dst, mp_lcd_sw_rotation_data_t *copy_dat
 
     switch (copy_data->rotation) {
         case LCD_ROTATION_90:
+            uint32_t src_line_bytes;
+            dst_height -= 1;
+
             for (uint32_t y = y_start; y < y_end; y++) {
+                src_line_bytes = (y * src_bytes_per_line) - offset;
+
                 for (uint32_t x = x_start; x < x_end; x++) {
-                    i = y * src_bytes_per_line + x - offset;
-                    j = (dst_height - 1 - x) * dst_width + y;
+                    i = src_line_bytes + x;
+                    j = ((dst_height - x) * dst_width) + y;
                     copy_8bpp(src + i, dst + j);
                 }
             }
@@ -154,12 +159,13 @@ void rotate_8bpp(uint8_t *src, uint8_t *dst, mp_lcd_sw_rotation_data_t *copy_dat
 
         // MIRROR_X MIRROR_Y
         case LCD_ROTATION_180:
-            LCD_UNUSED(j);
+            j = dst_width - 1 - x_start;
             LCD_UNUSED(src_bytes_per_line);
             LCD_UNUSED(offset);
+            dst_height -= 1;
 
             for (uint32_t y = y_start; y < y_end; y++) {
-                i = (dst_height - 1 - y) * dst_width + (dst_width - 1 - x_start);
+                i = ((dst_height - y) * dst_width) + j;
                 for (uint32_t x = x_start; x < x_end; x++) {
                     copy_8bpp(src, dst + i);
                     src++;
@@ -170,10 +176,16 @@ void rotate_8bpp(uint8_t *src, uint8_t *dst, mp_lcd_sw_rotation_data_t *copy_dat
 
         // SWAP_XY   MIRROR_X
         case LCD_ROTATION_270:
+            uint32_t m;
+            uint32_t o;
+
             for (uint32_t y = y_start; y < y_end; y++) {
+                m = y * src_bytes_per_line;
+                o = dst_width - 1 - y;
+
                 for (uint32_t x = x_start; x < x_end; x++) {
-                    i = y * src_bytes_per_line + x - offset;
-                    j = x * dst_width + dst_width - 1 - y;
+                    i = m + x;
+                    j = (x * dst_width) + o;
                     copy_8bpp(src + i, dst + j);
                 }
             }
@@ -219,10 +231,14 @@ void rotate_16bpp_swap_dither(uint16_t *src, uint16_t *dst, mp_lcd_sw_rotation_d
             break;    
     
         case LCD_ROTATION_90:
+            uint32_t src_line_bytes;
+            dst_height -= 1;
+
             for (uint32_t y = y_start; y < y_end; y++) {
+                src_line_bytes = (y * src_bytes_per_line) - offset;
                 for (uint32_t x = x_start; x < x_end; x++) {
-                    i = y * src_bytes_per_line + x - offset;
-                    j = (dst_height - 1 - x) * dst_width + y;
+                    i = src_line_bytes + x;
+                    j = ((dst_height - x) * dst_width) + y;
                     rgb565_dither_byte_swap_pixel(CALC_THRESHOLD(x, y), src + i, dst + j);
                     // copy_16bpp(src + i, dst + j);
                 }
@@ -231,12 +247,13 @@ void rotate_16bpp_swap_dither(uint16_t *src, uint16_t *dst, mp_lcd_sw_rotation_d
 
         // MIRROR_X MIRROR_Y
         case LCD_ROTATION_180:
-            LCD_UNUSED(j);
+            j = dst_width - 1 - x_start;
             LCD_UNUSED(src_bytes_per_line);
             LCD_UNUSED(offset);
+            dst_height -= 1;
 
             for (uint32_t y = y_start; y < y_end; y++) {
-                i = (dst_height - 1 - y) * dst_width + (dst_width - 1 - x_start);
+                i = ((dst_height - y) * dst_width) + j;
                 for (uint32_t x = x_start; x < x_end; x++) {
                     rgb565_dither_byte_swap_pixel(CALC_THRESHOLD(x, y), src, dst + i);
 
@@ -249,10 +266,16 @@ void rotate_16bpp_swap_dither(uint16_t *src, uint16_t *dst, mp_lcd_sw_rotation_d
 
         // SWAP_XY   MIRROR_X
         case LCD_ROTATION_270:
+            uint32_t m;
+            uint32_t o;
+
             for (uint32_t y = y_start; y < y_end; y++) {
+                m = (y * src_bytes_per_line) - offset;
+                o = dst_width - 1 - y;
+
                 for (uint32_t x = x_start; x < x_end; x++) {
-                    i = y * src_bytes_per_line + x - offset;
-                    j = (x * dst_width + dst_width - 1 - y);
+                    i = m + x;
+                    j = (x * dst_width) + o;
                     rgb565_dither_byte_swap_pixel(CALC_THRESHOLD(x, y), src + i, dst + j);
 
                     // copy_16bpp(src + i, dst + j);
@@ -300,10 +323,15 @@ void rotate_16bpp_dither(uint16_t *src, uint16_t *dst, mp_lcd_sw_rotation_data_t
             break;    
     
         case LCD_ROTATION_90:
+            uint32_t src_line_bytes;
+            dst_height -= 1;
+
             for (uint32_t y = y_start; y < y_end; y++) {
+                src_line_bytes = (y * src_bytes_per_line) - offset;
+
                 for (uint32_t x = x_start; x < x_end; x++) {
-                    i = y * src_bytes_per_line + x - offset;
-                    j = (dst_height - 1 - x) * dst_width + y;
+                    i = src_line_bytes + x;
+                    j = ((dst_height - x) * dst_width) + y;
                     rgb565_dither_pixel(CALC_THRESHOLD(x, y), src + i, dst + j);
 
                     // copy_16bpp(src + i, dst + j);
@@ -313,12 +341,13 @@ void rotate_16bpp_dither(uint16_t *src, uint16_t *dst, mp_lcd_sw_rotation_data_t
 
         // MIRROR_X MIRROR_Y
         case LCD_ROTATION_180:
-            LCD_UNUSED(j);
+            j = dst_width - 1 - x_start;
             LCD_UNUSED(src_bytes_per_line);
             LCD_UNUSED(offset);
+            dst_height -= 1;
 
             for (uint32_t y = y_start; y < y_end; y++) {
-                i = (dst_height - 1 - y) * dst_width + (dst_width - 1 - x_start);
+                i = ((dst_height - y) * dst_width) + j;
                 for (uint32_t x = x_start; x < x_end; x++) {
                     rgb565_dither_pixel(CALC_THRESHOLD(x, y), src, dst + i);
 
@@ -331,10 +360,16 @@ void rotate_16bpp_dither(uint16_t *src, uint16_t *dst, mp_lcd_sw_rotation_data_t
 
         // SWAP_XY   MIRROR_X
         case LCD_ROTATION_270:
+            uint32_t m;
+            uint32_t o;
+
             for (uint32_t y = y_start; y < y_end; y++) {
+                m = (y * src_bytes_per_line) - offset;
+                o = dst_width - 1 - y;
+
                 for (uint32_t x = x_start; x < x_end; x++) {
-                    i = y * src_bytes_per_line + x - offset;
-                    j = (x * dst_width + dst_width - 1 - y);
+                    i = m + x;
+                    j = (x * dst_width) + o;
                     rgb565_dither_pixel(CALC_THRESHOLD(x, y), src + i, dst + j);
 
                     // copy_16bpp(src + i, dst + j);
@@ -382,11 +417,13 @@ void rotate_16bpp_swap(uint16_t *src, uint16_t *dst, mp_lcd_sw_rotation_data_t *
             break;    
     
         case LCD_ROTATION_90:
+            uint32_t src_line_bytes;
+            dst_height -= 1;
+
             for (uint32_t y = y_start; y < y_end; y++) {
                 for (uint32_t x = x_start; x < x_end; x++) {
-                    i = y * src_bytes_per_line + x - offset;
-                    j = (dst_height - 1 - x) * dst_width + y;
-                    
+                    i = src_line_bytes + x;
+                    j = ((dst_height - x) * dst_width) + y;
                     *(dst + j) = (*(src + i) << 8) | (*(src + i) >> 8);
                     
                     // copy_16bpp(src + i, dst + j);
@@ -396,13 +433,14 @@ void rotate_16bpp_swap(uint16_t *src, uint16_t *dst, mp_lcd_sw_rotation_data_t *
         
         // MIRROR_X MIRROR_Y
         case LCD_ROTATION_180:
-            LCD_UNUSED(j);
+            j = dst_width - 1 - x_start;
             LCD_UNUSED(src_bytes_per_line);
             LCD_UNUSED(offset);
+            dst_height -= 1;
 
             for (uint32_t y = y_start; y < y_end; y++) {
-                i = (dst_height - 1 - y) * dst_width + (dst_width - 1 - x_start);
-                for (uint32_t x = x_start; x < x_end; x++) {                    
+                i = ((dst_height - y) * dst_width) + j;
+                for (uint32_t x = x_start; x < x_end; x++) {
                     *(dst + i) = (*src << 8) | (*src >> 8);
                     
                     // copy_16bpp(src, dst + i);
@@ -414,11 +452,16 @@ void rotate_16bpp_swap(uint16_t *src, uint16_t *dst, mp_lcd_sw_rotation_data_t *
 
         // SWAP_XY   MIRROR_X
         case LCD_ROTATION_270:
+            uint32_t m;
+            uint32_t o;
+
             for (uint32_t y = y_start; y < y_end; y++) {
+                m = (y * src_bytes_per_line) - offset;
+                o = dst_width - 1 - y;
+
                 for (uint32_t x = x_start; x < x_end; x++) {
-                    i = y * src_bytes_per_line + x - offset;
-                    j = (x * dst_width + dst_width - 1 - y);
-                    
+                    i = m + x;
+                    j = (x * dst_width) + o;
                     *(dst + j) = (*(src + i) << 8) | (*(src + i) >> 8);
                     
                     // copy_16bpp(src + i, dst + j);
@@ -469,11 +512,15 @@ void rotate_16bpp(uint16_t *src, uint16_t *dst, mp_lcd_sw_rotation_data_t *copy_
             break;
 
         case LCD_ROTATION_90:
-            for (uint32_t y = y_start; y < y_end; y++) {
-                for (uint32_t x = x_start; x < x_end; x++) {
-                    i = y * src_bytes_per_line + x - offset;
-                    j = (dst_height - 1 - x) * dst_width + y;
+            uint32_t src_line_bytes;
+            dst_height -= 1;
 
+            for (uint32_t y = y_start; y < y_end; y++) {
+                src_line_bytes = (y * src_bytes_per_line) - offset;
+
+                for (uint32_t x = x_start; x < x_end; x++) {
+                    i = src_line_bytes + x;
+                    j = ((dst_height - x) * dst_width) + y;
                     copy_16bpp(src + i, dst + j);
                 }
             }
@@ -481,12 +528,13 @@ void rotate_16bpp(uint16_t *src, uint16_t *dst, mp_lcd_sw_rotation_data_t *copy_
 
         // MIRROR_X MIRROR_Y
         case LCD_ROTATION_180:
-            LCD_UNUSED(j);
+            j = dst_width - 1 - x_start;
             LCD_UNUSED(src_bytes_per_line);
             LCD_UNUSED(offset);
+            dst_height -= 1;
 
             for (uint32_t y = y_start; y < y_end; y++) {
-                i = (dst_height - 1 - y) * dst_width + (dst_width - 1 - x_start);
+                i = ((dst_height - y) * dst_width) + j;
                 for (uint32_t x = x_start; x < x_end; x++) {
                     copy_16bpp(src, dst + i);
                     src++;
@@ -497,11 +545,16 @@ void rotate_16bpp(uint16_t *src, uint16_t *dst, mp_lcd_sw_rotation_data_t *copy_
 
         // SWAP_XY   MIRROR_X
         case LCD_ROTATION_270:
-            for (uint32_t y = y_start; y < y_end; y++) {
-                for (uint32_t x = x_start; x < x_end; x++) {
-                    i = y * src_bytes_per_line + x - offset;
-                    j = (x * dst_width + dst_width - 1 - y);
+            uint32_t m;
+            uint32_t o;
 
+            for (uint32_t y = y_start; y < y_end; y++) {
+                m = (y * src_bytes_per_line) - offset;
+                o = dst_width - 1 - y;
+
+                for (uint32_t x = x_start; x < x_end; x++) {
+                    i = m + x;
+                    j = (x * dst_width) + o;
                     copy_16bpp(src + i, dst + j);
                 }
             }
@@ -535,11 +588,15 @@ void rotate_24bpp(uint8_t *src, uint8_t *dst, mp_lcd_sw_rotation_data_t *copy_da
 
     switch (copy_data->rotation) {
         case LCD_ROTATION_90:
-            for (uint32_t y = y_start; y < y_end; y++) {
-                for (uint32_t x = x_start; x < x_end; x++) {
-                    i = y * src_bytes_per_line + x * 3 - offset;
-                    j = ((dst_height - 1 - x) * dst_width + y) * 3;
+            uint32_t src_line_bytes;
+            dst_height -= 1;
 
+            for (uint32_t y = y_start; y < y_end; y++) {
+                src_line_bytes = (y * src_bytes_per_line) - offset;
+
+                for (uint32_t x = x_start; x < x_end; x++) {
+                    i = src_line_bytes + (x * 3);
+                    j = (((dst_height - x) * dst_width) + y) * 3;
                     copy_24bpp(src + i, dst + j);
                 }
             }
@@ -547,12 +604,13 @@ void rotate_24bpp(uint8_t *src, uint8_t *dst, mp_lcd_sw_rotation_data_t *copy_da
 
         // MIRROR_X MIRROR_Y
         case LCD_ROTATION_180:
-            LCD_UNUSED(j);
+            j = dst_width - 1 - x_start;
             LCD_UNUSED(src_bytes_per_line);
             LCD_UNUSED(offset);
+            dst_height -= 1;
 
             for (int y = y_start; y < y_end; y++) {
-                i = ((dst_height - 1 - y) * dst_width + (dst_width - 1 - x_start)) * 3;
+                i = (((dst_height - y) * dst_width) + j) * 3;
                 for (size_t x = x_start; x < x_end; x++) {
                     copy_24bpp(src, dst + i);
                     src += 3;
@@ -563,11 +621,16 @@ void rotate_24bpp(uint8_t *src, uint8_t *dst, mp_lcd_sw_rotation_data_t *copy_da
 
         // SWAP_XY   MIRROR_X
         case LCD_ROTATION_270:
-            for (uint32_t y = y_start; y < y_end; y++) {
-                for (uint32_t x = x_start; x < x_end; x++) {
-                    i = y * src_bytes_per_line + x * 3 - offset;
-                    j = (x * dst_width + dst_width - 1 - y) * 3;
+            uint32_t m;
+            uint32_t o;
 
+            for (uint32_t y = y_start; y < y_end; y++) {
+                m = (y * src_bytes_per_line) - offset;
+                o = dst_width - 1 - y;
+
+                for (uint32_t x = x_start; x < x_end; x++) {
+                    i = m + (x * 3);
+                    j = ((x * dst_width) + o) * 3;
                     copy_24bpp(src + i, dst + j);
                 }
             }
@@ -601,11 +664,15 @@ void rotate_32bpp(uint32_t *src, uint32_t *dst, mp_lcd_sw_rotation_data_t *copy_
 
     switch (copy_data->rotation) {
         case LCD_ROTATION_90:
-            for (uint32_t y = y_start; y < y_end; y++) {
-                for (uint32_t x = x_start; x < x_end; x++) {
-                    i = y * src_bytes_per_line + x - offset;
-                    j = (dst_height - 1 - x) * dst_width + y;
+            uint32_t src_line_bytes;
+            dst_height -= 1;
 
+            for (uint32_t y = y_start; y < y_end; y++) {
+                src_line_bytes = (y * src_bytes_per_line) - offset;
+
+                for (uint32_t x = x_start; x < x_end; x++) {
+                    i = src_line_bytes + x;
+                    j = ((dst_height - x) * dst_width) + y;
                     copy_32bpp(src + i, dst + j);
                 }
             }
@@ -613,12 +680,14 @@ void rotate_32bpp(uint32_t *src, uint32_t *dst, mp_lcd_sw_rotation_data_t *copy_
 
         // MIRROR_X MIRROR_Y
         case LCD_ROTATION_180:
-            LCD_UNUSED(j);
+            j = dst_width - 1 - x_start;
             LCD_UNUSED(src_bytes_per_line);
             LCD_UNUSED(offset);
+            dst_height -= 1;
 
             for (uint32_t y = y_start; y < y_end; y++) {
-                i = (dst_height - 1 - y) * dst_width + (dst_width - 1 - x_start);
+                i = ((dst_height - y) * dst_width) + j;
+
                 for (uint32_t x = x_start; x < x_end; x++) {
                     copy_32bpp(src, dst + i);
                     src++;
@@ -629,11 +698,16 @@ void rotate_32bpp(uint32_t *src, uint32_t *dst, mp_lcd_sw_rotation_data_t *copy_
 
         // SWAP_XY   MIRROR_X
         case LCD_ROTATION_270:
-            for (uint32_t y = y_start; y < y_end; y++) {
-                for (uint32_t x = x_start; x < x_end; x++) {
-                    i = y * src_bytes_per_line + x - offset;
-                    j = x * dst_width + dst_width - 1 - y;
+            uint32_t m;
+            uint32_t o;
 
+            for (uint32_t y = y_start; y < y_end; y++) {
+                m = (y * src_bytes_per_line) - offset;
+                o = dst_width - 1 - y;
+
+                for (uint32_t x = x_start; x < x_end; x++) {
+                    i = m + x;
+                    j = (x * dst_width) + o;
                     copy_32bpp(src + i, dst + j);
                 }
             }

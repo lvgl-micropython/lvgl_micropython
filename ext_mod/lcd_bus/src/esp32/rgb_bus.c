@@ -390,13 +390,11 @@
         self->panel_io_config->timings.h_res = self->sw_rot.data.dst_width;
         self->panel_io_config->timings.v_res = self->sw_rot.data.dst_height;
         self->panel_io_config->bits_per_pixel = self->sw_rot.data.bytes_per_pixel * 8;
-
-        self->sw_rot.init.cb = &rgb_init_cb;
-        self->sw_rot.flush_cb = &rgb_flush_cb;
-
         self->panel_io_config->flags.fb_in_psram = 1;
         self->panel_io_config->flags.double_fb = 1;
 
+        self->sw_rot.init.cb = &rgb_init_cb;
+        self->sw_rot.flush_cb = &rgb_flush_cb;
 
         uint8_t *tmp_buf = (uint8_t *)malloc(1);
         self->sw_rot.buffers.active = tmp_buf;
