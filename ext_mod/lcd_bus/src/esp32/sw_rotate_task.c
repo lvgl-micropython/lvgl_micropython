@@ -117,7 +117,7 @@ bool mp_lcd_start_rotate_task(void *self_in)
 {
     mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)self_in;
 
-    LCD_DEBUG_PRINT("mp_lcd_start_rotate_task m- acquiring init lock\n")
+    LCD_DEBUG_PRINT("mp_lcd_start_rotate_task - acquiring init lock\n")
     mp_lcd_lock_acquire(&self->sw_rot.handles.init_lock);
 
     xTaskCreatePinnedToCore(
@@ -125,8 +125,8 @@ bool mp_lcd_start_rotate_task(void *self_in)
                 self, ESP_TASK_PRIO_MAX - 1, &self->sw_rot.handles.task_handle, 0);
 
     LCD_DEBUG_PRINT("mp_lcd_start_rotate_task - acquiring init lock\n")
-
     mp_lcd_lock_acquire(&self->sw_rot.handles.init_lock);
+
     LCD_DEBUG_PRINT("mp_lcd_start_rotate_task - releasing init lock\n")
     mp_lcd_lock_release(&self->sw_rot.handles.init_lock);
 
