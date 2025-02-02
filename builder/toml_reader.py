@@ -83,6 +83,15 @@ class TOMLObject(metaclass=TOMLMeta):
         if self.name == 'SDCard':
             return 'machine.SDCard'
 
+        if self.name == 'RGBDisplay':
+            return 'rgb_display.' + self.name
+
+        if self.name == 'SDLDisplay':
+            return 'sdl_display.' + self.name
+
+        if self.name == 'SDLPointer':
+            return 'sdl_pointer.' + self.name
+        
         if self.name.lower() in display_drivers:
             return self.name.lower() + '.' + self.name
 
