@@ -117,13 +117,14 @@ bool mp_lcd_start_rotate_task(void *self_in)
 {
     mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)self_in;
 
+    mp_lcd_lock_acquire(&self->sw_rot.handles.init_lock);
+
     xTaskCreatePinnedToCore(
                 mp_lcd_sw_rotate_task, "rotate_task", LCD_DEFAULT_STACK_SIZE / sizeof(StackType_t),
                 self, ESP_TASK_PRIO_MAX - 1, &self->sw_rot.handles.task_handle, 0);
 
     mp_lcd_lock_acquire(&self->sw_rot.handles.init_lock);
     mp_lcd_lock_release(&self->sw_rot.handles.init_lock);
-    mp_lcd_lock_delete(&self->sw_rot.handles.init_lock);
 
     if (self->sw_rot.init.err != LCD_OK) {
         mp_raise_msg_varg(&mp_type_OSError, self->sw_rot.init.err_msg, self->sw_rot.init.err);

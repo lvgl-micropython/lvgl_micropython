@@ -421,6 +421,8 @@ void rotate_16bpp_swap(uint16_t *src, uint16_t *dst, mp_lcd_sw_rotation_data_t *
             dst_height -= 1;
 
             for (uint32_t y = y_start; y < y_end; y++) {
+                src_line_bytes = (y * src_bytes_per_line) - offset;
+
                 for (uint32_t x = x_start; x < x_end; x++) {
                     i = src_line_bytes + x;
                     j = ((dst_height - x) * dst_width) + y;

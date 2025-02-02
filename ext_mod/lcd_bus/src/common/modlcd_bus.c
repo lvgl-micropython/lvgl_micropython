@@ -118,9 +118,7 @@ static mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_
     mp_lcd_lock_init(&self->sw_rot.handles.tx_color_lock);
     mp_lcd_event_init(&self->sw_rot.handles.copy_task_exit);
     mp_lcd_event_init(&self->sw_rot.handles.swap_bufs);
-    mp_lcd_event_set(&self->sw_rot.handles.swap_bufs);
     mp_lcd_lock_init(&self->sw_rot.handles.init_lock);
-    mp_lcd_lock_acquire(&self->sw_rot.handles.init_lock);
     mp_lcd_lock_init(&self->sw_rot.tx_params.lock);
 
     ret = self->panel_io_handle.init(

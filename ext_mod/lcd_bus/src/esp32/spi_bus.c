@@ -300,14 +300,6 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint8_t cmd_bits, uint8_t param_bits)
     self->sw_rot.flush_cb = &spi_flush_cb;
     self->sw_rot.tx_params.cb = &spi_tx_param_cb;
 
-    mp_lcd_lock_init(&self->sw_rot.handles.copy_lock);
-    mp_lcd_lock_init(&self->sw_rot.handles.tx_color_lock);
-    mp_lcd_event_init(&self->sw_rot.handles.copy_task_exit);
-    mp_lcd_event_init(&self->sw_rot.handles.swap_bufs);
-    mp_lcd_event_set(&self->sw_rot.handles.swap_bufs);
-    mp_lcd_lock_init(&self->sw_rot.handles.init_lock);
-    mp_lcd_lock_acquire(&self->sw_rot.handles.init_lock);
-    mp_lcd_lock_init(&self->sw_rot.tx_params.lock);
     self->sw_rot.tx_params.len = 0;
 
     mp_machine_hw_spi_bus_add_device(&self->spi_device);

@@ -38,6 +38,7 @@ void mp_lcd_sw_rotate_task(void *self_in)
     int cmd;
 
     mp_lcd_lock_acquire(&handles->copy_lock);
+    mp_lcd_event_set(&self->sw_rot.handles.swap_bufs);
 
     init->err = LCD_OK;
     mp_lcd_lock_release(&handles->init_lock);

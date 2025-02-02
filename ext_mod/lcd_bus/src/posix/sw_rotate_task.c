@@ -182,7 +182,6 @@ bool mp_lcd_start_rotate_task(void *self_in)
 
     mp_lcd_lock_acquire(&self->sw_rot.handles.init_lock);
     mp_lcd_lock_release(&self->sw_rot.handles.init_lock);
-    mp_lcd_lock_delete(&self->sw_rot.handles.init_lock);
 
     if (self->sw_rot.init.err != LCD_OK) {
         mp_raise_msg_varg(&mp_type_OSError, self->sw_rot.init.err_msg, self->sw_rot.init.err);
