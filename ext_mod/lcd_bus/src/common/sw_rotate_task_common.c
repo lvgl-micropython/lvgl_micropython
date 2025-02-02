@@ -24,7 +24,9 @@ void mp_lcd_sw_rotate_task(void *self_in)
 
     LCD_DEBUG_PRINT("mp_lcd_sw_rotate_task - starting bus init\n")
     if (!init->cb(self_in)) {
-        LCD_DEBUG_PRINT("mp_lcd_sw_rotate_task - bus init FAILURE\n")
+        init->err
+        LCD_DEBUG_PRINT(init->err_msg, init->err)
+        LCD_DEBUG_PRINT("mp_lcd_sw_rotate_task - bus init FAILURE, releasing init lock\n")
         mp_lcd_lock_release(&handles->init_lock);
         return;
     }
