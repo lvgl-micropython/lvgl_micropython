@@ -399,8 +399,8 @@
 
 
         uint8_t *tmp_buf = (uint8_t *)malloc(1);
-        self->sw_rot.data.buffers.active = tmp_buf;
-        self->sw_rot.data.buffers.idle = tmp_buf;
+        self->sw_rot.buffers.active = tmp_buf;
+        self->sw_rot.buffers.idle = tmp_buf;
 
         LCD_DEBUG_PRINT("h_res=%lu\n", self->panel_io_config->timings.h_res)
         LCD_DEBUG_PRINT("v_res=%lu\n", self->panel_io_config->timings.v_res)
