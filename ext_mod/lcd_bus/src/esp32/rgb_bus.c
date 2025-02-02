@@ -71,6 +71,8 @@
 
     static bool rgb_init_cb(void *self_in)
     {
+        LCD_DEBUG_PRINT("rgb_init_cb\n")
+
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)self_in;
         mp_lcd_sw_rotation_init_t *init = &self->sw_rot.init;
 
@@ -81,7 +83,6 @@
         esp_lcd_rgb_panel_event_callbacks_t callbacks = { .on_vsync = rgb_trans_done_cb };
 
         LCD_DEBUG_PRINT("esp_lcd_new_rgb_panel\n")
-
         init->err = esp_lcd_new_rgb_panel(self->panel_io_config, &self->panel_handle);
         if (init->err != 0) {
             init->err_msg = MP_ERROR_TEXT("%d(esp_lcd_new_rgb_panel)");
@@ -366,13 +367,14 @@
         LCD_UNUSED(cmd_bits);
         LCD_UNUSED(param_bits);
 
-        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)MP_OBJ_TO_PTR(obj);
+        mp_lcd_sw_rotation_data_t *data = &self->sw_rot.data;
 
         self->sw_rotate = 1;
 
-        if (self->sw_rot.data.bytes_per_pixel != 2) self->sw_rot.data.rgb565_swap = 0;
+        if (data->bytes_per_pixel != 2) data->rgb565_swap = 0;
 
-        if (self->sw_rot.data.rgb565_swap && self->panel_io_config->data_width == 16) {
+        if (data->rgb565_swap && self->panel_io_config->data_width == 16) {
             /*
             We change the pins aound when the bus width is 16 and wanting to
             swap bytes. This does the same thing as moving the bytes around in
@@ -389,12 +391,12 @@
                 self->panel_io_config->data_gpio_nums[i + 8] = temp_pin;
             }
 
-            self->sw_rot.data.rgb565_swap = 0;
+            data->rgb565_swap = 0;
         }
 
-        self->panel_io_config->timings.h_res = self->sw_rot.data.dst_width;
-        self->panel_io_config->timings.v_res = self->sw_rot.data.dst_height;
-        self->panel_io_config->bits_per_pixel = self->sw_rot.data.bytes_per_pixel * 8;
+        self->panel_io_config->timings.h_res = data->dst_width;
+        self->panel_io_config->timings.v_res = data->dst_height;
+        self->panel_io_config->bits_per_pixel = data->bytes_per_pixel * 8;
         self->panel_io_config->flags.fb_in_psram = 1;
         self->panel_io_config->flags.double_fb = 1;
 
@@ -408,7 +410,7 @@
         LCD_DEBUG_PRINT("h_res=%lu\n", self->panel_io_config->timings.h_res)
         LCD_DEBUG_PRINT("v_res=%lu\n", self->panel_io_config->timings.v_res)
         LCD_DEBUG_PRINT("bits_per_pixel=%d\n", self->panel_io_config->bits_per_pixel)
-        LCD_DEBUG_PRINT("rgb565_byte_swap=%d\n", self->sw_rot.data.rgb565_swap)
+        LCD_DEBUG_PRINT("rgb565_byte_swap=%d\n", data->rgb565_swap)
 
         return LCD_OK;
     }
