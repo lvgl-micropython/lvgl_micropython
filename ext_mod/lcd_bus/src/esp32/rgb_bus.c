@@ -237,7 +237,7 @@
 
         self->callback = mp_const_none;
 
-        self->panel_io_config = malloc(sizeof(esp_lcd_rgb_panel_config_t));
+        self->panel_io_config = (esp_lcd_rgb_panel_config_t *)malloc(sizeof(esp_lcd_rgb_panel_config_t));
 
         esp_lcd_rgb_panel_config_t *panel_io_config = self->panel_io_config;
 
@@ -282,8 +282,6 @@
         panel_io_config->sram_trans_align = 8;
         panel_io_config->psram_trans_align = 64;
         panel_io_config->flags.refresh_on_demand = (uint32_t)args[ARG_refresh_on_demand].u_bool;
-        panel_io_config->flags.fb_in_psram = 0;
-        panel_io_config->flags.double_fb = 0;
 
         int i = 0;
         for (; i < 16; i++) {
@@ -397,6 +395,7 @@
         self->panel_io_config->bits_per_pixel = data->bytes_per_pixel * 8;
         self->panel_io_config->flags.fb_in_psram = 1;
         self->panel_io_config->flags.double_fb = 1;
+        self->panel_io_config->num_fbs = 2;
 
         self->sw_rot.init.cb = &rgb_init_cb;
         self->sw_rot.flush_cb = &rgb_flush_cb;
@@ -411,6 +410,7 @@
         LCD_DEBUG_PRINT("fb_in_psram=%d\n", self->panel_io_config->flags.fb_in_psram)
         LCD_DEBUG_PRINT("double_fb=%d\n", self->panel_io_config->flags.double_fb)
         LCD_DEBUG_PRINT("rgb565_byte_swap=%d\n", data->rgb565_swap)
+        LCD_DEBUG_PRINT("rgb565_byte_swap=%d\n", self->panel_io_config->num_fbs)
 
         return LCD_OK;
     }

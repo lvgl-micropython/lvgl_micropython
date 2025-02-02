@@ -37,9 +37,6 @@
         mp_lcd_sw_rotation_t sw_rot;
 
         esp_lcd_rgb_panel_config_t *panel_io_config;
-        void *padding;
-
-        /* specific to bus */
         esp_lcd_panel_handle_t panel_handle;
 
     };
