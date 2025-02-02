@@ -331,8 +331,6 @@
         LCD_DEBUG_PRINT("sram_trans_align=%d\n", panel_io_config->sram_trans_align)
         LCD_DEBUG_PRINT("psram_trans_align=%d\n", panel_io_config->psram_trans_align)
         LCD_DEBUG_PRINT("refresh_on_demand=%d\n", panel_io_config->flags.refresh_on_demand)
-        LCD_DEBUG_PRINT("fb_in_psram=%d\n", panel_io_config->flags.fb_in_psram)
-        LCD_DEBUG_PRINT("double_fb=%d\n", panel_io_config->flags.double_fb)
         LCD_DEBUG_PRINT("data_width=%d\n", panel_io_config->data_width)
 
         self->panel_io_handle.del = &rgb_del;
@@ -410,6 +408,8 @@
         LCD_DEBUG_PRINT("h_res=%lu\n", self->panel_io_config->timings.h_res)
         LCD_DEBUG_PRINT("v_res=%lu\n", self->panel_io_config->timings.v_res)
         LCD_DEBUG_PRINT("bits_per_pixel=%d\n", self->panel_io_config->bits_per_pixel)
+        LCD_DEBUG_PRINT("fb_in_psram=%d\n", self->panel_io_config->flags.fb_in_psram)
+        LCD_DEBUG_PRINT("double_fb=%d\n", self->panel_io_config->flags.double_fb)
         LCD_DEBUG_PRINT("rgb565_byte_swap=%d\n", data->rgb565_swap)
 
         return LCD_OK;
