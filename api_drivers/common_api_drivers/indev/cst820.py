@@ -1,4 +1,4 @@
-# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+# Based on cst816s, Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
 from micropython import const  # NOQA
 import pointer_framework
@@ -40,7 +40,7 @@ _BPC1H = const(0xB2)
 _BPC1L = const(0xB3)
 
 _ChipID = const(0xA7)
-_ChipIDValue = const(0xB5)
+_ChipIDValue = const(0xB7) # 0xB5=cst816s, 0xB7=cst820
 
 _ProjID = const(0xA8)
 _FwVersion = const(0xA9)
