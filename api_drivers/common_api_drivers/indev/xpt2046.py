@@ -7,8 +7,8 @@ import pointer_framework
 import time
 
 
-_CMD_X_READ = const(0xD0)  # 12 bit resolution
-_CMD_Y_READ = const(0x90)  # 12 bit resolution
+#_CMD_X_READ = 0xD0  # 12 bit resolution
+#_CMD_Y_READ = 0x90  # 12 bit resolution
 _CMD_Z1_READ = const(0xB0)
 _CMD_Z2_READ = const(0xC0)
 _MIN_RAW_COORD = const(10)
@@ -40,6 +40,7 @@ class XPT2046(pointer_framework.PointerDriver):
         device,
         touch_cal=None,
         startup_rotation=pointer_framework.lv.DISPLAY_ROTATION._0,  # NOQA
+        swapxy=False,
         debug=False
     ):
         self._device = device
@@ -55,6 +56,12 @@ class XPT2046(pointer_framework.PointerDriver):
 
         margin = max(min(self.margin, 100), 1)
         self.__margin = margin * margin
+        if swapxy: # some very popular/prolific esp32_2432S028R boards require this
+            self._cmd_x_read = 0x90
+            self._cmd_y_read = 0xD0
+        else:
+            self._cmd_x_read = 0xD0
+            self._cmd_y_read = 0x90
 
         super().__init__(
             touch_cal=touch_cal, startup_rotation=startup_rotation, debug=debug
@@ -112,8 +119,8 @@ class XPT2046(pointer_framework.PointerDriver):
         return x, y
 
     def _get_raw(self):
-        x = self._read_reg(_CMD_X_READ, 3)
-        y = self._read_reg(_CMD_Y_READ, 3)
+        x = self._read_reg(self._cmd_x_read, 3)
+        y = self._read_reg(self._cmd_y_read, 3)
         if x > _MIN_RAW_COORD and y < _MAX_RAW_COORD:  # touch pressed?
             return x, y
         else:
