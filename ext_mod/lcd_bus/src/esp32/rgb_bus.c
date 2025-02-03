@@ -410,7 +410,7 @@
         LCD_DEBUG_PRINT("fb_in_psram=%d\n", self->panel_io_config->flags.fb_in_psram)
         LCD_DEBUG_PRINT("double_fb=%d\n", self->panel_io_config->flags.double_fb)
         LCD_DEBUG_PRINT("rgb565_byte_swap=%d\n", data->rgb565_swap)
-        LCD_DEBUG_PRINT("rgb565_byte_swap=%d\n", self->panel_io_config->num_fbs)
+        LCD_DEBUG_PRINT("num_fbs=%d\n", self->panel_io_config->num_fbs)
 
         return LCD_OK;
     }
