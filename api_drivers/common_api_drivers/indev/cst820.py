@@ -153,7 +153,7 @@ _En1v8 = const(0x01)
 _DisAutoSleep = const(0xFE)
 
 
-class CST816S(pointer_framework.PointerDriver):
+class CST820(pointer_framework.PointerDriver):
 
     def _read_reg(self, reg):
         self._tx_buf[0] = reg
