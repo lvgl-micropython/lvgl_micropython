@@ -33,9 +33,6 @@ class GC9107(display_driver_framework.DisplayDriver):
     )
 
     def _set_memory_location(self, x1, y1, x2, y2):
-        # Column addresses
-        param_buf = self._param_buf  # NOQA
-
         if self._rotation in (0, 2):
             x1 += 2
             x2 += 2
