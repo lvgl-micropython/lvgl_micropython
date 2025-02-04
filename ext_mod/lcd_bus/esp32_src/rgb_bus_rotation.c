@@ -346,7 +346,7 @@
                     MIN(x_end, dst_width), MIN(y_end, dst_height),
                     dst_width, dst_height, bytes_per_pixel, rgb565_dither);
         } else {
-            y_end += 1;
+            // y_end += 1;
             if (rotate == RGB_BUS_ROTATION_90 || rotate == RGB_BUS_ROTATION_270) {
                 x_start = MIN(x_start, dst_height);
                 x_end = MIN(x_end, dst_height);
