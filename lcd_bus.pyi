@@ -2,7 +2,7 @@
 
 from typing import Any, Callable, Optional, Union, ClassVar, Final
 import array
-import spi as _spi
+import machine
 
 _BufferType = Union[bytearray, memoryview, bytes, array.array]
 
@@ -23,14 +23,14 @@ class I2CBus:
         sda: int,
         scl: int,
         addr: int,
-        host: Optional[int] = 0,
-        control_phase_bytes: Optional[int] = 1,
-        dc_bit_offset: Optional[int] = 6,
-        freq: Optional[int] = 10000000,
-        dc_low_on_data: Optional[bool] = False,
-        sda_pullup: Optional[bool] = True,
-        scl_pullup: Optional[bool] = True,
-        disable_control_phase: Optional[bool] = False
+        host: int = 0,
+        control_phase_bytes: int = 1,
+        dc_bit_offset: int = 6,
+        freq: int = 10000000,
+        dc_low_on_data: bool = False,
+        sda_pullup: bool = True,
+        scl_pullup: bool = True,
+        disable_control_phase: bool = False
     ):
         ...
 
@@ -70,15 +70,17 @@ class SPIBus:
     def __init__(
         self,
         *,
-        spi_bus: _spi.SPI.Bus,
-        freq: int,
+        spi_bus: machine.SPI.Bus,
         dc: int,
-        cs: Optional[int] = -1,
-        polarity: int = 0,
-        phase: int = 0,
-        firstbit: int = _spi.SPI.MSB,
-        cs_high_active: bool = False,
+        freq: int,
+        cs: int = -1,
         dc_low_on_data: bool = False,
+        lsb_first: bool = False,
+        cs_high_active: bool = False,
+        spi_mode: int = 0,
+        dual: bool = False,
+        quad: bool = False,
+        octal: bool = False
     ):
         ...
 
@@ -230,28 +232,29 @@ class RGBBus:
         data5: int,
         data6: int,
         data7: int,
-        data8: Optional[int] = -1,
-        data9: Optional[int] = -1,
-        data10: Optional[int] = -1,
-        data11: Optional[int] = -1,
-        data12: Optional[int] = -1,
-        data13: Optional[int] = -1,
-        data14: Optional[int] = -1,
-        data15: Optional[int] = -1,
-        freq: Optional[int] = 8000000,
-        hsync_front_porch: Optional[int] = 0,
-        hsync_back_porch: Optional[int] = 0,
-        hsync_pulse_width: Optional[int] = 1,
-        hsync_idle_low: Optional[bool] = False,
-        vsync_front_porch: Optional[int] = 0,
-        vsync_back_porch: Optional[int] = 0,
-        vsync_pulse_width: Optional[int] = 1,
-        vsync_idle_low: Optional[bool] = False,
-        de_idle_high: Optional[bool] = False,
-        pclk_idle_high: Optional[bool] = False,
-        pclk_active_low: Optional[bool] = False,
-        disp_active_low: Optional[bool] = False,
-        refresh_on_demand: Optional[bool] = False
+        data8: int = -1,
+        data9: int = -1,
+        data10: int = -1,
+        data11: int = -1,
+        data12: int = -1,
+        data13: int = -1,
+        data14: int = -1,
+        data15: int = -1,
+        freq: int = 8000000,
+        hsync_front_porch: int = 0,
+        hsync_back_porch: int = 0,
+        hsync_pulse_width: int = 1,
+        hsync_idle_low: bool = False,
+        vsync_front_porch: int = 0,
+        vsync_back_porch: int = 0,
+        vsync_pulse_width: int = 1,
+        vsync_idle_low: bool = False,
+        de_idle_high: bool = False,
+        pclk_idle_high: bool = False,
+        pclk_active_low: bool = False,
+        disp_active_low: bool = False,
+        refresh_on_demand: bool = False,
+        rgb565_dither: bool = False
     ):
         ...
 
@@ -301,25 +304,25 @@ class I80Bus:
         data5: int,
         data6: int,
         data7: int,
-        data8: Optional[int] = -1,
-        data9: Optional[int] = -1,
-        data10: Optional[int] = -1,
-        data11: Optional[int] = -1,
-        data12: Optional[int] = -1,
-        data13: Optional[int] = -1,
-        data14: Optional[int] = -1,
-        data15: Optional[int] = -1,
-        cs: Optional[int] = -1,
-        freq: Optional[int] = 10000000,
-        dc_idle_high: Optional[bool] = False,
-        dc_cmd_high: Optional[bool] = False,
-        dc_dummy_high: Optional[bool] = False,
-        dc_data_high: Optional[bool] = True,
-        cs_active_high: Optional[bool] = False,
-        reverse_color_bits: Optional[bool] = False,
-        swap_color_bytes: Optional[bool] = False,
-        pclk_active_low: Optional[bool] = False,
-        pclk_idle_low: Optional[bool] = False,
+        data8: int = -1,
+        data9: int = -1,
+        data10: int = -1,
+        data11: int = -1,
+        data12: int = -1,
+        data13: int = -1,
+        data14: int = -1,
+        data15: int = -1,
+        cs: int = -1,
+        freq: int = 10000000,
+        dc_idle_high: bool = False,
+        dc_cmd_high: bool = False,
+        dc_dummy_high: bool = False,
+        dc_data_high: bool = True,
+        cs_active_high: bool = False,
+        reverse_color_bits: bool = False,
+        swap_color_bytes: bool = False,
+        pclk_active_low: bool = False,
+        pclk_idle_low: bool = False,
     ):
         ...
 
