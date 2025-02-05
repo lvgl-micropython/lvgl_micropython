@@ -1,0 +1,66 @@
+[MCU.esp32]
+BOARD = "ESP32_GENERIC"
+BOARD_VARIANT = "SPIRAM"
+uart_repl_bitrate = 115200
+
+[SPI.Bus.spi_bus]
+host = 1
+mosi = 13
+miso = 12
+sck = 14
+
+[SPIBus.display_bus]
+spi_bus = "spi_bus"
+freq = 24000000
+dc = 2
+cs = 15
+
+
+[I2C.Bus.i2c_bus]
+host = 0
+scl = 32
+sda = 33
+freq = 400000
+
+
+[I2C.Device.indev_device]
+bus = "i2c_bus"
+dev_id = "gt911.I2C_ADDR"
+reg_bits = "gt911.BITS"
+
+
+[ST7789.display]
+data_bus = "display_bus"
+display_width = 240
+display_height = 320
+backlight_pin = 27
+backlight_on_state = "st7789.STATE_PWM"
+color_space = "lv.COLOR_FORMAT.RGB565"
+color_byte_order = "st7789.BYTE_ORDER_BGR"
+rgb565_byte_swap = true
+
+[display.set_power]
+params = [true]
+
+[display.init]
+params = []
+
+[gt911.indev]
+device = "indev_device"
+
+[indev.firmware_config.fw_config]
+
+[fw_config.width]
+value=240
+
+[fw_config.height]
+value=320
+
+[fw_config.save]
+params=[]
+
+[display.set_backlight]
+params = [100]
+
+[task_handler.TaskHandler]
+params=[]

@@ -61,11 +61,11 @@ if args.toml is not None:
 
     build_command = toml_reader.run(toml_path, driver_out_path)
 
-    build_command = set(build_command)
-    extra_args = set(extra_args)
+    for arg in extra_args:
+        if arg not in build_command:
+            build_command.append(arg)
 
-    extra_args = list(extra_args.union(build_command))
-
+    extra_args = build_command
 
 argParser = ArgumentParser(prefix_chars='-')
 argParser.add_argument(

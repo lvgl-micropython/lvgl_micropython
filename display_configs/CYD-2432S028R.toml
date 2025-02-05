@@ -1,0 +1,58 @@
+[MCU.esp32]
+BOARD = "ESP32_GENERIC"
+BOARD_VARIANT = "SPIRAM"
+uart_repl_bitrate = 115200
+
+[SPI.Bus.spi_bus]
+host = 1
+mosi = 13
+miso = 12
+sck = 14
+
+[SPIBus.display_bus]
+spi_bus = "spi_bus"
+freq = 24000000
+dc = 2
+cs = 15
+
+
+[SPI.Bus.indev_bus]
+host = 2
+mosi= 32
+miso = 39
+sck = 25
+
+
+[SPI.Device.indev_device]
+spi_bus = "indev_bus"
+freq = 2000000
+cs = 33
+
+
+[ILI9341.display]
+data_bus = "display_bus"
+display_width = 320
+display_height = 240
+backlight_pin = 21
+backlight_on_state = "st7789.STATE_PWM"
+color_space = "lv.COLOR_FORMAT.RGB565"
+rgb565_byte_swap = true
+
+[display._ORIENTATION_TABLE]
+value = [0, 96, 192, 160]
+
+
+[display.set_power]
+params = [true]
+
+[display.init]
+params = [1]
+
+[xpt2046.indev]
+device = "indev_device"
+
+[display.set_backlight]
+params = [100]
+
+[task_handler.TaskHandler]
+params=[]

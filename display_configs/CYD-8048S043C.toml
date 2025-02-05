@@ -1,0 +1,92 @@
+[MCU.esp32]
+BOARD = "ESP32_GENERIC_S3"
+BOARD_VARIANT = "SPIRAM_OCT"
+flash_size = 8
+enable_jtag_repl = 'n'
+enable_cdc_repl = 'n'
+enable_uart_repl = 'y'
+uart_repl_bitrate = 115200
+
+
+[RGBBus.display_bus]
+data0 = 8
+data1 = 3
+data2 = 46
+data3 = 9
+data4 = 1
+data5 = 5
+data6 = 6
+data7 = 7
+data8 = 15
+data9 = 16
+data10 = 4
+data11 = 45
+data12 = 48
+data13 = 47
+data14 = 21
+data15 = 14
+hsync = 39
+vsync = 41
+de = 40
+pclk = 42
+freq = 12000000
+hsync_front_porch = 8
+hsync_back_porch = 8
+hsync_pulse_width = 4
+hsync_idle_low = true
+vsync_front_porch = 8
+vsync_back_porch = 8
+vsync_pulse_width = 4
+vsync_idle_low = true
+de_idle_high = false
+pclk_idle_high = false
+pclk_active_low = true
+
+
+[I2C.Bus.i2c_bus]
+host = 0
+scl = 20
+sda = 19
+freq = 400000
+
+
+[I2C.Device.indev_device]
+bus = "i2c_bus"
+dev_id = "ft6x36.I2C_ADDR"
+reg_bits = "ft6x36.BITS"
+
+
+[RGBDisplay.display]
+data_bus = "display_bus"
+display_width = 800
+display_height = 480
+backlight_pin = 2
+color_space = "lv.COLOR_FORMAT.RGB565"
+
+
+[display.set_power]
+params = [true]
+
+
+[display.init]
+params = []
+
+[FT6x36.indev]
+device = "indev_device"
+
+[indev.firmware_config.fw_config]
+
+[fw_config.width]
+value=800
+
+[fw_config.height]
+value=480
+
+[fw_config.save]
+params=[]
+
+[display.set_backlight]
+params = [100]
+
+[task_handler.TaskHandler]
+params=[]
