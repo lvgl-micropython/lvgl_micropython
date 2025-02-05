@@ -44,11 +44,11 @@ data_bus = "display_bus"
 display_width = 320
 display_height = 480
 backlight_pin = 45
-color_byte_order = "st7789.BYTE_ORDER_BGR"
+color_byte_order = "st7796.BYTE_ORDER_BGR"
 color_space = "lv.COLOR_FORMAT.RGB565"
 rgb565_byte_swap = true
 
-[ST7796.display.init]
+[display.init]
 params = []
 
 [FT6x36.indev]

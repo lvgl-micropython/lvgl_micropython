@@ -1,7 +1,7 @@
 import os
 
 try:
-    import tomlib as toml
+    import tomllib as toml
 except ImportError:
     try:
         import toml
@@ -13,6 +13,10 @@ except ImportError:
             '\n'
             'pip3 install toml'
         )
+
+
+used_imports = []
+global_variable_names = []
 
 
 class TOMLMeta(type):
@@ -36,25 +40,27 @@ class TOMLMeta(type):
 class TOMLObject(metaclass=TOMLMeta):
 
     def __init__(self, name, parent=None, **kwargs):
-
         if parent is not None and parent.name == 'MCU':
             self.build_args = kwargs
+            self.mcu = name
 
+            paren = parent.parent
+            while paren.parent is not None:
+                paren = parent.parent
+
+            paren.mcu_obj = TOMLmcu(self)
+        else:
+            self.mcu = None
+
+        self.mcu_obj = None
         self.name = name
         self.parent = parent
         self.__kwargs = kwargs
         self.__children = []
         self.imports = []
-        self.mcu = None
 
     def add_child(self, child):
-        if self.name == 'MCU':
-            self.__dict__.update(child.__dict__)
-            self.board = child.name
-            self.name = 'MCU'
-        elif self.parent is None and child.name == 'MCU':
-            self.mcu = TOMLmcu(child)
-        else:
+        if child.name != 'MCU':
             self.__children.append(child)
 
     def __getattr__(self, item):
@@ -74,8 +80,20 @@ class TOMLObject(metaclass=TOMLMeta):
 
             return self.name + ' = ' + self.parent.fqn
 
+        if self.name == 'RGBDisplay':
+            return 'rgb_display.RGBDisplay'
+
+        if self.name == 'SDLDisplay':
+            return 'sdl_display.SDLDisplay'
+
+        if self.name == 'SDLPointer':
+            return 'sdl_pointer.SDLPointer'
+
         if self.name == 'I2C':
             return 'i2c.I2C'
+
+        if self.name == 'Spi3Wire':
+            return 'spi3wire.Spi3Wire'
 
         if self.name == 'SPI':
             return 'machine.SPI'
@@ -145,16 +163,17 @@ class TOMLObject(metaclass=TOMLMeta):
 
     def __str__(self):
         if self.parent is None:
-            var_names = self.var_names
+            global_variable_names.extend(self.var_names)
 
             output = []
             output.extend(self.constants)
 
             for child in self.__children:
-                if child.name not in var_names:
+                if child.name not in global_variable_names:
                     module = child.fqn.split('.')[0]
-                    if module not in self.imports:
+                    if module not in self.imports and module not in used_imports:
                         self.imports.append(module)
+                        used_imports.append(module)
                         output.extend(['', f'import {module}', ''])
 
                 output.append(str(child))
@@ -178,16 +197,72 @@ class TOMLObject(metaclass=TOMLMeta):
         if len(self.__kwargs) == 1:
             key = list(self.__kwargs.keys())[0]
             if key == 'params':
+                output = ''
+                for param in self.__kwargs[key]:
+                    if isinstance(param, str) and '.' in param:
+                        mod = param.split('.', 1)[0]
+                        if (
+                            mod not in used_imports and
+                            mod not in global_variable_names and (
+                                mod in display_drivers or
+                                mod in indev_drivers or
+                                mod in io_expanders
+                            )
+                        ):
+                            output += f'import {mod}\n\n'
+                            used_imports.append(mod)
+
                 params = ', '.join(str(itm) for itm in self.__kwargs[key])
-                return f'{fqn}({params})'
-            elif key == 'value':
-                return f'{fqn} = ' + str(self.__kwargs[key])
+                output += f'{fqn}({params})'
+                return output
             else:
-                return f'{fqn}({key}={str(self.__kwargs[key])})'
+                output = ''
+                if (
+                    isinstance(self.__kwargs[key], str) and
+                    '.' in self.__kwargs[key]
+                ):
+                    mod = self.__kwargs[key].split('.', 1)[0]
+                    if (
+                        mod not in used_imports and
+                        mod not in global_variable_names and (
+                            mod in display_drivers or
+                            mod in indev_drivers or
+                            mod in io_expanders
+                        )
+                    ):
+                        output += f'import {mod}\n\n'
+                        used_imports.append(mod)
+
+                if key == 'value':
+                    output += f'{fqn} = ' + str(self.__kwargs[key])
+                else:
+                    output += f'{fqn}({key}={str(self.__kwargs[key])})'
+
+                return output
         else:
+            output = []
+
+            for v in self.__kwargs.values():
+                if not (isinstance(v, str) and '.' in v):
+                    continue
+
+                mod = v.split('.', 1)[0]
+                if (
+                    mod not in used_imports and
+                    mod not in global_variable_names and (
+                        mod in display_drivers or
+                        mod in indev_drivers or
+                        mod in io_expanders
+                    )
+                ):
+                    output.append(f'import {mod}')
+                    used_imports.append(mod)
+            if output:
+                output.append('')
+
             params = ',\n'.join(f'    {k}={str(v)}' for k, v in self.__kwargs.items() if not isinstance(v, dict))
             if params:
-                output = [f'{fqn}(\n{params}\n)', '']
+                output.append(f'{fqn}(\n{params}\n)\n')
             else:
                 raise RuntimeError
 
@@ -203,7 +278,7 @@ class TOMLObject(metaclass=TOMLMeta):
 class TOMLmcu:
 
     def __init__(self, mcu):
-        name = mcu.board
+        name = mcu.mcu
         build_args = mcu.build_args
 
         command = [name]
@@ -259,10 +334,10 @@ def run(toml_path, output_file):
         indevs = [f'INDEV={item}' for item in toml_obj.imports if item in indev_drivers]
         expanders = [f'EXPANDER={item}' for item in toml_obj.imports if item in io_expanders]
 
-        if toml_obj.mcu is None:
+        if toml_obj.mcu_obj is None:
             build_command = []
         else:
-            build_command = toml_obj.build_command
+            build_command = toml_obj.mcu_obj.build_command
 
         for display in displays[:]:
             if display not in build_command:
