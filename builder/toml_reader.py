@@ -74,6 +74,9 @@ class TOMLObject(metaclass=TOMLMeta):
 
     @property
     def fqn(self):
+        if self.parent is not None and self.parent.name == 'Pin':
+            return self.name + ' = ' + self.parent.fqn
+
         if self.__kwargs:
             if 'params' in self.__kwargs or 'value' in self.__kwargs:
                 return self.parent.fqn + '.' + self.name
@@ -107,8 +110,8 @@ class TOMLObject(metaclass=TOMLMeta):
         if self.name.lower() in indev_drivers:
             return self.name.lower() + '.' + self.name
 
-        if self.name.lower() in io_expanders:
-            return self.name.lower() + '.' + self.name
+        if self.name in io_expanders:
+            return self.name
 
         if self.name in ('I80Bus', 'SPIBus', 'I2CBus', 'RGBBus'):
             return 'lcd_bus.' + self.name
