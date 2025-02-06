@@ -1,19 +1,12 @@
 import os
 
 try:
-    import tomllib as toml
+    import toml
 except ImportError:
-    try:
-        import toml
-    except ImportError:
-        raise RuntimeError(
-            'A "toml" library is needed to read a .toml file\n'
-            'One is included with Python 3.11+ or you can install \n'
-            'into your current version of Python using the following command:\n'
-            '\n'
-            'pip3 install toml'
-        )
-
+    raise RuntimeError(
+        'The toml library is needed to use this feature.\n'
+        'Please run "pip3 install toml" and then restart your build'
+    )
 
 used_imports = []
 global_variable_names = []
