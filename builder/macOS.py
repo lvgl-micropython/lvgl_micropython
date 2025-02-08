@@ -15,12 +15,8 @@ from .unix import (
 from . import unix
 from . import spawn
 
-unix.unix_cmd = [
-    'make',
-    '',
-    '',
-    '-C',
-]
+from . import read_file, write_file
+
 
 unix.REAL_PORT = 'macOS'
 
@@ -33,8 +29,6 @@ def parse_args(extra_args, lv_cflags, board):
 
 
 def build_commands(not_sure, extra_args, script_dir, lv_cflags, board):
-
-
     return _build_commands(not_sure, extra_args, script_dir, lv_cflags, board)
 
 
@@ -98,6 +92,9 @@ def is_homebrew_arm(cmd):
     return False, cmd[0][0]
 
 
+EXTMOD_MK_PATH = 'lib/micropython/extmod/extmod.mk'
+
+
 def submodules():
     is_arm, brew_path = is_homebrew_arm([['brew', 'config']])
 
@@ -150,8 +147,35 @@ def submodules():
         if return_code != 0:
             sys.exit(return_code)
 
+    mbedtls = os.path.abspath('lib/micropython/lib/mbedtls/README.md')
+
+    if not os.path.exists(mbedtls):
+        return_code, _ = unix.spawn(unix.submodules_cmd)
+
+        if return_code != 0:
+            sys.exit(return_code)
 
 def compile(*args):  # NOQA
+    data = read_file('macOS', EXTMOD_MK_PATH)
+    data = data.replace(
+        'CFLAGS_EXTMOD += -DMICROPY_SSL_MBEDTLS=1 -I$(TOP)/$(MBEDTLS_DIR)/include',
+        'CFLAGS_EXTMOD += -DMICROPY_SSL_MBEDTLS=1'
+    )
+    code = [
+        'SRC_THIRDPARTY_C += lib/mbedtls_errors/mp_mbedtls_errors.c',
+        'SRC_THIRDPARTY_C += $(wildcard \\',
+        '    $(MBEDTLS_DIR)/include/*/*.h \\',
+        '    $(MBEDTLS_DIR)/library/*.h \\',
+        ')'
+    ]
+
+    data = data.replace(
+        'SRC_THIRDPARTY_C += lib/mbedtls_errors/mp_mbedtls_errors.c',
+        '\n'.join(code)
+    )
+
+    write_file(EXTMOD_MK_PATH, data)
+
     _compile(*args)
 
 
