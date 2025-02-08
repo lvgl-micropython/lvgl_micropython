@@ -15,6 +15,12 @@ from .unix import (
 from . import unix
 from . import spawn
 
+unix.unix_cmd = [
+    'make',
+    '',
+    '',
+    '-C',
+]
 
 unix.REAL_PORT = 'macOS'
 
@@ -27,6 +33,8 @@ def parse_args(extra_args, lv_cflags, board):
 
 
 def build_commands(not_sure, extra_args, script_dir, lv_cflags, board):
+
+
     return _build_commands(not_sure, extra_args, script_dir, lv_cflags, board)
 
 

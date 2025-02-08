@@ -1,0 +1,80 @@
+[MCU.esp32]
+BOARD = "ESP32_GENERIC_S3"
+BOARD_VARIANT = "SPIRAM_OCT"
+flash_size = 16
+octal_flash = true
+enable_jtag_repl = 'n'
+enable_cdc_repl = 'n'
+enable_uart_repl = 'y'
+uart_repl_bitrate = 115200
+
+
+[I80Bus.display_bus]
+data0 = 47
+data1 = 21
+data2 = 14
+data3 = 13
+data4 = 12
+data5 = 11
+data6 = 10
+data7 = 9
+data8 = 3
+data9 = 8
+data10 = 16
+data11 = 15
+data12 = 7
+data13 = 6
+data14 = 5
+data15 = 4
+dc = 45
+wr = 18
+freq = 40000000
+
+
+[I2C.Bus.i2c_bus]
+host = 0
+scl = 39
+sda = 38
+freq = 100000
+
+
+[I2C.Device.indev_device]
+bus = "i2c_bus"
+dev_id = "ft6x36.I2C_ADDR"
+reg_bits = "ft6x36.BITS"
+
+
+[ILI9488.display]
+data_bus = "display_bus"
+display_width = 320
+display_height = 480
+backlight_pin = 46
+color_space = "lv.COLOR_FORMAT.RGB565"
+
+
+[display.set_power]
+params = [true]
+
+
+[display.init]
+params = []
+
+[FT6x36.indev]
+device = "indev_device"
+
+[indev.firmware_config.fw_config]
+
+[fw_config.width]
+value=800
+
+[fw_config.height]
+value=480
+
+[fw_config.save]
+params=[]
+
+[display.set_backlight]
+params = [100]
+
+[task_handler.TaskHandler]
+params=[]
