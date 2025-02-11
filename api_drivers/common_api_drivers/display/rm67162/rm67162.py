@@ -14,11 +14,11 @@ STATE_PWM = display_driver_framework.STATE_PWM
 BYTE_ORDER_RGB = display_driver_framework.BYTE_ORDER_RGB
 BYTE_ORDER_BGR = display_driver_framework.BYTE_ORDER_BGR
 
-
-_MADCTL_MY = const(0x01)  # mirror y
-_MADCTL_MX = const(0x02)  # mirror x
+_MADCTL_MY = const(0x80)  # Decreasing in vertical
+_MADCTL_MX = const(0x60)  # Increasing in horizontal
 _MADCTL_MV = const(0x20)  # x, y = y, x
-
+_MADCTL_MYRS = const(0x01)  # mirror y
+_MADCTL_MXRS = const(0x02)  # mirror x
 
 # Write Display Brightness
 # 0 to 255
@@ -42,10 +42,10 @@ _HBM_EN = const(0x02)
 
 class RM67162(display_driver_framework.DisplayDriver):
     _ORIENTATION_TABLE = (
-        0x00,
-        _MADCTL_MV,
-        _MADCTL_MY | _MADCTL_MX,
-        _MADCTL_MY | _MADCTL_MX | _MADCTL_MV
+        _MADCTL_MX,
+        _MADCTL_MX & ~_MADCTL_MV,
+        _MADCTL_MX | _MADCTL_MYRS | _MADCTL_MXRS,
+        _MADCTL_MX | _MADCTL_MYRS | _MADCTL_MXRS & ~_MADCTL_MV
     )
 
     def __init__(
