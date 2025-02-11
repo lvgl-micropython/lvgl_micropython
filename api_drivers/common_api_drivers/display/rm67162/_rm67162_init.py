@@ -1,3 +1,7 @@
+# Copyright (c) 2025 0ut4t1m3
+# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+
+
 from micropython import const  # NOQA
 import lvgl as lv
 import time
