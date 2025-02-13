@@ -1,0 +1,91 @@
+[MCU.esp32]
+BOARD = "ESP32_GENERIC_S3"
+BOARD_VARIANT = "SPIRAM_OCT"
+flash_size = 16
+octal_flash = true
+enable_cdc_repl = "y"
+enable_jtag_repl = "n"
+enable_uart_repl = "n"
+FROZEN_MANIFEST = "display_configs/LilyGo-TDeck/manifest.py"
+
+[SPI.Bus.spi_bus]
+host = 1
+mosi = 41
+miso = 38
+sck = 40
+
+[SPI.Device.lora_device]
+spi_bus = "spi_bus"
+freq = 20000000
+cs = 9
+
+[SPIBus.display_bus]
+spi_bus = "spi_bus"
+freq = 40000000
+dc = 11
+cs = 12
+
+[SDCard.sdcard]
+spi_bus = "spi_bus"
+freq = 10000000
+cs = 39
+
+[I2C.Bus.i2c_bus]
+host = 0
+scl = 8
+sda = 18
+freq = 100000
+
+[I2C.Device.touch_device]
+bus = "i2c_bus"
+dev_id = "gt911.I2C_ADDR"
+reg_bits = "gt911.BITS"
+
+[I2C.Device.keyboard_device]
+bus = "i2c_bus"
+dev_id = 85
+reg_bits = 8
+
+[ST7789.display]
+data_bus = "display_bus"
+display_width = 320
+display_height = 240
+power_pin = 42
+backlight_pin = 42
+backlight_on_state = "st7789.STATE_PWM"
+color_space = "lv.COLOR_FORMAT.RGB565"
+color_byte_order = "ili9341.BYTE_ORDER_BGR"
+rgb565_byte_swap = true
+
+[display.set_power]
+params = [true]
+
+[display.init]
+params = []
+
+[gt911.touch]
+device = "touch_device"
+
+[keyboard_s3.Keyboard.keyboard]
+device = "keyboard_device"
+
+[trackball.TrackBall.trackball]
+up_pin = 3
+down_pin = 2
+left_pin = 15
+right_pin = 1
+
+[power.Button.pwr_button]
+pin = 10
+
+[display.set_backlight]
+params = [100]
+
+[sx1262.SX1262.lora]
+spi_device = "lora_device"
+gpio = 13
+irq = 45
+rst = 17
+
+[task_handler.TaskHandler]
+params=[]

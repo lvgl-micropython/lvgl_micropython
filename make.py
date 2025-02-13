@@ -182,9 +182,18 @@ expanders = args2.expanders
 builder.DO_NOT_SCRUB_BUILD_FOLDER = args2.no_scrub
 
 
+if frozen_manifest is not None:
+    frozen_manifest = os.path.abspath(frozen_manifest)
+    if not os.path.exists(frozen_manifest):
+        raise RuntimeError('Frozen manifest does not exist.')
+
+
 if custom_board_path is not None:
     board_name = os.path.split(custom_board_path)[-1]
     dst_path = f'lib/micropython/ports/{target}/boards/{board_name}'
+    if os.path.exists(dst_path):
+        shutil.rmtree(dst_path)
+
     shutil.copytree(custom_board_path, dst_path)
 
     if board is None or board != board_name:

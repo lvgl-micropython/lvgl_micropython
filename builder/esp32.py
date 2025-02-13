@@ -1290,7 +1290,7 @@ def build_sdkconfig(*args):
                 for itm in (
                     15, 16, 20, 24, 26, 30, 32, 40, 48, 60, 64, 80, 120
                 ):
-                    base_config.append(f'CONFIG_ESPTOOLPY__FLASHFREQ_{itm}M=n')
+                    base_config.append(f'CONFIG_ESPTOOLPY_FLASHFREQ_{itm}M=n')
             elif 'SPIRAM_SPEED' in arg:
                 for itm in (20, 26, 40, 80, 120):
                     base_config.append(f'CONFIG_SPIRAM_SPEED_{itm}M=n')
