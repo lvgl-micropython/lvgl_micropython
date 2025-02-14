@@ -4,7 +4,7 @@ import lvgl as lv
 import time
 
 
-class PowerButton:
+class Button:
 
     def __init__(self, pin):
         self._pin = machine.Pin(pin, machine.Pin.IN)

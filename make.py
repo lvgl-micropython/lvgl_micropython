@@ -188,18 +188,6 @@ if frozen_manifest is not None:
         raise RuntimeError('Frozen manifest does not exist.')
 
 
-if custom_board_path is not None:
-    board_name = os.path.split(custom_board_path)[-1]
-    dst_path = f'lib/micropython/ports/{target}/boards/{board_name}'
-    if os.path.exists(dst_path):
-        shutil.rmtree(dst_path)
-
-    shutil.copytree(custom_board_path, dst_path)
-
-    if board is None or board != board_name:
-        board = board_name
-
-
 if lv_cflags is None:
     lv_cflags = ''
 
@@ -217,10 +205,12 @@ def get_submodules():
         os.path.join(SCRIPT_DIR, 'lib/micropython/mpy-cross')
     ):
         builder.get_micropython()
+
     if not os.path.exists(
         os.path.join(SCRIPT_DIR, 'lib/lvgl/lvgl.h')
     ):
         builder.get_lvgl()
+
     if not os.path.exists(os.path.join(
         SCRIPT_DIR, 'lib/pycparser/pycparser')
     ):
@@ -272,6 +262,19 @@ if __name__ == '__main__':
         import builder as mod
 
     get_submodules()
+
+    if custom_board_path is not None:
+        board_name = os.path.split(custom_board_path)[-1]
+        dst_path = f'lib/micropython/ports/{target}/boards/{board_name}'
+        if os.path.exists(dst_path):
+            shutil.rmtree(dst_path)
+
+        shutil.copytree(custom_board_path, dst_path)
+
+        if board is None or board != board_name:
+            board = board_name
+
+        mod.custom_board_path = custom_board_path
 
     extra_args, lv_cflags, board = mod.parse_args(extra_args, lv_cflags, board)
     extra_args = mod.build_commands(

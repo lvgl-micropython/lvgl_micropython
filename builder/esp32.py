@@ -1484,8 +1484,9 @@ def compile(*args):  # NOQA
 
             build_name = f'build-{board}'
 
-            if board_variant:
-                build_name += f'-{board_variant}'
+            if custom_board_path is None:
+                if board_variant:
+                    build_name += f'-{board_variant}'
 
             full_file_path = (
                 f'{SCRIPT_DIR}/lib/micropython/ports/esp32/{build_name}'
@@ -1504,9 +1505,12 @@ def compile(*args):  # NOQA
 
             scrub_build_folder()
 
-            build_bin_file = f'build/lvgl_micropy_{build_name[6:]}-{flash_size}'
-            if oct_flash:
-                build_bin_file += '_OCTFLASH'
+            if custom_board_path is None:
+                build_bin_file = f'build/lvgl_micropy_{build_name[6:]}-{flash_size}'
+                if oct_flash:
+                    build_bin_file += '_OCTFLASH'
+            else:
+                build_bin_file = f'build/lvgl_micropy_{build_name[6:]}'
 
             build_bin_file += '.bin'
             build_bin_file = os.path.abspath(build_bin_file)
