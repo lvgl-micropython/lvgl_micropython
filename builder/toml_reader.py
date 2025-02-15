@@ -15,6 +15,9 @@ global_variable_names = []
 class TOMLMeta(type):
 
     def __call__(cls, name, parent=None, **kwargs):
+        if name and name == 'conditional':
+            return TOMLConditional(name, None, **kwargs)
+
         children = {}
         for key, value in list(kwargs.items()):
             if isinstance(value, dict):
@@ -130,6 +133,9 @@ class TOMLObject(metaclass=TOMLMeta):
         var_names = []
 
         for child in self.__children:
+            if isinstance(child, TOMLConditional):
+                continue
+
             var_names.extend(child.var_names)
 
         return var_names
@@ -153,6 +159,9 @@ class TOMLObject(metaclass=TOMLMeta):
                 self.__kwargs[key] = f'_{key_upper}'
         else:
             for child in self.__children:
+                if isinstance(child, TOMLConditional):
+                    continue
+
                 res.extend(child.constants)
 
         return res
@@ -165,7 +174,10 @@ class TOMLObject(metaclass=TOMLMeta):
             output.extend(self.constants)
 
             for child in self.__children:
-                if child.name not in global_variable_names:
+                if isinstance(child, TOMLConditional):
+                    output.append('')
+
+                elif child.name not in global_variable_names:
                     module = child.fqn.split('.')[0]
                     if module not in self.imports and module not in used_imports:
                         self.imports.append(module)
@@ -173,6 +185,8 @@ class TOMLObject(metaclass=TOMLMeta):
                         output.extend(['', f'import {module}', ''])
 
                 output.append(str(child))
+                if isinstance(child, TOMLConditional):
+                    output.append('')
 
             if output:
                 output = [
@@ -269,6 +283,162 @@ class TOMLObject(metaclass=TOMLMeta):
                 output.append('')
 
             return '\n'.join(output)
+
+
+class TOMLConditionalObject:
+
+    def __init__(self, name, parent=None, **kwargs):
+        self.name = name
+        self.parent = parent
+        self.__children = []
+
+        for key, value in list(kwargs.items())[:]:
+            if isinstance(value, dict):
+                self.__children.append(TOMLConditionalObject(key, self, **value))
+                del kwargs[key]
+
+        self.__kwargs = kwargs
+
+    def get_conditional(self):
+        if 'not_equal' in self.__kwargs:
+            return f'{self.name} != {self.__kwargs["not_equal"]}'
+        elif 'equal' in self.__kwargs:
+            return f'{self.name} == {self.__kwargs["equal"]}'
+        elif 'greater_than' in self.__kwargs:
+            return f'{self.name} > {self.__kwargs["greater_than"]}'
+        elif 'less_than' in self.__kwargs:
+            return f'{self.name} < {self.__kwargs["less_than"]}'
+        elif 'greater_than_or_equal' in self.__kwargs:
+            return f'{self.name} >= {self.__kwargs["greater_than_or_equal"]}'
+        elif 'less_than_or_equal' in self.__kwargs:
+            return f'{self.name} <= {self.__kwargs["less_than_or_equal"]}'
+        elif 'is' in self.__kwargs:
+            return f'{self.name} is {self.__kwargs["is"]}'
+        elif 'is_not' in self.__kwargs:
+            return f'{self.name} is not {self.__kwargs["is_not"]}'
+        elif 'in' in self.__kwargs:
+            return f'{self.name} in {self.__kwargs["in"]}'
+        elif 'not_in' in self.__kwargs:
+            return f'{self.name} not in {self.__kwargs["not_in"]}'
+        else:
+            for child in self.__children:
+                res = child.get_conditional()
+                if res is not None:
+                    return f'{self.name}.{res}'
+
+    def is_conditional(self):
+        cond = self.get_conditional()
+        return cond is not None and not cond.startswith(f'{self.name}.')
+
+    def get_objects(self):
+        res = []
+
+        base_conditional = self.parent
+        while not isinstance(base_conditional, TOMLConditional):
+            base_conditional = base_conditional.parent
+
+        if self.is_conditional():
+            for child in self.__children:
+                res.extend(child.get_objects())
+        else:
+            if 'value' in self.__kwargs:
+                names = []
+                parent = self.parent
+                while parent.name and not isinstance(parent, TOMLConditional):
+                    names.insert(0, parent.name)
+                    parent = parent.parent
+
+                while names and not base_conditional.has_variable_name('.'.join(names)):
+                    names.pop(0)
+
+                names.append(self.name)
+                var_name = '.'.join(names)
+                base_conditional.add_variable_name(var_name)
+                res.append(f'{var_name} = {self.__kwargs["value"]}')
+
+            elif 'params' in self.__kwargs:
+                params = ', '.join(str(item) for item in self.__kwargs['params'])
+                if self.name == 'del':
+                    res.append(f'{self.name} {params}')
+                else:
+                    res.append(f'{self.name}({params})')
+
+                return res
+
+            for child in self.__children:
+                lines = child.get_objects()
+
+                for line in lines:
+                    if ' = ' in line:
+                        var_name = line.split(' = ', 1)[0]
+                        if base_conditional.has_variable_name(var_name):
+                            res.append(line)
+                            continue
+                    else:
+                        try:
+                            func_name = line.split('(', 1)[0]
+                            if base_conditional.has_variable_name(func_name):
+                                res.append(line)
+                                continue
+
+                            func_name = func_name.split('.', 1)[0]
+                            if base_conditional.has_variable_name(func_name):
+                                res.append(line)
+                                continue
+                        except IndexError:
+                            pass
+
+                    if line.startswith('del '):
+                        res.append(line)
+                    else:
+                        res.append(f'{self.name}.{line}')
+        return res
+
+    def is_variable(self):
+        return 'value' in self.__kwargs
+
+    def is_function(self):
+        return 'params' in self.__kwargs
+
+
+class TOMLConditional:
+
+    def __init__(self, name, parent=None, **kwargs):
+        self.name = name
+        self.parent = parent
+        self.__children = []
+        self.__variable_names = []
+
+        for key, value in list(kwargs.items())[:]:
+            if isinstance(value, dict):
+                self.__children.append(TOMLConditionalObject(key, self, **value))
+                del kwargs[key]
+
+        self.__kwargs = kwargs
+
+        code = []
+        for child in self.__children:
+            cond = child.get_conditional()
+            if cond is not None:
+                code.append(f'if {cond}:')
+                break
+        else:
+            raise RuntimeError('Unable to locate conditional argument')
+
+        for child in self.__children:
+            code.extend([f'    {line}' for line in child.get_objects()])
+
+        self.__code = '\n'.join(code)
+
+    def add_variable_name(self, name):
+        if name not in self.__variable_names:
+            self.__variable_names.append(name)
+
+    def has_variable_name(self, name):
+        return name in self.__variable_names
+
+    def __str__(self):
+        return self.__code
 
 
 class TOMLmcu:
