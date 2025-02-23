@@ -55,32 +55,16 @@ class KeypadDriver(_indev_base.IndevBase):
         if key is None:  # ignore no key
             if self._current_state != lv.INDEV_STATE.RELEASED:  # NOQA
                 self._current_state = lv.INDEV_STATE.RELEASED  # NOQA
-                res = True
-            else:
-                res = False
 
             data.key = self._last_key
             data.state = self._current_state
-            data.continue_reading = False
-            return res
 
         state, key = key
-
         self._last_key = key
-
-        if self._current_state == state == lv.INDEV_STATE.RELEASED:  # NOQA
-            res = False
-            data.continue_reading = False
-        else:
-            res = True
-            data.continue_reading = True
-
         self._current_state = state
 
         data.key = self._last_key
         data.state = self._current_state
-
-        return res
 
     def get_type(self):
         return self._indev_drv.get_type()  # NOQA
