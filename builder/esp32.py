@@ -1068,6 +1068,10 @@ def update_mpconfigport():
 
     if custom_board_path is None:
         repl_data = [
+            '#ifndef USB_SERIAL_JTAG_PACKET_SZ_BYTES',
+            '#define USB_SERIAL_JTAG_PACKET_SZ_BYTES (64)',
+            '#endif',
+            '',
             '#ifdef MICROPY_HW_UART_REPL_BAUD',
             '#undef MICROPY_HW_UART_REPL_BAUD',
             '#endif',
