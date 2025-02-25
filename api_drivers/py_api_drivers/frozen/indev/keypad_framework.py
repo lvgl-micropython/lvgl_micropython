@@ -58,6 +58,7 @@ class KeypadDriver(_indev_base.IndevBase):
 
             data.key = self._last_key
             data.state = self._current_state
+            return
 
         state, key = key
         self._last_key = key
