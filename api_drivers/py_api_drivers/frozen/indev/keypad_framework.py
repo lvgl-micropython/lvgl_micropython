@@ -53,19 +53,13 @@ class KeypadDriver(_indev_base.IndevBase):
         key = self._get_key()
 
         if key is None:  # ignore no key
-            if self._current_state != lv.INDEV_STATE.RELEASED:  # NOQA
-                self._current_state = lv.INDEV_STATE.RELEASED  # NOQA
+            state = self.RELEASED
+            key = self._last_key
+        else:
+            state, key = key
 
-            data.key = self._last_key
-            data.state = self._current_state
-            return
-
-        state, key = key
-        self._last_key = key
-        self._current_state = state
-
-        data.key = self._last_key
-        data.state = self._current_state
+        data.key = self._last_key = key
+        data.state = self._current_state = state
 
     def get_type(self):
         return self._indev_drv.get_type()  # NOQA
