@@ -5,7 +5,7 @@ import keypad_framework
 
 
 class Keyboard(keypad_framework.KeypadDriver):
-    def __init__(self, device, debug):  # NOQA
+    def __init__(self, device, debug=False):  # NOQA
         self._device = device
         self._debug = debug
         super().__init__()
