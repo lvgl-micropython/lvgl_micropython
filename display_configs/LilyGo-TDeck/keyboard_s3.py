@@ -5,11 +5,9 @@ import keypad_framework
 
 
 class Keyboard(keypad_framework.KeypadDriver):
-    def __init__(self, device):  # NOQA
+    def __init__(self, device, debug):  # NOQA
         self._device = device
-        self._buf = bytearray(1)
-        self._mv = memoryview(self._buf)
-
+        self._debug = debug
         super().__init__()
 
     def _get_key(self):
@@ -19,9 +17,7 @@ class Keyboard(keypad_framework.KeypadDriver):
         # lv.KEY.PREV = 0x0B
         # lv.KEY.HOME = 0x02
         # lv.KEY.END = 0x03
-        self._device.read(buf=self._mv)
-        key = self._buf[0]
-
+        key = bytearray(self._device.read(1))[0]
         if key == 0x00:  # no key
             return None
         elif key == 0x08:  # backspace
@@ -30,6 +26,17 @@ class Keyboard(keypad_framework.KeypadDriver):
             key = lv.KEY.ENTER  # 0x0A  # NOQA
         elif key == 0x0C:  # alt + c
             return None
+
+        if self._debug:
+            k = key
+            # check if key is in human readable ascii range and if it
+            # is then convert it form it's decimal value to the actual ascii
+            # key else convert to hex
+            if 127 > k >= 32:
+                k = chr(k)
+            else:
+                k = hex(k)
+            print('RAW KEY:', hex(k))
 
         return self.PRESSED, key
 
