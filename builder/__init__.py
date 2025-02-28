@@ -10,7 +10,7 @@ import queue
 
 _windows_env = None
 
-
+MICROPY_LVGL_VER = "1.0.0"
 DO_NOT_SCRUB_BUILD_FOLDER = False
 
 
@@ -34,7 +34,7 @@ def revert_files(port):
     if port in ('raspberry_pi', 'macOS'):
         port = 'unix'
 
-    dst_path = f'lib/micropython/ports/{port}'
+    dst_path = f'lib/micropython'
 
     if not os.path.exists(src_path) or not os.listdir(src_path):
         return
@@ -63,7 +63,7 @@ def copy_micropy_updates(port):
         port = 'unix'
         src_path = f'micropy_updates/{port}'
 
-    dst_path = f'lib/micropython/ports/{port}'
+    dst_path = f'lib/micropython'
 
     def iter_files(s_path, d_path, o_path):
         for file in os.listdir(s_path):
@@ -99,7 +99,7 @@ def read_file(port, file):
 
     head, tail = os.path.split(filepath)
     save_path = []
-    while tail != port:
+    while tail != 'micropython':
         save_path.insert(0, tail)
         head, tail = os.path.split(head)
 
