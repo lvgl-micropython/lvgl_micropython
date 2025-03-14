@@ -1,6 +1,5 @@
 # Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
-from micropython import const  # NOQA
 import io_expander_framework
 
 
@@ -14,50 +13,31 @@ EXIO7 = io_expander_framework.EXIO7
 EXIO8 = io_expander_framework.EXIO8
 
 
-_INPUT_PORT_REG = const(0x00)
-_OUTPUT_PORT_REG = const(0x02)
-_POLARITY_INVERSION_REG = const(0x04)
-_CONFIGURATION_REG = const(0x06)
-
-I2C_ADDR = 0x20
+# 0x40, 0x42, 0x44, 0x46, 0x48, 0x4A, 0x4C, 0x4E
+I2C_ADDR = 0x40
 BITS = 8
-
-# 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26 or 0x27
-I2C_TCA9554_ADDR = 0x20
-
-# 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E or 0x3F
-I2C_TCA9554A_ADDR = 0x38
 
 
 class Pin(io_expander_framework.Pin):
-    _config_settings = 0x00
-    _output_states = 0x00
+    _output_states = 0xFF
     _reg_int_pins = []
 
     @property
     def __bit(self):
         return 1 << self._id
 
-    def __read_reg(self, reg):
+    def __read_reg(self):
         self._buf[0] = 0
-        self._buf[1] = 0
-        self._device.read_mem(reg, buf=self._mv)
-        return self._buf[0] << 8 | self._buf[1]
+        Pin._device.read(buf=self._mv[:1])
+        return self._buf[0]
 
-    def __write_reg(self, reg, value):
-        self._buf[0] = value >> 8 & 0xFF
-        self._buf[1] = value & 0xFF
-        self._device.write_mem(reg, buf=self._mv)
+    def __write_reg(self, value):
+        self._buf[0] = value & 0xFF
+        Pin._device.write(buf=self._mv[:1])
 
     def _set_dir(self, direction):
-        if direction == self.OUT:
-            Pin._config_settings &= ~self.__bit
-        elif direction == self.IN:
-            Pin._config_settings |= self.__bit
-        else:
+        if direction == self.OPEN_DRAIN:
             raise ValueError('OPEN_DRAIN is not supported')
-
-        self.__write_reg(_CONFIGURATION_REG, Pin._config_settings)
 
     def _set_level(self, level):
         if self._mode == self.OUT:
@@ -68,13 +48,13 @@ class Pin(io_expander_framework.Pin):
 
             # 0nly set if there is an actual change
             if states != Pin._output_states:
-                self.__write_reg(_OUTPUT_PORT_REG, Pin._output_states)
+                self.__write_reg(Pin._output_states)
                 Pin._output_states = states
 
     def _get_level(self):
         if self._mode == self.IN:
-            states = self.__read_reg(_INPUT_PORT_REG)
-        elif self._mode == self.OUT:
+            states = self.__read_reg()
+        elif self.mode == self.OUT:
             states = Pin._output_states
         else:
             raise ValueError('Unsupported pin mode')

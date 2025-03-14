@@ -1,0 +1,3348 @@
+from micropython import const  # NOQA
+import io_expander_framework
+import lcd_utils
+
+
+# mcu: ESP32
+# flash: 16mb
+# psram: 8mb
+# touch ic: CHSC6540
+# sdcard reader
+# speaker: NS4168 (i2s)
+# rtc: BM8563
+# power management: AXP192
+# display ic: ILI9342C  (320x240)
+
+
+# uart
+# rx: gpio3
+# tx: gpio1
+
+# flash
+# CS: gpio11
+# MISO: gpio7
+# MOSI: gpio8
+# SCK: gpio6
+# HOLD: gpio9
+# WP: gpio10
+
+# PSRAM
+# MOSI: gpio8
+# MISO: gpio7
+# DATA2: gpio10
+# DATA3: gpio9
+# SCK: gpio17
+# CS: gpio16
+
+# RTC (I2C)
+# SCL: gpio22
+# SDA: gpio21
+# INT: PWRKEY
+# PWR: PMU LDO1
+
+# RS485
+# RX: gpio27
+# TX: gpio19
+
+# RESET??
+# gpio25?
+
+
+# SDCARD (SPI)
+# MISO: gpio38
+# MOSI:gpio23
+# SCK: gpio18
+# CS: gpio4
+
+# speaker
+# LRCK: gpio0
+# BCLK: gpio12
+# DATA: gpio2
+# ENABLE: PMU IO2
+
+# Mic
+# DATA: gpio34
+# CLK: gpio0
+
+# PMU (I2C)
+# SDA: gpio21
+# SCK: gpio22
+# GPIO1: TP Reset
+# GPIO2: Speaker Enable
+# GPIO4: LCD Reset
+
+
+# 2 channel DAC
+# G25
+# G25/DAC: gpio25
+
+# 2 channel DAC
+# G26
+# G26/DAC: gpio26
+
+
+# 10 channel ADC
+# G0/2/4/12-15/25-27
+# G0: gpio0
+# G1/TXD0: gpio1
+# G2: gpio2
+# G3/RXD0: gpio3
+
+
+# G13/RXD2: gpio13
+# G14/TXD2: gpio14
+
+# G18/SCK: gpio18
+# G23/MOSI: gpio23
+
+
+# G19: gpio19
+# G27: gpio27
+# G21/SDA: gpio21
+# G22/SCL: gpio22
+
+# 8 channel ADC
+# G32-39
+# G32/SDA: gpio32
+# G33/SCL: gpio33
+# G34/ADC: gpio34
+# G35/ADC: gpio35
+# G36/ADC: gpio36
+
+# G38/MISO: gpio38
+
+# EXT:
+
+# SYS:
+
+# LCD
+# MOSI: gpio23
+# SCK: gpio18
+# CS: gpio5
+# DC: gpio15
+# BL: PMU LDO3
+# PWR: PMU LDO2
+# RST: PMU IO4
+
+# Touch
+# SCK: gpio39
+# SCL: gpio22
+# SDA: gpio21
+
+
+# I2C Bus There are 2 I2C busses
+# bus 1
+# SCL: gpio22
+# SDC: gpio21
+# shared with Touch, BUS.SYS, PMU, RTC
+
+# bus2
+# SDA: gpio32
+# SCL: gpio33
+# shared with BUS-EXT
+
+# define CONFIG_I2S_BCK_PIN 12
+# define CONFIG_I2S_LRCK_PIN 0
+# define CONFIG_I2S_DATA_PIN 2
+# define CONFIG_I2S_DATA_IN_PIN 34
+
+# define Speak_I2S_NUMBER I2S_NUM_0
+# define MODE_MIC 0
+# define MODE_SPK 1
+# define I2S_DATA_LEN 60
+# define TFT_LED_PIN 32
+# define TFT_DC_PIN 27
+# define TFT_CS_PIN 14
+# define TFT_MOSI_PIN 23
+# define TFT_CLK_PIN 18
+# define TFT_RST_PIN 33
+# define TFT_MISO_PIN 19
+# define TFCARD_CS_PIN 4
+
+
+# define AXP_ADDR 0X34
+
+# freq = 400000
+#
+#
+# class AXP192(object):
+#
+#     def __init__(self, ):
+#         self._tx_buf = bytearray(3)
+#         self._tx_mv = memoryview(self._tx_buf)
+#
+#         self._rx_buf = bytearray(3)
+#         self._rx_mv = memoryview(self._rx_buf)
+#
+#         self._write_1_byte(0x30, (self._read_8_bits(0x30) & 0x04) | 0X02)
+#
+#         #     //AXP192 GPIO1:OD OUTPUT ( GPIO1 = Touch RST )
+#         self._write_1_byte(0x92, self._read_8_bits(0x92) & 0xf8)
+#
+#         # //AXP192 GPIO2:OD OUTPUT
+#         self._write_1_byte(0x93, self._read_8_bits(0x93) & 0xf8)
+#
+#         # //AXP192 RTC CHG
+#         self._write_1_byte(0x35, (self._read_8_bits(0x35) & 0x1c) | 0xa2)
+#
+#         self.set_esp_voltage(3350)
+#
+#         self.set_lcd_voltage(2800)
+#
+#         # //Periph power voltage preset (LCD_logic, SD card)
+#         self.set_ldo_voltage(2, 3300)
+#
+#         # // LCD backlight ( for Tough )
+#         self.set_ldo_voltage(3, 3000)
+#
+#         self.set_lcd_enable(2, True)
+#         self.set_ldo_enable(3, True)
+#
+#         self.set_charge_current(100)
+#
+#         # //AXP192 GPIO4
+#         self._write_1_byte(0X95, (self._read_8_bits(0x95) & 0x72) | 0X84)
+#
+#         self._write_1_byte(0X36, 0X4C)
+#
+#         self._write_1_byte(0x82,0xff)
+#
+#         self.set_lcd_reset(0)
+#         delay(100)
+#         self.set_lcd_reset(1)
+#         delay(100)
+#
+#
+#         # //  bus power mode_output
+#         # // axp: check v-bus status
+#         if self._read_8_bits(0x00) & 0x08:
+#             self._write_1_byte(0x30, self._read_8_bits(0x30) | 0x80)
+#             # // if v-bus can use, disable M-Bus 5V output to input
+#             self.set_bus_power_mode(_kMBusModeInput)
+#         else:
+#             # // if not, enable M-Bus 5V output
+#             self.set_bus_power_mode(_kMBusModeOutput)
+#
+#
+#     def _read_8_bits(self, reg):
+#         self._tx_buf[0] = reg
+#
+#         self._device.write_readinto(
+#             self._tx_mv[:1],
+#             self._rx_mv[:1]
+#         )
+#         return self._rx_buf[0]
+#
+#     def _read_12_bits(self, reg):
+#         self._tx_buf[0] = reg
+#
+#         self._device.write_readinto(
+#             self._tx_mv[:2],
+#             self._rx_mv[:2]
+#         )
+#
+#         return (self._rx_buf[0]  << 4) + self._rx_buf[1]
+#
+#     def _read_13_bits(self, reg):
+#         self._tx_buf[0] = reg
+#
+#         self._device.write_readinto(
+#             self._tx_mv[:2],
+#             self._rx_mv[:2]
+#         )
+#
+#         return (self._rx_buf[0]  << 5) + self._rx_buf[1]
+#
+#     def _read_16_bits(self, reg):
+#         self._tx_buf[0] = reg
+#
+#         self._device.write_readinto(
+#             self._tx_mv[:2],
+#             self._rx_mv[:2]
+#         )
+#
+#         return (self._rx_buf[0]  << 8) | self._rx_buf[1]
+#
+#     def _read_24_bits(self, reg):
+#         self._tx_buf[0] = reg
+#
+#         self._device.write_readinto(
+#             self._tx_mv[:3],
+#             self._rx_mv[:3]
+#         )
+#
+#         return (self._rx_buf[0]  << 16) | (self._rx_buf[1] << 8) | self._rx_buf[2]
+#
+#
+#     def _read_32_bits(self, reg):
+#         self._tx_buf[0] = reg
+#
+#         self._device.write_readinto(
+#             self._tx_mv[:4],
+#             self._rx_mv[:4]
+#         )
+#
+#         return (self._rx_buf[0]  << 24) | (self._rx_buf[1] << 16) | (self._rx_buf[2] << 8) | self._rx_buf[3]
+#
+#     def _write_1_byte(self, reg, value):
+#         self._tx_buf[0] = reg
+#         self._tx_buf[1] = value
+#         self._device.write(self._tx_mv[:2])
+#
+#     def set_screen_brightness(self, brightness):
+#         brightness = int((brightness / 100.0) * 12)
+#         brightness = max(0, min(12, brightness))
+#         buf = self._read_8_bits(0x28)
+#         self._write_1_byte(0x28, ((buf & 0x0f) | (brightness << 4)))
+#
+#
+#     def get_bat_state(self):
+#         return bool(self._read_8_bits(0x01) | 0x20)
+#
+#     def enable_coulomb_counter(self, en):
+#         if en:
+#             self._write_1_byte(0xB8, 0x80)
+#         else:
+#             self._write_1_byte(0xB8, 0x00)
+#
+
+'''
+    def stop_coulomb_counter(self):
+    self._write_1_byte(0xB8, 0xC0);
+}
+
+    def clear_coulomb_counter(self):
+    self._write_1_byte(0xB8, 0xA0);
+}
+
+    def get_coulomb_charge_Data(self):
+    return Read32bit(0xB0);
+}
+
+    def get_coulomb_discharge_data(self):
+    return Read32bit(0xB4);
+}
+
+    def get_coulomb_data(self):
+
+    uint32_t coin = 0;
+    uint32_t coout = 0;
+
+    coin = GetCoulombchargeData();
+    coout = GetCoulombdischargeData();
+
+    //c = 65536 * current_LSB * (coin - coout) / 3600 / ADC rate
+    //Adc rate can be read from 84H ,change this variable if you change the ADC reate
+    float ccc = 65536 * 0.5 * (coin - coout) / 3600.0 / 25.0;
+    return ccc;
+}
+
+// Cut all power, except for LDO1 (RTC)
+    def power_off(self):
+    self._write_1_byte(0x32, Read8bit(0x32) | 0b10000000);
+}
+
+    def set_sdc_state(self, state):
+    // Enable / Disable all ADCs
+    self._write_1_byte(0x82, state ? 0xff : 0x00);
+}
+
+    def prepare_to_sleep(self):
+    // Disable ADCs
+    SetAdcState(false);
+
+    // Turn LED off
+    TouchReset(false);
+
+    // Turn LCD backlight off
+    SetLDOEnable(3, false);
+}
+
+// Get current battery level
+    def get_battery_level(self):
+    const float batVoltage = GetBatVoltage();
+    const float batPercentage = 
+        (batVoltage < 3.248088) 
+        ? (0) 
+        : (batVoltage - 3.120712) * 100;       
+    return (batPercentage <= 100) ? batPercentage : 100;    
+}
+
+    def restore_from_light_sleep(self):
+    // Turn LCD backlight on
+    SetDCDC3(true);
+
+    // Turn LED on
+    TouchReset(true);
+
+    // Enable ADCs
+    SetLDOEnable(3, true);
+}
+
+    def get_warning_level(self):
+    Wire1.beginTransmission(0x34);
+    Wire1.write(0x47);
+    Wire1.endTransmission();
+    Wire1.requestFrom(0x34, 1);
+    uint8_t buf = Wire1.read();
+    return (buf & 0x01);
+}
+
+// -- sleep
+    def deep_sleep(time_in_us):
+    PrepareToSleep();
+
+    if (time_in_us > 0)
+    {
+        esp_sleep_enable_timer_wakeup(time_in_us);
+    }
+    else
+    {
+        esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_TIMER);
+    }
+    (time_in_us == 0) ? esp_deep_sleep_start() : esp_deep_sleep(time_in_us);
+
+    // Never reached - after deep sleep ESP32 restarts
+}
+
+    def light_sleep(time_in_us):
+    PrepareToSleep();
+
+    if (time_in_us > 0)
+    {
+        esp_sleep_enable_timer_wakeup(time_in_us);
+    }
+    else
+    {
+        esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_TIMER);
+    }
+    esp_light_sleep_start();
+
+    RestoreFromLightSleep();
+}
+
+    def get_warning_level(self):
+    return Read8bit(0x47) & 0x01;
+}
+
+    def get_battery_voltage(self):
+    float ADCLSB = 1.1 / 1000.0;
+    uint16_t ReData = Read12Bit(0x78);
+    return ReData * ADCLSB;
+}
+
+    def get_battery_current(self):
+    float ADCLSB = 0.5;
+    uint16_t CurrentIn = Read13Bit(0x7A);
+    uint16_t CurrentOut = Read13Bit(0x7C);
+    return (CurrentIn - CurrentOut) * ADCLSB;
+}
+
+    def get_vin_voltage(self):
+    float ADCLSB = 1.7 / 1000.0;
+    uint16_t ReData = Read12Bit(0x56);
+    return ReData * ADCLSB;
+}
+
+    def get_vin_current(self):
+    float ADCLSB = 0.625;
+    uint16_t ReData = Read12Bit(0x58);
+    return ReData * ADCLSB;
+}
+
+    def get_vbus_voltage(self):
+    float ADCLSB = 1.7 / 1000.0;
+    uint16_t ReData = Read12Bit(0x5A);
+    return ReData * ADCLSB;
+}
+
+    def get_vbus_current(self):
+    float ADCLSB = 0.375;
+    uint16_t ReData = Read12Bit(0x5C);
+    return ReData * ADCLSB;
+}
+
+    def get_temp_in_axp192(self):
+    float ADCLSB = 0.1;
+    const float OFFSET_DEG_C = -144.7;
+    uint16_t ReData = Read12Bit(0x5E);
+    return OFFSET_DEG_C + ReData * ADCLSB;
+}
+
+    def get_battery_power(self):
+    float VoltageLSB = 1.1;
+    float CurrentLCS = 0.5;
+    uint32_t ReData = Read24bit(0x70);
+    return VoltageLSB * CurrentLCS * ReData / 1000.0;
+}
+
+    def get_battery_charge_current(self):
+    float ADCLSB = 0.5;
+    uint16_t ReData = Read12Bit(0x7A);
+    return ReData * ADCLSB;
+}
+
+    def get_aps_voltage(self):
+    float ADCLSB = 1.4 / 1000.0;
+    uint16_t ReData = Read12Bit(0x7E);
+    return ReData * ADCLSB;
+}
+
+    def get_battery_coulomb_input(self):
+    uint32_t ReData = Read32bit(0xB0);
+    return ReData * 65536 * 0.5 / 3600 / 25.0;
+}
+
+    def get_battery_coulomb_out(self):
+    uint32_t ReData = Read32bit(0xB4);
+    return ReData * 65536 * 0.5 / 3600 / 25.0;
+}
+
+    def set_coulomb_clear(self):
+{
+    Write1Byte(0xB8, 0x20);
+}
+
+    def set_ldo2(state):
+    uint8_t buf = Read8bit(0x12);
+    if (State == true)
+        buf = (1 << 2) | buf;
+    else
+        buf = ~(1 << 2) & buf;
+    Write1Byte(0x12, buf);
+}
+
+    def set_dcdc3(state):
+    uint8_t buf = Read8bit(0x12);
+    if (State == true)
+        buf = (1 << 1) | buf;
+    else
+        buf = ~(1 << 1) & buf;
+    self._write_1_byte(0x12, buf);
+}
+
+    def axp_in_state(self):
+    return Read8bit(0x00);
+}
+
+    def is_ac_in(self):
+    return ( Read8bit(0x00) & 0x80 ) ? true : false;
+}
+
+    def is_charging(self):
+    return ( Read8bit(0x00) & 0x04 ) ? true : false;
+}
+
+    def is_vbus(self):
+    return ( Read8bit(0x00) & 0x20 ) ? true : false;
+}
+
+    def set_ldo_voltage(number, voltage):
+    voltage = (voltage > 3300) ? 15 : (voltage / 100) - 18;
+    switch (number)
+    {
+    //uint8_t reg, data;
+    case 2:
+        self._write_1_byte(0x28, (Read8bit(0x28) & 0X0F) | (voltage << 4));
+        break;
+    case 3:
+        self._write_1_byte(0x28, (Read8bit(0x28) & 0XF0) | voltage);
+        break;
+    }
+}
+
+    def set_dc_voltage(number, voltage):
+    uint8_t addr;
+    if (number > 2)
+        return;
+    voltage = (voltage < 700) ? 0 : (voltage - 700) / 25;
+    switch (number)
+    {
+    case 0:
+        addr = 0x26;
+        break;
+    case 1:
+        addr = 0x25;
+        break;
+    case 2:
+        addr = 0x27;
+        break;
+    }
+    self._write_1_byte(addr, (Read8bit(addr) & 0X80) | (voltage & 0X7F));
+}
+
+    def set_esp_voltage(voltage):
+    if (voltage >= 3000 && voltage <= 3400)
+    {
+        SetDCVoltage(0, voltage);
+    }
+}
+
+    def set_lcd_voltage(voltage):
+    if (voltage >= 2500 && voltage <= 3300)
+    {
+        SetDCVoltage(2, voltage);
+    }
+}
+
+    def set_ldo_enable(number, state):
+
+    uint8_t mark = 0x01;
+    if ((number < 2) || (number > 3))
+        return;
+
+    mark <<= number;
+    if (state)
+    {
+        self._write_1_byte(0x12, (Read8bit(0x12) | mark));
+    }
+    else
+    {
+        self._write_1_byte(0x12, (Read8bit(0x12) & (~mark)));
+    }
+}
+
+    def set_lcd_reset(state)
+{
+    uint8_t reg_addr = 0x96;
+    uint8_t gpio_bit = 0x02;
+    uint8_t data;
+    data = Read8bit(reg_addr);
+
+    if (state)
+    {
+        data |= gpio_bit;
+    }
+    else
+    {
+        data &= ~gpio_bit;
+    }
+
+    self._write_1_byte(reg_addr, data);
+}
+
+    def set_bus_power_mode(state)
+{
+    uint8_t data;
+    if (state == 0)
+    {
+        data = Read8bit(0x91);
+        self._write_1_byte(0x91, (data & 0X0F) | 0XF0);
+
+        data = Read8bit(0x90);
+        self._write_1_byte(0x90, (data & 0XF8) | 0X02); //set GPIO0 to LDO OUTPUT , pullup N_VBUSEN to disable supply from BUS_5V
+
+        data = Read8bit(0x91);
+
+        data = Read8bit(0x12);         //read reg 0x12
+        self._write_1_byte(0x12, data | 0x40); //set EXTEN to enable 5v boost
+    }
+    else
+    {
+        data = Read8bit(0x12);         //read reg 0x10
+        self._write_1_byte(0x12, data & 0XBF); //set EXTEN to disable 5v boost
+
+        //delay(2000);
+
+        data = Read8bit(0x90);
+        self._write_1_byte(0x90, (data & 0xF8) | 0X01); //set GPIO0 to float , using enternal pulldown resistor to enable supply from BUS_5VS
+    }
+}
+
+    def touch_reset(state):
+    uint8_t reg_addr=0x94;
+    uint8_t data;
+    data=Read8bit(reg_addr);
+
+    if(state)
+    {
+      data|=0X02;
+    }
+    else
+    {
+      data=data&0XFD;
+    }
+
+    self._write_1_byte(reg_addr,data);
+}
+
+//set led state(GPIO high active,set 1 to enable amplifier)
+    def set_speaker_enable(state):
+    uint8_t reg_addr=0x94;
+    uint8_t gpio_bit=0x04;
+    uint8_t data;
+    data=Read8bit(reg_addr);
+
+    if(state)
+    {
+      data|=gpio_bit;
+    }
+    else
+    {
+      data&=~gpio_bit;
+    }
+
+    self._write_1_byte(reg_addr,data);
+}
+
+    def set_charge_current(state):
+    uint8_t data = Read8bit(0x33);
+    data &= 0xf0;
+    data = data | ( state & 0x0f );
+    self._write_1_byte(0x33,data);
+}
+    
+    '''
+
+
+TIME_0_032S = 0x00  # 32ms
+TIME_0_064S = 0x01  # 64ms
+TIME_0_128S = 0x02  # 128ms
+TIME_0_500S = 0x03  # 500ms
+TIME_0_512S = 0x04  # 512ms
+TIME_1_000S = 0x05
+TIME_1_500S = 0x06
+TIME_2_000S = 0x07
+TIME_2_500S = 0x08
+TIME_3_000S = 0x09
+TIME_4_000S = 0x0A
+TIME_6_000S = 0x0B
+TIME_8_000S = 0x0C
+TIME_10_000S = 0x0D
+
+TIME_0_500H = 0x00  # 30 minutes
+TIME_0_666H = 0x01  # 40 minutes
+TIME_0_833H = 0x02  # 50 minutes
+TIME_1_000H = 0x03
+TIME_7_000H = 0x04
+TIME_8_000H = 0x05
+TIME_9_000H = 0x06
+TIME_10_000H = 0x07
+
+
+# Power Status Register
+# READ
+# bit 7: ACIN presence indication
+#        0: ACIN does not exist
+#        1: ACIN does exist
+# bit 6: Indicates whether ACIN is available
+#        0: not available
+#        1: available
+# bit 5: VBUS presence indication
+#        0: VBUS not present
+#        1: VBUS present
+# bit 4: Indicates whether VBUS is available
+#        0: not available
+#        1: available
+# bit 3: Indicates whether VBUS is greater than VHOLD before use
+# bit 2: Indicates the direction of battery current
+#        0: battery is discharging
+#        1: battery is charging
+# bit 1: Indicates whether the ACIN and VBUS inputs are shorted on the PCB
+#        0: not shorted
+#        1: shorted
+# bit 0: Indicates whether the boot source is ACIN or VBUS
+#        0: The boot source is not ACIN/VBUS
+#        1: The boot source is ACIN/VBUS
+_STATUS = const(0x00)
+
+
+# Power Mode/Charging Status Register
+# READ
+# bit 7: Indicates whether AXP192 is overheated
+#        0: Not overheated
+#        1: Overheated
+# bit 6: Charging Instructions
+#        0: Not charging or charging completed
+#        1: Charging
+# bit 5: Battery status indicator
+#        0: No battery is connected to AXP192
+#        1: Battery is already connected to AXP192
+# bit 4: Reserved, cannot be changed
+#        0:
+#        1:
+# bit 3: Indicates whether the battery enters activation mode
+#        0: Not in battery activation mode
+#        1: In battery activation mode
+# bit 2:  Indicates whether the charging current is less than the expected current
+#        0: The actual charging current is equal to the expected current
+#        1: The actual charging current is less than the expected current
+# bit 1: AXP192 power on/off mode indication
+#        0: Mode A
+#        1: Mode B
+# bit 0: Reserved, cannot be changed
+#        0:
+#        1:
+
+POWER_MODE_A = 0
+POWER_MODE_B = 1
+
+_MODE_CHGSTATUS = const(0x01)
+
+
+# USB OTG VBUS status indication
+# READ
+# bit 2: Indicates whether VBUS is valid
+#        0: invalid
+#        1: valid
+# bit 1: Indicates whether VBUS Session A/B is valid
+#        0: invalid
+#        1: valid
+# bit 0: Indicates Session End status
+#        0: invalid
+#        1: valid
+_OTG_STATUS = const(0x02)
+
+_IC_MODEL = const(0x03)
+
+
+_DATA_BUFFER1 = const(0x04)
+_DATA_BUFFER2 = const(0x05)
+_DATA_BUFFER3 = const(0x06)
+_DATA_BUFFER4 = const(0x07)
+_DATA_BUFFER5 = const(0x08)
+_DATA_BUFFER6 = const(0x09)
+_DATA_BUFFER7 = const(0x0A)
+_DATA_BUFFER8 = const(0x0B)
+_DATA_BUFFER9 = const(0x0C)
+_DATA_BUFFERA = const(0x0D)
+_DATA_BUFFERB = const(0x0E)
+_DATA_BUFFERC = const(0x0F)
+
+
+# EXTEN & DC-DC2 Switch Control Register
+# READ/WRITE
+# bit 2: EXTEN switch control 1
+#        0: Close
+#        1: Open
+# bit 0: DC-DC2 switch control
+#        0: Close
+#        1: Open
+_SWITCH_CTRL_1 = const(0x10)
+
+
+# DC-DC1/3 & LDO2/3 Switch Control Register
+# READ/WRITE
+# bit 6: EXTEN switch control
+#        0: Close
+#        1: Open
+# bit 4: DC-DC2 switch control
+#        0: Close
+#        1: Open
+# bit 3: LDO3 switch control
+#        0: Close
+#        1: Open
+# bit 2: LDO2 switch control
+#        0: Close
+#        1: Open
+# bit 1: DC-DC3 switch control
+#        0: Close
+#        1: Open
+# bit 0: DC-DC1 switch control
+#        0: Close
+#        1: Open
+_SWITCH_CTRL_2 = const(0x12)
+
+
+# DC-DC2 Voltage Setting Register
+# READ/WRITE
+# bits 0 - 5: 0.7 - 2.275V, 0.25v increments
+#   0.7 = 0 0 0 0 0  0x00
+# 2.275 = 1 1 1 1 1  0x1F
+_DC2_VLT_SETTING = const(0x23)
+
+
+# DC-DC2 voltage slope parameter setting register
+# READ/WRITE
+# bit 2: DC-DC2 VRC enable control
+#        0: Close
+#        1: Open
+# bit 0: DC-DC2 VRC voltage rise slope control
+#        0: 25mV/15.625us=1.6mV/us
+#        1: 25mV/31.250us=0.8mV/us
+# TODO
+_DC2_VLT_SLOPE = const(0x25)
+
+
+# DC-DC1 Voltage Setting Register
+# READ/WRITE
+# bits 0 - 6: 0.7 - 3.5V, 0.25v increments
+#   0.7 = 0 0 0 0 0 0  0x00
+#   3.5 = 1 1 1 1 1 1  0x3F
+_DC1_VLT_SETTING = const(0x26)
+
+
+# DC-DC3 Voltage Setting Register
+# READ/WRITE
+# bits 0 - 6: 0.7 - 3.5V, 0.25v increments
+#   0.7 = 0 0 0 0 0 0  0x00
+#   3.5 = 1 1 1 1 1 1  0x3F
+_DC3_VLT_SETTING = const(0x27)
+
+
+# LDO2/3 voltage setting register
+# bits 4 - 7: LDO2 1.8 - 3.3V, 0.1v increments
+#   1.8 = 0 0 0 0  0x00
+#   3.3 = 1 1 1 1  0x0F
+# bits 0 - 3: LDO3 1.8 - 3.3V, 0.1v increments
+#   1.8 = 0 0 0 0  0x00
+#   3.3 = 1 1 1 1  0x0F
+# READ/WRITE
+_LDO_VLT_SETTING_1 = const(0x28)
+_LDO_VLT_SETTING_2 = const(0x29)
+
+
+# VBUS-IPSOUT path setting register
+# READ/WRITE
+# bit 7:     VBUS-IPSOUT channel selection control signal when VBUS is available
+#            0: Whether to open this path is determined by N_VBUSEN pin
+#            1: VBUS-IPSOUT path can be selected to be open regardless of the state of N_VBUSEN
+# bit 6:     VBUS VHOLD voltage limit control
+#            0: No pressure limit
+#            1: Pressure limit
+# bit 3 - 5: VHOLD Setting
+#            000: 4.0V
+#            001: 4.1V
+#            010: 4.2V
+#            011: 4.3V
+#            100: 4.4V
+#            101: 4.5V
+#            110: 4.6V
+#            111: 4.7V
+# bit 1:     VBUS current limit control enable signal
+#            0: Close
+#            1: Open
+# bit 0:     VBUS current limit control is turned on when the current limit selection
+#            0:500mA
+#            1:100mA
+# BIT 7 NEEDS RESEARCH  ***
+VHOLD_LIMIT_NO_PRESSURE = 0x00
+VHOLD_LIMIT_PRESSURE = 0x01
+
+VBUS_CUR_LIMIT_500MA = 0x00
+VBUS_CUR_LIMIT_100MA = 0x01
+
+_VBUS_IPS_SETTING = const(0x30)
+
+
+# VOFF shutdown voltage setting register
+# READ/WRITE
+# bit 3:     In Sleep mode, enable the PWRON short press wake-up function
+#            0: Short press wake-up function is disabled
+#            1: Short press to wake up the function
+# bit 2 - 0: VOFF setting
+#            000: 2.6V
+#            001: 2.7V
+#            010: 2.8V
+#            011: 2.9V
+#            100: 3.0V
+#            101: 3.1V
+#            110: 3.2V
+#            111: 3.3V
+_VOFF_SETTING = const(0x31)
+
+
+# Shutdown, battery detection, CHGLED control register
+# READ/WRITE
+# bit 7:     Shutdown control in mode A
+# bit 6:     Battery monitoring function setting
+#            0: Disable
+#            1: Enable
+# bit 5 - 4: CHGLED pin function setting
+#            00: high impedance
+#            01: 25% 1Hz flicker
+#            10: 25% 4Hz flicker
+#            11: Output low level
+# bit 3:     CHGLED pin control settings
+#            0: Controlled by charging function
+#            1: Controlled by register REG 32HBit[5:4]
+# bit 1 - 0: N_OE changes from low to high and then AXP192 shuts down and delays
+#            00: 0.5S
+#            01: 1S
+#            10: 2S
+#            11: 3S
+# BIT 7 NEEDS RESEARCH ***
+CHRG_LED_HIGH_IMP = 0x00
+CHRG_LED_1HZ = 0x01
+CHRG_LED_4HZ = 0x02
+CHRG_LED_LOW = 0x03
+
+_SETTINGS_1 = const(0x32)
+
+
+# Charge control register 1
+# READ/WRITE
+# bit 7:     Charging function enable control bit, including internal channel and external channel
+#            0: Off
+#            1: On
+# bit 6 - 5: Charging target voltage setting
+#            00: 4.1V
+#            01: 4.15V
+#            10: 4.2V
+#            11: 4.36V
+# bit 4:     Charging end current setting
+#            0: Charging ends when the charging current is less than 10% of the setting value
+#            1: Charging ends when the charging current is less than 15% of the setting value
+# bit 3 - 0: Internal path charging current setting
+#            0000: 100mA
+#            0001: 190mA
+#            0010: 280mA
+#            0011: 360mA
+#            0100: 450mA
+#            0101: 550mA
+#            0110: 630mA
+#            0111: 700mA
+#            1000: 780mA
+#            1001: 880mA
+#            1010: 960mA
+#            1011: 1000mA
+#            1100: 1080mA
+#            1101: 1160mA
+#            1110: 1240mA
+#            1111: 1320mA
+#
+CHARGE_4_1V = 0x00
+CHARGE_4_15V = 0x01
+CHARGE_4_2V = 0x02
+CHARGE_4_36V = 0x03
+
+CHARGE_END_10 = 0x00
+CHARGE_END_15 = 0x01
+
+_CHARGE_CTRL_1 = const(0x33)
+
+
+# Charge control register 2
+# READ/WRITE
+# bit 7 - 6: Precharge timeout setting
+#            00: 30min
+#            01: 40min
+#            10: 50min
+#            11: 60min
+# bit 5 - 3: External path charging current setting
+#            Range 300-1000mA, 100mA/step
+#            000: 300ma
+#            001: 400ma
+#            ...
+#            111: 1000ma
+# bit 2:     External path enable setting during charging
+#            0: Close
+#            1: Open
+# bit 1 - 0: Timeout setting in constant current mode
+#            00: 7 Hours
+#            01: 8 Hours
+#            10: 9 Hours
+#            11: 10 Hours
+_CHARGE_CTRL_2 = const(0x34)
+
+
+# Backup battery charge control register
+# READ/WRITE
+# bit 7:     Backup battery charging enable control
+#            0: Close
+#            1: Open
+# bit 6 - 5: Backup battery charging target voltage setting
+#            00: 3.1V
+#            01: 3.0V
+#            10: 3.0V
+#            11: 2.5V
+# bit 1 - 0: Backup battery charge current setting
+#            00: 50uA
+#            01: 100uA
+#            10: 200uA
+#            11: 400uA
+
+BACKUP_CHRG_3_1V = 0x00
+BACKUP_CHRG_3_0V = 0x01
+BACKUP_CHRG_2_5V = 0x03
+
+_CHARGE_CTRL_3 = const(0x35)
+
+'''
+mapping = {
+    TIME_0_128S: 0x00,
+    TIME_0_512S: 0x01,
+    TIME_1_000S: 0x02,
+    TIME_2_000S: 0x03
+}
+
+
+mapping = {
+    TIME_1_000S: 0x00,
+    TIME_1_500S: 0x01,
+    TIME_2_000S: 0x02,
+    TIME_2_500S: 0x03
+}
+
+
+mapping = {
+    TIME_0_032S: 0x00,
+    TIME_0_064S: 0x01
+}
+
+
+mapping = {
+    TIME_4_000S: 0x00,
+    TIME_6_000S: 0x01,
+    TIME_8_000S: 0x02,
+    TIME_10_000S: 0x03
+}
+
+'''
+
+# PEK parameter setting register
+# READ/WRITE
+# bit 7 - 6: Power-on time setting
+#            00: 128mS
+#            01: 512mS
+#            10: 1S
+#            11: 2S
+# bit 5 - 5: Long press time setting
+#            00: 1S
+#            01: 1.5S
+#            10: 2S
+#            11: 2.5S
+# bit 3:     Automatic shutdown function setting when the key press time is longer than the shutdown time
+#            0: Close
+#            1: Open
+# bit 2:     PWROK signal delay after power on completion
+#            0: 32mS
+#            1: 64mS
+# bit 1 - 0: Shutdown time setting
+#            00: 4S
+#            01: 6S
+#            10: 8S
+#            11: 10S
+# TODO *****************
+_PEK_SETTINGS = const(0x36)
+
+
+# DCDC converter operating frequency setting register
+# READ/WRITE
+# bit 3 - 0: DC-DC switching frequency setting
+#            Each level changes by 5%, the default value is 1.5MHz
+#            0000: 995133hz
+#            0001: 1047508hz
+#            0010: 1102639hz
+#            0011: 1160672hz
+#            0100: 1221760hz
+#            0101: 1286063hz
+#            0110: 1353750hz
+#            0111: 1425000hz
+#            1000: 1500000hz
+#            1001: 1575000hz
+#            1010: 1653750hz
+#            1011: 1736437hz
+#            1100: 1823258hz
+#            1101: 1914420hz
+#            1110: 2010141hz
+#            1111: 2110648hz
+
+DCDC_FREQ_995133HZ = 0x00
+DCDC_FREQ_1047508HZ = 0x01
+DCDC_FREQ_1102639HZ = 0x02
+DCDC_FREQ_1160672HZ = 0x03
+DCDC_FREQ_1221760HZ = 0x04
+DCDC_FREQ_1286063HZ = 0x05
+DCDC_FREQ_1353750HZ = 0x06
+DCDC_FREQ_1425000HZ = 0x07
+DCDC_FREQ_1500000HZ = 0x08
+DCDC_FREQ_1575000HZ = 0x09
+DCDC_FREQ_1653750HZ = 0x0A
+DCDC_FREQ_1736437HZ = 0x0B
+DCDC_FREQ_1823258HZ = 0x0C
+DCDC_FREQ_1914420HZ = 0x0D
+DCDC_FREQ_2010141HZ = 0x0E
+DCDC_FREQ_2110648HZ = 0x0F
+
+# TODO *****************
+_DCDC_FREQ = const(0x37)
+
+
+# Battery VLTF-charge battery charging low temperature threshold setting
+# READ/WRITE
+# bit 7 - 0: Battery low temperature threshold setting during charging, MM*10H, when M=A5H corresponds to 2.112V
+#            Corresponding voltage 0V~3.264V
+#            VLTF-charge = M *10H * 0.0008V
+# setter: value = int(round(voltage / (0x10 * 0.0008)))
+# getter: voltage = round(value * 0x10 * 0.0008, 4)
+# TODO *****************
+_VLTF_CHRG_LOW_TEMP = const(0x38)
+
+
+# Battery VHTF-charge battery charging high temperature threshold setting
+# READ/WRITE
+# bit 7 - 0: Battery high temperature threshold setting during charging, NN*10H, when N=1FH, corresponding to 0.397V;
+#            Corresponding voltage 0V~3.264V
+#            VHTF-charge = N *10H * 0.0008V
+# setter: value = int(round(voltage / (0x10 * 0.0008)))
+# getter: voltage = round(value * 0x10 * 0.0008, 4)
+# TODO *****************
+_VHTF_CHRG_HIGH_TEMP = const(0x39)
+
+
+# APS low power Level 1 setting register
+# READ/WRITE
+# bit 7 - 0: APS Low Power Setting Level 1
+# TODO *****************
+_APS_LOW_PWR_1 = const(0x3A)
+
+# APS low power Level2 setting register
+# READ/WRITE
+# bit 7 - 0: APS low power setting level 2
+#            APS voltage corresponding to REG 0x3A and REG 0x3B is set to the following relationship (assuming the register value is n):
+#            Vwarning = 2.8672 + 1.4mV * n * 4
+# TODO *****************
+_APS_LOW_PWR_2 = const(0x3B)
+
+
+# Battery VLTF-discharge battery discharge low temperature threshold setting
+# READ/WRITE
+# bit 7 - 0: Battery low temperature threshold setting during discharge, MM*10H, when M=FCH, it corresponds to 3.226V;
+#            Corresponding voltage 0V~3.264V
+#            VLTF-discharge = M * 0x10 * 0.0008V
+
+# setter: value = int(round(voltage / (0x10 * 0.0008)))
+# getter: voltage = round(value * 0x10 * 0.0008, 4)
+# TODO *****************
+_VLTF_DCHRG_LOW_TEMP = const(0x3C)
+
+
+# Battery VHTF-discharge battery discharge high temperature threshold setting
+# READ/WRITE
+# bit 7 - 0: Battery high temperature threshold setting during discharge, NN * 0x10, when N = 0x16, corresponding to 0.282V;
+#            The voltage should be 0V~3.264V
+#            VLTF-discharge = N * 0x10 * 0.0008V
+# setter: value = int(round(voltage / (0x10 * 0.0008)))
+# getter: voltage = round(value * 0x10 * 0.0008, 4)
+# TODO *****************
+_VHTF_DCHRG_HIGH_TEMP = const(0x3D)
+
+
+# DCDC working mode setting register
+# READ/WRITE
+# bit 3: DC-DC1 working mode control
+#        0: PFM/PWM automatic switching
+#        1: Fixed PWM
+# bit 2: DC-DC2 working mode control
+#        0: PFM/PWM automatic switching
+#        1: Fixed PWM
+# bit 1: DC-DC3 working mode control
+#        0: PFM/PWM automatic switching
+#        1: Fixed PWM
+
+# @property
+# def dcdc1_pwm_fixed_working_mode(self):
+#     pass
+
+# @dcdc1_pwm_fixed_working_mode.setter
+# def dcdc1_pwm_fixed_working_mode(self, value):
+#     int(value)
+
+PWM_AUTO = 0x00
+PWM_FIXED = 0x01
+# TODO *****************
+_DCDC_MODE = const(0x80)
+
+
+# ADC Enable Setting Register 1
+# READ/WRITE
+# bit 7: Battery voltage ADC enable  default 1
+#        0: diabled
+#        1: enabled
+# bit 6: Battery current ADC enable  default 0
+#        0: diabled
+#        1: enabled
+# bit 5: ACIN voltage ADC enable     default 0
+#        0: diabled
+#        1: enabled
+# bit 4: ACIN current ADC enable     default 0
+#        0: diabled
+#        1: enabled
+# bit 3: VBUS voltage ADC enable     default 0
+#        0: diabled
+#        1: enabled
+# bit 2: VBUS current ADC enable     default 0
+#        0: diabled
+#        1: enabled
+# bit 1: APS voltage ADC enable      default 1
+#        0: diabled
+#        1: enabled
+# bit 0: TS pin ADC function enable  default 1
+#        0: diabled
+#        1: enabled
+_ADC_EN_1 = const(0x82)
+
+
+# ADC Enable Setting Register 2
+# READ/WRITE
+# bit 7: AXP192 internal temperature monitoring ADC enable
+#        0: disable
+#        1: enable
+# bit 3: GPIO0 ADC function enable
+#        0: disable
+#        1: enable
+# bit 2: GPIO1 ADC function enable
+#        0: disable
+#        1: enable
+# bit 1: GPIO2 ADC function enable
+#        0: disable
+#        1: enable
+# bit 0: GPIO3 ADC function enable
+#        0: disable
+#        1: enable
+_ADC_EN_2 = const(0x83)
+
+
+# ADC sampling rate setting, TS pin control register
+# READ/WRITE
+# bit 7 - 6: ADC sampling rate setting
+#            00: 25hz
+#            01: 50hz
+#            10: 100hz
+#            11: 200hz
+# bit 5 - 4: TS pin output current setting
+#            00: 20uA
+#            01: 40uA
+#            10: 60uA
+#            11: 80uA
+# bit 2:     TS pin function selection
+#            0: Battery temperature monitoring function
+#            1: External independent ADC input path
+# bit 1 - 0: TS pin current output mode setting
+#            00: off
+#            01: Output current during charging
+#            10: ADC sampling input, can save power
+#            11: Always open
+# TODO *****************
+_ADC_SAMP_TS_PIN = const(0x84)
+
+
+# GPIO [3:0] input range setting register
+# READ/WRITE
+# bit 3: GPIO3 ADC input range
+#        0: 0 - 2.0475V
+#        1: 0.7 - 2.7475V
+# bit 2: GPIO2 ADC input range
+#        0: 0 - 2.0475V
+#        1: 0.7 - 2.7475V
+# bit 1: GPIO1 ADC input range
+#        0: 0 - 2.0475V
+#        1: 0.7 - 2.7475V
+# bit 0: GPIO0 ADC input range
+#        0: 0 - 2.0475V
+#        1: 0.7 - 2.7475V
+_GPIO_INPT_RNG = const(0x85)
+
+
+# GPIO1 ADC IRQ rising edge threshold setting
+# READ/WRITE
+# bit 7 - 0: One LSB is 8mV
+# TODO *****************
+_GPIO1_ADC_IRQ_RISE = const(0x86)
+
+
+# GPIO1 ADC IRQ falling edge threshold setting
+# READ/WRITE
+# bit 7 - 0: One LSB is 8mV
+# TODO *****************
+_GPIO1_ADC_IRQ_FALL = const(0x87)
+
+
+# timer control register
+# READ/WRITE
+# bit 7: Timer timed out
+#        Write 1 to clear the state
+# bit 6 - 0: Set the timing time in minutes
+#            Write 0 to disable timer
+# TODO *****************
+_TIMER_CTRL = const(0x8A)
+
+
+# VBUS monitoring setting register
+# READ/WRITE
+# bit 5 - 4: VBUS effective voltage setting
+#            00: 4.0V
+#            01: 4.15V
+#            10: 4.45V
+#            11: 4.55V
+# bit 3:     VBUS Valid detection function setting:
+#            0: Disable
+#            1: Enable
+# bit 2:     VBUS Session detection function setting:
+#            0: Disable
+#            1: Enable
+# bit 1:     Discharge VBUS discharge function setting
+#            0: turn off the discharge resistor of VBUS
+#            1: use the discharge resistor of VBUS
+# bit 0:     Charge VBUS charging function settings
+#            0: Disconnect the VBUS charging resistor
+#            1: Use the VBUS charging resistor to charge VBUS
+
+VBUS_VLTG_4_00 = 0x00
+VBUS_VLTG_4_15 = 0x01
+VBUS_VLTG_4_45 = 0x02
+VBUS_VLTG_4_55 = 0x03
+
+_VBUS_MONITOR = const(0x8B)
+
+
+# Over temperature shutdown control register
+# READ/WRITE
+# bit 2: AXP192 internal over temperature shutdown function setting
+#        0: Do not shut down
+#        1: Shut down
+_OVER_TEMP_SHUT_CTRL = const(0x8F)
+
+
+# Group 2, GPIO control
+
+# GPIO0 Control Register
+# READ/WRITE
+# bit 2 - 0: GPIO0 pin function setting
+#            000: NMOS open drain output
+#            001: General input function
+#            010: Low Noise LDO
+#            100: ADC input
+#            101: Output low
+#            110: Floating
+#            111: Floating
+_GPIO0_CTRL_1 = const(0x90)
+
+
+# GPIO0 LDO mode output voltage setting register
+# READ/WRITE
+# bits 7 - 4: GPIO0 Output voltage setting in LDO mode
+#             0000: 1.8V
+#             0001: 1.9V
+#             0010: 2.0V
+#             0011: 2.1V
+#             0100: 2.2V
+#             0101: 2.3V
+#             0110: 2.4V
+#             0111: 2.5V
+#             1000: 2.6V
+#             1001: 2.7V
+#             1010: 2.8V
+#             1011: 2.9V
+#             1100: 3.0V
+#             1101: 3.1V
+#             1110: 3.2V
+#             1111: 3.3V
+_GPIO0_CTRL_2 = const(0x91)
+
+
+# GPIO1 Control Register
+# READ/WRITE
+# bit 2 - 0: GPIO1 pin function setting
+#            000: NMOS open drain output
+#            001: General input function
+#            010: PWM1 output, high level is VINT, no You can add a pull-down resistor less than 100K
+#            100: ADC input
+#            101: Output low
+#            110: Floating
+#            111: Floating
+_GPIO1_CTRL = const(0x92)
+
+
+# GPIO2 Control Register
+# bit 2 - 0: GPIO2 pin function setting
+#            000: NMOS open drain output
+#            001: General input function
+#            010: PWM2 output, high level is VINT, no You can add a pull-down resistor less than 100K
+#            100: ADC input
+#            101: Output low
+#            110: Floating
+#            111: Floating
+# READ/WRITE
+_GPIO2_CTRL = const(0x93)
+
+
+# GPIO[2:0] signal status register
+# READ/WRITE
+# bit 6: GPIO2 input status
+#        0: Input low level
+#        1: Input high level
+# bit 5: GPIO1 input status
+#        0: Input low level
+#        1: Input high level
+# bit 4: GPIO0 input status
+#        0: Input low level
+#        1: Input high level
+# bit 2: GPIO2 output settings
+#        0: Output low level, grounded NMOS is turned on
+#        1: Output floating, grounded NMOS off
+# bit 1: GPIO1 output settings
+#        0: Output low level, grounded NMOS is turned on
+#        1: Output floating, grounded NMOS off
+# bit 0: GPIO0 output setting
+#        0: Output low level, grounded NMOS is turned on
+#        1: Output floating, grounded NMOS off
+_GPIO_SIG_STATUS_1 = const(0x94)
+
+
+# GPIO[4:3] function control register
+# READ/WRITE
+# bit 7:     GPIO[4:3] control
+#            1: GPIO function
+# bit 3 - 2: GPIO4 pin function setting
+#            00: External charging control
+#            01:NMOS open drain output port 4
+#            10: General purpose input port 4
+#            11: Undefined
+# bit 1 - 0: GPIO3 pin function setting
+#            00: External charging control
+#            01:NMOS open drain output port 3
+#            10: General purpose input port 3
+#            11: ADC Input
+_GPIO_FUNC_CTRL = const(0x95)
+
+
+# GPIO[4:3] signal status register
+# READ/WRITE
+# bit 5: GPIO4 input status
+#        0: Input low level
+#        1: Input high level
+# bit 4: GPIO3 input status
+#        0: Input low level
+#        1: Input high level
+
+# bit 1: GPIO4 output setting
+#        0: Output low level, NMOS is turned on
+#        1: Floating, NMOS off
+# bit 0: GPIO3 output setting
+#        0: Output low level, NMOS is turned on
+#        1: Floating, NMOS off
+_GPIO_SIG_STATUS_2 = const(0x96)
+
+
+# GPIO[2:0] pull-down control register
+# READ/WRITE
+# bit 2: Pull-down resistor control when GPIO2 is used as input
+#        0: turn off the pull-down resistor
+#        1: Use a pull-down resistor
+# bit 1: Pull-down resistor control when GPIO1 is used as input
+#        0: turn off the pull-down resistor
+#        1: Use a pull-down resistor
+# bit 0: Pull-down resistor control when GPIO0 is used as input
+#        0: turn off the pull-down resistor
+#        1: Use a pull-down resistor
+_GPIO_PULL_DOWN = const(0x97)
+
+
+# PWM1 frequency setting register
+# READ/WRITE
+# bit 7 - 0: PWM1 output frequency setting X
+_PWM1_FREQ_X = const(0x98)
+
+
+# PWM1 Duty Cycle Setting Register 1
+# READ/WRITE
+# bit 7 - 0: PWM1 duty cycle setting Y1
+_PMW1_DUTY_Y1 = const(0x99)
+
+# PWM1 duty cycle setting register 2
+# READ/WRITE
+# bit 7 - 6: PWM1 duty cycle setting Y2
+_PMW1_DUTY_Y2 = const(0x9A)
+
+
+# PWM2 frequency setting register
+# READ/WRITE
+# bit 7 - 0: PWM2 output frequency setting X
+_PWM2_FREQ_X = const(0x9B)
+
+
+# PWM2 duty cycle setting register 1
+# READ/WRITE
+# bit 7 - 0: PWM2 duty cycle setting Y1
+_PMW2_DUTY_Y1 = const(0x9C)
+
+# PWM2 duty cycle setting register 2
+# READ/WRITE
+# bit 7 - 6: PWM2 duty cycle setting Y2
+_PMW2_DUTY_Y2 = const(0x9D)
+
+# ******************
+# Note: PWM output frequency = 2.25MHz / (X+1) / Y1
+# PWM output duty cycle = Y2 / Y1
+# ******************
+
+
+# N_RSTO (GPIO5) Control Register
+# READ/WRITE
+# bit 7: N_RSTO pin function setting
+#        0: N_RSTO, LDO1 status monitoring
+#        1: General input and output port 5
+# bit 6: N_RSTO is used as general purpose input and output port 5 setting
+#        0: NMOS open drain output
+#        1: general input function
+# bit 5: N_RSTO as output port 5 settings
+#        0: Output low level, NMOS is turned on
+#        1: Floating, NMOS is turned off
+# bit 4: Status of N_RSTO as input port 5
+#        0: input low level
+#        1: input high level
+# TODO
+GPIO5_CTRL = const(0x9E)
+
+
+# Group 3, Interrupt Control
+
+# IRQ Enable Control Register 1
+# READ/WRITE
+# bit 7: ACIN overvoltage IRQ enable
+# bit 6: ACIN access IRQ enable
+# bit 5: ACIN OUT IRQ ENABLE
+# bit 4: VBUS overvoltage IRQ enable
+# bit 3: VBUS access IRQ enable
+# bit 2: VBUS removed IRQ enable
+# bit 1: VBUS is available but less than VHOLDIRQ Enable
+# bit 0: reserved cannot be changed
+_INT_CTRL_1 = const(0x40)
+
+
+# IRQ Enable Control Register 2
+# READ/WRITE
+# bit 7: Battery connected IRQ Enable
+# bit 6: Battery removed IRQ enable
+# bit 5: Battery activation mode IRQ Enable
+# bit 4: Exit battery activation mode IRQ Enable
+# bit 3: Charging IRQ Enable
+# bit 2: Charging completed IRQ Enable
+# bit 1: Battery over temperature IRQ Enable
+# bit 0: Battery under temperature IRQ Enable
+_INT_CTRL_2 = const(0x41)
+
+
+# IRQ Enable Control Register 3
+# READ/WRITE
+# bit 7: AXP192 internal over temperature IRQ enable
+# bit 6: charging current is less than the set current IRQ enable
+# bit 5: DC-DC1 output voltage is less than the set value IRQ enabled
+# bit 4: DC-DC2 output voltage is less than the set value IRQ enabled
+# bit 3: DC-DC3 output voltage is less than the set value IRQ enable
+# bit 2: reserved
+# bit 1: Short key IRQ enable
+# bit 0: Long key IRQ enable
+_INT_CTRL_3 = const(0x42)
+
+
+# IRQ Enable Control Register 4
+# READ/WRITE
+# bit 7: N_OE Power on IRQ enable
+# bit 6: N_OE Shutdown IRQ Enable
+# bit 5: VBUS Valid IRQ Enable
+# bit 4: VBUS Invalid IRQ Enable
+# bit 3: VBUS Session A/B IRQ Enable
+# bit 2: VBUS Session End IRQ Enable
+# bit 1: reserved
+# bit 0: APS Low Voltage IRQ Enable
+_INT_CTRL_4 = const(0x43)
+
+
+# IRQ Enable Control Register 5
+# READ/WRITE
+# bit 7: Timer timeout IRQ Enable
+# bit 6: reserved
+# bit 5: reserved
+# bit 4: reserved
+# bit 3: reserved
+# bit 2: GPIO2 input edge triggered IRQ enable
+# bit 1: GPIO1 input edge triggered IRQ enable
+# bit 0: GPIO0 input edge triggered IRQ enable
+_INT_CTRL_5 = const(0x4A)
+
+
+# IRQ Status Register 1
+# READ/WRITE
+# bit 7: ACIN overvoltage IRQ status
+# bit 6: ACIN access IRQ status
+# bit 5: ACIN moves out of IRQ state
+# bit 4: VBUS overvoltage IRQ status
+# bit 3: VBUS access IRQ status
+# bit 2: VBUS moves out of IRQ state
+# bit 1: VBUS is available but less than VHOLDIRQ status
+# bit 0: reserved
+_INT_STATUS_1 = const(0x44)
+
+
+# IRQ Status Register 2
+# READ/WRITE
+# bit 7: Battery connected IRQ status
+# bit 6: Battery removed IRQ status
+# bit 5: Battery activation mode IRQ status
+# bit 4: Exit battery activation mode IRQ status
+# bit 3: Charging IRQ status
+# bit 2: Charging completed IRQ status
+# bit 1: Battery over temperature IRQ status
+# bit 0: Battery under temperature IRQ status
+_INT_STATUS_2 = const(0x45)
+
+
+# IRQ Status Register 3
+# READ/WRITE
+# bit 7: AXP192 Internal over temperature IRQ status
+# bit 6: Charging current is less than the set current IRQ status
+# bit 5: DC-DC1 output voltage is less than the set value IRQ status
+# bit 4: DC-DC2 output voltage is less than the set value IRQ status
+# bit 3: DC-DC3 output voltage is less than the set value IRQ status
+# bit 2: reserved
+# bit 1: Short key IRQ status
+# bit 0: Long key IRQ status
+_INT_STATUS_3 = const(0x46)
+
+
+# IRQ Status Register 4
+# READ/WRITE
+# bit 7: N_OE Power on IRQ status
+# bit 6: N_OE Shutdown IRQ status
+# bit 5: VBUS valid IRQ status
+# bit 4: VBUS Invalid IRQ status
+# bit 3: VBUS Session A/B IRQ status
+# bit 2: VBUS Session End IRQ status
+# bit 1: reserved
+# bit 0: APS low voltage IRQ state
+#        APS voltage is lower than Warning Level2 and then set,
+#        exceeding Warning Level1 Will be cleared to 0
+_INT_STATUS_4 = const(0x47)
+
+
+# IRQ Status Register 5
+# READ/WRITE
+# bit 7: Timer timeout IRQ status
+# bit 6: reserved
+# bit 5: reserved
+# bit 4: reserved
+# bit 3: reserved
+# bit 2: GPIO2 input edge trigger IRQ status
+# bit 1: GPIO1 input edge trigger IRQ status
+# bit 0: GPIO0 input edge trigger IRQ status
+_INT_STATUS_5 = const(0x4D)
+
+
+# Group 4, ADC data class
+# These are all READ
+
+# ACIN voltage ADC data high 8 bits
+_ACIN_VLTS_H = const(0x56)
+
+# ACIN voltage ADC data lower 4 bits
+_ACIN_VLTS_L = const(0x57)
+
+# TODO
+# ACIN voltage ADC data 12 bit resolution
+# ((REG 0x56) << 4) + (REG  0x57)
+
+
+# ACIN current ADC data high 8 bits
+_ACIN_CURR_H = const(0x58)
+
+# ACIN current ADC data lower 4 bits
+_ACIN_CURR_L = const(0x59)
+
+# TODO
+# ACIN current ADC data 12 bit resolution
+# ((REG 0x58) << 4) + (REG  0x59)
+
+
+# VBUS voltage ADC data high 8 bits
+_VBUS_VLTS_H = const(0x5A)
+
+# VBUS voltage ADC data lower 4 bits
+_VBUS_VLTS_L = const(0x5B)
+
+# TODO
+# VBUS voltage ADC data 12 bit resolution
+# ((REG 0x5A) << 4) + (REG  0x5B)
+
+
+# VBUS current ADC data high 8 bits
+_VBUS_CURR_H = const(0x5C)
+
+# VBUS current ADC data lower 4 bits
+_VBUS_CURR_L = const(0x5D)
+
+# TODO
+# VBUS current ADC data 12 bit resolution
+# ((REG 0x5C) << 4) + (REG  0x5D)
+
+
+# AXP192 internal temperature monitoring ADC data high 8 bits
+_TEMP_H = const(0x5E)
+
+# AXP192 internal temperature monitoring ADC data lower 4 bits
+_TEMP_L = const(0x5F)
+
+# TODO
+# AXP192 internal temperature monitoring ADC data 12 bit resolution
+# ((REG 0x5E) << 4) + (REG  0x5F)
+
+
+# TS input ADC data high 8 bits, default monitoring battery temperature
+_TS_INPUT_H = const(0x62)
+
+# TS input ADC data lower 4 bits, default monitoring battery temperature
+_TS_INPUT_L = const(0x63)
+
+# TODO
+# TS input ADC data 12 bit resolution
+# ((REG 0x62) << 4) + (REG  0x63)
+
+
+# GPIO0 voltage ADC data high 8 bits
+_GPIO0_VLTS_H = const(0x64)
+
+# GPIO0 voltage ADC data lower 4 bits
+_GPIO0_VLTS_L = const(0x65)
+
+# GPIO0 voltage ADC data 12 bit resolution
+# ((REG 0x64) << 4) + (REG  0x65)
+
+
+# GPIO1 voltage ADC data high 8 bits
+_GPIO1_VLTS_H = const(0x66)
+
+
+# GPIO1 voltage ADC data lower 4 bits
+_GPIO1_VLTS_L = const(0x67)
+
+
+# GPIO1 voltage ADC data 12 bit resolution
+# ((REG 0x66) << 4) + (REG  0x67)
+
+
+# GPIO2 voltage ADC data high 8 bits
+_GPIO2_VLTS_H = const(0x68)
+
+# GPIO2 voltage ADC data lower 4 bits
+_GPIO2_VLTS_L = const(0x69)
+
+
+# GPIO2 voltage ADC data 12 bit resolution
+# ((REG 0x68) << 4) + (REG  0x69)
+
+
+# GPIO3 voltage ADC data high 8 bits
+_GPIO3_VLTS_H = const(0x6A)
+
+
+# GPIO3 voltage ADC data lower 4 bits
+_GPIO3_VLTS_L = const(0x6B)
+
+# GPIO3 voltage ADC data 12 bit resolution
+# ((REG 0x6A) << 4) + (REG  0x6B)
+
+
+# Battery instantaneous power high 8 bits
+_BAT_PWR_H = const(0x70)
+
+# Battery instantaneous power medium 8 bits
+_BAT_PWR_M = const(0x71)
+
+#  Battery instantaneous power low 8 bits
+_BAT_PWR_L = const(0x72)
+
+# TODO
+# Battery instantaneous power 24 bit resolution
+# ((REG 0x70) << 16) | ((REG  0x71) << 8) | (REG 0x72)
+
+
+#  Battery voltage high 8 bits
+_BAT_VLTS_H = const(0x78)
+
+#  Battery voltage low 4 bits
+_BAT_VLTS_L = const(0x79)
+
+# TODO
+# Battery voltage 12 bit resolution
+# ((REG 0x78) << 4) + (REG  0x79)
+
+
+#  Battery charge current high 8 bits
+_BAT_CHRG_CURR_H = const(0x7A)
+
+#  Battery charge current low 5 bits
+_BAT_CHRG_CURR_L = const(0x7B)
+
+# TODO
+# Battery charge current 13 bit resolution
+# ((REG 0x7A) << 5) + (REG  0x7B)
+
+
+#  Battery discharge current high 8 bits
+_BAT_DCHRG_CURR_H = const(0x7C)
+
+#  Battery discharge current low 5 bits
+_BAT_DCHRG_CURR_L = const(0x7D)
+
+# TODO
+# Battery discharge current 13 bit resolution
+# ((REG 0x7C) << 5) + (REG  0x7D)
+
+
+# APS voltage high 8 bits
+_APS_VLTS_H = const(0x7E)
+
+# APS voltage low 4 bits
+_APS_VLTS_L = const(0x7F)
+
+# TODO
+# APS voltage 12 bit resolution
+# ((REG 0x7E) << 4) + (REG  0x7F)
+
+
+# READ/WRITE
+# Battery Charge Coulomb Counter Data Register [31:24]
+_BAT_CHRG_COUNTER_1 = const(0xB0)
+
+# Battery Charge Coulomb Counter Data Register [23:16]
+_BAT_CHRG_COUNTER_2 = const(0xB1)
+
+# Battery Charge Coulomb Counter Data Register [15:8]
+_BAT_CHRG_COUNTER_3 = const(0xB2)
+
+# Battery Charge Coulomb Counter Data Register [7:0]
+_BAT_CHRG_COUNTER_4 = const(0xB3)
+
+# TODO
+# Battery Charge Coulomb Counter Data 32 bits
+# ((REG 0xB0) << 24) | ((REG 0xB1) << 16) | ((REG  0xB2) << 8) | (REG 0xB3)
+
+
+# Battery Discharge Coulomb Counter Data Register [31:24]
+_BAT_DCHRG_COUNTER_1 = const(0xB4)
+
+# Battery Discharge Coulomb Counter Data Register [23:16]
+_BAT_DCHRG_COUNTER_2 = const(0xB5)
+
+# Battery Discharge Coulomb Counter Data Register [15:8]
+_BAT_DCHRG_COUNTER_3 = const(0xB6)
+
+# Battery Discharge Coulomb Counter Data Register [7:0]
+_BAT_DCHRG_COUNTER_4 = const(0xB7)
+# TODO
+# Battery Discharge Coulomb Counter Data 32 bits
+# ((REG 0xB4) << 24) | ((REG 0xB5) << 16) | ((REG  0xB6) << 8) | (REG 0xB7)
+
+
+# TODO
+# Coulomb Counter Control Register
+# READ/WRITE
+# bit 7: Coulomb meter switch control
+# bit 6: Coulomb meter pause control
+#        0: N/A
+#        1: pause the coulomb counting
+# bit 5: Clear coulomb meter control,
+#        0: N/A
+#        1: clear the coulomb meter
+_COUNTER_CTRL = const(0xB8)
+
+
+# Coulomb calculation method:
+#     C = 65536 * current LSB * (charging coulomb counter value - discharging coulomb counter value) / 3600 / ADC sampling
+#
+# Among them: ADC sampling rate refers to the setting of REG84H;
+# current LSB is 0.5mA;
+# the unit of calculation result is mAh.
+
+
+EXIO0 = 0
+EXIO1 = 1
+EXIO2 = 2
+EXIO3 = 3
+EXIO4 = 4
+
+
+class Pin(io_expander_framework.Pin):
+    # IRQ Status Register 5
+    # READ/WRITE
+    # bit 7: Timer timeout IRQ status
+    # bit 6: reserved
+    # bit 5: reserved
+    # bit 4: reserved
+    # bit 3: reserved
+    # bit 2: GPIO2 input edge trigger IRQ status
+    # bit 1: GPIO1 input edge trigger IRQ status
+    # bit 0: GPIO0 input edge trigger IRQ status
+    _INT_STATUS_5 = const(0x4D)
+
+    def __init__(self, id, device, mode=-1, pull=-1, value=None):  # NOQA
+
+        if id not in (EXIO0, EXIO1, EXIO2, EXIO3, EXIO4):
+            raise ValueError(f"GPIO (EXIO) {id} is not supported for this IC")
+
+        self._device = device
+
+        if mode == -1:
+            mode = self.IN
+
+        self._direction = -1
+
+        self._pwm = None
+        self._adc = None
+        self._irq = None
+
+        io_expander_framework.Pin.__init__(self, id=id, mode=mode, pull=pull, value=value)
+
+        device._gpios[self._id] = self  # NOQA
+
+    def deinit(self):
+        if self._pwm is not None:
+            self._pwm.deinit()
+        if self._adc is not None:
+            self._adc.deinit()
+        if self._irq is not None:
+            value = self._device.read(_INT_CTRL_5)
+            if self._id == EXIO0:
+                value &= ~0x01
+            elif self._id == EXIO1:
+                value &= ~0x02
+            elif self._id == EXIO2:
+                value &= ~0x04
+
+            self._device.write(_INT_CTRL_5, value)
+            self._irq = None
+
+    def __del__(self):
+        self.deinit()
+        del self._device._gpios[self.id]  # NOQA
+
+    def _set_irq(self, handler, trigger):  # NOQA
+
+        if handler is not None and self._id not in (EXIO0, EXIO1, EXIO2):
+            raise ValueError(f"IRQ is not supported for GPIO (EXIO) {self._id}")
+
+        value = self._device.read(_INT_CTRL_5)
+
+        if handler is None:
+            if self._id == EXIO0:
+                value &= ~0x01
+            elif self._id == EXIO1:
+                value &= ~0x02
+            elif self._id == EXIO2:
+                value &= ~0x04
+        else:
+            if self._id == EXIO0:
+                value |= 0x01
+            elif self._id == EXIO1:
+                value |= 0x02
+            elif self._id == EXIO2:
+                value |= 0x04
+
+        self._device.write(_INT_CTRL_5, value)
+        self._irq = handler
+
+    def _set_dir(self, direction):
+        if direction == self.IN:
+            if self._id == EXIO0:
+                value = self._device.read(_GPIO0_CTRL_1) & 0xF8
+                value |= 0x01
+                self._device.write(_GPIO0_CTRL_1, value)
+            elif self._id == EXIO1:
+                value = self._device.read(_GPIO1_CTRL) & 0xF8
+                value |= 0x01
+                self._device.write(_GPIO1_CTRL, value)
+            elif self._id == EXIO2:
+                value = self._device.read(_GPIO2_CTRL) & 0xF8
+                value |= 0x01
+                self._device.write(_GPIO2_CTRL, value)
+            elif self._id == EXIO3:
+                value = self._device.read(_GPIO_FUNC_CTRL) & 0xFC
+                value |= 0x02
+                self._device.write(_GPIO_FUNC_CTRL, value)
+            elif self._id == EXIO4:
+                value = self._device.read(_GPIO_FUNC_CTRL) & 0xF3
+                value |= 0x08
+                self._device.write(_GPIO_FUNC_CTRL, value)
+
+        elif direction == self.OUT:
+            if self._id == EXIO0:
+                value = self._device.read(_GPIO0_CTRL_1) & 0xF8
+                value |= 0x05
+                self._device.write(_GPIO0_CTRL_1, value)
+            elif self._id == EXIO1:
+                value = self._device.read(_GPIO1_CTRL) & 0xF8
+                value |= 0x05
+                self._device.write(_GPIO1_CTRL, value)
+            elif self._id == EXIO2:
+                value = self._device.read(_GPIO2_CTRL) & 0xF8
+                value |= 0x05
+                self._device.write(_GPIO2_CTRL, value)
+            else:
+                raise ValueError(f'OUT is not supported for GPIO (EXIO) {self._id}')
+
+        elif direction == self.OPEN_DRAIN:
+            if self._id == EXIO0:
+                value = self._device.read(_GPIO0_CTRL_1) & 0xF8
+                self._device.write(_GPIO0_CTRL_1, value)
+            elif self._id == EXIO1:
+                value = self._device.read(_GPIO1_CTRL) & 0xF8
+                self._device.write(_GPIO1_CTRL, value)
+            elif self._id == EXIO2:
+                value = self._device.read(_GPIO2_CTRL) & 0xF8
+                self._device.write(_GPIO2_CTRL, value)
+            elif self._id == EXIO3:
+                value = self._device.read(_GPIO_FUNC_CTRL) & 0xFC
+                value |= 0x02
+                self._device.write(_GPIO_FUNC_CTRL, value)
+            elif self._id == EXIO4:
+                value = self._device.read(_GPIO_FUNC_CTRL) & 0xF3
+                value |= 0x08
+                self._device.write(_GPIO_FUNC_CTRL, value)
+        else:
+            raise ValueError(str(direction))
+
+        self._direction = direction
+
+    def _set_pull(self, pull):
+
+        if self._id not in (EXIO0, EXIO1, EXIO1) and pull is not None and pull != self.PULL_DOWN:
+            raise ValueError(f'"PULL_DOWN" is not supported for GPIO (EXIO) {self._id}')
+
+        if pull is None:
+            if self._id == EXIO0:
+                value = self._device.read(_GPIO_PULL_DOWN)
+                value &= ~0x01
+                self._device.write(_GPIO_PULL_DOWN, value)
+            elif self._id == EXIO1:
+                value = self._device.read(_GPIO_PULL_DOWN)
+                value &= ~0x02
+                self._device.write(_GPIO_PULL_DOWN, value)
+            elif self._id == EXIO2:
+                value = self._device.read(_GPIO_PULL_DOWN)
+                value &= ~0x04
+                self._device.write(_GPIO_PULL_DOWN, value)
+
+        elif pull == self.PULL_DOWN:
+            if self._id == EXIO0:
+                value = self._device.read(_GPIO_PULL_DOWN)
+                value |= 0x01
+                self._device.write(_GPIO_PULL_DOWN, value)
+            elif self._id == EXIO1:
+                value = self._device.read(_GPIO_PULL_DOWN)
+                value |= 0x02
+                self._device.write(_GPIO_PULL_DOWN, value)
+            elif self._id == EXIO2:
+                value = self._device.read(_GPIO_PULL_DOWN)
+                value |= 0x04
+                self._device.write(_GPIO_PULL_DOWN, value)
+
+    def _set_level(self, level):
+        if level:
+            if self._direction == self.OPEN_DRAIN:
+                if self._id == EXIO0:
+                    value = self._device.read(_GPIO_SIG_STATUS_1)
+                    value |= 0x01
+                    self._device.write(_GPIO_SIG_STATUS_1, value)
+                elif self._id == EXIO1:
+                    value = self._device.read(_GPIO_SIG_STATUS_1)
+                    value |= 0x02
+                    self._device.write(_GPIO_SIG_STATUS_1, value)
+                elif self._id == EXIO2:
+                    value = self._device.read(_GPIO_SIG_STATUS_1)
+                    value |= 0x04
+                    self._device.write(_GPIO_SIG_STATUS_1, value)
+                elif self._id == EXIO3:
+                    value = self._device.read(_GPIO_SIG_STATUS_2)
+                    value |= 0x01
+                    self._device.write(_GPIO_SIG_STATUS_2, value)
+                elif self._id == EXIO4:
+                    value = self._device.read(_GPIO_SIG_STATUS_2)
+                    value |= 0x02
+                    self._device.write(_GPIO_SIG_STATUS_2, value)
+            elif self._direction == self.OUT:
+                if self._id == EXIO0:
+                    if isinstance(level, bool) or level == 1:
+                        level = 0xF0
+                    else:
+                        level = int(lcd_utils.remap(float(level), 1.8, 3.3, 0.0, 15.0)) << 4
+
+                    value = self._device.read(_GPIO0_CTRL_2) & 0x0F
+                    value |= level
+                    self._device.write(_GPIO0_CTRL_2, value)
+
+                    value = self._device.read(_GPIO0_CTRL_1) & 0xF8
+                    value |= 0x02
+                    self._device.write(_GPIO0_CTRL_1, value)
+
+                elif self._id == EXIO1:
+                    value = self._device.read(_GPIO_SIG_STATUS_1)
+                    value |= 0x06
+                    self._device.write(_GPIO_SIG_STATUS_1, value)
+
+                elif self._id == EXIO2:
+                    value = self._device.read(_GPIO_SIG_STATUS_1)
+                    value |= 0x06
+                    self._device.write(_GPIO_SIG_STATUS_1, value)
+        else:
+            if self._direction == self.OPEN_DRAIN:
+                if self._id == EXIO0:
+                    value = self._device.read(_GPIO_SIG_STATUS_1)
+                    value &= ~0x01
+                    self._device.write(_GPIO_SIG_STATUS_1, value)
+                elif self._id == EXIO1:
+                    value = self._device.read(_GPIO_SIG_STATUS_1)
+                    value &= ~0x02
+                    self._device.write(_GPIO_SIG_STATUS_1, value)
+                elif self._id == EXIO2:
+                    value = self._device.read(_GPIO_SIG_STATUS_1)
+                    value &= ~0x04
+                    self._device.write(_GPIO_SIG_STATUS_1, value)
+                elif self._id == EXIO3:
+                    value = self._device.read(_GPIO_SIG_STATUS_2)
+                    value &= ~0x01
+                    self._device.write(_GPIO_SIG_STATUS_2, value)
+                elif self._id == EXIO4:
+                    value = self._device.read(_GPIO_SIG_STATUS_2)
+                    value &= ~0x02
+                    self._device.write(_GPIO_SIG_STATUS_2, value)
+
+            elif self._direction == self.OUT:
+                if self._id == EXIO0:
+                    value = self._device.read(_GPIO0_CTRL_1)
+                    value |= 0x05
+                    self._device.write(_GPIO0_CTRL_1, value)
+                elif self._id == EXIO1:
+                    value = self._device.read(_GPIO1_CTRL)
+                    value |= 0x05
+                    self._device.write(_GPIO1_CTRL, value)
+                elif self._id == EXIO2:
+                    value = self._device.read(_GPIO2_CTRL)
+                    value |= 0x05
+                    self._device.write(_GPIO2_CTRL, value)
+
+    def _get_level(self):
+        if self._id == EXIO0:
+            value = self._device.read(_GPIO_SIG_STATUS_1) & 0x08
+        elif self._id == EXIO1:
+            value = self._device.read(_GPIO_SIG_STATUS_1) & 0x10
+        elif self._id == EXIO2:
+            value = self._device.read(_GPIO_SIG_STATUS_1) & 0x20
+        elif self._id == EXIO3:
+            value = self._device.read(_GPIO_SIG_STATUS_2) & 0x08
+        elif self._id == EXIO4:
+            value = self._device.read(_GPIO_SIG_STATUS_2) & 0x10
+        else:
+            raise ValueError(f"not supported for GPIO (EXIO) {self._id}")
+
+        return int(bool(value))
+
+
+class ADC(io_expander_framework.ADC):
+
+    ATTN_0DB = 0  # 0 - 2.0475V
+    ATTN_2_5DB = 1  # 0.7 - 2.7475V
+
+    WIDTH_9BIT = 0
+    WIDTH_10BIT = 1
+    WIDTH_11BIT = 2
+    WIDTH_12BIT = 3
+    WIDTH_13BIT = 4
+
+    def __init__(self, pin: Pin, attn=-1):
+        self._device = pin._device  # NOQA
+        super().__init__(pin=pin, attn=attn)
+
+        self._width = self.WIDTH_12BIT
+
+        if pin._id == EXIO0:  # NOQA
+            self._device.write(_GPIO0_CTRL_1, (self._device.read(_GPIO0_CTRL_1) & 0xF8) | 0x04)
+            self._device.write(_ADC_EN_2, (self._device.read(_ADC_EN_2) & 0xF0) | 0x08)
+        if pin._id == EXIO1:  # NOQA
+            self._device.write(_GPIO1_CTRL, (self._device.read(_GPIO1_CTRL) & 0xF8) | 0x04)
+            self._device.write(_ADC_EN_2, (self._device.read(_ADC_EN_2) & 0xF0) | 0x04)
+        elif pin._id == EXIO2:  # NOQA
+            self._device.write(_GPIO2_CTRL, (self._device.read(_GPIO2_CTRL) & 0xF8) | 0x04)
+            self._device.write(_ADC_EN_2, (self._device.read(_ADC_EN_2) & 0xF0) | 0x02)
+        elif pin._id == EXIO3:  # NOQA
+            self._device.write(_GPIO_FUNC_CTRL, (self._device.read(_GPIO_FUNC_CTRL) & 0xFC) | 0x03)
+            self._device.write(_ADC_EN_2, (self._device.read(_ADC_EN_2) & 0xF0) | 0x01)
+        else:
+            pin._adc = None
+            raise ValueError(f"ADC is not supported for GPIO (EXIO) {self._pin._id}")  # NOQA
+
+    def deinit(self) -> None:
+        if self._pin._id == EXIO0:  # NOQA
+            self._device.write(_GPIO0_CTRL_1, (self._device.read(_GPIO0_CTRL_1) & 0xF8) | 0x06)
+            self._device.write(_ADC_EN_2, (self._device.read(_ADC_EN_2) & 0xF0) & ~0x08)
+        if self._pin._id == EXIO1:  # NOQA
+            self._device.write(_GPIO1_CTRL, (self._device.read(_GPIO1_CTRL) & 0xF8) | 0x06)
+            self._device.write(_ADC_EN_2, (self._device.read(_ADC_EN_2) & 0xF0) & ~0x04)
+        elif self._pin._id == EXIO2:  # NOQA
+            self._device.write(_GPIO2_CTRL, (self._device.read(_GPIO2_CTRL) & 0xF8) | 0x06)
+            self._device.write(_ADC_EN_2, (self._device.read(_ADC_EN_2) & 0xF0) & ~0x02)
+        elif self._pin._id == EXIO3:  # NOQA
+            self._device.write(_GPIO_FUNC_CTRL, (self._device.read(_GPIO_FUNC_CTRL) & 0xFC) | 0x02)
+            self._device.write(_ADC_EN_2, (self._device.read(_ADC_EN_2) & 0xF0) & ~0x01)
+        else:
+            raise ValueError(f"not supported for GPIO (EXIO) {self._pin._id}")  # NOQA
+
+        super().deinit()
+
+    def __del__(self):
+        self.deinit()
+
+    def attn(self, attn=-1):
+        if attn in (self.ATTN_0DB, self.ATTN_2_5DB):
+            value = self._device.read(_GPIO_INPT_RNG) & 0xF0
+            if self._pin._id == EXIO0:  # NOQA
+                value &= ~self.ATTN_2_5DB
+                value |= attn
+            elif self._pin._id == EXIO1:  # NOQA
+                value &= ~(self.ATTN_2_5DB << 1)
+                value |= attn << 1
+            elif self._pin._id == EXIO2:  # NOQA
+                value &= ~(self.ATTN_2_5DB << 2)
+                value |= attn << 2
+            elif self._pin._id == EXIO3:  # NOQA
+                value &= ~(self.ATTN_2_5DB << 3)
+                value |= attn << 3
+            else:
+                raise ValueError(f"not supported for GPIO (EXIO) {self._pin._id}")  # NOQA
+
+            self._attn = attn
+            self._device.write(value)
+
+    def read_uv(self):
+        value = self.read()
+
+        if self._width == self.WIDTH_9BIT:
+            old_max = 0x01FF
+        elif self._width == self.WIDTH_10BIT:
+            old_max = 0x03FF
+        elif self._width == self.WIDTH_11BIT:
+            old_max = 0x07FF
+        elif self._width == self.WIDTH_12BIT:
+            old_max = 0x0FFF
+        elif self._width == self.WIDTH_13BIT:
+            old_max = 0x1FFF
+        else:
+            raise ValueError("not supported for GPIO (EXIO) {self.id}")
+
+        if self._attn == self.ATTN_0DB:
+            new_min = 0.0
+            new_max = 2.0475
+        elif self._attn == self.ATTN_2_5DB:
+            new_min = 0.7
+            new_max = 2.7475
+        else:
+            raise ValueError(f"not supported for GPIO (EXIO) {self._pin._id}")  # NOQA
+
+        return round(lcd_utils.remap(float(value), 0.0, float(old_max), new_min, new_max), 4)
+
+    def read(self):
+        if self._pin._id == EXIO0:  # NOQA
+            byte_h = self._device.read(_GPIO0_VLTS_H)
+            byte_l = self._device.read(_GPIO0_VLTS_L)
+        elif self._pin._id == EXIO1:  # NOQA
+            byte_h = self._device.read(_GPIO1_VLTS_H)
+            byte_l = self._device.read(_GPIO1_VLTS_L)
+        elif self._pin._id == EXIO2:  # NOQA
+            byte_h = self._device.read(_GPIO2_VLTS_H)
+            byte_l = self._device.read(_GPIO2_VLTS_L)
+        elif self._pin._id == EXIO3:  # NOQA
+            byte_h = self._device.read(_GPIO3_VLTS_H)
+            byte_l = self._device.read(_GPIO3_VLTS_L)
+        else:
+            raise ValueError(f"not supported for GPIO (EXIO) {self._pin._id}")  # NOQA
+
+        value = (byte_h << 4) + byte_l
+
+        if self._width == self.WIDTH_9BIT:
+            value = lcd_utils.remap(value, 0x0000, 0x0FFF, 0x0000, 0x01FF)
+        elif self._width == self.WIDTH_10BIT:
+            value = lcd_utils.remap(value, 0x0000, 0x0FFF, 0x0000, 0x03FF)
+        elif self._width == self.WIDTH_11BIT:
+            value = lcd_utils.remap(value, 0x0000, 0x0FFF, 0x0000, 0x07FF)
+        elif self._width == self.WIDTH_12BIT:
+            # device default
+            pass
+        elif self._width == self.WIDTH_13BIT:
+            value = lcd_utils.remap(value, 0x0000, 0x0FFF, 0x0000, 0x1FFF)
+        else:
+            raise ValueError(f"not supported for GPIO (EXIO) {self._pin._id}")  # NOQA
+
+        return value
+
+
+class PWM(io_expander_framework.PWM):
+
+    def __init__(self, pin: Pin, freq=-1, duty=-1):
+
+        self._device = pin._device  # NOQA
+
+        super().__init__(pin=pin, freq=freq, duty=duty)
+
+        if pin._id == EXIO1:  # NOQA
+            self._device.write((self._device.read(_GPIO1_CTRL) & 0xF8) | 0x02)
+        elif pin._id == EXIO2:  # NOQA
+            self._device.write((self._device.read(_GPIO2_CTRL) & 0xF8) | 0x02)
+        else:
+            pin._pwm = None
+            raise ValueError(f"PWM is not supported for GPIO (EXIO) {self._pin._id}")  # NOQA
+
+
+    def init(self, freq: int = -1, duty: int = -1):  # NOQA
+        if duty != -1:
+            self.duty(duty)
+
+    def deinit(self) -> None:
+        if self._pin._id == EXIO1:  # NOQA
+            self._device.write((self._device.read(_GPIO1_CTRL) & 0xF8) | 0x06)
+        elif self._pin._id == EXIO2:  # NOQA
+            self._device.write((self._device.read(_GPIO2_CTRL) & 0xF8) | 0x06)
+        else:
+            raise ValueError(f"not supported for GPIO (EXIO) {self._pin._id}")  # NOQA
+
+        super().deinit()
+
+    def __del__(self):
+        self.deinit()
+
+    def freq(self, freq: int = -1):
+        raise NotImplementedError(f"not supported for GPIO (EXIO) {self._pin._id}")  # NOQA
+
+    def duty(self, duty: int = -1):
+        if duty == -1:
+            if self._pin._id == EXIO1:  # NOQA
+                value = self._device.read(_PMW1_DUTY_Y2)
+            elif self._pin._id == EXIO2:  # NOQA
+                value = self._device.read(_PMW2_DUTY_Y2)
+            else:
+                raise ValueError(f"not supported for GPIO (EXIO) {self._pin._id}")  # NOQA
+
+            return value
+        else:
+            duty = min(255, max(0, duty))
+
+            if self._pin._id == EXIO1:  # NOQA
+                self._device.write(_PMW1_DUTY_Y1, 0xFF)
+                self._device.write(_PMW1_DUTY_Y2, duty)
+                self._device.write((self._device.read(_GPIO1_CTRL) & 0xF8) | 0x02)
+            elif self._pin._id == EXIO2:  # NOQA
+                self._device.write(_PMW2_DUTY_Y1, 0xFF)
+                self._device.write(_PMW2_DUTY_Y2, duty)
+                self._device.write((self._device.read(_GPIO2_CTRL) & 0xF8) | 0x02)
+            else:
+                raise ValueError(f"not supported for GPIO (EXIO) {self._pin._id}")  # NOQA
+            
+
+class AXP192:
+    
+    def _write(self, reg, value):
+        pass
+    
+    def _read(self, reg):
+        return 0x00
+
+    @property
+    def is_acin_present(self):
+        value = self._read(_STATUS)
+        return bool(value & 0x80)
+
+    @property
+    def is_acin_available(self):
+        value = self._read(_STATUS)
+        return bool(value & 0x40)
+
+    @property
+    def is_vbus_present(self):
+        value = self._read(_STATUS)
+        return bool(value & 0x20)
+
+    @property
+    def is_vbus_available(self):
+        value = self._read(_STATUS)
+        return bool(value & 0x10)
+
+    @property
+    def is_vbus_greater_vhold(self):
+        value = self._read(_STATUS)
+        return bool(value & 0x08)
+
+    @property
+    def is_charging(self):
+        value = self._read(_STATUS)
+        return bool(value & 0x04)
+
+    @property
+    def is_acin_and_vbus_shorted(self):
+        value = self._read(_STATUS)
+        return bool(value & 0x02)
+
+    @property
+    def is_boost_source_acin_vbus(self):
+        value = self._read(_STATUS)
+        return bool(value & 0x01)
+
+    @property
+    def is_ic_overheated(self):
+        value = self._read(_MODE_CHGSTATUS)
+        return bool(value & 0x80)
+
+    @property
+    def is_commanded_charging(self):
+        value = self._read(_MODE_CHGSTATUS)
+        return bool(value & 0x40)
+
+    @property
+    def is_battery_connected(self):
+        value = self._read(_MODE_CHGSTATUS)
+        return bool(value & 0x20)
+
+    @property
+    def is_battery_activation_mode(self):
+        value = self._read(_MODE_CHGSTATUS)
+        return bool(value & 0x08)
+
+    @property
+    def is_charging_current_low(self):
+        value = self._read(_MODE_CHGSTATUS)
+        return bool(value & 0x04)
+
+    @property
+    def power_mode(self):
+        """
+        POWER_MODE_A
+        POWER_MODE_B
+        """
+        value = self._read(_MODE_CHGSTATUS)
+        return value & 0x02
+
+    @property
+    def is_vbus_valid(self):
+        value = self._read(_OTG_STATUS)
+        return bool(value & 0x04)
+
+    @property
+    def is_vbus_session_valid(self):
+        value = self._read(_OTG_STATUS)
+        return bool(value & 0x02)
+
+    @property
+    def is_vbus_session_end(self):
+        value = self._read(_OTG_STATUS)
+        return bool(value & 0x01)
+
+    @property
+    def extern_switch_state(self):
+        value = self._read(_SWITCH_CTRL_1)
+        return not bool(value & 0x04)
+
+    @extern_switch_state.setter
+    def extern_switch_state(self, state):
+        value = self._read(_SWITCH_CTRL_1) & ~0x04
+        state = int(not state) << 1
+        value |= state
+        self._write(_SWITCH_CTRL_1, value)
+
+    @property
+    def dc_dc2_switch_state(self):
+        value = self._read(_SWITCH_CTRL_1)
+        return not bool(value & 0x01)
+
+    @dc_dc2_switch_state.setter
+    def dc_dc2_switch_state(self, state):
+        value = self._read(_SWITCH_CTRL_1) & ~0x01
+        value |= int(not state)
+        self._write(_SWITCH_CTRL_1, value)
+
+    @property
+    def extern_switch_control(self):
+        value = self._read(_SWITCH_CTRL_2)
+        return not bool(value & 0x40)
+
+    @extern_switch_control.setter
+    def extern_switch_control(self, state):
+        value = self._read(_SWITCH_CTRL_2) & ~0x40
+        state = int(not state) << 6
+        value |= state
+        self._write(_SWITCH_CTRL_2, value)
+
+    @property
+    def dc_dc2_switch_control(self):
+        value = self._read(_SWITCH_CTRL_2)
+        return not bool(value & 0x10)
+
+    @dc_dc2_switch_control.setter
+    def dc_dc2_switch_control(self, state):
+        value = self._read(_SWITCH_CTRL_2) & ~0x10
+        value |= int(not state) << 4
+        self._write(_SWITCH_CTRL_2, value)
+
+    @property
+    def ldo3_switch_control(self):
+        value = self._read(_SWITCH_CTRL_2)
+        return not bool(value & 0x08)
+
+    @ldo3_switch_control.setter
+    def ldo3_switch_control(self, state):
+        value = self._read(_SWITCH_CTRL_2) & ~0x08
+        value |= int(not state) << 3
+        self._write(_SWITCH_CTRL_2, value)
+
+    @property
+    def ldo2_switch_control(self):
+        value = self._read(_SWITCH_CTRL_2)
+        return not bool(value & 0x04)
+
+    @ldo2_switch_control.setter
+    def ldo2_switch_control(self, state):
+        value = self._read(_SWITCH_CTRL_2) & ~0x04
+        value |= int(not state) << 2
+        self._write(_SWITCH_CTRL_2, value)
+
+    @property
+    def dc_dc3_switch_control(self):
+        value = self._read(_SWITCH_CTRL_2)
+        return not bool(value & 0x02)
+
+    @dc_dc3_switch_control.setter
+    def dc_dc3_switch_control(self, state):
+        value = self._read(_SWITCH_CTRL_2) & ~0x02
+        value |= int(not state) << 1
+        self._write(_SWITCH_CTRL_2, value)
+
+    @property
+    def dc_dc1_switch_control(self):
+        value = self._read(_SWITCH_CTRL_2)
+        return not bool(value & 0x02)
+
+    @dc_dc1_switch_control.setter
+    def dc_dc1_switch_control(self, state):
+        value = self._read(_SWITCH_CTRL_2) & ~0x01
+        value |= int(not state)
+        self._write(_SWITCH_CTRL_2, value)
+
+    @property
+    def dc_dc2_volts(self):
+        """
+        0.7 - 2.275 in 0.25 increments
+        """
+        value = self._read(_DC2_VLT_SETTING) & 0x1F
+        volts = lcd_utils.remap(float(value), 0.0, 31.0, 0.7, 2.275)
+        return round(volts, 3)
+
+    @dc_dc2_volts.setter
+    def dc_dc2_volts(self, volts):
+        """
+        0.7 - 2.275 in 0.25 increments
+        """
+        volts = min(2.275, (max(0.7, float(volts))))
+        volts = lcd_utils.remap(float(volts), 0.7, 2.275, 0.0, 31.0)
+        volts = int(volts)
+        value = self._read(_DC2_VLT_SETTING) & 0xE0
+        value |= volts
+        self._write(_DC2_VLT_SETTING, value)
+
+    @property
+    def dc_dc1_volts(self):
+        """
+        0.7 - 3.5 in 0.25 increments
+        """
+        value = self._read(_DC1_VLT_SETTING) & 0x3F
+        volts = lcd_utils.remap(float(value), 0.0, 63.0, 0.7, 3.5)
+        return round(volts, 2)
+
+    @dc_dc1_volts.setter
+    def dc_dc1_volts(self, volts):
+        """
+        0.7 - 3.5 in 0.25 increments
+        """
+        volts = min(3.5, (max(0.7, float(volts))))
+        volts = lcd_utils.remap(float(volts), 0.7, 3.5, 0.0, 63.0)
+        volts = int(volts)
+        value = self._read(_DC1_VLT_SETTING) & 0xC0
+        value |= volts
+        self._write(_DC1_VLT_SETTING, value)
+
+    @property
+    def dc_dc3_volts(self):
+        """
+        0.7 - 3.5 in 0.25 increments
+        """
+        value = self._read(_DC3_VLT_SETTING) & 0x3F
+        volts = lcd_utils.remap(float(value), 0.0, 63.0, 0.7, 3.5)
+        return round(volts, 2)
+
+    @dc_dc3_volts.setter
+    def dc_dc3_volts(self, volts):
+        """
+        0.7 - 3.5 in 0.25 increments
+        """
+        volts = min(3.5, (max(0.7, float(volts))))
+        volts = lcd_utils.remap(float(volts), 0.7, 3.5, 0.0, 63.0)
+        volts = int(volts)
+        value = self._read(_DC3_VLT_SETTING) & 0xC0
+        value |= volts
+        self._write(_DC3_VLT_SETTING, value)
+
+    @property
+    def ldo2_volts(self):
+        """
+        1.8 - 3.3 in 0.1 increments
+        """
+        value = self._read(_LDO_VLT_SETTING_1) >> 4
+        volts = lcd_utils.remap(float(value), 0.0, 15.0, 1.8, 3.3)
+        return round(volts, 2)
+
+    @ldo2_volts.setter
+    def ldo2_volts(self, volts):
+        """
+        1.8 - 3.3 in 0.1 increments
+        """
+        volts = min(3.3, (max(1.8, float(volts))))
+        volts = lcd_utils.remap(float(volts), 1.8, 3.3, 0.0, 15.0)
+        volts = int(volts) << 4
+        value = self._read(_LDO_VLT_SETTING_1) & 0x0F
+        value |= volts
+        self._write(_LDO_VLT_SETTING_1, value)
+
+    @property
+    def ldo3_volts(self):
+        """
+        1.8 - 3.3 in 0.1 increments
+        """
+        value = self._read(_LDO_VLT_SETTING_1) & 0x0F
+        volts = lcd_utils.remap(float(value), 0.0, 15.0, 1.8, 3.3)
+        return round(volts, 2)
+
+    @ldo3_volts.setter
+    def ldo3_volts(self, volts):
+        """
+        1.8 - 3.3 in 0.1 increments
+        """
+        volts = min(3.3, (max(1.8, float(volts))))
+        volts = lcd_utils.remap(float(volts), 1.8, 3.3, 0.0, 15.0)
+        volts = int(volts)
+        value = self._read(_LDO_VLT_SETTING_1) & 0xF0
+        value |= volts
+        self._write(_LDO_VLT_SETTING_1, value)
+
+    @property
+    def vbus_vhold_limit_control(self):
+        """
+        VHOLD_LIMIT_NO_PRESSURE
+        VHOLD_LIMIT_PRESSURE
+        """
+        value = self._read(_VBUS_IPS_SETTING) & 0x40
+        return bool(value)
+
+    @vbus_vhold_limit_control.setter
+    def vbus_vhold_limit_control(self, en):
+        """
+        VHOLD_LIMIT_NO_PRESSURE
+        VHOLD_LIMIT_PRESSURE
+        """
+        value = self._read(_VBUS_IPS_SETTING) & ~0x40
+        value |= int(bool(en)) << 6
+        self._write(_VBUS_IPS_SETTING, value)
+
+    @property
+    def vbus_vhold_volts(self):
+        """
+        4.0 to 4.7 in 0.1 increments
+        """
+        value = self._read(_VBUS_IPS_SETTING) & 0x38
+        value >>= 3
+
+        volts = lcd_utils.remap(float(value), 0.0, 7.0, 4.0, 4.7)
+        return round(volts, 1)
+
+    @vbus_vhold_volts.setter
+    def vbus_vhold_volts(self, volts):
+        """
+        4.0 to 4.7 in 0.1 increments
+        """
+        value = self._read(_VBUS_IPS_SETTING)
+        value &= ~0x38
+        volts = min(4.7, max(4.0, float(volts)))
+        volts = lcd_utils.remap(volts, 4.0, 4.7, 0.0, 7.0)
+        volts = int(volts) << 3
+        value |= volts
+        self._write(_VBUS_IPS_SETTING, value)
+
+    @property
+    def vbus_current_limit_enable(self):
+        value = self._read(_VBUS_IPS_SETTING) & 0x02
+        return bool(value)
+
+    @vbus_current_limit_enable.setter
+    def vbus_current_limit_enable(self, en):
+        value = self._read(_VBUS_IPS_SETTING) & ~0x02
+        value |= int(bool(en)) << 1
+        self._write(_VBUS_IPS_SETTING, value)
+
+    @property
+    def vbus_current_limit(self):
+        """
+        VBUS_CUR_LIMIT_500MA
+        VBUS_CUR_LIMIT_100MA
+        """
+        value = self._read(_VBUS_IPS_SETTING) & 0x01
+        return value
+
+    @vbus_current_limit.setter
+    def vbus_current_limit(self, limit):
+        """
+        VBUS_CUR_LIMIT_500MA
+        VBUS_CUR_LIMIT_100MA
+        """
+        value = self._read(_VBUS_IPS_SETTING) & ~0x01
+        value |= limit & 0x01
+        self._write(_VBUS_IPS_SETTING, value)
+
+    @property
+    def voff_volts(self):
+        """
+        2.6 - 3.3 in 0.1 increments
+        """
+        value = self._read(_VOFF_SETTING) & 0x07
+        volts = lcd_utils.remap(float(value), 0.0, 7.0, 2.6, 3.3)
+        return round(volts, 1)
+
+    @voff_volts.setter
+    def voff_volts(self, volts):
+        """
+        2.6 - 3.3 in 0.1 increments
+        """
+        value = self._read(_VOFF_SETTING)
+        value &= ~0x07
+        volts = max(2.6, min(3.3, float(volts)))
+        volts = lcd_utils.remap(volts, 2.6, 3.3, 0.0, 7.0)
+        value |= int(volts)
+        self._write(_VOFF_SETTING, value)
+
+    @property
+    def wake_up_short_press_enable(self):
+        value = self._read(_VOFF_SETTING) & 0x08
+        return bool(value)
+
+    @wake_up_short_press_enable.setter
+    def wake_up_short_press_enable(self, en):
+        value = self._read(_VOFF_SETTING)
+        value &= ~0x08
+        value |= int(bool(en)) << 3
+        self._write(_VOFF_SETTING, value)
+
+    @property
+    def battery_monitoring_enable(self):
+        value = self._read(_SETTINGS_1) & 0x40
+        return bool(value)
+
+    @battery_monitoring_enable.setter
+    def battery_monitoring_enable(self, en):
+        value = self._read(_SETTINGS_1)
+        value &= ~0x40
+        value |= int(bool(en)) << 6
+        self._write(_SETTINGS_1, value)
+
+    @property
+    def chrg_led_pin_output(self):
+        """
+        CHRG_LED_HIGH_IMP
+        CHRG_LED_1HZ
+        CHRG_LED_4HZ
+        CHRG_LED_LOW
+        """
+        value = self._read(_SETTINGS_1) & 0x30
+        return value >> 4
+
+    @chrg_led_pin_output.setter
+    def chrg_led_pin_output(self, setting):
+        """
+        CHRG_LED_HIGH_IMP
+        CHRG_LED_1HZ
+        CHRG_LED_4HZ
+        CHRG_LED_LOW
+        """
+        value = self._read(_SETTINGS_1)
+        value &= ~0x30
+        value |= setting << 4
+        self._write(_SETTINGS_1, value)
+
+    @property
+    def chrg_led_reg_ctrl_enable(self):
+        value = self._read(_SETTINGS_1) & 0x08
+        return bool(value)
+
+    @chrg_led_reg_ctrl_enable.setter
+    def chrg_led_reg_ctrl_enable(self, setting):
+        value = self._read(_SETTINGS_1)
+        value &= ~0x08
+        value |= int(bool(setting)) << 3
+        self._write(_SETTINGS_1, value)
+
+    @property
+    def n_oe_shutdown_delay(self):
+        """
+        TIME_0_500S
+        TIME_1_000S
+        TIME_2_000S
+        TIME_3_000S
+        """
+        mapping = {
+            0x00: TIME_0_500S,
+            0x01: TIME_1_000S,
+            0x02: TIME_2_000S,
+            0x03: TIME_3_000S
+        }
+
+        value = self._read(_SETTINGS_1) & 0x03
+        return mapping.get(value)
+
+    @n_oe_shutdown_delay.setter
+    def n_oe_shutdown_delay(self, delay):
+        """
+        TIME_0_500S
+        TIME_1_000S
+        TIME_2_000S
+        TIME_3_000S
+        """
+        value = self._read(_SETTINGS_1)
+        value &= ~0x03
+
+        mapping = {
+            TIME_0_500S: 0x00,
+            TIME_1_000S: 0x01,
+            TIME_2_000S: 0x02,
+            TIME_3_000S: 0x03
+        }
+
+        delay = mapping.get(delay, None)
+        if delay is None:
+            raise ValueError
+
+        value |= delay
+        self._write(_SETTINGS_1, value)
+
+    @property
+    def charging_enable(self):
+        value = self._read(_CHARGE_CTRL_1) & 0x80
+        return bool(value)
+
+    @charging_enable.setter
+    def charging_enable(self, setting):
+        value = self._read(_CHARGE_CTRL_1)
+        value &= ~0x80
+        value |= int(bool(setting)) << 7
+        self._write(_CHARGE_CTRL_1, value)
+
+    @property
+    def charging_target_vlts(self):
+        """
+        CHARGE_4_1V
+        CHARGE_4_15V
+        CHARGE_4_2V
+        CHARGE_4_36V
+        """
+        value = self._read(_CHARGE_CTRL_1) & 0x60
+        return value >> 5
+
+    @charging_target_vlts.setter
+    def charging_target_vlts(self, volts):
+        """
+        CHARGE_4_1V
+        CHARGE_4_15V
+        CHARGE_4_2V
+        CHARGE_4_36V
+        """
+        value = self._read(_CHARGE_CTRL_1)
+        value &= ~0x60
+        value |= volts << 5
+        self._write(_CHARGE_CTRL_1, value)
+
+    @property
+    def charging_current(self):
+        """
+        100 - 1320
+        """
+        value = self._read(_CHARGE_CTRL_1) & 0x0F
+
+        mapping = {
+            0: 100, 1: 190, 2: 280, 3: 360, 4: 450, 5: 550,
+            6: 630, 7: 700, 8: 780, 9: 880, 10: 960, 11: 1000,
+            12: 1080, 13: 1160, 14: 1240, 15: 1320
+        }
+        return mapping.get(value)
+
+    @charging_current.setter
+    def charging_current(self, curr):
+        """
+        100 - 1320
+        """
+        value = self._read(_CHARGE_CTRL_1)
+        value &= ~0x0F
+
+        curr = max(100, min(1320, curr))
+        curr = int((((curr - 100) * 15) / (1320 - 100)))
+        value |= curr
+        self._write(_CHARGE_CTRL_1, value)
+
+    @property
+    def precharge_timeout(self):
+        """
+        TIME_0_500H
+        TIME_0_666H
+        TIME_0_833H
+        TIME_1_000H
+        """
+
+        mapping = {
+            0x00: TIME_0_500H,
+            0x01: TIME_0_666H,
+            0x02: TIME_0_833H,
+            0x03: TIME_1_000H
+        }
+
+        value = self._read(_CHARGE_CTRL_2) & 0xC0
+        return mapping.get(value >> 6)
+
+    @precharge_timeout.setter
+    def precharge_timeout(self, timeout):
+        """
+        TIME_0_500H
+        TIME_0_666H
+        TIME_0_833H
+        TIME_1_000H
+        """
+
+        mapping = {
+            TIME_0_500H: 0x00,
+            TIME_0_666H: 0x01,
+            TIME_0_833H: 0x02,
+            TIME_1_000H: 0x03
+        }
+        value = self._read(_CHARGE_CTRL_2)
+        value &= ~0xC0
+        value |= mapping.get(timeout) << 6
+        self._write(_CHARGE_CTRL_2, value)
+
+    @property
+    def extn_path_chrg_current(self):
+        """
+        300 - 1000 in 100 increments
+        """
+        value = self._read(_CHARGE_CTRL_2) & 0x07
+        mapping = {
+            0: 300,
+            1: 400,
+            2: 500,
+            3: 600,
+            4: 700,
+            5: 800,
+            6: 900,
+            7: 1000
+        }
+        return mapping.get(value >> 3)
+
+    @extn_path_chrg_current.setter
+    def extn_path_chrg_current(self, curr):
+        """
+        300 - 1000 in 100 increments
+        """
+        value = self._read(_CHARGE_CTRL_2)
+        value &= ~0x07
+        curr = max(300, min(1000, curr))
+        curr = int((((curr - 300) * 7) / (1000 - 300)))
+        value |= curr << 3
+        self._write(_CHARGE_CTRL_2, value)
+
+    @property
+    def extn_path_chrg_enable(self):
+        value = self._read(_CHARGE_CTRL_2) & 0x04
+        return bool(value)
+
+    @extn_path_chrg_enable.setter
+    def extn_path_chrg_enable(self, en):
+        value = self._read(_CHARGE_CTRL_2)
+        value &= ~0x04
+        value |= int(bool(en)) << 2
+        self._write(_CHARGE_CTRL_2, value)
+
+    @property
+    def const_current_timeout(self):
+        """
+        TIME_7_000H
+        TIME_8_000H
+        TIME_9_000H
+        TIME_10_000H
+        """
+
+        mapping = {
+            0x00: TIME_7_000H,
+            0x01: TIME_8_000H,
+            0x02: TIME_9_000H,
+            0x03: TIME_10_000H
+        }
+
+        value = self._read(_CHARGE_CTRL_2) & 0x03
+        return mapping.get(value)
+
+    @const_current_timeout.setter
+    def const_current_timeout(self, timeout):
+        """
+        TIME_7_000H
+        TIME_8_000H
+        TIME_9_000H
+        TIME_10_000H
+        """
+
+        mapping = {
+            TIME_7_000H: 0x00,
+            TIME_8_000H: 0x01,
+            TIME_9_000H: 0x02,
+            TIME_10_000H: 0x03
+        }
+
+        value = self._read(_CHARGE_CTRL_2)
+        value &= ~0x03
+        value |= mapping.get(timeout)
+        self._write(_CHARGE_CTRL_2, value)
+
+    @property
+    def backup_batt_chrg_enable(self):
+        value = self._read(_CHARGE_CTRL_3) & 0x80
+        return bool(value)
+
+    @backup_batt_chrg_enable.setter
+    def backup_batt_chrg_enable(self, en):
+        value = self._read(_CHARGE_CTRL_3)
+        value &= ~0x80
+        value |= int(bool(en)) << 7
+        self._write(_CHARGE_CTRL_3, value)
+
+    @property
+    def backup_batt_chrg_target_vlts(self):
+        """
+        BACKUP_CHRG_3_1V
+        BACKUP_CHRG_3_0V
+        BACKUP_CHRG_2_5V
+        """
+        value = self._read(_CHARGE_CTRL_3) & 0x60
+        return value >> 5
+
+    @backup_batt_chrg_target_vlts.setter
+    def backup_batt_chrg_target_vlts(self, setting):
+        """
+        BACKUP_CHRG_3_1V
+        BACKUP_CHRG_3_0V
+        BACKUP_CHRG_2_5V
+        """
+        value = self._read(_CHARGE_CTRL_3)
+        value &= ~0x60
+        value |= setting << 5
+        self._write(_CHARGE_CTRL_3, value)
+
+    @property
+    def backup_batt_chrg_current(self):
+        """
+        50 - 400
+        """
+        value = self._read(_CHARGE_CTRL_3) & 0x03
+        mapping = {0: 50, 1: 100, 2: 200, 3: 400}
+        return mapping.get(value)
+
+    @backup_batt_chrg_current.setter
+    def backup_batt_chrg_current(self, curr):
+        """
+        50 - 400
+        """
+        value = self._read(_CHARGE_CTRL_3)
+        value &= ~0x03
+        curr = max(50, min(400, curr))
+        value |= int((((curr - 50) * 3) / (400 - 50)))
+        self._write(_CHARGE_CTRL_3, value)
+
+    @property
+    def bat_vltg_adc_enable(self):
+        value = self._read(_ADC_EN_1) & 0x80
+        return bool(value)
+
+    @bat_vltg_adc_enable.setter
+    def bat_vltg_adc_enable(self, en):
+        value = self._read(_ADC_EN_1)
+        value &= ~0x80
+        value |= int(bool(en)) << 7
+        self._write(_ADC_EN_1, value)
+
+    @property
+    def bat_curr_adc_enable(self):
+        value = self._read(_ADC_EN_1) & 0x40
+        return bool(value)
+
+    @bat_curr_adc_enable.setter
+    def bat_curr_adc_enable(self, en):
+        value = self._read(_ADC_EN_1)
+        value &= ~0x40
+        value |= int(bool(en)) << 6
+        self._write(_ADC_EN_1, value)
+
+    @property
+    def acin_vltg_adc_enable(self):
+        value = self._read(_ADC_EN_1) & 0x20
+        return bool(value)
+
+    @acin_vltg_adc_enable.setter
+    def acin_vltg_adc_enable(self, en):
+        value = self._read(_ADC_EN_1)
+        value &= ~0x20
+        value |= int(bool(en)) << 5
+        self._write(_ADC_EN_1, value)
+
+    @property
+    def acin_curr_adc_enable(self):
+        value = self._read(_ADC_EN_1) & 0x10
+        return bool(value)
+
+    @acin_curr_adc_enable.setter
+    def acin_curr_adc_enable(self, en):
+        value = self._read(_ADC_EN_1)
+        value &= ~0x10
+        value |= int(bool(en)) << 4
+        self._write(_ADC_EN_1, value)
+
+    @property
+    def vbus_vltg_adc_enable(self):
+        value = self._read(_ADC_EN_1) & 0x08
+        return bool(value)
+
+    @vbus_vltg_adc_enable.setter
+    def vbus_vltg_adc_enable(self, en):
+        value = self._read(_ADC_EN_1)
+        value &= ~0x08
+        value |= int(bool(en)) << 3
+        self._write(_ADC_EN_1, value)
+
+    @property
+    def vbus_curr_adc_enable(self):
+        value = self._read(_ADC_EN_1) & 0x04
+        return bool(value)
+
+    @vbus_curr_adc_enable.setter
+    def vbus_curr_adc_enable(self, en):
+        value = self._read(_ADC_EN_1)
+        value &= ~0x04
+        value |= int(bool(en)) << 2
+        self._write(_ADC_EN_1, value)
+
+    @property
+    def aps_vltg_adc_enable(self):
+        value = self._read(_ADC_EN_1) & 0x02
+        return bool(value)
+
+    @aps_vltg_adc_enable.setter
+    def aps_vltg_adc_enable(self, en):
+        value = self._read(_ADC_EN_1)
+        value &= ~0x02
+        value |= int(bool(en)) << 1
+        self._write(_ADC_EN_1, value)
+
+    @property
+    def ts_pin_vltg_adc_enable(self):
+        value = self._read(_ADC_EN_1) & 0x01
+        return bool(value)
+
+    @ts_pin_vltg_adc_enable.setter
+    def ts_pin_vltg_adc_enable(self, en):
+        value = self._read(_ADC_EN_1)
+        value &= ~0x01
+        value |= int(bool(en))
+        self._write(_ADC_EN_1, value)
+
+    @property
+    def temp_adc_enable(self):
+        value = self._read(_ADC_EN_2) & 0x80
+        return bool(value)
+
+    @temp_adc_enable.setter
+    def temp_adc_enable(self, en):
+        value = self._read(_ADC_EN_2)
+        value &= ~0x80
+        value |= int(bool(en)) << 7
+        self._write(_ADC_EN_2, value)
+
+    @property
+    def vbus_effective_vlts(self):
+        """
+        VBUS_VLTG_4_00
+        VBUS_VLTG_4_15
+        VBUS_VLTG_4_45
+        VBUS_VLTG_4_55
+        """
+        value = self._read(_VBUS_MONITOR) & 0x30
+        return value >> 4
+
+    @vbus_effective_vlts.setter
+    def vbus_effective_vlts(self, setting):
+        """
+        VBUS_VLTG_4_00
+        VBUS_VLTG_4_15
+        VBUS_VLTG_4_45
+        VBUS_VLTG_4_55
+        """
+        value = self._read(_VBUS_MONITOR)
+        value &= ~0x30
+        value |= setting << 4
+        self._write(_VBUS_MONITOR, value)
+
+    @property
+    def vbus_valid_detection_enable(self):
+        value = self._read(_VBUS_MONITOR) & 0x08
+        return bool(value)
+
+    @vbus_valid_detection_enable.setter
+    def vbus_valid_detection_enable(self, en):
+        value = self._read(_VBUS_MONITOR)
+        value &= ~0x08
+        value |= int(bool(en)) << 3
+        self._write(_VBUS_MONITOR, value)
+
+    @property
+    def vbus_session_detection_enable(self):
+        value = self._read(_VBUS_MONITOR) & 0x04
+        return bool(value)
+
+    @vbus_session_detection_enable.setter
+    def vbus_session_detection_enable(self, en):
+        value = self._read(_VBUS_MONITOR)
+        value &= ~0x04
+        value |= int(bool(en)) << 2
+        self._write(_VBUS_MONITOR, value)
+
+    @property
+    def vbus_dchrg_resistor_enable(self):
+        value = self._read(_VBUS_MONITOR) & 0x02
+        return bool(value)
+
+    @vbus_dchrg_resistor_enable.setter
+    def vbus_dchrg_resistor_enable(self, en):
+        value = self._read(_VBUS_MONITOR)
+        value &= ~0x02
+        value |= int(bool(en)) << 1
+        self._write(_VBUS_MONITOR, value)
+
+    @property
+    def vbus_chrg_resistor_enable(self):
+        value = self._read(_VBUS_MONITOR) & 0x01
+        return bool(value)
+
+    @vbus_chrg_resistor_enable.setter
+    def vbus_chrg_resistor_enable(self, en):
+        value = self._read(_VBUS_MONITOR)
+        value &= ~0x01
+        value |= int(bool(en))
+        self._write(_VBUS_MONITOR, value)
+
+    @property
+    def temp_over_shutdown_enable(self):
+        value = self._read(_OVER_TEMP_SHUT_CTRL) & 0x04
+        return bool(value)
+
+    @temp_over_shutdown_enable.setter
+    def temp_over_shutdown_enable(self, en):
+        value = self._read(_OVER_TEMP_SHUT_CTRL)
+        value &= ~0x04
+        value |= int(bool(en)) << 2
+        self._write(_OVER_TEMP_SHUT_CTRL, value)
