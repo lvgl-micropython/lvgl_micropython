@@ -1,0 +1,58 @@
+[MCU.esp32]
+BOARD = "ESP32_GENERIC_S3"
+BOARD_VARIANT = "SPIRAM_OCT"
+flash_size = 16
+enable_jtag_repl = 'n'
+enable_cdc_repl = 'n'
+enable_uart_repl = 'y'
+uart_repl_bitrate = 115200
+
+[I2C.Bus.i2c_bus]
+host = 0
+scl = 20
+sda = 19
+freq = 400000
+
+[I80Bus.display_bus]
+data0 = 11
+data1 = 12
+data2 = 13
+data3 = 14
+data4 = 15
+data5 = 16
+data6 = 17
+data7 = 18
+dc = 8
+wr = 6
+cs = -1
+freq = 80000000
+
+[I2C.Device.indev_device]
+bus = "i2c_bus"
+dev_id = "gsl1680.I2C_ADDR"
+reg_bits = "gsl1680.BITS"
+
+[LT7381.display]
+data_bus = "display_bus"
+display_width = 800
+display_height = 480
+backlight_pin = 4
+reset_pin = 21
+wait_pin = 9
+color_space = "lv.COLOR_FORMAT.RGB565"
+
+[display.set_power]
+params = [true]
+
+[display.init]
+params = ["lt7381.TYPE_ER_TFTMC050_3"]
+
+[GSL1680.indev]
+device = "indev_device"
+wake_pin = 0
+
+[display.set_backlight]
+params = [100]
+
+[task_handler.TaskHandler]
+params=[]
