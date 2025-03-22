@@ -51,14 +51,14 @@ class GSL1680(pointer_framework.PointerDriver):
         self._wake_pin = wake_pin
 
         self._wake_up()
-        time.sleep_ms(50)
+        time.sleep_ms(50)  # NOQA
         self._write_reg(_STATUS_REG, 0x88)
-        time.sleep_ms(10)
+        time.sleep_ms(10)  # NOQA
         self._write_reg(0xE4, 0x04)
-        time.sleep_ms(5)
+        time.sleep_ms(5)  # NOQA
         self._tx_buf[:4] = bytearray([0x00, 0x00, 0x00, 0x00])
         self._write_reg(0xBC, buf=self._tx_mv[:4])
-        time.sleep_ms(5)
+        time.sleep_ms(5)  # NOQA
         self._write_reg(0xE0, 0x00)
 
         super().__init__(
@@ -68,13 +68,14 @@ class GSL1680(pointer_framework.PointerDriver):
     def _wake_up(self):
         # toggle wake pin
         self._wake_pin.value(1)
-        time.sleep_ms(5)  # NOQA
+        time.sleep_ms(1)  # NOQA
         self._wake_pin.value(0)
-        time.sleep_ms(5)  # NOQA
+        time.sleep_ms(1)  # NOQA
         self._wake_pin.value(1)
-        time.sleep_ms(3)  # NOQA
+        time.sleep_ms(1)  # NOQA
 
     def _get_coords(self):
+        self._wake_up()
         self._read_reg(_DATA_REG, buf=self._rx_mv)
         data = self._rx_buf
 
