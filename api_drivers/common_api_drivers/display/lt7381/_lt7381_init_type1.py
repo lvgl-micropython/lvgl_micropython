@@ -1302,6 +1302,3 @@ def init(self):
         self._set_reg(_MPWCTR, _MPWCTR_MAIN_COLOR_24BPP)
         self._set_reg(_AW_COLOR, _AW_COLOR_CANVAS_24BPP)
         self._set_reg(_MPWCTR, _MPWCTR_MAIN_COLOR_24BPP)
-
-    setattr(self, 'set_backlight', set_backlight)
-    setattr(self, 'get_backlight', get_backlight)
