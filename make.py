@@ -264,7 +264,7 @@ if __name__ == '__main__':
     get_submodules()
 
     if custom_board_path is not None:
-        if custom_board_path.endswith('/'):
+        if custom_board_path.endswith('/') or custom_board_path.endswith('\\'):
             custom_board_path = custom_board_path[:-1]
 
         board_name = os.path.split(custom_board_path)[-1]
