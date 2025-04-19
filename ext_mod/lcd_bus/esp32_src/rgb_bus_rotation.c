@@ -380,7 +380,7 @@
         if(x_start == 0 && x_end == (dst_width - 1) && !rgb565_dither) {
             memcpy(dst, src, dst_width * (y_end - y_start + 1) * bytes_per_pixel);
         } else {
-            uint32_t src_bytes_per_line = (x_end - x_start + 1) * bytes_per_pixel;
+            uint32_t src_bytes_per_line = (x_end - x_start) * bytes_per_pixel;
             uint32_t dst_bytes_per_line = dst_width * bytes_per_pixel;
 
             if (rgb565_dither) {
@@ -409,7 +409,7 @@
         uint32_t i;
         uint32_t j;
 
-        uint32_t src_bytes_per_line = x_end - x_start + 1;
+        uint32_t src_bytes_per_line = x_end - x_start;
         uint32_t offset = y_start * src_bytes_per_line + x_start;
 
         switch (rotate) {
@@ -468,7 +468,7 @@
         uint32_t i;
         uint32_t j;
 
-        uint32_t src_bytes_per_line = x_end - x_start + 1;
+        uint32_t src_bytes_per_line = x_end - x_start;
         uint32_t offset = y_start * src_bytes_per_line + x_start;
 
         if (rgb565_dither) {
@@ -577,7 +577,7 @@
         uint32_t i;
         uint32_t j;
 
-        uint32_t src_bytes_per_line = (x_end - x_start + 1) * 3;
+        uint32_t src_bytes_per_line = (x_end - x_start) * 3;
         uint32_t offset = y_start * src_bytes_per_line + x_start * 3;
 
         switch (rotate) {
@@ -636,7 +636,7 @@
         uint32_t i;
         uint32_t j;
 
-        uint32_t src_bytes_per_line = x_end - x_start + 1;
+        uint32_t src_bytes_per_line = x_end - x_start;
         uint32_t offset = y_start * src_bytes_per_line + x_start;
 
         switch (rotate) {
