@@ -261,9 +261,9 @@ class CST816S(pointer_framework.PointerDriver):
 
         self._write_reg(_DisAutoSleep, 0x00)
         time.sleep_ms(10)  # NOQA
-        self._write_reg(_DisAutoSleep, 0x01)
+        self._write_reg(_DisAutoSleep, 0xFE)
         time.sleep_ms(50)  # NOQA
-        self._write_reg(_DisAutoSleep, 0x01)
+        self._write_reg(_DisAutoSleep, 0xFE)
         time.sleep_ms(50)  # NOQA
         self._write_reg(_DisAutoSleep, int(not auto_sleep))
 
@@ -277,7 +277,7 @@ class CST816S(pointer_framework.PointerDriver):
         if en:
             self._write_reg(_DisAutoSleep, 0x00)
         else:
-            self._write_reg(_DisAutoSleep, 0x01)
+            self._write_reg(_DisAutoSleep, 0xFE)
 
     def hw_reset(self):
         if self._reset_pin is None:
