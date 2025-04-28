@@ -4,14 +4,14 @@ from micropython import const  # NOQA
 import io_expander_framework
 
 
-EXIO1 = io_expander_framework.EXIO1
-EXIO2 = io_expander_framework.EXIO2
-EXIO3 = io_expander_framework.EXIO3
-EXIO4 = io_expander_framework.EXIO4
-EXIO5 = io_expander_framework.EXIO5
-EXIO6 = io_expander_framework.EXIO6
-EXIO7 = io_expander_framework.EXIO7
-EXIO8 = io_expander_framework.EXIO8
+EXIO1 = 0x01
+EXIO2 = 0x02
+EXIO3 = 0x03
+EXIO4 = 0x04
+EXIO5 = 0x05
+EXIO6 = 0x06
+EXIO7 = 0x07
+EXIO8 = 0x08
 
 
 _INPUT_PORT_REG = const(0x00)
@@ -36,7 +36,7 @@ class Pin(io_expander_framework.Pin):
 
     @property
     def __bit(self):
-        return 1 << self._id
+        return 1 << (self._id - 1)
 
     def __read_reg(self, reg):
         self._buf[0] = 0

@@ -306,33 +306,3 @@ class ADC:
 
     def _read(self):
         raise NotImplementedError
-
-
-# this class allows for dynamically pulling the EXIO constants. We do not
-# want to have a mess of int objects loaded into memory so instead we have
-# this one class that acts like a module and will return the integer value
-# of the ESIO constant that is being requested.
-class DynamicModule(object):
-
-    def __init__(self):
-        import sys
-
-        self.__mod__ = sys.modules[__name__]
-        self.__name__ = __name__
-
-        sys.modules[__name__] = self
-
-    def __getattr__(self, item):
-        if item in self.__dict__:
-            return self.__dict__[item]
-
-        if hasattr(self.__mod__, item):
-            return getattr(self.__mod__, item)
-
-        if item.startswith('EXIO') and item[4:].isdigit():
-            return int(item[4:])
-
-        raise AttributeError(item)
-
-
-__dm = DynamicModule()

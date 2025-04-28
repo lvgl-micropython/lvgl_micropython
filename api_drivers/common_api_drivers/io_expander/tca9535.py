@@ -4,22 +4,22 @@ from micropython import const  # NOQA
 import io_expander_framework
 
 
-EXIO1 = io_expander_framework.EXIO1
-EXIO2 = io_expander_framework.EXIO2
-EXIO3 = io_expander_framework.EXIO3
-EXIO4 = io_expander_framework.EXIO4
-EXIO5 = io_expander_framework.EXIO5
-EXIO6 = io_expander_framework.EXIO6
-EXIO7 = io_expander_framework.EXIO7
-EXIO8 = io_expander_framework.EXIO8
-EXIO9 = io_expander_framework.EXIO9
-EXIO10 = io_expander_framework.EXIO10
-EXIO11 = io_expander_framework.EXIO11
-EXIO12 = io_expander_framework.EXIO12
-EXIO13 = io_expander_framework.EXIO13
-EXIO14 = io_expander_framework.EXIO14
-EXIO15 = io_expander_framework.EXIO15
-EXIO16 = io_expander_framework.EXIO16
+EXIO1 = 0x01
+EXIO2 = 0x02
+EXIO3 = 0x03
+EXIO4 = 0x04
+EXIO5 = 0x05
+EXIO6 = 0x06
+EXIO7 = 0x07
+EXIO8 = 0x08
+EXIO9 = 0x09
+EXIO10 = 0x0A
+EXIO11 = 0x0B
+EXIO12 = 0x0C
+EXIO13 = 0x0D
+EXIO14 = 0x0E
+EXIO15 = 0x0F
+EXIO16 = 0x10
 
 _INPUT_PORT_REG = const(0x00)
 _OUTPUT_PORT_REG = const(0x02)
