@@ -116,21 +116,28 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
         ARG_width,
         ARG_cd,
         ARG_wp,
+        ARG_cmd,
+        ARG_clk,
+        ARG_data_pins,
         ARG_spi_bus,
         ARG_cs,
         ARG_freq,
     };
 
     static const mp_arg_t make_new_args[] = {
-        { MP_QSTR_slot,     MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int =  1} },
-        { MP_QSTR_width,    MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int =  1} },
-        { MP_QSTR_cd,       MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = -1} },
-        { MP_QSTR_wp,       MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = -1} },
+        { MP_QSTR_slot,      MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int =  1} },
+        { MP_QSTR_width,     MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int =  1} },
+        { MP_QSTR_cd,        MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = -1} },
+        { MP_QSTR_wp,        MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = -1} },
+        // Added so a user can set their own custom data pins
+        { MP_QSTR_cmd,       MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = -1} },
+        { MP_QSTR_clk,       MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = -1} },
+        { MP_QSTR_data_pins, MP_ARG_KW_ONLY | MP_ARG_OBJ, {.u_obj = mp_const_none} },
         // These are only needed if using SPI mode
-        { MP_QSTR_spi_bus,  MP_ARG_KW_ONLY | MP_ARG_OBJ, {.u_obj = mp_const_none} },
-        { MP_QSTR_cs,       MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = -1} },
+        { MP_QSTR_spi_bus,   MP_ARG_KW_ONLY | MP_ARG_OBJ, {.u_obj = mp_const_none} },
+        { MP_QSTR_cs,        MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = -1} },
         // freq is valid for both SPI and SDMMC interfaces
-        { MP_QSTR_freq,     MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 20000000} },
+        { MP_QSTR_freq,      MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 20000000} },
     };
 
     mp_arg_val_t args[MP_ARRAY_SIZE(make_new_args)];
@@ -211,7 +218,34 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
         slot_config.gpio_cd = (int)args[ARG_cd].u_int;
         slot_config.gpio_wp = (int)args[ARG_wp].u_int;
 
-        int width = args[ARG_width].u_int;
+        int clk = (int)args[ARG_clk].u_int;
+        int cmd = (int)args[ARG_cmd].u_int;
+        int width = (int)args[ARG_width].u_int;
+
+        if (clk != -1) slot_config.clk = clk;
+        if (cmd != -1) slot_config.cmd = cmd;
+
+        if (args[ARG_data_pins].u_obj != mp_const_none) {
+            mp_obj_tuple_t *t = MP_OBJ_TO_PTR(args[ARG_data_pins].u_obj);
+            if ((int)t->len != width) {
+                mp_raise_ValueError(MP_ERROR_TEXT("width does not match the number of data pins provided"));
+            }
+
+            slot_config.d0 = (int)mp_obj_get_int(t->items[0]);
+
+            if (width >= 4) {
+                slot_config.d1 = (int)mp_obj_get_int(t->items[1]);
+                slot_config.d2 = (int)mp_obj_get_int(t->items[2]);
+                slot_config.d3 = (int)mp_obj_get_int(t->items[3]);
+            }
+            if (width == 8) {
+                slot_config.d4 = (int)mp_obj_get_int(t->items[4]);
+                slot_config.d5 = (int)mp_obj_get_int(t->items[5]);
+                slot_config.d6 = (int)mp_obj_get_int(t->items[6]);
+                slot_config.d7 = (int)mp_obj_get_int(t->items[7]);
+            }
+        }
+
         if (width == 1 || width == 4 || (width == 8 && slot_num == 0)) {
             slot_config.width = width;
         } else {
