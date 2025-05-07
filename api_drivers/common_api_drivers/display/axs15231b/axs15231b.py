@@ -52,7 +52,7 @@ class AXS15231B(display_driver_framework.DisplayDriver):
     ):
         self.__tx_color_count = 0
         self._brightness = 0xD0
-        color_size = lv.color_format_get_size(self._color_space)
+        color_size = lv.color_format_get_size(color_space)
         buf_size = display_width * display_height * color_size
         if isinstance(data_bus, lcd_bus.RGBBus):
             buf_size = int(buf_size // 10)
