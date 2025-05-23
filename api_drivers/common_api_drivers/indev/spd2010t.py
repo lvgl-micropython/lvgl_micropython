@@ -76,7 +76,7 @@ class _tp_hdp_status_t:
         self.next_packet_len = 0
 
 
-class SPD2010(pointer_framework.PointerDriver):
+class SPD2010T(pointer_framework.PointerDriver):
 
     def __init__(
         self,
