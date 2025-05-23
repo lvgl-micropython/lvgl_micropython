@@ -218,10 +218,12 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
         slot_config.gpio_cd = (int)args[ARG_cd].u_int;
         slot_config.gpio_wp = (int)args[ARG_wp].u_int;
 
-        int clk = (int)args[ARG_clk].u_int;
-        int cmd = (int)args[ARG_cmd].u_int;
         int width = (int)args[ARG_width].u_int;
 
+        int clk = (int)args[ARG_clk].u_int;
+        int cmd = (int)args[ARG_cmd].u_int;
+
+#if SOC_SDMMC_USE_GPIO_MATRIX
         if (clk != -1) slot_config.clk = clk;
         if (cmd != -1) slot_config.cmd = cmd;
 
@@ -245,6 +247,11 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
                 slot_config.d7 = (int)mp_obj_get_int(t->items[7]);
             }
         }
+#else
+        if ((args[ARG_data_pins].u_obj != mp_const_none) || (clk != -1) || (cmd != -1)) {
+            mp_raise_ValueError(MP_ERROR_TEXT("This MCU does not allow setting of the SDMMC pins"));
+        }
+#endif
 
         if (width == 1 || width == 4 || (width == 8 && slot_num == 0)) {
             slot_config.width = width;
