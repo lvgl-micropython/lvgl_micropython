@@ -33,7 +33,7 @@ __version__ = "7.3.0"  # Version set by https://github.com/hlovatt/tag2ver
 
 from typing import overload, NoReturn, Callable
 from typing import Sequence, ClassVar, Any, Final
-from typing import Optional
+from typing import Union
 
 from uos import AbstractBlockDev
 from uio import AnyReadableBuf, AnyWritableBuf
@@ -1412,9 +1412,7 @@ class SPI:
             host: int,
             mosi: int,
             miso: int,
-            sck: int,
-            quad_pins: Optional[tuple[int]] = None,
-            octal_pins: Optional[tuple[int]] = None
+            sck: int
         ):
             """
             Construct an SPI object on the given bus, *id*. Values of *id* depend
@@ -1431,13 +1429,99 @@ class SPI:
             """
             Turn off the SPI bus.
             """
+
+    class DualBus:
+
+        def __init__(
+            self,
+            *,
+            host: int,
+            data0: int,
+            data1: int,
+            sck: int
+        ):
+            """
+            Construct an SPI object on the given bus, *id*. Values of *id* depend
+            on a particular port and its hardware. Values 0, 1, etc. are commonly used
+            to select hardware SPI block #0, #1, etc.
+
+            With no additional parameters, the SPI object is created but not
+            initialised (it has the settings from the last initialisation of
+            the bus, if any).  If extra arguments are given, the bus is initialised.
+            See ``init`` for parameters of initialisation.
+            """
+
+        def deinit(self) -> None:
+            """
+            Turn off the SPI bus.
+            """
+
+    class QuadBus:
+
+        def __init__(
+            self,
+            *,
+            host: int,
+            data0: int,
+            data1: int,
+            data2: int,
+            data3: int,
+            sck: int
+        ):
+            """
+            Construct an SPI object on the given bus, *id*. Values of *id* depend
+            on a particular port and its hardware. Values 0, 1, etc. are commonly used
+            to select hardware SPI block #0, #1, etc.
+
+            With no additional parameters, the SPI object is created but not
+            initialised (it has the settings from the last initialisation of
+            the bus, if any).  If extra arguments are given, the bus is initialised.
+            See ``init`` for parameters of initialisation.
+            """
+
+        def deinit(self) -> None:
+            """
+            Turn off the SPI bus.
+            """
+
+    class OctalBus:
+
+        def __init__(
+            self,
+            *,
+            host: int,
+            data0: int,
+            data1: int,
+            data2: int,
+            data3: int,
+            data4: int,
+            data5: int,
+            data6: int,
+            data7: int,
+            sck: int
+        ):
+            """
+            Construct an SPI object on the given bus, *id*. Values of *id* depend
+            on a particular port and its hardware. Values 0, 1, etc. are commonly used
+            to select hardware SPI block #0, #1, etc.
+
+            With no additional parameters, the SPI object is created but not
+            initialised (it has the settings from the last initialisation of
+            the bus, if any).  If extra arguments are given, the bus is initialised.
+            See ``init`` for parameters of initialisation.
+            """
+
+        def deinit(self) -> None:
+            """
+            Turn off the SPI bus.
+            """
             
     class Device:
         
         def __init__(
             self,
             *,
-            spi_bus: "SPI.Bus",
+            spi_bus: Union["SPI.Bus", "SPI.DualBus", "SPI.QuadBus", "SPI.OctalBus",],
             freq: int,  # NOQA
             cs: int,
             polarity: int = 0,
@@ -2460,7 +2544,10 @@ class SDCard(AbstractBlockDev):
         width: int = 1,
         cd: int = -1,
         wp: int = -1,
-        spi_bus: Optional[SPI.Bus] = None,
+        cmd: int = -1,
+        clk: int = -1,
+        data_pins: tuple[int] | None = None,
+        spi_bus: SPI.Bus | SPI.DualBus | SPI.QuadBus | SPI.OctalBus | None = None,
         cs: int = -1,
         freq: int = 20000000
     ):
@@ -2471,18 +2558,49 @@ class SDCard(AbstractBlockDev):
         This allows the mounting of an SD card to be as simple as::
        
             os.mount(machine.SDCard(), "/sd")
-       
-        The constructor takes the following parameters:
-       
-          - *slot* selects which of the available interfaces to use. Leaving this
-            unset will select the default interface.  
-          - *width* selects the bus width for the SD/MMC interface.
-          - *cd* can be used to specify a card-detect pin.
-          - *wp* can be used to specify a write-protect pin.
-          - *sck* can be used to specify an SPI clock pin.
-          - *miso* can be used to specify an SPI miso pin.
-          - *mosi* can be used to specify an SPI mosi pin.
-          - *cs* can be used to specify an SPI chip select pin.
-          - *freq* selects the SD/MMC interface frequency in Hz (only supported on the ESP32).
-        
+
+
+        :param slot: selects which of the available interfaces to use. Leaving this
+                     unset will select the default interface.
+        :type slot: int
+
+        :param width: selects the bus width for the SD/MMC interface.
+        :type width: int
+
+        :param cd: can be used to specify a card-detect pin.
+        :type cd: int
+
+        :param wp: can be used to specify a write-protect pin.
+        :type wp: int
+
+
+        The following parameters for for MMC Card readers.
+        MMC card readers are not the same as SD Card readers.
+
+        :param cmd: command/data pin
+        :type cmd: int
+
+        :param clk: clock pin
+        :type clk: int
+
+        :param data_pins: tuple of integer pin designations.
+                          The length of this tuple MUST match what is set in
+                          the `width` parameter. Valid lengths are 1, 4, and 8.
+        :type data_pins: tuple[int]
+
+
+        The next parameters are only used for SD Card readers which use
+        an SPI interface.
+
+        :param spi_bus: Instance of an SPI Bus object.
+        :type spi_bus: SPI.Bus | SPI.DualBus | SPI.QuadBus | SPI.OctalBus | None
+
+        :param cs: device select pin.
+        :type cs: int
+
+
+        This last parameter is used for SD or MMC Card readers.
+
+        :param freq: Speed/frequency in bits/sec
+        :type freq: int
         """

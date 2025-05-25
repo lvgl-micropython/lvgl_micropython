@@ -9,5 +9,8 @@ include(${CMAKE_CURRENT_LIST_DIR}/lcd_bus/micropython.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/lvgl/micropython.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/lcd_utils/micropython.cmake)
 
+separate_arguments(FUSION_ENV UNIX_COMMAND $ENV{FUSION})
 
-
+if(${FUSION_ENV} EQUAL "1")
+    include(${CMAKE_CURRENT_LIST_DIR}/imu_fusion/micropython.cmake)
+endif()

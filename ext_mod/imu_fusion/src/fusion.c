@@ -1,27 +1,21 @@
+
+
+#include "fusion.h"
 #include "mphalport.h"
+#include "py/obj.h"
+#include "py/runtime.h"
+
 #include <math.h>
 
 
-#define PI 3.14159265358979323846f
+#define FUSION_PI 3.14159265358979323846f
 
-#define FUSION_RADIANS(degree) (degree) * PI / 180.0f
-#define FUSION_DEGREES(radian) (radian) * 180.0f / PI
+#define FUSION_RADIANS(degree) (degree) * FUSION_PI / 180.0f
+#define FUSION_DEGREES(radian) (radian) * 180.0f / FUSION_PI
 
 
 #define FUSION_MAX(item1, item2) (item1) >= (item2) ? (item1) : (item2)
 #define FUSION_MIN(item1, item2) (item1) <= (item2) ? (item1) : (item2)
-
-
-typedef struct {
-    mp_obj_base_t base;
-
-    uint32_t start_ts;
-    float mag_bias[3];
-    float beta;  // 0.6045997880780725842169464404f
-    float declination;
-    float q[4];
-
-} mp_fusion_obj_t;
 
 
 static mp_obj_t fusion_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
@@ -114,6 +108,12 @@ static float delta_T(mp_fusion_obj_t *self)
 
 mp_obj_t calculate(mp_fusion_obj_t *self, float accel[3], float gyro[3], float *mag)
 {
+    mp_obj_t tuple[3] = {
+        mp_const_none,
+        mp_const_none,
+        mp_const_none
+    };
+
     float roll;
     float pitch;
     float yaw;
@@ -121,6 +121,34 @@ mp_obj_t calculate(mp_fusion_obj_t *self, float accel[3], float gyro[3], float *
     float ax = accel[0];
     float ay = accel[1];
     float az = accel[2];
+
+    // Normalise accelerometer measurement
+    float norm = sqrtf((ax * ax) + (ay * ay) + (az * az));
+
+    if (norm == 0.0f) return mp_obj_new_tuple(3, tuple);  // handle NaN
+
+    norm = 1.0f / norm;  // use reciprocal for division
+
+    ax *= norm;
+    ay *= norm;
+    az *= norm;
+
+    if (mag != NULL) {
+        float mx = mag[0] - self->mag_bias[0];
+        float my = mag[1] - self->mag_bias[1];
+        float mz = mag[2] - self->mag_bias[2];
+
+        // Normalise magnetometer measurement
+        norm = sqrtf((mx * mx) + (my * my) + (mz * mz));
+
+        if (norm == 0.0f) return mp_obj_new_tuple(3, tuple);  // handle NaN
+
+        norm = 1.0f / norm;  // use reciprocal for division
+
+        mx *= norm;
+        my *= norm;
+        mz *= norm;
+    }
 
     float gx = FUSION_RADIANS(gyro[0]);
     float gy = FUSION_RADIANS(gyro[1]);
@@ -142,41 +170,16 @@ mp_obj_t calculate(mp_fusion_obj_t *self, float accel[3], float gyro[3], float *
     float q3sq = q3 * q3;
     float q4sq = q4 * q4;
 
-    // Normalise accelerometer measurement
-    float norm = sqrtf((ax * ax) + (ay * ay) + (az * az));
-
-    if (norm == 0.0f) return;  // handle NaN
-
-    norm = 1.0f / norm;  // use reciprocal for division
-
-    ax *= norm;
-    ay *= norm;
-    az *= norm;
-
     float s1;
     float s2;
     float s3;
     float s4;
 
     if (mag != NULL) {
-        float mx = mag[0] - self->mag_bias[0];
-        float my = mag[1] - self->mag_bias[1];
-        float mz = mag[2] - self->mag_bias[2];
-
         float q12 = q1 * q2;
         float q13 = q1 * q3;
         float q24 = q2 * q4;
         float q34 = q3 * q4;
-
-        // Normalise magnetometer measurement
-        norm = sqrtf((mx * mx) + (my * my) + (mz * mz));
-
-        if (norm == 0.0f) return;  // handle NaN
-
-        norm = 1.0f / norm;  // use reciprocal for division
-        mx *= norm;
-        my *= norm;
-        mz *= norm;
 
         // Reference direction of Earth's magnetic field
         float _2q1mx = _2q1 * mx;
@@ -213,20 +216,19 @@ mp_obj_t calculate(mp_fusion_obj_t *self, float accel[3], float gyro[3], float *
         s2 = (_2q4 * temp1) + (_2q1 * temp2) - (q2 * temp7) + (temp10 * temp3) + ((temp8 + temp11) * temp4) + ((temp9 - (_4bz * q2)) * temp5);
         s3 = (-_2q1 * temp1) + (_2q4 * temp2) - (q3 * temp7) + ((-_4bx * q3 - temp11) * temp3) + ((temp13 + temp10) * temp4) + ((temp15 - (_4bz * q3)) * temp5);
         s4 = (_2q2 * temp1) + (_2q3 * temp2) + (((-_4bx * q4) + temp12) * temp3) + ((-temp15 + temp14) * temp4) + (temp13 * temp5);
-
     } else {
-        float _4q1 = _2q1 + _2q1
-        float _4q2 = _2q2 + _2q2
-        float _4q3 = _2q3 + _2q3
+        float _4q1 = _2q1 + _2q1;
+        float _4q2 = _2q2 + _2q2;
+        float _4q3 = _2q3 + _2q3;
 
-        float _8q2 = _4q2 + _4q2
-        float _8q3 = _4q3 + _4q3
+        float _8q2 = _4q2 + _4q2;
+        float _8q3 = _4q3 + _4q3;
 
         // Gradient decent algorithm corrective step
-        s1 = (_4q1 * q3sq) + (_2q3 * ax) + (_4q1 * q2sq) - (_2q2 * ay)
-        s2 = (_4q2 * q4sq) - (_2q4 * ax) + (4 * q1sq * q2) - (_2q1 * ay) - _4q2 + (_8q2 * q2sq) + (_8q2 * q3sq) + (_4q2 * az)
-        s3 = (4 * q1sq * q3) + (_2q1 * ax) + (_4q3 * q4sq) - (_2q4 * ay) - _4q3 + (_8q3 * q2sq) + (_8q3 * q3sq) + (_4q3 * az)
-        s4 = (4 * q2sq * q4) - (_2q2 * ax) + (4 * q3sq * q4) - (_2q3 * ay)
+        s1 = (_4q1 * q3sq) + (_2q3 * ax) + (_4q1 * q2sq) - (_2q2 * ay);
+        s2 = (_4q2 * q4sq) - (_2q4 * ax) + (4 * q1sq * q2) - (_2q1 * ay) - _4q2 + (_8q2 * q2sq) + (_8q2 * q3sq) + (_4q2 * az);
+        s3 = (4 * q1sq * q3) + (_2q1 * ax) + (_4q3 * q4sq) - (_2q4 * ay) - _4q3 + (_8q3 * q2sq) + (_8q3 * q3sq) + (_4q3 * az);
+        s4 = (4 * q2sq * q4) - (_2q2 * ax) + (4 * q3sq * q4) - (_2q3 * ay);
     }
 
     norm = 1.0f / sqrtf((s1 * s1) + (s2 * s2) + (s3 * s3) + (s4 * s4));  // normalise step magnitude
@@ -275,14 +277,14 @@ mp_obj_t calculate(mp_fusion_obj_t *self, float accel[3], float gyro[3], float *
         yaw += self->declination;
     }
 
-    mp_obj_t tuple[3] = {
-        mp_obj_new_float((mp_float_t)roll),
-        mp_obj_new_float((mp_float_t)pitch),
-        mp_obj_new_float((mp_float_t)yaw)
-    };
+    tuple[0] = mp_obj_new_float((mp_float_t)roll);
+    tuple[1] = mp_obj_new_float((mp_float_t)pitch);
+    tuple[2] = mp_obj_new_float((mp_float_t)yaw);
 
     return mp_obj_new_tuple(3, tuple);
 }
+
+
 
 
 mp_obj_t update(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)

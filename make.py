@@ -154,9 +154,21 @@ argParser.add_argument(
     'EXPANDER',
     dest='expanders',
     help=(
-        'io expander ic model or path (absolue) to an io expander driver. '
-        'the model is the name of the source file under '
+        'io expander ic model or path (absolute) to an io expander driver. '
+        'The model is the name of the source file under '
         'api_drivers/common_api_drivers/io_expander (without the ".py")'
+    ),
+    action='append',
+    default=[]
+)
+
+argParser.add_argument(
+    'IMU',
+    dest='imus',
+    help=(
+        'imu/mems sensor ic model or path (absolute) to an imu/mems sensor '
+        'driver. The model is the name of the source file under '
+        'api_drivers/common_api_drivers/imu_sensor (without the ".py")'
     ),
     action='append',
     default=[]
@@ -179,7 +191,11 @@ frozen_manifest = args2.frozen_manifest
 displays = args2.displays
 indevs = args2.indevs
 expanders = args2.expanders
+imus = args2.imus
 builder.DO_NOT_SCRUB_BUILD_FOLDER = args2.no_scrub
+
+if imus:
+    os.environ['FUSION'] = "1"
 
 
 if frozen_manifest is not None:
@@ -300,7 +316,7 @@ if __name__ == '__main__':
 
     mod.build_manifest(
         target, SCRIPT_DIR, False, displays,
-        indevs, expanders, frozen_manifest
+        indevs, expanders, imus, frozen_manifest
     )
 
     create_lvgl_header()

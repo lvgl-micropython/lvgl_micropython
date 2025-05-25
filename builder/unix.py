@@ -121,6 +121,7 @@ def build_manifest(
     displays,
     indevs,
     expanders,
+    imus,
     frozen_manifest
 ):
     global SCRIPT_PATH
@@ -132,7 +133,7 @@ def build_manifest(
     manifest_path = 'lib/micropython/ports/unix/variants/manifest.py'
 
     generate_manifest(script_dir, lvgl_api, manifest_path, displays,
-                      indevs, expanders, frozen_manifest)
+                      indevs, expanders, imus, frozen_manifest)
 
 
 def force_clean(clean_mpy_cross):

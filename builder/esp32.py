@@ -639,7 +639,7 @@ set_displays = []
 
 
 def build_manifest(
-    target, script_dir, lvgl_api, displays, indevs, expanders, frozen_manifest
+    target, script_dir, lvgl_api, displays, indevs, expanders, imus, frozen_manifest
 ):
     _update_mphalport(target)
 
@@ -659,7 +659,7 @@ def build_manifest(
 
     set_displays.extend(generate_manifest(
         script_dir, lvgl_api, manifest_path,
-        displays, indevs, expanders, frozen_manifest
+        displays, indevs, expanders, imus, frozen_manifest
         # f'{script_dir}/api_drivers/common_api_drivers/frozen/other/spi3wire.py'
     ))
 

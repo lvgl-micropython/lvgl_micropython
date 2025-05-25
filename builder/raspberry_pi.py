@@ -39,10 +39,11 @@ def build_manifest(
     displays,
     indevs,
     expanders,
+    imus,
     frozen_manifest
 ):
     _build_manifest(target, script_dir, lvgl_api, displays,
-                    indevs, expanders, frozen_manifest)
+                    indevs, expanders, imus, frozen_manifest)
 
 
 def clean():

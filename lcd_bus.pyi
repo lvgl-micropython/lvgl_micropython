@@ -52,9 +52,6 @@ class I2CBus:
     def tx_color(self, cmd: int, data: _BufferType, start_x: int, start_y: int, end_x: int, end_y: int, rotation: int, last_update: bool, /) -> None:
         ...
 
-    def rx_param(self, cmd: int, params: _BufferType, /) -> None:
-        ...
-
     def get_lane_count(self) -> int:
         ...
 
@@ -70,7 +67,7 @@ class SPIBus:
     def __init__(
         self,
         *,
-        spi_bus: machine.SPI.Bus,
+        spi_bus: machine.SPI.Bus | machine.SPI.DualBus | machine.SPI.QuadBus | machine.SPI.OctalBus,
         dc: int,
         freq: int,
         cs: int = -1,
@@ -100,9 +97,6 @@ class SPIBus:
         ...
 
     def tx_color(self, cmd: int, data: _BufferType, start_x: int, start_y: int, end_x: int, end_y: int, rotation: int, last_update: bool, /) -> None:
-        ...
-
-    def rx_param(self, cmd: int, params: _BufferType, /) -> None:
         ...
 
     def get_lane_count(self) -> int:
@@ -200,9 +194,6 @@ class SDLBus:
     def tx_color(self, cmd: int, data: _BufferType, start_x: int, start_y: int, end_x: int, end_y: int, rotation: int, last_update: bool, /) -> None:
         ...
 
-    def rx_param(self, cmd: int, params: _BufferType, /) -> None:
-        ...
-
     def get_lane_count(self) -> int:
         ...
 
@@ -276,9 +267,6 @@ class RGBBus:
     def tx_color(self, cmd: int, data: _BufferType, start_x: int, start_y: int, end_x: int, end_y: int, rotation: int, last_update: bool, /) -> None:
         ...
 
-    def rx_param(self, cmd: int, params: _BufferType, /) -> None:
-        ...
-    
     def get_lane_count(self) -> int:
         ...
 
@@ -342,9 +330,6 @@ class I80Bus:
         ...
 
     def tx_param(self, cmd: int, data: _BufferType, /) -> None:
-        ...
-
-    def rx_param(self, cmd: int, params: _BufferType, /) -> None:
         ...
 
     def get_lane_count(self) -> int:

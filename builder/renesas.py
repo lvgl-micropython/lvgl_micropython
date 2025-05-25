@@ -63,6 +63,7 @@ def build_manifest(
     displays,
     indevs,
     expanders,
+    imus,
     frozen_manifest
 ):
     update_mphalport(target)
@@ -70,7 +71,7 @@ def build_manifest(
 
     generate_manifest(
         script_dir, lvgl_api, manifest_path,
-        displays, indevs, expanders, frozen_manifest
+        displays, indevs, expanders, imus, frozen_manifest
     )
 
 
