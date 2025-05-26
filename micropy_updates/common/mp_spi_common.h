@@ -4,7 +4,6 @@
 
 #include "py/obj.h"
 #include "py/runtime.h"
-#include "driver/spi_master.h"
 
 #ifndef __MP_SPI_COMMON_H__
     #define __MP_SPI_COMMON_H__
@@ -21,8 +20,19 @@
     struct _mp_machine_hw_spi_bus_obj_t {
         mp_obj_base_t base;
         uint8_t host;
+        mp_obj_t sck;
+        mp_obj_t data0;
+        mp_obj_t data1;
+        mp_obj_t data2;
+        mp_obj_t data3;
+        mp_obj_t data4;
+        mp_obj_t data5;
+        mp_obj_t data6;
+        mp_obj_t data7;
+        bool dual;
+        bool quad;
+        bool octal;
         uint8_t device_count;
-        spi_bus_config_t buscfg;
         mp_machine_hw_spi_device_obj_t **devices;
         mp_machine_hw_spi_state_t state;
         const void *user_data;
@@ -52,12 +62,7 @@
 
     extern const mp_obj_type_t mp_machine_hw_spi_device_type;
     extern const mp_obj_type_t mp_machine_hw_spi_bus_type;
-    extern const mp_obj_type_t mp_machine_hw_spi_dual_bus_type;
-    extern const mp_obj_type_t mp_machine_hw_spi_quad_bus_type;
-    extern const mp_obj_type_t mp_machine_hw_spi_octal_bus_type;
-
 
     void mp_machine_hw_spi_bus_deinit_all(void);
 
 #endif /* __MP_SPI_COMMON_H__ */
-

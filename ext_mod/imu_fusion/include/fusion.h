@@ -15,6 +15,6 @@
     } mp_fusion_obj_t;
 
 
-    extern const mp_obj_type_t mp_spi3wire_type;
+    extern const mp_obj_type_t mp_fusion_type;
 
 #endif

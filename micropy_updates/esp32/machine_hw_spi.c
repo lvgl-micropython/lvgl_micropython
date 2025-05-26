@@ -262,15 +262,15 @@ void machine_hw_spi_bus_deinit_internal(mp_machine_hw_spi_bus_obj_t *self)
             return;
     }
 
-    disable_gpio(self->buscfg.data0_io_num);
-    disable_gpio(self->buscfg.data1_io_num);
-    disable_gpio(self->buscfg.data2_io_num);
-    disable_gpio(self->buscfg.data3_io_num);
-    disable_gpio(self->buscfg.data4_io_num);
-    disable_gpio(self->buscfg.data5_io_num);
-    disable_gpio(self->buscfg.data6_io_num);
-    disable_gpio(self->buscfg.data7_io_num);
-    disable_gpio(self->buscfg.sclk_io_num);
+    disable_gpio((int)mp_obj_get_int(self->data0));
+    disable_gpio((int)mp_obj_get_int(self->data1));
+    disable_gpio((int)mp_obj_get_int(self->sck));
+    disable_gpio((int)mp_obj_get_int(self->data2));
+    disable_gpio((int)mp_obj_get_int(self->data3));
+    disable_gpio((int)mp_obj_get_int(self->data4));
+    disable_gpio((int)mp_obj_get_int(self->data5));
+    disable_gpio((int)mp_obj_get_int(self->data6));
+    disable_gpio((int)mp_obj_get_int(self->data7));
 
     self->state = MP_SPI_STATE_STOPPED;
 }
@@ -392,235 +392,104 @@ static void machine_hw_spi_device_transfer(mp_obj_base_t *self_in, size_t len, c
     spi_device_release_bus(spi_device);
 }
 
-
-mp_obj_t machine_hw_spi_octal_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
-
-    enum { ARG_host, ARG_data0, ARG_data1, ARG_data2, ARG_data3, ARG_data4, ARG_data5, ARG_data6, ARG_data7, ARG_sck };
-    static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_host,       MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-        { MP_QSTR_data0,      MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-        { MP_QSTR_data1,      MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-        { MP_QSTR_data2,      MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-        { MP_QSTR_data3,      MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-        { MP_QSTR_data4,      MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-        { MP_QSTR_data5,      MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-        { MP_QSTR_data6,      MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-        { MP_QSTR_data7,      MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-        { MP_QSTR_sck,        MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-    };
-    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
-    mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
-
-    uint8_t host = (uint8_t)args[ARG_host].u_int;
-    int data0 = (int)args[ARG_data0].u_int;
-    int data1 = (int)args[ARG_data1].u_int;
-    int data2 = (int)args[ARG_data2].u_int;
-    int data3 = (int)args[ARG_data3].u_int;
-    int data4 = (int)args[ARG_data0].u_int;
-    int data5 = (int)args[ARG_data1].u_int;
-    int data6 = (int)args[ARG_data2].u_int;
-    int data7 = (int)args[ARG_data3].u_int;
-    int sck = (int)args[ARG_sck].u_int;
-
-    mp_machine_hw_spi_bus_obj_t *self;
-
-    if (1 <= host && host <= MICROPY_HW_SPI_MAX) {
-        self = machine_hw_spi_bus_objs[host - 1];
-    } else {
-        mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("SPI(%d) doesn't exist"), host);
-        return mp_const_none;
-    }
-
-    bool reconfigure = false;
-
-    if (self == NULL) {
-        reconfigure = true;
-        self = m_new_obj(mp_machine_hw_spi_bus_obj_t);
-        self->base.type = &mp_machine_hw_spi_octal_bus_type;
-        self->host = host;
-        self->deinit = &machine_hw_spi_bus_deinit_internal;
-        machine_hw_spi_bus_objs[host - 1] = self;
-    } else {
-        if (self->buscfg.data0_io_num != data0) reconfigure = true;
-        if (self->buscfg.data1_io_num != data1) reconfigure = true;
-        if (self->buscfg.data2_io_num != data2) reconfigure = true;
-        if (self->buscfg.data3_io_num != data3) reconfigure = true;
-        if (self->buscfg.data4_io_num != data4) reconfigure = true;
-        if (self->buscfg.data5_io_num != data5) reconfigure = true;
-        if (self->buscfg.data6_io_num != data6) reconfigure = true;
-        if (self->buscfg.data7_io_num != data7) reconfigure = true;
-        if (self->buscfg.sclk_io_num != sck) reconfigure = true;
-    }
-
-    if (reconfigure) {
-        if (self->device_count > 0) {
-            mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("SPI(%d) has active devices, unable to change pins"), host);
-            return mp_const_none;
-        }
-
-        self->buscfg.data0_io_num = data0;
-        self->buscfg.data1_io_num = data1;
-        self->buscfg.data2_io_num = data2;
-        self->buscfg.data3_io_num = data3;
-        self->buscfg.data4_io_num = data4;
-        self->buscfg.data5_io_num = data5;
-        self->buscfg.data6_io_num = data6;
-        self->buscfg.data7_io_num = data7;
-        self->buscfg.sclk_io_num = sck;
-        self->buscfg.flags = SPICOMMON_BUSFLAG_MASTER | SPICOMMON_BUSFLAG_OCTAL;
-        self->buscfg.max_transfer_sz = SPI_LL_DMA_MAX_BIT_LEN / 8;
-    }
-
-    return MP_OBJ_FROM_PTR(self);
-
-
-
-mp_obj_t machine_hw_spi_quad_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
-
-    enum { ARG_host, ARG_data0, ARG_data1, ARG_data2, ARG_data3, ARG_sck };
-    static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_host,       MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-        { MP_QSTR_data0,      MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-        { MP_QSTR_data1,      MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-        { MP_QSTR_data2,      MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-        { MP_QSTR_data3,      MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-        { MP_QSTR_sck,        MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-    };
-    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
-    mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
-
-    uint8_t host = (uint8_t)args[ARG_host].u_int;
-    int data0 = (int)args[ARG_data0].u_int;
-    int data1 = (int)args[ARG_data1].u_int;
-    int data2 = (int)args[ARG_data2].u_int;
-    int data3 = (int)args[ARG_data3].u_int;
-    int sck = (int)args[ARG_sck].u_int;
-
-    mp_machine_hw_spi_bus_obj_t *self;
-
-    if (1 <= host && host <= MICROPY_HW_SPI_MAX) {
-        self = machine_hw_spi_bus_objs[host - 1];
-    } else {
-        mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("SPI(%d) doesn't exist"), host);
-        return mp_const_none;
-    }
-
-    bool reconfigure = false;
-
-    if (self == NULL) {
-        reconfigure = true;
-        self = m_new_obj(mp_machine_hw_spi_bus_obj_t);
-        self->base.type = &mp_machine_hw_spi_quad_bus_type;
-        self->host = host;
-        self->deinit = &machine_hw_spi_bus_deinit_internal;
-        machine_hw_spi_bus_objs[host - 1] = self;
-    } else {
-        if (self->buscfg.data0_io_num != data0) reconfigure = true;
-        if (self->buscfg.data1_io_num != data1) reconfigure = true;
-        if (self->buscfg.data2_io_num != data2) reconfigure = true;
-        if (self->buscfg.data3_io_num != data3) reconfigure = true;
-        if (self->buscfg.sclk_io_num != sck) reconfigure = true;
-    }
-
-    if (reconfigure) {
-        if (self->device_count > 0) {
-            mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("SPI(%d) has active devices, unable to change pins"), host);
-            return mp_const_none;
-        }
-
-        self->buscfg.data0_io_num = data0;
-        self->buscfg.data1_io_num = data1;
-        self->buscfg.data2_io_num = data2;
-        self->buscfg.data3_io_num = data3;
-        self->buscfg.sclk_io_num = sck;
-        self->buscfg.flags = SPICOMMON_BUSFLAG_MASTER | SPICOMMON_BUSFLAG_QUAD;
-        self->buscfg.max_transfer_sz = SPI_LL_DMA_MAX_BIT_LEN / 8;
-    }
-
-    return MP_OBJ_FROM_PTR(self);
-
-
-
-mp_obj_t machine_hw_spi_dual_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
-
-    enum { ARG_host, ARG_data0, ARG_data1, ARG_sck };
-    static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_host,       MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-        { MP_QSTR_data0,      MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-        { MP_QSTR_data1,      MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-        { MP_QSTR_sck,        MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-    };
-
-    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
-    mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
-
-    uint8_t host = (uint8_t)args[ARG_host].u_int;
-    int data0 = (int)args[ARG_data0].u_int;
-    int data1 = (int)args[ARG_data1].u_int;
-    int sck = (int)args[ARG_sck].u_int;
-
-    mp_machine_hw_spi_bus_obj_t *self;
-
-    if (1 <= host && host <= MICROPY_HW_SPI_MAX) {
-        self = machine_hw_spi_bus_objs[host - 1];
-    } else {
-        mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("SPI(%d) doesn't exist"), host);
-        return mp_const_none;
-    }
-
-    bool reconfigure = false;
-
-    if (self == NULL) {
-        reconfigure = true;
-        self = m_new_obj(mp_machine_hw_spi_bus_obj_t);
-        self->base.type = &mp_machine_hw_spi_dual_bus_type;
-        self->host = host;
-        self->deinit = &machine_hw_spi_bus_deinit_internal;
-        machine_hw_spi_bus_objs[host - 1] = self;
-    } else {
-        if (self->buscfg.data0_io_num != data0) reconfigure = true;
-        if (self->buscfg.data1_io_num != data1) reconfigure = true;
-        if (self->buscfg.sclk_io_num != sck) reconfigure = true;
-    }
-
-    if (reconfigure) {
-        if (self->device_count > 0) {
-            mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("SPI(%d) has active devices, unable to change pins"), host);
-            return mp_const_none;
-        }
-
-        self->buscfg.data0_io_num = data0;
-        self->buscfg.data1_io_num = data1;
-        self->buscfg.sclk_io_num = sck;
-        self->buscfg.flags = SPICOMMON_BUSFLAG_MASTER | SPICOMMON_BUSFLAG_DUAL;
-        self->buscfg.max_transfer_sz = SPI_LL_DMA_MAX_BIT_LEN / 8;
-    }
-
-    return MP_OBJ_FROM_PTR(self);
-
-
 /******************************************************************************/
 // MicroPython bindings for hw_spi
 
 mp_obj_t machine_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
 
-    enum { ARG_host, ARG_mosi, ARG_miso, ARG_sck };
+    enum { ARG_host, ARG_sck, ARG_mosi, ARG_miso, ARG_dual_pins, ARG_quad_pins, ARG_octal_pins };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_host,       MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-        { MP_QSTR_mosi,       MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-        { MP_QSTR_miso,       MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
-        { MP_QSTR_sck,        MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT }
+        { MP_QSTR_sck,        MP_ARG_KW_ONLY | MP_ARG_REQUIRED | MP_ARG_INT },
+        { MP_QSTR_mosi,       MP_ARG_KW_ONLY | MP_ARG_INT, { .u_int = -1 } },
+        { MP_QSTR_miso,       MP_ARG_KW_ONLY | MP_ARG_INT, { .u_int = -1 } },
+        { MP_QSTR_dual_pins,  MP_ARG_KW_ONLY | MP_ARG_OBJ, { .u_obj = mp_const_none } },
+        { MP_QSTR_quad_pins,  MP_ARG_KW_ONLY | MP_ARG_OBJ, { .u_obj = mp_const_none } },
+        { MP_QSTR_octal_pins, MP_ARG_KW_ONLY | MP_ARG_OBJ, { .u_obj = mp_const_none } },
     };
 
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
     uint8_t host = (uint8_t)args[ARG_host].u_int;
-    int mosi = (int)args[ARG_mosi].u_int;
-    int miso = (int)args[ARG_miso].u_int;
     int sck = (int)args[ARG_sck].u_int;
+    int data0 = -1;
+    int data1 = -1;
+    int data2 = -1;
+    int data3 = -1;
+    int data4 = -1;
+    int data5 = -1;
+    int data6 = -1;
+    int data7 = -1;
+
+    bool dual = false;
+    bool quad = false;
+    bool octal = false;
 
     mp_machine_hw_spi_bus_obj_t *self;
+
+    if (args[ARG_dual_pins].u_obj != mp_const_none) {
+        mp_obj_tuple_t *dual_data_pins = MP_OBJ_TO_PTR(args[ARG_dual_pins].u_obj);
+
+        if (dual_data_pins->len != 4) {
+            mp_raise_msg_varg(
+                &mp_type_ValueError,
+                MP_ERROR_TEXT("2 pins needed for quad SPI not %d"),
+                dual_data_pins->len
+            );
+            return mp_const_none;
+        }
+
+        data0 = (int)mp_obj_get_int(dual_data_pins->items[0]);
+        data1 = (int)mp_obj_get_int(dual_data_pins->items[1]);
+
+        dual = true;
+
+    } else if (args[ARG_quad_pins].u_obj != mp_const_none) {
+        mp_obj_tuple_t *quad_data_pins = MP_OBJ_TO_PTR(args[ARG_quad_pins].u_obj);
+
+        if (quad_data_pins->len != 4) {
+            mp_raise_msg_varg(
+                &mp_type_ValueError,
+                MP_ERROR_TEXT("4 pins needed for quad SPI not %d"),
+                quad_data_pins->len
+            );
+            return mp_const_none;
+        }
+
+        data0 = (int)mp_obj_get_int(quad_data_pins->items[0]);
+        data1 = (int)mp_obj_get_int(quad_data_pins->items[1]);
+        data2 = (int)mp_obj_get_int(quad_data_pins->items[2]);
+        data3 = (int)mp_obj_get_int(quad_data_pins->items[3]);
+
+        quad = true;
+
+    } else if (args[ARG_octal_pins].u_obj != mp_const_none) {
+        mp_obj_tuple_t *octal_data_pins = MP_OBJ_TO_PTR(args[ARG_octal_pins].u_obj);
+
+        if (octal_data_pins->len != 8) {
+            mp_raise_msg_varg(
+                &mp_type_ValueError,
+                MP_ERROR_TEXT("8 pins are needed for octal SPI not %d"),
+                octal_data_pins->len
+            );
+            return mp_const_none;
+        }
+
+        data0 = (int)mp_obj_get_int(octal_data_pins->items[0]);
+        data1 = (int)mp_obj_get_int(octal_data_pins->items[1]);
+        data2 = (int)mp_obj_get_int(octal_data_pins->items[2]);
+        data3 = (int)mp_obj_get_int(octal_data_pins->items[3]);
+        data4 = (int)mp_obj_get_int(octal_data_pins->items[4]);
+        data5 = (int)mp_obj_get_int(octal_data_pins->items[5]);
+        data6 = (int)mp_obj_get_int(octal_data_pins->items[6]);
+        data7 = (int)mp_obj_get_int(octal_data_pins->items[7]);
+
+        octal = true;
+    } else {
+        data0 = (int)args[ARG_mosi].u_int;
+        data1 = (int)args[ARG_miso].u_int;
+    }
 
     if (1 <= host && host <= MICROPY_HW_SPI_MAX) {
         self = machine_hw_spi_bus_objs[host - 1];
@@ -639,9 +508,15 @@ mp_obj_t machine_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, s
         self->deinit = &machine_hw_spi_bus_deinit_internal;
         machine_hw_spi_bus_objs[host - 1] = self;
     } else {
-        if (self->buscfg.miso_io_num != miso) reconfigure = true;
-        if (self->buscfg.mosi_io_num != mosi) reconfigure = true;
-        if (self->buscfg.sclk_io_num != sck) reconfigure = true;
+        if ((int)mp_obj_get_int(self->data0) != data0) reconfigure = true;
+        if ((int)mp_obj_get_int(self->data1) != data1) reconfigure = true;
+        if ((int)mp_obj_get_int(self->sck) != sck) reconfigure = true;
+        if ((int)mp_obj_get_int(self->data2) != data2) reconfigure = true;
+        if ((int)mp_obj_get_int(self->data3) != data3) reconfigure = true;
+        if ((int)mp_obj_get_int(self->data4) != data4) reconfigure = true;
+        if ((int)mp_obj_get_int(self->data5) != data5) reconfigure = true;
+        if ((int)mp_obj_get_int(self->data6) != data6) reconfigure = true;
+        if ((int)mp_obj_get_int(self->data7) != data7) reconfigure = true;
     }
 
     if (reconfigure) {
@@ -650,11 +525,18 @@ mp_obj_t machine_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, s
             return mp_const_none;
         }
 
-        self->buscfg.miso_io_num = miso;
-        self->buscfg.mosi_io_num = mosi;
-        self->buscfg.sclk_io_num = sck;
-        self->buscfg.flags = SPICOMMON_BUSFLAG_MASTER;
-        self->buscfg.max_transfer_sz = SPI_LL_DMA_MAX_BIT_LEN / 8;
+        self->data0 = mp_obj_new_int((mp_int_t)data0);
+        self->data1 = mp_obj_new_int((mp_int_t)data1);
+        self->sck = mp_obj_new_int((mp_int_t)sck);
+        self->data2 = mp_obj_new_int((mp_int_t)data2);
+        self->data3 = mp_obj_new_int((mp_int_t)data3);
+        self->data4 = mp_obj_new_int((mp_int_t)data4);
+        self->data5 = mp_obj_new_int((mp_int_t)data5);
+        self->data6 = mp_obj_new_int((mp_int_t)data6);
+        self->data7 = mp_obj_new_int((mp_int_t)data7);
+        self->dual = dual;
+        self->quad = quad;
+        self->octal = octal;
     }
 
     return MP_OBJ_FROM_PTR(self);
@@ -664,15 +546,36 @@ mp_obj_t machine_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, s
 void mp_machine_hw_spi_bus_initilize(mp_machine_hw_spi_bus_obj_t *bus)
 {
     if (bus->state != MP_SPI_STATE_STOPPED) return;
+
+    uint32_t flags = SPICOMMON_BUSFLAG_MASTER;
+
+    if (bus->dual) flags |= SPICOMMON_BUSFLAG_DUAL;
+    if (bus->quad) flags |= SPICOMMON_BUSFLAG_QUAD;
+    if (bus->octal) flags |= SPICOMMON_BUSFLAG_OCTAL;
+
+    spi_bus_config_t buscfg = {
+        .data0_io_num = (int)mp_obj_get_int(bus->data0),
+        .data1_io_num = (int)mp_obj_get_int(bus->data1),
+        .sclk_io_num = (int)mp_obj_get_int(bus->sck),
+        .data2_io_num = (int)mp_obj_get_int(bus->data2),
+        .data3_io_num = (int)mp_obj_get_int(bus->data3),
+        .data4_io_num = (int)mp_obj_get_int(bus->data4),
+        .data5_io_num = (int)mp_obj_get_int(bus->data5),
+        .data6_io_num = (int)mp_obj_get_int(bus->data6),
+        .data7_io_num = (int)mp_obj_get_int(bus->data7),
+        .flags = flags,
+        .max_transfer_sz = SPI_LL_DMA_MAX_BIT_LEN / 8
+    };
+
     esp_err_t ret;
 
 #if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6
-    ret = spi_bus_initialize((spi_host_device_t)bus->host, &bus->buscfg, SPI_DMA_CH_AUTO);
+    ret = spi_bus_initialize((spi_host_device_t)bus->host, &buscfg, SPI_DMA_CH_AUTO);
 #else
     if (bus->host == SPI2_HOST) {
-        ret = spi_bus_initialize((spi_host_device_t)bus->host, &bus->buscfg, 1);
+        ret = spi_bus_initialize((spi_host_device_t)bus->host, &buscfg, 1);
     } else {
-        ret = spi_bus_initialize((spi_host_device_t)bus->host, &bus->buscfg, 2);
+        ret = spi_bus_initialize((spi_host_device_t)bus->host, &buscfg, 2);
     }
 #endif
 
@@ -692,12 +595,7 @@ void mp_machine_hw_spi_bus_initilize(mp_machine_hw_spi_bus_obj_t *bus)
 
 
 spi_host_device_t machine_hw_spi_get_host(mp_obj_t in) {
-    if (
-        (mp_obj_get_type(in) != &mp_machine_hw_spi_bus_type) ||
-        (mp_obj_get_type(in) != &mp_machine_hw_spi_dual_bus_type) ||
-        (mp_obj_get_type(in) != &mp_machine_hw_spi_quad_bus_type) ||
-        (mp_obj_get_type(in) != &mp_machine_hw_spi_octal_bus_type)
-    ) {
+    if (mp_obj_get_type(in) != &mp_machine_hw_spi_bus_type) {
         mp_raise_ValueError(MP_ERROR_TEXT("expecting a SPI object"));
     }
     mp_machine_hw_spi_bus_obj_t *self = (mp_machine_hw_spi_bus_obj_t *)in;
@@ -733,14 +631,14 @@ mp_obj_t machine_hw_spi_device_make_new(const mp_obj_type_t *type, size_t n_args
     self->cs = mp_obj_new_int((mp_int_t)cs);
     self->bits =  (uint8_t)args[ARG_bits].u_int;
     self->deinit = &machine_hw_spi_device_deinit_callback;
-
     bool dual = (bool)args[ARG_dual].u_bool;
     bool quad = (bool)args[ARG_quad].u_bool;
     bool octal = (bool)args[ARG_octal].u_bool;
 
-    if (!(self->spi_bus->buscfg.flags & SPICOMMON_BUSFLAG_DUAL)) dual = false;
-    if (!(self->spi_bus->buscfg.flags & SPICOMMON_BUSFLAG_QUAD)) quad = false;
-    if (!(self->spi_bus->buscfg.flags & SPICOMMON_BUSFLAG_OCTAL)) octal = false;
+
+    if (!self->spi_bus->dual) dual = false;
+    if (!self->spi_bus->quad) quad = false;
+    if (!self->spi_bus->octal) octal = false;
 
     self->dual = dual;
     self->quad = quad;
@@ -823,37 +721,10 @@ MP_DEFINE_CONST_OBJ_TYPE(
     locals_dict, &machine_spi_bus_locals_dict
 );
 
-MP_DEFINE_CONST_OBJ_TYPE(
-    mp_machine_hw_spi_dual_bus_type,
-    MP_QSTR_DualBus,
-    MP_TYPE_FLAG_NONE,
-    make_new, machine_hw_spi_dual_bus_make_new,
-    locals_dict, &machine_spi_bus_locals_dict
-);
-
-MP_DEFINE_CONST_OBJ_TYPE(
-    mp_machine_hw_spi_quad_bus_type,
-    MP_QSTR_QuadBus,
-    MP_TYPE_FLAG_NONE,
-    make_new, machine_hw_spi_quad_bus_make_new,
-    locals_dict, &machine_spi_bus_locals_dict
-);
-
-MP_DEFINE_CONST_OBJ_TYPE(
-    mp_machine_hw_spi_octal_bus_type,
-    MP_QSTR_OctalBus,
-    MP_TYPE_FLAG_NONE,
-    make_new, machine_hw_spi_octal_bus_make_new,
-    locals_dict, &machine_spi_bus_locals_dict
-);
-
 
 static const mp_rom_map_elem_t machine_spi_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),  MP_OBJ_NEW_QSTR(MP_QSTR_SPI)   },
     { MP_ROM_QSTR(MP_QSTR_Bus),       (mp_obj_t)&mp_machine_hw_spi_bus_type },
-    { MP_ROM_QSTR(MP_QSTR_DualBus),   (mp_obj_t)&mp_machine_hw_spi_dual_bus_type },
-    { MP_ROM_QSTR(MP_QSTR_QuadBus),   (mp_obj_t)&mp_machine_hw_spi_quad_bus_type },
-    { MP_ROM_QSTR(MP_QSTR_OctalBus),  (mp_obj_t)&mp_machine_hw_spi_octal_bus_type },
     { MP_ROM_QSTR(MP_QSTR_Device),    (mp_obj_t)&mp_machine_hw_spi_device_type }
 };
 

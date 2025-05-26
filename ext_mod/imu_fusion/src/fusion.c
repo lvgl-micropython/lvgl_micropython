@@ -9,10 +9,10 @@
 
 
 #define FUSION_PI 3.14159265358979323846f
+#define FUSION_UNUSED(x) ((void)x)
 
 #define FUSION_RADIANS(degree) (degree) * FUSION_PI / 180.0f
 #define FUSION_DEGREES(radian) (radian) * 180.0f / FUSION_PI
-
 
 #define FUSION_MAX(item1, item2) (item1) >= (item2) ? (item1) : (item2)
 #define FUSION_MIN(item1, item2) (item1) <= (item2) ? (item1) : (item2)
@@ -38,10 +38,8 @@ static mp_obj_t fusion_make_new(const mp_obj_type_t *type, size_t n_args, size_t
 
     self->beta = 0.6045997880780725842169464404f;
 
-    float declination;
-
     if (args[ARG_declination].u_obj == mp_const_none) {
-        self->declination = 0.0f
+        self->declination = 0.0f;
     } else {
         self->declination = mp_obj_get_float_to_f(args[ARG_declination].u_obj);
     }
@@ -50,7 +48,8 @@ static mp_obj_t fusion_make_new(const mp_obj_type_t *type, size_t n_args, size_t
 }
 
 
-static mp_obj_t calibrate(up_obj_t self_in, mp_obj_t getxyz, mp_obj_t stopfunc):
+static mp_obj_t calibrate(mp_obj_t self_in, mp_obj_t getxyz, mp_obj_t stopfunc)
+{
 
     mp_fusion_obj_t *self = MP_OBJ_TO_PTR(self_in);
 
@@ -85,7 +84,7 @@ static mp_obj_t calibrate(up_obj_t self_in, mp_obj_t getxyz, mp_obj_t stopfunc):
     }
 
     return mp_const_none;
-
+}
 
 static MP_DEFINE_CONST_FUN_OBJ_3(calibrate_obj, calibrate);
 
@@ -95,13 +94,13 @@ static float delta_T(mp_fusion_obj_t *self)
     float res;
     uint32_t ts = mp_hal_ticks_us();
 
-    if (self->start_time == 0) {
+    if (self->start_ts == 0) {
         res = 0.0001f;
     } else {
-        res = (float)(ts - self->start_time) * 0.000001f;
+        res = (float)(ts - self->start_ts) * 0.000001f;
     }
 
-    self->start_time = ts;
+    self->start_ts = ts;
     return res;
 }
 
@@ -133,10 +132,14 @@ mp_obj_t calculate(mp_fusion_obj_t *self, float accel[3], float gyro[3], float *
     ay *= norm;
     az *= norm;
 
+    float mx;
+    float my;
+    float mz;
+
     if (mag != NULL) {
-        float mx = mag[0] - self->mag_bias[0];
-        float my = mag[1] - self->mag_bias[1];
-        float mz = mag[2] - self->mag_bias[2];
+        mx = mag[0] - self->mag_bias[0];
+        my = mag[1] - self->mag_bias[1];
+        mz = mag[2] - self->mag_bias[2];
 
         // Normalise magnetometer measurement
         norm = sqrtf((mx * mx) + (my * my) + (mz * mz));
@@ -148,6 +151,10 @@ mp_obj_t calculate(mp_fusion_obj_t *self, float accel[3], float gyro[3], float *
         mx *= norm;
         my *= norm;
         mz *= norm;
+    } else {
+        mx = 0.0f;
+        my = 0.0f;
+        mz = 0.0f;
     }
 
     float gx = FUSION_RADIANS(gyro[0]);
@@ -160,10 +167,10 @@ mp_obj_t calculate(mp_fusion_obj_t *self, float accel[3], float gyro[3], float *
     float q4 = self->q[3];
 
     // Auxiliary variables to avoid repeated arithmetic
-    float _2q1 = 2.0f * q1
-    float _2q2 = 2.0f * q2
-    float _2q3 = 2.0f * q3
-    float _2q4 = 2.0f * q4
+    float _2q1 = 2.0f * q1;
+    float _2q2 = 2.0f * q2;
+    float _2q3 = 2.0f * q3;
+    float _2q4 = 2.0f * q4;
 
     float q1sq = q1 * q1;
     float q2sq = q2 * q2;
@@ -261,7 +268,7 @@ mp_obj_t calculate(mp_fusion_obj_t *self, float accel[3], float gyro[3], float *
 
     q1sq = q1 * q1;
     q2sq = q2 * q2;
-    s3sq = s3 * s3;
+    float s3sq = s3 * s3;
     q4sq = q4 * q4;
 
     self->q[0] = q1;
@@ -275,6 +282,8 @@ mp_obj_t calculate(mp_fusion_obj_t *self, float accel[3], float gyro[3], float *
     if (mag != NULL) {
         yaw = FUSION_DEGREES(atan2f(2.0f * ((q2 * q3) + (q1 * q4)), q1sq + q2sq - s3sq - q4sq));
         yaw += self->declination;
+    } else {
+        yaw = 0.0f;
     }
 
     tuple[0] = mp_obj_new_float((mp_float_t)roll);
@@ -365,7 +374,7 @@ static MP_DEFINE_CONST_DICT(fusion_globals, fusion_globals_table);
 
 const mp_obj_module_t mp_module_fusion = {
     .base    = {&mp_type_module},
-    .globals = (mp_obj_dict_t *)fusion_globals,
+    .globals = (mp_obj_dict_t *)&fusion_globals,
 };
 
 

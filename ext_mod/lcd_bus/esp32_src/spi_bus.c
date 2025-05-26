@@ -151,9 +151,9 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     self->panel_io_config.flags.quad_mode = (unsigned int)args[ARG_quad].u_bool;
     self->panel_io_config.flags.octal_mode = (unsigned int)args[ARG_octal].u_bool;
 
-    if (!(spi_bus->buscfg.flags & SPICOMMON_BUSFLAG_DUAL)) self->panel_io_config.flags.sio_mode = 0;
-    if (!(spi_bus->buscfg.flags & SPICOMMON_BUSFLAG_QUAD)) self->panel_io_config.flags.quad_mode = 0;
-    if (!(spi_bus->buscfg.flags & SPICOMMON_BUSFLAG_OCTAL)) self->panel_io_config.flags.octal_mode = 0;
+    if (!spi_bus->dual) self->panel_io_config.flags.sio_mode = 0;
+    if (!spi_bus->quad) self->panel_io_config.flags.quad_mode = 0;
+    if (!spi_bus->octal) self->panel_io_config.flags.octal_mode = 0;
 
     self->panel_io_handle.del = &spi_del;
     self->panel_io_handle.init = &spi_init;
