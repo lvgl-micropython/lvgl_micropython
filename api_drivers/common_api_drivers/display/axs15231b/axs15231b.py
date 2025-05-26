@@ -7,8 +7,6 @@ import display_driver_framework
 from micropython import const  # NOQA
 
 import lcd_bus
-import gc
-
 import lvgl as lv  # NOQA
 
 
@@ -19,14 +17,26 @@ STATE_PWM = display_driver_framework.STATE_PWM
 BYTE_ORDER_RGB = display_driver_framework.BYTE_ORDER_RGB
 BYTE_ORDER_BGR = display_driver_framework.BYTE_ORDER_BGR
 
-_RASET = const(0x02002B00)
-_CASET = const(0x02002A00)
-_MADCTL = const(0x02003600)
+_RASET = const(0x2B)
+_CASET = const(0x2A)
+_MADCTL = const(0x36)
 
-_RAMWR = const(0x32002C00)
-_RAMWRC = const(0x32003C00)
+_RAMWR = const(0x2C)
+_RAMWRC = const(0x3C)
 
-_WRDISBV = const(0x02005100)
+_WRITE_CMD = const(0x02)
+_WRITE_COLOR = const(0x32)
+
+_MADCTL_MH = const(0x04)  # Refresh 0=Left to Right, 1=Right to Left
+_MADCTL_BGR = const(0x08)  # BGR color order
+_MADCTL_ML = const(0x10)  # Refresh 0=Top to Bottom, 1=Bottom to Top
+
+_MADCTL_MV = const(0x20)  # 0=Normal, 1=Row/column exchange
+_MADCTL_MX = const(0x40)  # 0=Left to Right, 1=Right to Left
+_MADCTL_MY = const(0x80)  # 0=Top to Bottom, 1=Bottom to Top
+
+_WRDISBV = const(0x51)
+_SW_RESET = const(0x01)
 
 
 class AXS15231B(display_driver_framework.DisplayDriver):
@@ -50,51 +60,22 @@ class AXS15231B(display_driver_framework.DisplayDriver):
         color_space=lv.COLOR_FORMAT.RGB888,  # NOQA
         rgb565_byte_swap=False
     ):
-        self.__tx_color_count = 0
+        num_lanes = data_bus.get_lane_count()
+
+        if isinstance(data_bus, lcd_bus.SPIBus) and num_lanes == 4:
+            self.__qspi = True
+            _cmd_bits = 32
+        else:
+            if isinstance(data_bus, lcd_bus.I80Bus) and num_lanes > 8:
+                raise RuntimeError('Only 8 lanes is supported when using the I80Bus')
+
+            self.__qspi = False
+            _cmd_bits = 8
+
+        if not isinstance(data_bus, (lcd_bus.RGBBus, lcd_bus.I80Bus, lcd_bus.SPIBus)):
+            raise RuntimeError('incompatable bus driver')
+
         self._brightness = 0xD0
-        color_size = lv.color_format_get_size(color_space)
-        buf_size = display_width * display_height * color_size
-        if isinstance(data_bus, lcd_bus.RGBBus):
-            buf_size = int(buf_size // 10)
-
-        if frame_buffer1 is None:
-            gc.collect()
-
-            if isinstance(data_bus, lcd_bus.RGBBus):
-                memory_flags = (lcd_bus.MEMORY_INTERNAL, lcd_bus.MEMORY_SPIRAM)
-            else:
-                memory_flags = (
-                    lcd_bus.MEMORY_INTERNAL | lcd_bus.MEMORY_DMA,
-                    lcd_bus.MEMORY_SPIRAM | lcd_bus.MEMORY_DMA,
-                    lcd_bus.MEMORY_INTERNAL,
-                    lcd_bus.MEMORY_SPIRAM
-                )
-
-            for flags in memory_flags:
-                try:
-                    frame_buffer1 = (
-                        data_bus.allocate_framebuffer(buf_size, flags)
-                    )
-
-                    if (flags | lcd_bus.MEMORY_DMA) == flags:
-                        frame_buffer2 = (
-                            data_bus.allocate_framebuffer(buf_size, flags)
-                        )
-
-                    break
-
-                except MemoryError:
-                    frame_buffer1 = data_bus.free_framebuffer(frame_buffer1)
-
-            if frame_buffer1 is None:
-                raise MemoryError(
-                    f'Unable to allocate memory for frame buffer ({buf_size})'
-                    # NOQA
-                )
-
-        if not isinstance(data_bus, lcd_bus.RGBBus):
-            if len(frame_buffer1) != buf_size:
-                raise MemoryError(f'The frame buffer is too small ({buf_size})')
 
         super().__init__(
             data_bus,
@@ -113,56 +94,27 @@ class AXS15231B(display_driver_framework.DisplayDriver):
             color_byte_order,
             color_space,  # NOQA
             rgb565_byte_swap,
-            _cmd_bits=32
+            _cmd_bits=_cmd_bits,
+            _param_bits=8,
+            _init_bus=True
         )
 
-    def _init_bus(self):
-        buffer_size = len(self._frame_buffer1)
-
-        self._data_bus.init(
-            self.display_width,
-            self.display_height,
-            lv.color_format_get_size(self._color_space) * 8,
-            buffer_size,
-            self._rgb565_byte_swap,
-            self._cmd_bits,
-            self._param_bits
-        )
-
-        self._disp_drv.set_flush_cb(self._flush_cb)
-
-        if isinstance(self._data_bus, lcd_bus.RGBBus):
-            setattr(
-                self,
-                '_set_memory_location',
-                self._dummy_set_memory_location
-            )
-            render_mode = lv.DISPLAY_RENDER_MODE.PARTIAL  # NOQA
+    def reset(self):
+        if self._reset_pin is None:
+            self.set_params(_SW_RESET)
         else:
-            render_mode = lv.DISPLAY_RENDER_MODE.DIRECT  # NOQA
+            self._reset_pin.value(not self._reset_state)
+            time.sleep_ms(10)  # NOQA
+            self._reset_pin.value(self._reset_state)
+            time.sleep_ms(10)  # NOQA
+            self._reset_pin.value(not self._reset_state)
+        time.sleep_ms(120)  # NOQA
 
-        self._disp_drv.set_buffers(
-            self._frame_buffer1,
-            self._frame_buffer2,
-            len(self._frame_buffer1),
-            render_mode
-        )
-
-        self._data_bus.register_callback(self._flush_ready_cb)
-        self.set_default()
-        self._disp_drv.add_event_cb(
-            self._on_size_change,
-            lv.EVENT.RESOLUTION_CHANGED,  # NOQA
-            None
-        )
-
-        self._displays.append(self)
-
-    def set_rotation(self, value):
+    def init(self, type=None):  # NOQA
         if not isinstance(self._data_bus, lcd_bus.RGBBus):
-            raise NotImplementedError
-
-        super().set_rotation(value)
+            super().init(type)
+        else:
+            self._initilized = True
 
     def set_brightness(self, value):
         value = int(value / 100.0 * 255)
@@ -176,42 +128,38 @@ class AXS15231B(display_driver_framework.DisplayDriver):
     def get_brightness(self):
         return round(self._brightness / 255.0 * 100.0, 1)
 
-    def _flush_ready_cb(self, *_):
-        self.__tx_color_count += 1
-        if self.__tx_color_count == 2:
-            self._disp_drv.flush_ready()
-            self.__tx_color_count = 0
+    def set_params(self, cmd, params=None):
+        if self.__qspi:
+            cmd &= 0xFF
+            cmd <<= 8
+            cmd |= _WRITE_CMD << 24
+
+        self._data_bus.tx_param(cmd, params)
 
     def _set_memory_location(self, x1: int, y1: int, x2: int, y2: int):
+        if y1 == 0:
+            cmd = _RAMWR
+        else:
+            cmd = _RAMWRC
+
         param_buf = self._param_buf  # NOQA
 
         param_buf[0] = (x1 >> 8) & 0xFF
         param_buf[1] = x1 & 0xFF
         param_buf[2] = (x2 >> 8) & 0xFF
         param_buf[3] = x2 & 0xFF
-        self.set_params(_CASET, self._param_mv)
 
-        return _RAMWR
+        self._data_bus.tx_param(_CASET, self._param_mv)
 
-    def _flush_cb(self, _, area, color_p):
-        x1 = area.x1 + self._offset_x
-        x2 = area.x2 + self._offset_x
+        if self.__qspi:
+            cmd &= 0xFF
+            cmd <<= 8
+            cmd |= _WRITE_COLOR << 2
+        else:
+            param_buf[0] = (y1 >> 8) & 0xFF
+            param_buf[1] = y1 & 0xFF
+            param_buf[2] = (y2 >> 8) & 0xFF
+            param_buf[3] = y2 & 0xFF
+            self._data_bus.tx_param(_RASET, self._param_mv)
 
-        y1 = area.y1 + self._offset_y
-        y2 = area.y2 + self._offset_y
-
-        cmd = self._set_memory_location(x1, y1, x2, y2)
-
-        width = x2 - x1 + 1
-        height = y2 - y1 + 1
-
-        color_size = lv.color_format_get_size(self._color_space)
-        size = width * height * color_size
-        chunk_size = int(width * height // 2) * color_size
-
-        data_view = color_p.__dereference__(size)
-
-        self._data_bus.tx_color(cmd, data_view[:chunk_size], x1, y1, x2, y2,
-                                self._rotation, self._disp_drv.flush_is_last())
-        self._data_bus.tx_color(_RAMWRC, data_view[chunk_size:], x1, y1, x2, y2,
-                                self._rotation, self._disp_drv.flush_is_last())
+        return cmd
