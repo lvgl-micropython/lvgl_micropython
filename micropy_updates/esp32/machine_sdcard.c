@@ -169,7 +169,7 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
 
 #if !SOC_SDMMC_HOST_SUPPORTED
     if (!is_spi) {
-        mp_raise_ValueError(MP_ERROR_TEXT("MMC Reader is not supported by this MCU"));
+        mp_raise_NotImplementedError(MP_ERROR_TEXT("MMC Reader is not supported by this MCU"));
     }
 #endif
 
