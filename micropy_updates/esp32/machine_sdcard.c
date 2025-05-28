@@ -114,11 +114,10 @@ static esp_err_t sdcard_ensure_card_init(sdcard_card_obj_t *self, bool force) {
 static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
     // check arguments
     enum {
-        ARG_slot,
         ARG_width,
         ARG_cd,
         ARG_wp,
-        ARG_cs,
+        ARG_slot,
         ARG_cmd,
         ARG_clk,
         ARG_data_pins,
@@ -126,7 +125,6 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
         ARG_cs,
         ARG_freq,
     };
-    #if SOC_SDMMC_USE_GPIO_MATRIX
 
     static const mp_arg_t make_new_args[] = {
         { MP_QSTR_width,    MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 1} },
