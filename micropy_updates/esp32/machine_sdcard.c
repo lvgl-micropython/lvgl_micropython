@@ -176,7 +176,7 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
     self->flags = 0;
     // Note that these defaults are macros that expand to structure
     // constants so we can't directly assign them to fields.
-    int freq = arg_vals[ARG_freq].u_int;
+    int freq = args[ARG_freq].u_int;
 
 
     if (is_spi) {
@@ -202,7 +202,6 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
     if (is_spi) {
         // SPI interface
         DEBUG_printf("  Setting up SPI slot configuration");
-        spi_host_device_t spi_host_id = self->host.slot;
 
         self->dev_config = (sdspi_device_config_t){
             .host_id = (spi_host_device_t)self->host.slot,
