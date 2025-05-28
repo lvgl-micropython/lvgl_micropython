@@ -9,17 +9,6 @@
 #include "py/objarray.h"
 #include "py/binary.h"
 
-void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
-{
-    uint16_t *buf16 = (uint16_t *)buf;
-
-    while (buf_size_px > 0) {
-        buf16[0] =  (buf16[0] << 8) | (buf16[0] >> 8);
-        buf16++;
-        buf_size_px--;
-    }
-}
-
 
 #ifdef ESP_IDF_VERSION
     // esp-idf includes
@@ -80,7 +69,6 @@ void rgb565_byte_swap(void *buf, uint32_t buf_size_px)
         mp_sched_unlock();
 
         mp_thread_set_state(old_state);
-        mp_hal_wake_main_task_from_isr();
     }
 
     // called when esp_lcd_panel_draw_bitmap is completed

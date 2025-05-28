@@ -2,6 +2,7 @@
 
 // local includes
 #include "lcd_types.h"
+#include "lcd_bus_task.h"
 #include "modlcd_bus.h"
 #include "i2c_bus.h"
 
@@ -20,7 +21,7 @@
 
 
 mp_lcd_err_t i2c_del(mp_obj_t obj);
-mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
+mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool sw_rotation, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
 mp_lcd_err_t i2c_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
 
 
@@ -175,7 +176,7 @@ mp_lcd_err_t i2c_del(mp_obj_t obj)
 }
 
 
-mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
+mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool sw_rotation, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
 {
     mp_lcd_i2c_bus_obj_t *self = (mp_lcd_i2c_bus_obj_t *)obj;
 

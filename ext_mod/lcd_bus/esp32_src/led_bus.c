@@ -1,6 +1,14 @@
 // Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
 
+
+#include "lcd_types.h"
+#include "lcd_bus_task.h"
+#include "modlcd_bus.h"
+#include "led_bus.h"
+
+
+
 static bool led_rmt_bus_trans_done_cb(rmt_channel_handle_t tx_chan, const rmt_tx_done_event_data_t *edata, void *user_ctx)
 {
     mp_lcd_led_bus_obj_t *self = (mp_lcd_led_bus_obj_t *)user_ctx;
@@ -75,7 +83,7 @@ void led_spi_deinit_callback(machine_hw_spi_device_obj_t *device);
 
 
 mp_lcd_err_t led_del(mp_obj_t obj);
-mp_lcd_err_t led_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
+mp_lcd_err_t led_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool sw_rotation, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
 mp_lcd_err_t led_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
 mp_lcd_err_t led_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
 mp_lcd_err_t led_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
@@ -358,7 +366,7 @@ mp_obj_t led_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps)
 }
 
 
-mp_lcd_err_t led_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
+mp_lcd_err_t led_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool sw_rotation, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
 {
     LCD_UNUSED(cmd_bits);
     LCD_UNUSED(param_bits);

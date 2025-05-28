@@ -6,7 +6,17 @@ uint8_t* red_thresh = NULL;
 uint8_t* green_thresh = NULL;
 uint8_t* blue_thresh = NULL;
 
-bool rgb565_dither_init(void)
+
+void dither_deinit(void)
+{
+    if (red_thresh != NULL) free(red_threshresh);
+    if (green_thresh != NULL) free(green_thresh);
+    if (blue_thresh != NULL) free(blue_thresh);
+    return;
+}
+
+
+bool dither_init(void)
 {
     if (red_thresh == NULL) {
         red_thresh = (uint8_t *)malloc(64);

@@ -60,6 +60,19 @@ mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
+    mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
+
+    lcd_bus_lock_init(&self->init.lock);
+    lcd_bus_lock_acquire(self->init.lock);
+
+    lcd_bus_lock_init(&self->task.lock);
+    lcd_bus_event_init(self->task.exit);
+
+    lcd_bus_lock_init(&self->tx_data.lock);
+    lcd_bus_event_init(self->tx_data.swap_bufs);
+    lcd_bus_event_set(self->tx_data.swap_bufs);
+
+
     mp_lcd_err_t ret = lcd_panel_io_init(
         args[ARG_self].u_obj,
         (uint16_t)args[ARG_width].u_int,
@@ -72,7 +85,19 @@ mp_obj_t mp_lcd_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
     );
 
     if (ret != 0) {
-        mp_raise_msg_varg(&mp_type_OSError, MP_ERROR_TEXT("%d(lcd_panel_io_init)"), ret);
+        if (ret == LCD_ERR_NO_MEM) {
+            mp_raise_msg_varg(&mp_type_MemoryError, MP_ERROR_TEXT("%d(mp_lcd_bus_init)"), ret);
+        } else if (ret == LCD_ERR_INVALID_ARG) {
+            mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(mp_lcd_bus_init)"), ret);
+        } else if (ret == LCD_ERR_NOT_SUPPORTED) {
+            mp_raise_msg_varg(&mp_type_ConnectionError, MP_ERROR_TEXT("%d(mp_lcd_bus_init)"), ret);
+        } else if (ret == LCD_ERR_INVALID_STATE) {
+        } else {
+            mp_raise_msg_varg(&mp_type_OSError, MP_ERROR_TEXT("%d(mp_lcd_bus_init)"), ret);
+        }
+
+
+
     }
     return mp_const_none;
 }
@@ -151,17 +176,18 @@ MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_bus_tx_param_obj, 2, mp_lcd_bus_tx_param);
 
 mp_obj_t mp_lcd_bus_tx_color(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
-    enum { ARG_self, ARG_cmd, ARG_data, ARG_x_start, ARG_y_start, ARG_x_end, ARG_y_end, ARG_rotation, ARG_last_update };
+    enum { ARG_self, ARG_cmd, ARG_data, ARG_x_start, ARG_y_start, ARG_x_end, ARG_y_end, ARG_dither, ARG_rotation, ARG_last_update };
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_self,        MP_ARG_OBJ  | MP_ARG_REQUIRED, { .u_obj = mp_const_none } },
-        { MP_QSTR_cmd,         MP_ARG_INT  | MP_ARG_REQUIRED, { .u_int = -1            } },
-        { MP_QSTR_data,        MP_ARG_OBJ  | MP_ARG_REQUIRED, { .u_obj = mp_const_none } },
-        { MP_QSTR_x_start,     MP_ARG_INT  | MP_ARG_REQUIRED, { .u_int = -1            } },
-        { MP_QSTR_y_start,     MP_ARG_INT  | MP_ARG_REQUIRED, { .u_int = -1            } },
-        { MP_QSTR_x_end,       MP_ARG_INT  | MP_ARG_REQUIRED, { .u_int = -1            } },
-        { MP_QSTR_y_end,       MP_ARG_INT  | MP_ARG_REQUIRED, { .u_int = -1            } },
-        { MP_QSTR_rotation,    MP_ARG_INT  | MP_ARG_REQUIRED, { .u_int =  0            } },
-        { MP_QSTR_last_update, MP_ARG_BOOL | MP_ARG_REQUIRED, { .u_bool = false        } },
+        { MP_QSTR_self,        MP_ARG_OBJ  | MP_ARG_REQUIRED },
+        { MP_QSTR_cmd,         MP_ARG_INT  | MP_ARG_REQUIRED },
+        { MP_QSTR_data,        MP_ARG_OBJ  | MP_ARG_REQUIRED },
+        { MP_QSTR_x_start,     MP_ARG_INT  | MP_ARG_REQUIRED },
+        { MP_QSTR_y_start,     MP_ARG_INT  | MP_ARG_REQUIRED },
+        { MP_QSTR_x_end,       MP_ARG_INT  | MP_ARG_REQUIRED },
+        { MP_QSTR_y_end,       MP_ARG_INT  | MP_ARG_REQUIRED },
+        { MP_QSTR_dither,      MP_ARG_INT  | MP_ARG_REQUIRED },
+        { MP_QSTR_rotation,    MP_ARG_INT  | MP_ARG_REQUIRED },
+        { MP_QSTR_last_update, MP_ARG_BOOL | MP_ARG_REQUIRED },
     };
 
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
@@ -172,22 +198,52 @@ mp_obj_t mp_lcd_bus_tx_color(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
     mp_buffer_info_t bufinfo;
     mp_get_buffer_raise(args[ARG_data].u_obj, &bufinfo, MP_BUFFER_READ);
 
-    mp_lcd_err_t ret = lcd_panel_io_tx_color(
-        args[ARG_self].u_obj,
-        (int)args[ARG_cmd].u_int,
-        bufinfo.buf,
-        (size_t)bufinfo.len,
-        (int)args[ARG_x_start].u_int,
-        (int)args[ARG_y_start].u_int,
-        (int)args[ARG_x_end].u_int,
-        (int)args[ARG_y_end].u_int,
-        (uint8_t)args[ARG_rotation].u_int,
-        (bool)args[ARG_last_update].u_bool
-    );
+    int cmd = (int)args[ARG_cmd].u_int;
+    uint8_t * color = (uint8_t *)bufinfo.buf;
+    size_t color_size = (size_t)bufinfo.len;
+    int32_t x_start = (int32_t)args[ARG_x_start].u_int;
+    int32_t y_start = (int32_t)args[ARG_y_start].u_int;
+    int32_t x_end = (int32_t)args[ARG_x_end].u_int;
+    int32_t y_end = (int32_t)args[ARG_y_end].u_int;
+    uint8_t dither = (uint8_t)args[ARG_dither].u_int;
+    uint8_t rotation = (uint8_t)args[ARG_rotation].u_int;
+    uint8_t last_update = (uint8_t)args[ARG_last_update].u_bool;
 
-    if (ret != 0) {
-        mp_raise_msg_varg(&mp_type_OSError, MP_ERROR_TEXT("%d(lcd_panel_io_tx_color)"), ret);
+    if (self->r_data.sw_rotation == 1) {
+        self->partial_buf = (uint8_t *)color;
+    } else if (dither && self->partial_buf == NULL) {
+        int ret = 0
+
+        if (self->view2 != NULL) {
+            ret = allocate_buffers(2, self->view1->len, self->idle_fb, self->active_fb);
+        } else {
+            ret = allocate_buffers(1, self->view1->len, self->idle_fb, NULL);
+        }
+
+        if (ret == -1) {
+            dither = false;
+            self.idle_fb = (uint8_t *)color;
+        }
+    } else if (!dither && self->partial_buf != NULL) {
+        free_buffers(self->idle_fb, self->active_fb);
+        self->partial_buf = NULL;
+        self->idle_fb = (uint8_t *)color;
     }
+
+    lcd_bus_lock_acquire(self->tx_color_lock);
+
+    self->r_data.last_update = (uint8_t)last_update;
+    self->color_size = color_size;
+    self->r_data.x_start = x_start;
+    self->r_data.y_start = y_start;
+    self->r_data.x_end = x_end;
+    self->r_data.y_end = y_end;
+    self->r_data.dst_width = x_end - x_start + 1;
+    self->r_data.dst_height = y_end - y_start + 1;
+    self->r_data.rotation = rotation;
+    self->r_data.dither = (uint8_t)dither;
+
+    lcd_bus_lock_release(self->copy_lock);
 
     if (self->callback == mp_const_none) {
         while (self->trans_done == false) {}
@@ -198,6 +254,22 @@ mp_obj_t mp_lcd_bus_tx_color(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
 }
 
 MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_bus_tx_color_obj, 7, mp_lcd_bus_tx_color);
+
+
+
+
+mp_lcd_err_t spi_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update, bool dither)
+    {
+        LCD_DEBUG_PRINT("spi_tx_color(self, lcd_cmd=%d, color, color_size=%d, x_start=%d, y_start=%d, x_end=%d, y_end=%d)\n", lcd_cmd, color_size, x_start, y_start, x_end, y_end)
+
+        mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)obj;
+
+
+
+        return LCD_OK;
+    }
+
+
 
 
 mp_obj_t mp_lcd_bus_deinit(mp_obj_t obj)

@@ -10,10 +10,16 @@
     #include "py/runtime.h"
     #include "py/objarray.h"
 
+
     typedef struct _lcd_panel_io_t lcd_panel_io_t;
+
+    void rgb565_byte_swap(void *buf, uint32_t buf_size_px);
 
     #ifdef ESP_IDF_VERSION
         #include "sdkconfig.h"
+        #include "lcd_bus_task.h"
+        #include "freertos/FreeRTOS.h"
+        #include "freertos/task.h"
 
         // esp-idf includes
         #include "esp_lcd_panel_io.h"
@@ -79,27 +85,72 @@
 
     mp_lcd_err_t lcd_panel_io_del(mp_obj_t obj);
 
-    typedef struct _mp_lcd_bus_obj_t {
+    typedef struct _mp_lcd_bus_obj_t mp_lcd_bus_obj_t;
+
+    typedef void (*flush_func_t)(mp_lcd_bus_obj_t *self, rotation_data_t *r_data, rotation_data_t *original_r_data, uint8_t *idle_fb, uint8_t last_update)
+    typedef void (*init_func_t)(mp_lcd_bus_obj_t *self)
+
+    typedef struct _lcd_bufs_t {
+        uint8_t *active;
+        uint8_t *idle;
+        uint8_t *partial;
+    } lcd_bufs_t;
+
+    typedef struct _lcd_task_t {
+        TaskHandle_t handle;
+        lcd_bus_event_t exit;
+        lcd_bus_lock_t lock;
+    } lcd_task_t;
+
+    typedef struct _lcd_init_t {
+        lcd_bus_lock_t lock;
+        mp_lcd_err_t err;
+        mp_rom_error_text_t err_msg;
+        init_func_t init_func;
+    } lcd_init_t;
+
+    typedef struct _lcd_tx_data_t {
+        lcd_bus_lock_t tx_lock;
+        lcd_bus_event_t swap_bufs;
+        flush_func_t flush_func;
+    } lcd_tx_data_t;
+
+    typedef struct _lcd_command_t {
+        int cmd;
+        uint8_t *params;
+        size_t params_len;
+        uint8_t flush_is_next: 1;
+    } lcd_cmd_t;
+
+    typedef struct _lcd_tx_commands_t {
+        lcd_bus_lock_t lock;
+        lcd_cmd_t *cmds;
+        size_t cmds_len;
+    } lcd_tx_cmds_t;
+
+    struct _mp_lcd_bus_obj_t {
         mp_obj_base_t base;
 
         mp_obj_t callback;
 
-    #ifdef ESP_IDF_VERSION
         mp_obj_array_t *view1;
         mp_obj_array_t *view2;
-    #else
-        void *buf1;
-        void *buf2;
-    #endif
 
         uint32_t buffer_flags;
 
-        bool trans_done;
-        bool rgb565_byte_swap;
+        uint8_t trans_done: 1;
+
+        lcd_task_t task;
+        lcd_init_t init;
+        lcd_bufs_t bufs;
+
+        lcd_tx_data_t tx_data;
+        lcd_tx_cmds_t tx_cmds;
+
+        rotation_data_t r_data;
 
         lcd_panel_io_t panel_io_handle;
-
-    } mp_lcd_bus_obj_t;
+    };
 
 
     void rgb565_byte_swap(void *buf, uint32_t buf_size_px);

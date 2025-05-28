@@ -5,6 +5,7 @@
 
     //local_includes
     #include "lcd_types.h"
+    #include "lcd_bus_task.h"
     #include "../../../micropy_updates/common/mp_spi_common.h"
 
     // esp-idf includes
@@ -29,16 +30,27 @@
 
         uint32_t buffer_flags;
 
-        bool trans_done;
-        bool rgb565_byte_swap;
+        uint8_t trans_done: 1;
+
+        lcd_task_t task;
+        lcd_init_t init;
+        lcd_bufs_t bufs;
+
+        lcd_tx_data_t tx_data;
+        lcd_tx_cmds_t tx_cmds;
+
+        rotation_data_t r_data;
 
         lcd_panel_io_t panel_io_handle;
+
+        // ********************** bus specific **********************
         esp_lcd_panel_io_spi_config_t panel_io_config;
         spi_bus_config_t bus_config;
         esp_lcd_spi_bus_handle_t bus_handle;
 
         spi_host_device_t host;
         mp_machine_hw_spi_device_obj_t spi_device;
+
     } mp_lcd_spi_bus_obj_t;
 
     extern const mp_obj_type_t mp_lcd_spi_bus_type;

@@ -8,6 +8,7 @@
 
         //local_includes
         #include "lcd_types.h"
+        #include "lcd_bus_task.h"
 
         // esp-idf includes
         #include "hal/lcd_hal.h"
@@ -50,26 +51,6 @@
             uint8_t bb_fb_index;  // Current frame buffer index which used by bounce buffer
         } rgb_panel_t;
 
-        typedef struct _rgb_bus_lock_t {
-            SemaphoreHandle_t handle;
-            StaticSemaphore_t buffer;
-        } rgb_bus_lock_t;
-
-        typedef struct _rgb_bus_event_t {
-            EventGroupHandle_t handle;
-            StaticEventGroup_t buffer;
-        } rgb_bus_event_t;
-
-    #if LCD_RGB_OPTIMUM_FB_SIZE
-        typedef struct _rgb_bus_optimum_fb_size_t {
-            uint16_t flush_count;
-            uint8_t sample_count;
-            uint8_t curr_index;
-            uint16_t *samples;
-            rgb_bus_lock_t lock;
-        } rgb_bus_optimum_fb_size_t;
-    #endif
-
         typedef struct _mp_lcd_rgb_bus_obj_t {
             mp_obj_base_t base;
 
@@ -80,66 +61,27 @@
 
             uint32_t buffer_flags;
 
-            bool trans_done;
-            bool rgb565_byte_swap;
+            uint8_t trans_done: 1;
+
+            lcd_task_t task;
+            lcd_init_t init;
+            lcd_bufs_t bufs;
+
+            lcd_tx_data_t tx_data;
+            lcd_tx_cmds_t tx_cmds;
+
+            rotation_data_t r_data;
 
             lcd_panel_io_t panel_io_handle;
 
+            // ********************** bus specific **********************
             esp_lcd_rgb_panel_config_t panel_io_config;
             esp_lcd_rgb_timing_t bus_config;
 
             esp_lcd_panel_handle_t panel_handle;
             uint32_t buffer_size;
 
-            uint8_t *active_fb;
-            uint8_t *idle_fb;
-            uint8_t *partial_buf;
-
-            int x_start;
-            int y_start;
-            int x_end;
-            int y_end;
-            uint16_t width;
-            uint16_t height;
-            uint8_t rotation: 2;
-            uint8_t bytes_per_pixel: 2;
-            uint8_t last_update: 1;
-            uint8_t rgb565_dither: 1;
-
-            rgb_bus_lock_t copy_lock;
-            rgb_bus_event_t copy_task_exit;
-            rgb_bus_lock_t tx_color_lock;
-            rgb_bus_event_t swap_bufs;
-            rgb_bus_lock_t init_lock;
-
-            TaskHandle_t copy_task_handle;
-
-            mp_lcd_err_t init_err;
-            mp_rom_error_text_t init_err_msg;
-
-        #if LCD_RGB_OPTIMUM_FB_SIZE
-            rgb_bus_optimum_fb_size_t optimum_fb;
-        #endif
-
         } mp_lcd_rgb_bus_obj_t;
-
-        void rgb_bus_event_init(rgb_bus_event_t *event);
-        void rgb_bus_event_delete(rgb_bus_event_t *event);
-        bool rgb_bus_event_isset(rgb_bus_event_t *event);
-        void rgb_bus_event_set(rgb_bus_event_t *event);
-        void rgb_bus_event_clear(rgb_bus_event_t *event);
-        void rgb_bus_event_clear_from_isr(rgb_bus_event_t *event);
-        bool rgb_bus_event_isset_from_isr(rgb_bus_event_t *event);
-        void rgb_bus_event_set_from_isr(rgb_bus_event_t *event);
-        void rgb_bus_event_wait(rgb_bus_event_t *event);
-
-        int  rgb_bus_lock_acquire(rgb_bus_lock_t *lock, int32_t wait_ms);
-        void rgb_bus_lock_release(rgb_bus_lock_t *lock);
-        void rgb_bus_lock_init(rgb_bus_lock_t *lock);
-        void rgb_bus_lock_delete(rgb_bus_lock_t *lock);
-        void rgb_bus_lock_release_from_isr(rgb_bus_lock_t *lock);
-
-        void rgb_bus_copy_task(void *self_in);
 
         extern const mp_obj_type_t mp_lcd_rgb_bus_type;
 

@@ -7,6 +7,7 @@
 
     // local includes
     #include "lcd_types.h"
+    #include "lcd_bus_task.h"
     #include "modlcd_bus.h"
     #include "rgb_bus.h"
 
@@ -41,7 +42,7 @@
     #define DEFAULT_STACK_SIZE    (5 * 1024)
 
     mp_lcd_err_t rgb_del(mp_obj_t obj);
-    mp_lcd_err_t rgb_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
+    mp_lcd_err_t rgb_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool sw_rotation, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
     mp_lcd_err_t rgb_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
     mp_lcd_err_t rgb_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
     mp_lcd_err_t rgb_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
@@ -66,6 +67,88 @@
         }
     }
 
+
+    static bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel,
+                                    const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
+    {
+        LCD_UNUSED(edata);
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)user_ctx;
+        rgb_panel_t *rgb_panel = __containerof(panel, rgb_panel_t, base);
+        uint8_t *curr_buf = rgb_panel->fbs[rgb_panel->cur_fb_index];
+
+        if (curr_buf != self->active_fb && !rgb_bus_event_isset_from_isr(&self->swap_bufs)) {
+            uint8_t *idle_fb = self->idle_fb;
+            self->idle_fb = self->active_fb;
+            self->active_fb = idle_fb;
+            lcd_bus_event_set_from_isr(self->swap_bufs);
+        }
+
+        return false;
+    }
+
+    static void rgb_flush_func(mp_lcd_bus_obj_t *self, rotation_data_t *r_data, rotation_data_t *original_r_data, uint8_t *idle_fb, uint8_t last_update)
+    {
+        if (self->callback != mp_const_none) {
+            cb_isr(self->callback);
+        }
+
+        if (last_update) {
+            mp_lcd_err_t ret = esp_lcd_panel_draw_bitmap(
+                self->panel_handle,
+                0,
+                0,
+                r_data->dst_width,
+                r_data->dst_height,
+                idle_fb
+            );
+
+            if (ret != 0) {
+                mp_printf(&mp_plat_print, "esp_lcd_panel_draw_bitmap error (%d)\n", ret);
+            } else {
+                lcd_bus_event_clear(self->swap_bufs);
+                lcd_bus_event_wait(self->swap_bufs);
+                memcpy(self->idle_fb, self->active_fb, r_data->dst_width * r_data->dst_height * r_data->bytes_per_pixel);
+            }
+        }
+    }
+
+    static bool rgb_init_func(mp_lcd_bus_obj_t *self_in)
+    {
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *) self_in;
+
+        esp_lcd_rgb_panel_event_callbacks_t callbacks = { .on_vsync = rgb_bus_trans_done_cb };
+
+        self->init_err = esp_lcd_new_rgb_panel(&self->panel_io_config, &self->panel_handle);
+        if (self->init_err != 0) {
+            self->init_err_msg = MP_ERROR_TEXT("%d(esp_lcd_new_rgb_panel)");
+            return false;
+        }
+
+        self->init_err = esp_lcd_rgb_panel_register_event_callbacks(self->panel_handle, &callbacks, self);
+        if (self->init_err != 0) {
+            self->init_err_msg = MP_ERROR_TEXT("%d(esp_lcd_rgb_panel_register_event_callbacks)");
+            return false;
+        }
+
+        self->init_err = esp_lcd_panel_reset(self->panel_handle);
+        if (self->init_err != 0) {
+            self->init_err_msg = MP_ERROR_TEXT("%d(esp_lcd_panel_reset)");
+            return false;
+        }
+
+        self->init_err = esp_lcd_panel_init(self->panel_handle);
+        if (self->init_err != 0) {
+            self->init_err_msg = MP_ERROR_TEXT("%d(esp_lcd_panel_init)");
+            return false;
+        }
+
+        rgb_panel_t *rgb_panel = __containerof((esp_lcd_panel_t *)self->panel_handle, rgb_panel_t, base);
+
+        self->active_fb = rgb_panel->fbs[0];
+        self->idle_fb = rgb_panel->fbs[1];
+
+        return true;
+    }
 
     mp_obj_t mp_lcd_rgb_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
@@ -251,6 +334,9 @@
         self->panel_io_handle.tx_param = &rgb_tx_param;
         self->panel_io_handle.tx_color = &rgb_tx_color;
         self->panel_io_handle.init = &rgb_init;
+        self->flush_func = rgb_flush_func;
+        self->init_func = rgb_init_func;
+
 
         return MP_OBJ_FROM_PTR(self);
     }
@@ -342,7 +428,7 @@
     }
 
 
-    mp_lcd_err_t rgb_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
+    mp_lcd_err_t rgb_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool sw_rotation, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
     {
         LCD_UNUSED(cmd_bits);
         LCD_UNUSED(param_bits);
@@ -351,7 +437,7 @@
 
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
 
-        if (bpp != 16 && self->rgb565_dither) self->rgb565_dither = 0;
+        self->r_data.sw_rotation = (uint8_t)sw_rotation;
 
         if (bpp == 16 && rgb565_byte_swap) {
             /*
@@ -371,53 +457,45 @@
                     self->panel_io_config.data_gpio_nums[i + 8] = temp_pin;
                 }
 
-                self->rgb565_byte_swap = false;
+                self->r_data.swap = 0;
             } else {
-                self->rgb565_byte_swap = true;
+                self->r_data.swap = 1;
             }
         } else {
-            self->rgb565_byte_swap = false;
+            self->r_data.swap = 0;
         }
 
         self->panel_io_config.timings.h_res = (uint32_t)width;
         self->panel_io_config.timings.v_res = (uint32_t)height;
         self->panel_io_config.bits_per_pixel = (size_t)bpp;
 
-        self->width = width;
-        self->height = height;
-        self->bytes_per_pixel = bpp / 8;
+        self->r_data.bytes_per_pixel = bpp / 8;
+        self->r_data.dst_height = (uint16_t)height;
+        self->r_data.dst_width = (uint16_t)width;
 
         self->panel_io_config.flags.fb_in_psram = 1;
         self->panel_io_config.flags.double_fb = 1;
 
-        rgb_bus_lock_init(&self->copy_lock);
-        rgb_bus_lock_init(&self->tx_color_lock);
-        rgb_bus_event_init(&self->copy_task_exit);
-        rgb_bus_event_init(&self->swap_bufs);
-        rgb_bus_event_set(&self->swap_bufs);
-        rgb_bus_lock_init(&self->init_lock);
-        rgb_bus_lock_acquire(&self->init_lock, -1);
-
-
-    #if LCD_RGB_OPTIMUM_FB_SIZE
-        rgb_bus_lock_init(&self->optimum_fb.lock);
-        rgb_bus_lock_acquire(&self->optimum_fb.lock, -1);
-        self->optimum_fb.samples = (uint16_t *)malloc(sizeof(uint16_t) * 255);
-        self->optimum_fb.curr_index = 254;
-    #endif
+        lcd_bus_lock_init(&self->task.lock);
+        lcd_bus_lock_init(&self->tx_color_lock);
+        lcd_bus_event_init(self->copy_task_exit);
+        lcd_bus_event_init(self->swap_bufs);
+        lcd_bus_event_set(self->swap_bufs);
+        lcd_bus_lock_init(&self->init_lock);
+        lcd_bus_lock_acquire(self->init_lock);
 
         LCD_DEBUG_PRINT("h_res=%lu\n", self->panel_io_config.timings.h_res)
         LCD_DEBUG_PRINT("v_res=%lu\n", self->panel_io_config.timings.v_res)
         LCD_DEBUG_PRINT("bits_per_pixel=%d\n", self->panel_io_config.bits_per_pixel)
-        LCD_DEBUG_PRINT("rgb565_byte_swap=%d\n", self->rgb565_byte_swap)
+        LCD_DEBUG_PRINT("rgb565_byte_swap=%d\n", self->r_data.rgb565_byte_swap)
 
         xTaskCreatePinnedToCore(
-                rgb_bus_copy_task, "rgb_task", DEFAULT_STACK_SIZE / sizeof(StackType_t),
+                lcd_bus_task, "rgb_task", DEFAULT_STACK_SIZE / sizeof(StackType_t),
                 self, ESP_TASK_PRIO_MAX - 1, &self->copy_task_handle, 0);
 
-        rgb_bus_lock_acquire(&self->init_lock, -1);
-        rgb_bus_lock_release(&self->init_lock);
-        rgb_bus_lock_delete(&self->init_lock);
+        lcd_bus_lock_acquire(self->init_lock);
+        lcd_bus_lock_release(self->init_lock);
+        lcd_bus_lock_delete(self->init_lock);
 
         if (self->init_err != LCD_OK) {
             mp_raise_msg_varg(&mp_type_ValueError, self->init_err_msg, self->init_err);
@@ -444,95 +522,34 @@
     }
 
 
-    mp_lcd_err_t rgb_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update)
+    mp_lcd_err_t rgb_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update, bool dither)
     {
         LCD_DEBUG_PRINT("rgb_tx_color(self, lcd_cmd=%d, color, color_size=%d, x_start=%d, y_start=%d, x_end=%d, y_end=%d)\n", lcd_cmd, color_size, x_start, y_start, x_end, y_end)
         LCD_UNUSED(color_size);
 
         mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
         
-        rgb_bus_lock_acquire(&self->tx_color_lock, -1);
+        lcd_bus_lock_acquire(self->tx_color_lock);
 
         self->last_update = (uint8_t)last_update;
         self->partial_buf = (uint8_t *)color;
-        self->x_start = x_start;
-        self->y_start = y_start;
-        self->x_end = x_end;
-        self->y_end = y_end;
-        self->rotation = rotation;
+        self->r_data.x_start = x_start;
+        self->r_data.y_start = y_start;
+        self->r_data.x_end = x_end;
+        self->r_data.y_end = y_end;
+        self->r_data.rotation = rotation;
+        self->r_data.dither = (uint8_t)dither;
 
-        rgb_bus_lock_release(&self->copy_lock);
-//        if (self->callback != mp_const_none) {
-//            mp_call_function_n_kw(self->callback, 0, 0, NULL);
-//        }
+        lcd_bus_lock_release(self->copy_lock);
 
         return LCD_OK;
     }
-
-#if LCD_RGB_OPTIMUM_FB_SIZE
-
-    static void rgb_bus_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
-    {
-        mp_lcd_rgb_bus_obj_t *self = MP_OBJ_TO_PTR(self_in);
-
-        if (attr == MP_QSTR_avg_flushes_per_update) {
-            if (dest[0] == MP_OBJ_NULL) {
-                uint32_t total = 0;
-
-                rgb_bus_lock_acquire(&self->optimum_fb.lock, -1);
-                for (uint8_t i=0;i<self->optimum_fb.sample_count;i++) {
-                    total += (uint32_t)self->optimum_fb.samples[i];
-                }
-
-                uint16_t avg = (uint16_t)(total / (uint32_t)self->optimum_fb.sample_count);
-
-                rgb_bus_lock_release(&self->optimum_fb.lock);
-
-                dest[0] = mp_obj_new_int_from_uint(avg);
-            } else if (dest[1]) {
-                uint16_t value = (uint16_t)mp_obj_get_int_truncated(dest[1]);
-
-                if (value == 0) {
-                    rgb_bus_lock_acquire(&self->optimum_fb.lock, -1);
-                    for (uint8_t i=0;i<self->optimum_fb.sample_count;i++) {
-                        self->optimum_fb.samples[i] = 0;
-                    }
-
-                    self->optimum_fb.sample_count = 0;
-                    self->optimum_fb.curr_index = 254;
-                    rgb_bus_lock_release(&self->optimum_fb.lock);
-
-                    dest[0] = MP_OBJ_NULL;
-                }
-            }
-        } else if (dest[0] == MP_OBJ_NULL) {
-            const mp_obj_type_t *type = mp_obj_get_type(self_in);
-            while (MP_OBJ_TYPE_HAS_SLOT(type, locals_dict)) {
-                // generic method lookup
-                // this is a lookup in the object (ie not class or type)
-                assert(MP_OBJ_TYPE_GET_SLOT(type, locals_dict)->base.type == &mp_type_dict); // MicroPython restriction, for now
-                mp_map_t *locals_map = &MP_OBJ_TYPE_GET_SLOT(type, locals_dict)->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self_in, type, elem->value, dest);
-                    break;
-                }
-                if (MP_OBJ_TYPE_GET_SLOT_OR_NULL(type, parent) == NULL) break;
-                // search parents
-                type = MP_OBJ_TYPE_GET_SLOT(type, parent);
-            }
-        }
-    }
-#endif
 
     MP_DEFINE_CONST_OBJ_TYPE(
         mp_lcd_rgb_bus_type,
         MP_QSTR_RGBBus,
         MP_TYPE_FLAG_NONE,
         make_new, mp_lcd_rgb_bus_make_new,
-    #if LCD_RGB_OPTIMUM_FB_SIZE
-        attr, rgb_bus_attr,
-    #endif
         locals_dict, (mp_obj_dict_t *)&mp_lcd_bus_locals_dict
     );
 

@@ -2,6 +2,7 @@
 
 // local includes
 #include "lcd_types.h"
+#include "lcd_bus_task.h"
 #include "modlcd_bus.h"
 #include "dsi_bus.h"
 
@@ -37,7 +38,7 @@
 
 
     mp_lcd_err_t dsi_del(mp_obj_t obj);
-    mp_lcd_err_t dsi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
+    mp_lcd_err_t dsi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool sw_rotation, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
     mp_lcd_err_t dsi_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
     mp_lcd_err_t dsi_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, , uint8_t rotation, bool last_update);
     mp_obj_t dsi_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps);
@@ -155,7 +156,7 @@
     }
     
 
-    mp_lcd_err_t dsi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
+    mp_lcd_err_t dsi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool sw_rotation, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
     {
         LCD_DEBUG_PRINT("dsi_init(self, width=%i, height=%i, bpp=%i, buffer_size=%lu, rgb565_byte_swap=%i, cmd_bits=%i, param_bits=%i)\n", width, height, bpp, buffer_size, (uint8_t)rgb565_byte_swap, cmd_bits, param_bits)
 

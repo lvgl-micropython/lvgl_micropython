@@ -6,6 +6,8 @@
 
     //local_includes
     #include "lcd_types.h"
+    #include "lcd_bus_task.h"
+
     #include "../../../micropy_updates/common/mp_spi_common.h"
 
     #include "driver/rmt.h"
@@ -49,19 +51,26 @@
 
         mp_obj_t callback;
 
-        void *buf1;
-        void *buf2;
+        mp_obj_array_t *view1;
+        mp_obj_array_t *view2;
+
         uint32_t buffer_flags;
 
-        bool trans_done;
-        bool rgb565_byte_swap;
+        uint8_t trans_done: 1;
+
+        lcd_task_t task;
+        lcd_init_t init;
+        lcd_bufs_t bufs;
+
+        lcd_tx_data_t tx_data;
+        lcd_tx_cmds_t tx_cmds;
+
+        rotation_data_t r_data;
 
         lcd_panel_io_t panel_io_handle;
 
+        // ********************** bus specific **********************
         uint32_t buffer_size;
-
-        mp_obj_array_t *view1;
-        mp_obj_array_t *view2;
 
         // common config
         mp_lcd_led_pixel_order pixel_order;
