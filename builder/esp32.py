@@ -1096,7 +1096,7 @@ def update_mpconfigport():
                 '#ifdef MICROPY_HW_ENABLE_USBDEV',
                 '#undef MICROPY_HW_ENABLE_USBDEV',
                 '#endif',
-                f'#define MICROPY_HW_ENABLE_USBDEV  ({int(enable_cdc_repl.lower() == "y")})'
+                f'#define MICROPY_HW_ENABLE_USBDEV  ({int(enable_cdc_repl.lower() == "y")})',
                 '',
                 '#ifdef MICROPY_HW_USB_CDC',
                 '#undef MICROPY_HW_USB_CDC',
@@ -1138,8 +1138,7 @@ def update_mpconfigport():
             ''
         )
         data = data.replace(
-            '#define MICROPY_WRAP_MP_SCHED_KEYBOARD_INTERRUPT(f) '
-            'IRAM_ATTR f\n',
+            '#define MICROPY_WRAP_MP_SCHED_KEYBOARD_INTERRUPT(f) IRAM_ATTR f\n',
             ''
         )
         data = data.replace(
@@ -1183,7 +1182,7 @@ def update_mpconfigport():
     #         )
     #         continue
 
-    data = '\n'.join(data)
+    # data = '\n'.join(data)
 
     write_file(MPCONFIGPORT_PATH, data)
 
