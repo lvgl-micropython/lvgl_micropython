@@ -221,6 +221,7 @@ static mp_obj_t machine_sdcard_make_new(const mp_obj_type_t *type, size_t n_args
         check_esp_err(sdspi_host_init_device(&self->dev_config, &self->sdspi_handle));
 
         mp_machine_hw_spi_bus_add_device(&self->spi_device);
+    }
 
 #if SOC_SDMMC_HOST_SUPPORTED
     else {
