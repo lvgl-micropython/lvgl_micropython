@@ -1,5 +1,7 @@
 #include <stdint.h>
-#include <inttypes.h>
+#include <stddef.h>
+#include <stdbool.h>
+#include <string.h>
 
 #ifndef __DITHER_H__
     #define __DITHER_H__
@@ -11,7 +13,7 @@
     extern uint8_t *blue_thresh;
 
     bool dither_init(void);
-    void dither_deinit(void)
+    void dither_deinit(void);
 
     __attribute__((always_inline))
     static inline void rgb565_dither_swap_pixel(uint8_t treshold_id, uint16_t *to, uint16_t *from)
@@ -19,18 +21,18 @@
         *to = (
             ((((*from >> 8) & 0xF8) + red_thresh[treshold_id]) << 8) |
             ((((*from >> 3) & 0xFC) + green_thresh[treshold_id]) << 3) |
-            ((((*from++ & 0x1F) << 3) + blue_thresh[treshold_id]) >> 3)
+            ((((*from & 0x1F) << 3) + blue_thresh[treshold_id]) >> 3)
         );
-        *to++ = (*to >> 8) | (*to << 8);
+        *to = (*to >> 8) | (*to << 8);
     }
 
     __attribute__((always_inline))
     static inline void rgb565_dither_pixel(uint8_t treshold_id, uint16_t *to, uint16_t *from)
     {
-        *to++ = (
+        *to = (
             ((((*from >> 8) & 0xF8) + red_thresh[treshold_id]) << 8) |
             ((((*from >> 3) & 0xFC) + green_thresh[treshold_id]) << 3) |
-            ((((*from++ & 0x1F) << 3) + blue_thresh[treshold_id]) >> 3)
+            ((((*from & 0x1F) << 3) + blue_thresh[treshold_id]) >> 3)
         );
     }
 

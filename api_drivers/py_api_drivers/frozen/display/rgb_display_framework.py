@@ -35,7 +35,8 @@ class RGBDisplayDriver(display_driver_framework.DisplayDriver):
         spi_3wire_shared_pins=False,
         _cmd_bits=8,
         _param_bits=8,
-        _init_bus=True
+        _init_bus=True,
+        _sw_rotate=True,
     ):
 
         self._spi_3wire = spi_3wire
@@ -60,7 +61,8 @@ class RGBDisplayDriver(display_driver_framework.DisplayDriver):
             rgb565_byte_swap=rgb565_byte_swap,
             _cmd_bits=_cmd_bits,
             _param_bits=_param_bits,
-            _init_bus=_init_bus
+            _init_bus=_init_bus,
+            _sw_rotate=_sw_rotate
         )
 
     def set_params(self, cmd, params=None):

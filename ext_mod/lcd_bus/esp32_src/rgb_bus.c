@@ -10,6 +10,7 @@
     #include "lcd_bus_task.h"
     #include "modlcd_bus.h"
     #include "rgb_bus.h"
+    #include "bus_trans_done.h"
 
     // esp-idf includes
     #include "hal/lcd_hal.h"
@@ -27,45 +28,34 @@
     #include "mphalport.h"
     #include "py/obj.h"
     #include "py/runtime.h"
-    #include "py/objarray.h"
-    #include "py/binary.h"
-    #include "py/objint.h"
-    #include "py/objstr.h"
-    #include "py/objtype.h"
-    #include "py/objexcept.h"
-
-    #include "rgb565_dither.h"
 
     // stdlib includes
     #include <string.h>
 
-    #define DEFAULT_STACK_SIZE    (5 * 1024)
 
-    mp_lcd_err_t rgb_del(mp_obj_t obj);
-    mp_lcd_err_t rgb_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool sw_rotation, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
-    mp_lcd_err_t rgb_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
-    mp_lcd_err_t rgb_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
-    mp_lcd_err_t rgb_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
-    mp_lcd_err_t rgb_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update);
+    typedef struct {
+        esp_lcd_panel_t base;
+        int panel_id;
+        lcd_hal_context_t hal;
+        size_t data_width;
+        size_t fb_bits_per_pixel;
+        size_t num_fbs;
+        size_t output_bits_per_pixel;
+        size_t sram_trans_align;
+        size_t psram_trans_align;
+        int disp_gpio_num;
+        intr_handle_t intr;
+        esp_pm_lock_handle_t pm_lock;
+        size_t num_dma_nodes;
+        uint8_t *fbs[3];
+        uint8_t cur_fb_index;
+        uint8_t bb_fb_index;
+    } rgb_panel_t;
 
-    static uint8_t rgb_bus_count = 0;
-    static mp_lcd_rgb_bus_obj_t **rgb_bus_objs;
 
-
-    void mp_lcd_rgb_bus_deinit_all(void)
-    {
-        // we need to copy the existing array to a new one so the order doesn't
-        // get all mucked up when objects get removed.
-        mp_lcd_rgb_bus_obj_t *objs[rgb_bus_count];
-
-        for (uint8_t i=0;i<rgb_bus_count;i++) {
-            objs[i] = rgb_bus_objs[i];
-        }
-
-        for (uint8_t i=0;i<rgb_bus_count;i++) {
-            rgb_del(MP_OBJ_FROM_PTR(objs[i]));
-        }
-    }
+    mp_lcd_err_t rgb_del(mp_lcd_bus_obj_t *self_in);
+    mp_lcd_err_t rgb_init(mp_lcd_bus_obj_t *self_in, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size,
+                          uint8_t cmd_bits, uint8_t param_bits);
 
 
     static bool rgb_bus_trans_done_cb(esp_lcd_panel_handle_t panel,
@@ -76,38 +66,44 @@
         rgb_panel_t *rgb_panel = __containerof(panel, rgb_panel_t, base);
         uint8_t *curr_buf = rgb_panel->fbs[rgb_panel->cur_fb_index];
 
-        if (curr_buf != self->active_fb && !rgb_bus_event_isset_from_isr(&self->swap_bufs)) {
-            uint8_t *idle_fb = self->idle_fb;
-            self->idle_fb = self->active_fb;
-            self->active_fb = idle_fb;
-            lcd_bus_event_set_from_isr(self->swap_bufs);
+        if (curr_buf != self->bufs.active && !lcd_bus_event_isset_from_isr(&self->tx_data.swap_bufs)) {
+            uint8_t *idle_fb = self->bufs.idle;
+            self->bufs.idle = self->bufs.active;
+            self->bufs.active = idle_fb;
+            lcd_bus_event_set_from_isr(self->tx_data.swap_bufs);
         }
 
         return false;
     }
 
-    static void rgb_flush_func(mp_lcd_bus_obj_t *self, rotation_data_t *r_data, rotation_data_t *original_r_data, uint8_t *idle_fb, uint8_t last_update)
+    static void rgb_send_func(mp_lcd_bus_obj_t *self_in, int cmd, uint8_t *params, size_t params_len)
     {
+        LCD_UNUSED(cmd);
+        LCD_UNUSED(params_len);
+    }
+
+    static void rgb_flush_func(mp_lcd_bus_obj_t *self_in, rotation_data_t *r_data, rotation_data_t *original_r_data,
+                               uint8_t *idle_fb, uint8_t last_update)
+    {
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *) self_in;
+
         if (self->callback != mp_const_none) {
             cb_isr(self->callback);
         }
 
         if (last_update) {
-            mp_lcd_err_t ret = esp_lcd_panel_draw_bitmap(
-                self->panel_handle,
-                0,
-                0,
-                r_data->dst_width,
-                r_data->dst_height,
-                idle_fb
-            );
+            mp_lcd_err_t ret = esp_lcd_panel_draw_bitmap(self->panel_handle, 0, 0,
+                                original_r_data->dst_width, original_r_data->dst_height,
+                                idle_fb);
 
             if (ret != 0) {
                 mp_printf(&mp_plat_print, "esp_lcd_panel_draw_bitmap error (%d)\n", ret);
             } else {
-                lcd_bus_event_clear(self->swap_bufs);
-                lcd_bus_event_wait(self->swap_bufs);
-                memcpy(self->idle_fb, self->active_fb, r_data->dst_width * r_data->dst_height * r_data->bytes_per_pixel);
+                lcd_bus_event_clear(self->tx_data.swap_bufs);
+                lcd_bus_event_wait(self->tx_data.swap_bufs);
+
+                size_t size = (size_t)(original_r_data->dst_width * original_r_data->dst_height * original_r_data->bytes_per_pixel);
+                memcpy(self->bufs.idle, self->bufs.active, size);
             }
         }
     }
@@ -118,98 +114,50 @@
 
         esp_lcd_rgb_panel_event_callbacks_t callbacks = { .on_vsync = rgb_bus_trans_done_cb };
 
-        self->init_err = esp_lcd_new_rgb_panel(&self->panel_io_config, &self->panel_handle);
-        if (self->init_err != 0) {
-            self->init_err_msg = MP_ERROR_TEXT("%d(esp_lcd_new_rgb_panel)");
+        self->init.err = esp_lcd_new_rgb_panel(&self->panel_io_config, &self->panel_handle);
+        if (self->init.err != 0) {
+            self->init.err_msg = MP_ERROR_TEXT("%d(esp_lcd_new_rgb_panel)");
             return false;
         }
 
-        self->init_err = esp_lcd_rgb_panel_register_event_callbacks(self->panel_handle, &callbacks, self);
-        if (self->init_err != 0) {
-            self->init_err_msg = MP_ERROR_TEXT("%d(esp_lcd_rgb_panel_register_event_callbacks)");
+        self->init.err = esp_lcd_rgb_panel_register_event_callbacks(self->panel_handle, &callbacks, self);
+        if (self->init.err != 0) {
+            self->init.err_msg = MP_ERROR_TEXT("%d(esp_lcd_rgb_panel_register_event_callbacks)");
             return false;
         }
 
-        self->init_err = esp_lcd_panel_reset(self->panel_handle);
-        if (self->init_err != 0) {
-            self->init_err_msg = MP_ERROR_TEXT("%d(esp_lcd_panel_reset)");
+        self->init.err = esp_lcd_panel_reset(self->panel_handle);
+        if (self->init.err != 0) {
+            self->init.err_msg = MP_ERROR_TEXT("%d(esp_lcd_panel_reset)");
             return false;
         }
 
-        self->init_err = esp_lcd_panel_init(self->panel_handle);
-        if (self->init_err != 0) {
-            self->init_err_msg = MP_ERROR_TEXT("%d(esp_lcd_panel_init)");
+        self->init.err = esp_lcd_panel_init(self->panel_handle);
+        if (self->init.err != 0) {
+            self->init.err_msg = MP_ERROR_TEXT("%d(esp_lcd_panel_init)");
             return false;
         }
 
         rgb_panel_t *rgb_panel = __containerof((esp_lcd_panel_t *)self->panel_handle, rgb_panel_t, base);
 
-        self->active_fb = rgb_panel->fbs[0];
-        self->idle_fb = rgb_panel->fbs[1];
+        self->bufs.active = rgb_panel->fbs[0];
+        self->bufs.idle = rgb_panel->fbs[1];
 
         return true;
     }
 
     mp_obj_t mp_lcd_rgb_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
-        enum {
-            ARG_hsync,
-            ARG_vsync,
-            ARG_de,
-            ARG_pclk,
-            ARG_data0,
-            ARG_data1,
-            ARG_data2,
-            ARG_data3,
-            ARG_data4,
-            ARG_data5,
-            ARG_data6,
-            ARG_data7,
-            ARG_data8,
-            ARG_data9,
-            ARG_data10,
-            ARG_data11,
-            ARG_data12,
-            ARG_data13,
-            ARG_data14,
-            ARG_data15,
-            ARG_freq,
-            ARG_hsync_front_porch,
-            ARG_hsync_back_porch,
-            ARG_hsync_pulse_width,
-            ARG_hsync_idle_low,
-            ARG_vsync_front_porch,
-            ARG_vsync_back_porch,
-            ARG_vsync_pulse_width,
-            ARG_vsync_idle_low,
-            ARG_de_idle_high,
-            ARG_pclk_idle_high,
-            ARG_pclk_active_low,
-            ARG_refresh_on_demand,
-            ARG_rgb565_dither
-        };
+        enum { ARG_hsync, ARG_vsync, ARG_de, ARG_pclk, ARG_data_pins, ARG_freq, ARG_hsync_front_porch, ARG_hsync_back_porch,
+               ARG_hsync_pulse_width, ARG_hsync_idle_low, ARG_vsync_front_porch, ARG_vsync_back_porch, ARG_vsync_pulse_width,
+               ARG_vsync_idle_low, ARG_de_idle_high, ARG_pclk_idle_high, ARG_pclk_active_low, ARG_refresh_on_demand };
 
         const mp_arg_t allowed_args[] = {
             { MP_QSTR_hsync,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
             { MP_QSTR_vsync,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
             { MP_QSTR_de,                 MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
             { MP_QSTR_pclk,               MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
-            { MP_QSTR_data0,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
-            { MP_QSTR_data1,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
-            { MP_QSTR_data2,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
-            { MP_QSTR_data3,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
-            { MP_QSTR_data4,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
-            { MP_QSTR_data5,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
-            { MP_QSTR_data6,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
-            { MP_QSTR_data7,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
-            { MP_QSTR_data8,              MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
-            { MP_QSTR_data9,              MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
-            { MP_QSTR_data10,             MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
-            { MP_QSTR_data11,             MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
-            { MP_QSTR_data12,             MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
-            { MP_QSTR_data13,             MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
-            { MP_QSTR_data14,             MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
-            { MP_QSTR_data15,             MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = -1      } },
+            { MP_QSTR_data_pins,          MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED     },
             { MP_QSTR_freq,               MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 8000000 } },
             { MP_QSTR_hsync_front_porch,  MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 0       } },
             { MP_QSTR_hsync_back_porch,   MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 0       } },
@@ -222,8 +170,7 @@
             { MP_QSTR_de_idle_high,       MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
             { MP_QSTR_pclk_idle_high,     MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
             { MP_QSTR_pclk_active_low,    MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
-            { MP_QSTR_refresh_on_demand,  MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
-            { MP_QSTR_rgb565_dither,      MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
+            { MP_QSTR_refresh_on_demand,  MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } }
         };
 
         mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
@@ -234,9 +181,6 @@
         self->base.type = &mp_lcd_rgb_bus_type;
 
         self->callback = mp_const_none;
-
-        self->rgb565_dither = (uint8_t)args[ARG_rgb565_dither].u_bool;
-
         self->bus_config.pclk_hz = (uint32_t)args[ARG_freq].u_int;
         self->bus_config.hsync_pulse_width = (uint32_t)args[ARG_hsync_pulse_width].u_int;
         self->bus_config.hsync_back_porch = (uint32_t)args[ARG_hsync_back_porch].u_int;
@@ -256,37 +200,32 @@
         self->panel_io_config.vsync_gpio_num = (int)args[ARG_vsync].u_int;
         self->panel_io_config.de_gpio_num = (int)args[ARG_de].u_int;
         self->panel_io_config.pclk_gpio_num = (int)args[ARG_pclk].u_int;
-        self->panel_io_config.data_gpio_nums[0] = (int)args[ARG_data0].u_int;
-        self->panel_io_config.data_gpio_nums[1] = (int)args[ARG_data1].u_int;
-        self->panel_io_config.data_gpio_nums[2] = (int)args[ARG_data2].u_int;
-        self->panel_io_config.data_gpio_nums[3] = (int)args[ARG_data3].u_int;
-        self->panel_io_config.data_gpio_nums[4] = (int)args[ARG_data4].u_int;
-        self->panel_io_config.data_gpio_nums[5] = (int)args[ARG_data5].u_int;
-        self->panel_io_config.data_gpio_nums[6] = (int)args[ARG_data6].u_int;
-        self->panel_io_config.data_gpio_nums[7] = (int)args[ARG_data7].u_int;
-        self->panel_io_config.data_gpio_nums[8] = (int)args[ARG_data8].u_int;
-        self->panel_io_config.data_gpio_nums[9] = (int)args[ARG_data9].u_int;
-        self->panel_io_config.data_gpio_nums[10] = (int)args[ARG_data10].u_int;
-        self->panel_io_config.data_gpio_nums[11] = (int)args[ARG_data11].u_int;
-        self->panel_io_config.data_gpio_nums[12] = (int)args[ARG_data12].u_int;
-        self->panel_io_config.data_gpio_nums[13] = (int)args[ARG_data13].u_int;
-        self->panel_io_config.data_gpio_nums[14] = (int)args[ARG_data14].u_int;
-        self->panel_io_config.data_gpio_nums[15] = (int)args[ARG_data15].u_int;
+
+
+        mp_obj_tuple_t *tuple = MP_OBJ_TO_PTR(args[ARG_data_pins].u_obj);
+        size_t i = 0;
+
+        if (tuple->len != 8 && tuple->len != 16) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("8 or 16 data pins are required"));
+        }
+
+        for (; i < tuple->len; i++) {
+            self->panel_io_config.data_gpio_nums[i] = (int)mp_obj_get_int(tuple->items[i])
+        }
+
+        for (i++; i < SOC_LCD_I80_BUS_WIDTH; i++) {
+            self->panel_io_config.data_gpio_nums[i] = -1;
+        }
+
+        self->panel_io_config.data_width = tuple->len;
+        self->num_lanes = (uint8_t)tuple->len;
+
         self->panel_io_config.disp_gpio_num = -1;   // -1 means no GPIO is assigned to this function
         self->panel_io_config.sram_trans_align = 8;
         self->panel_io_config.psram_trans_align = 64;
         self->panel_io_config.flags.refresh_on_demand = (uint32_t)args[ARG_refresh_on_demand].u_bool;
         self->panel_io_config.flags.fb_in_psram = 0;
         self->panel_io_config.flags.double_fb = 0;
-
-        int i = 0;
-        for (; i < 16; i++) {
-            if (self->panel_io_config.data_gpio_nums[i] == -1) {
-                break;
-            }
-        }
-
-        self->panel_io_config.data_width = (size_t) i;
 
         LCD_DEBUG_PRINT("pclk_hz=%lu\n", self->bus_config.pclk_hz)
         LCD_DEBUG_PRINT("hsync_pulse_width=%lu\n", self->bus_config.hsync_pulse_width)
@@ -328,32 +267,24 @@
         LCD_DEBUG_PRINT("double_fb=%d\n", self->panel_io_config.flags.double_fb)
         LCD_DEBUG_PRINT("data_width=%d\n", self->panel_io_config.data_width)
 
-        self->panel_io_handle.get_lane_count = &rgb_get_lane_count;
-        self->panel_io_handle.del = &rgb_del;
-        self->panel_io_handle.rx_param = &rgb_rx_param;
-        self->panel_io_handle.tx_param = &rgb_tx_param;
-        self->panel_io_handle.tx_color = &rgb_tx_color;
-        self->panel_io_handle.init = &rgb_init;
-        self->flush_func = rgb_flush_func;
-        self->init_func = rgb_init_func;
+        self->internal_cb_funcs.deinit = &rgb_del;
+        self->internal_cb_funcs.init = &rgb_init;
 
+        self->tx_data.flush_func = rgb_flush_func;
+        self->init.init_func = rgb_init_func;
+
+        self->tx_cmds.send_func = &rgb_send_func;
 
         return MP_OBJ_FROM_PTR(self);
     }
 
-    mp_lcd_err_t rgb_del(mp_obj_t obj)
+    mp_lcd_err_t rgb_del(mp_lcd_bus_obj_t *self_in)
     {
         LCD_DEBUG_PRINT("rgb_del(self)\n")
 
-        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)self_in;
 
         if (self->panel_handle != NULL) {
-            rgb_bus_lock_acquire(&self->tx_color_lock, -1);
-            self->partial_buf = NULL;
-            rgb_bus_event_set(&self->copy_task_exit);
-            rgb_bus_lock_release(&self->copy_lock);
-            rgb_bus_lock_release(&self->tx_color_lock);
-
             mp_lcd_err_t ret = esp_lcd_panel_del(self->panel_handle);
 
             if (ret != 0) {
@@ -361,85 +292,26 @@
             }
             self->panel_handle = NULL;
 
-            rgb_bus_lock_delete(&self->copy_lock);
-            rgb_bus_lock_delete(&self->tx_color_lock);
-
-            rgb_bus_event_clear(&self->swap_bufs);
-            rgb_bus_event_delete(&self->swap_bufs);
-            rgb_bus_event_delete(&self->copy_task_exit);
-
-            if (self->view1 != NULL) {
-                heap_caps_free(self->view1->items);
-                self->view1->items = NULL;
-                self->view1->len = 0;
-                self->view1 = NULL;
-                LCD_DEBUG_PRINT("rgb_free_framebuffer(self, buf=1)\n")
-            }
-
-            if (self->view2 != NULL) {
-                heap_caps_free(self->view2->items);
-                self->view2->items = NULL;
-                self->view2->len = 0;
-                self->view2 = NULL;
-                LCD_DEBUG_PRINT("rgb_free_framebuffer(self, buf=1)\n")
-            }
-
-            uint8_t i = 0;
-
-            for (;i<rgb_bus_count;i++) {
-                if (rgb_bus_objs[i] == self) {
-                    rgb_bus_objs[i] = NULL;
-                    break;
-                }
-            }
-
-            for (uint8_t j=i + 1;j<rgb_bus_count;j++) {
-                rgb_bus_objs[j - i + 1] = rgb_bus_objs[j];
-            }
-
-            rgb_bus_count--;
-            rgb_bus_objs = m_realloc(rgb_bus_objs, rgb_bus_count * sizeof(mp_lcd_rgb_bus_obj_t *));
             return ret;
         } else {
             return LCD_FAIL;
         }
     }
 
-    mp_lcd_err_t rgb_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
-    {
-        LCD_UNUSED(obj);
-        LCD_UNUSED(param);
-        LCD_UNUSED(lcd_cmd);
-        LCD_UNUSED(param_size);
 
-        LCD_DEBUG_PRINT("rgb_rx_param(self, lcd_cmd=%d, param, param_size=%d)\n", lcd_cmd, param_size)
-        return LCD_OK;
-    }
-
-    mp_lcd_err_t rgb_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
-    {
-        LCD_UNUSED(obj);
-        LCD_UNUSED(param);
-        LCD_UNUSED(lcd_cmd);
-        LCD_UNUSED(param_size);
-        LCD_DEBUG_PRINT("rgb_tx_param(self, lcd_cmd=%d, param, param_size=%d)\n", lcd_cmd, param_size)
-
-        return LCD_OK;
-    }
-
-
-    mp_lcd_err_t rgb_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool sw_rotation, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
+    mp_lcd_err_t rgb_init(mp_lcd_bus_obj_t *self_in, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size,
+                          uint8_t cmd_bits, uint8_t param_bits)
     {
         LCD_UNUSED(cmd_bits);
         LCD_UNUSED(param_bits);
 
-        LCD_DEBUG_PRINT("rgb_init(self, width=%i, height=%i, bpp=%d, buffer_size=%lu, rgb565_byte_swap=%d)\n", width, height, bpp, buffer_size, rgb565_byte_swap)
+        LCD_DEBUG_PRINT("rgb_init(self, width=%i, height=%i, bpp=%d, buffer_size=%lu)\n", width, height, bpp, buffer_size)
 
-        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
+        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)self_in;
 
-        self->r_data.sw_rotation = (uint8_t)sw_rotation;
+        LCD_DEBUG_PRINT("rgb565_byte_swap=%d\n", self->r_data.swap)
 
-        if (bpp == 16 && rgb565_byte_swap) {
+        if (self->r_data.swap) {
             /*
             We change the pins aound when the bus width is 16 and wanting to
             swap bytes. This does the same thing as moving the bytes around in
@@ -461,88 +333,32 @@
             } else {
                 self->r_data.swap = 1;
             }
-        } else {
-            self->r_data.swap = 0;
         }
 
         self->panel_io_config.timings.h_res = (uint32_t)width;
         self->panel_io_config.timings.v_res = (uint32_t)height;
         self->panel_io_config.bits_per_pixel = (size_t)bpp;
 
-        self->r_data.bytes_per_pixel = bpp / 8;
         self->r_data.dst_height = (uint16_t)height;
         self->r_data.dst_width = (uint16_t)width;
 
         self->panel_io_config.flags.fb_in_psram = 1;
         self->panel_io_config.flags.double_fb = 1;
 
-        lcd_bus_lock_init(&self->task.lock);
-        lcd_bus_lock_init(&self->tx_color_lock);
-        lcd_bus_event_init(self->copy_task_exit);
-        lcd_bus_event_init(self->swap_bufs);
-        lcd_bus_event_set(self->swap_bufs);
-        lcd_bus_lock_init(&self->init_lock);
-        lcd_bus_lock_acquire(self->init_lock);
-
         LCD_DEBUG_PRINT("h_res=%lu\n", self->panel_io_config.timings.h_res)
         LCD_DEBUG_PRINT("v_res=%lu\n", self->panel_io_config.timings.v_res)
         LCD_DEBUG_PRINT("bits_per_pixel=%d\n", self->panel_io_config.bits_per_pixel)
-        LCD_DEBUG_PRINT("rgb565_byte_swap=%d\n", self->r_data.rgb565_byte_swap)
+
 
         xTaskCreatePinnedToCore(
-                lcd_bus_task, "rgb_task", DEFAULT_STACK_SIZE / sizeof(StackType_t),
-                self, ESP_TASK_PRIO_MAX - 1, &self->copy_task_handle, 0);
+                lcd_bus_task, "rgb_task", LCD_DEFAULT_STACK_SIZE / sizeof(StackType_t),
+                self, ESP_TASK_PRIO_MAX - 1, &self->task.handle, 0);
 
-        lcd_bus_lock_acquire(self->init_lock);
-        lcd_bus_lock_release(self->init_lock);
-        lcd_bus_lock_delete(self->init_lock);
+        lcd_bus_lock_acquire(self->init.lock);
+        lcd_bus_lock_release(self->init.lock);
+        lcd_bus_lock_delete(self->init.lock);
 
-        if (self->init_err != LCD_OK) {
-            mp_raise_msg_varg(&mp_type_ValueError, self->init_err_msg, self->init_err);
-            return self->init_err;
-        } else {
-            // add the new bus ONLY after successfull initilization of the bus
-            rgb_bus_count++;
-            rgb_bus_objs = m_realloc(rgb_bus_objs, rgb_bus_count * sizeof(mp_lcd_rgb_bus_obj_t *));
-            rgb_bus_objs[rgb_bus_count - 1] = self;
-
-            return LCD_OK;
-        }
-    }
-
-
-    mp_lcd_err_t rgb_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
-    {
-        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
-        *lane_count = (uint8_t)self->panel_io_config.data_width;
-
-        LCD_DEBUG_PRINT("rgb_get_lane_count(self)-> %d\n", (uint8_t)self->panel_io_config.data_width)
-
-        return LCD_OK;
-    }
-
-
-    mp_lcd_err_t rgb_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update, bool dither)
-    {
-        LCD_DEBUG_PRINT("rgb_tx_color(self, lcd_cmd=%d, color, color_size=%d, x_start=%d, y_start=%d, x_end=%d, y_end=%d)\n", lcd_cmd, color_size, x_start, y_start, x_end, y_end)
-        LCD_UNUSED(color_size);
-
-        mp_lcd_rgb_bus_obj_t *self = (mp_lcd_rgb_bus_obj_t *)obj;
-        
-        lcd_bus_lock_acquire(self->tx_color_lock);
-
-        self->last_update = (uint8_t)last_update;
-        self->partial_buf = (uint8_t *)color;
-        self->r_data.x_start = x_start;
-        self->r_data.y_start = y_start;
-        self->r_data.x_end = x_end;
-        self->r_data.y_end = y_end;
-        self->r_data.rotation = rotation;
-        self->r_data.dither = (uint8_t)dither;
-
-        lcd_bus_lock_release(self->copy_lock);
-
-        return LCD_OK;
+        return self->init.err;
     }
 
     MP_DEFINE_CONST_OBJ_TYPE(

@@ -84,7 +84,8 @@ class DisplayDriver:
         rgb565_byte_swap=False,
         _cmd_bits=8,
         _param_bits=8,
-        _init_bus=True
+        _init_bus=True,
+        _sw_rotate=False
     ):
         if power_on_state not in (STATE_HIGH, STATE_LOW):
             raise RuntimeError(
@@ -130,6 +131,8 @@ class DisplayDriver:
         self._rotation = lv.DISPLAY_ROTATION._0  # NOQA
 
         self._rgb565_byte_swap = rgb565_byte_swap
+        self._dither = False
+        self._sw_rotate = _sw_rotate
         self._cmd_bits = _cmd_bits
         self._param_bits = _param_bits
 
@@ -239,6 +242,7 @@ class DisplayDriver:
             lv.color_format_get_size(self._color_space) * 8,
             buffer_size,
             self._rgb565_byte_swap,
+            self._sw_rotate,
             self._cmd_bits,
             self._param_bits
         )
@@ -284,6 +288,12 @@ class DisplayDriver:
 
         self._displays.append(self)
 
+    def set_dither(self, value):
+        self._dither = bool(value)
+
+    def get_dither(self):
+        return self._dither
+
     def _on_size_change(self, _):
         rotation = self._disp_drv.get_rotation()
         self._width = self._disp_drv.get_horizontal_resolution()
@@ -298,7 +308,7 @@ class DisplayDriver:
             self._param_buf[0] = (self._madctl(
                 self._color_byte_order, self._ORIENTATION_TABLE, ~rotation
             ))
-            self._data_bus.tx_param(_MADCTL, self._param_mv[:1])
+            self._data_bus.tx_param(_MADCTL, self._param_mv[:1], False)
 
     @staticmethod
     def get_displays():
@@ -484,10 +494,7 @@ class DisplayDriver:
         self._initilized = True
 
     def set_params(self, cmd, params=None):
-        self._data_bus.tx_param(cmd, params)
-
-    def get_params(self, cmd, params):
-        self._data_bus.rx_param(cmd, params)
+        self._data_bus.tx_param(cmd, params, False)
 
     def get_power(self):
         if self._power_pin is None:
@@ -560,7 +567,7 @@ class DisplayDriver:
         param_buf[2] = (x2 >> 8) & 0xFF
         param_buf[3] = x2 & 0xFF
 
-        self._data_bus.tx_param(_CASET, self._param_mv)
+        self._data_bus.tx_param(_CASET, self._param_mv, False)
 
         # Page addresses
         param_buf[0] = (y1 >> 8) & 0xFF
@@ -568,7 +575,7 @@ class DisplayDriver:
         param_buf[2] = (y2 >> 8) & 0xFF
         param_buf[3] = y2 & 0xFF
 
-        self._data_bus.tx_param(_RASET, self._param_mv)
+        self._data_bus.tx_param(_RASET, self._param_mv, True)
 
         return _RAMWR
 
@@ -592,7 +599,7 @@ class DisplayDriver:
         # memoryview object that can be passed to the bus drivers
         data_view = color_p.__dereference__(size)
         self._data_bus.tx_color(cmd, data_view, x1, y1, x2, y2,
-                                self._rotation, self._disp_drv.flush_is_last())
+                                self._rotation, self._dither, self._disp_drv.flush_is_last())
 
     # we always register this callback no matter what. This is what tells LVGL
     # that the buffer is able to be written to. If this callback doesn't get

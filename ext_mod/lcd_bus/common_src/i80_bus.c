@@ -19,7 +19,7 @@
 /* end includes */
 
 
-#ifdef MP_PORT_UNIX
+// #ifdef MP_PORT_UNIX
     static mp_obj_t mp_lcd_i80_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
         LCD_UNUSED(type);
@@ -30,8 +30,10 @@
         mp_raise_msg(&mp_type_NotImplementedError, MP_ERROR_TEXT("I80 display bus is not supported"));
         return mp_const_none;
     }
+
+/*
 #else
-    /* macros */
+    // macros
     #define CS_LOW()  { if (self->panel_io_config.cs_gpio_num) mp_hal_pin_write(self->panel_io_config.cs_gpio_num, self->panel_io_config.flags.cs_active_high);  }
     #define CS_HIGH() { if (self->panel_io_config.cs_gpio_num) mp_hal_pin_write(self->panel_io_config.cs_gpio_num, !self->panel_io_config.flags.cs_active_high); }
 
@@ -72,10 +74,10 @@
         mp_hal_pin_write(self->bus_config.data_gpio_nums[1], (buf[0] >> 1) & 1);   \
         mp_hal_pin_write(self->bus_config.data_gpio_nums[0], buf[0] & 1);          \
     }
-    /* end macros */
+    // end macros
 
 
-    /* forward declarations */
+    // forward declarations
     mp_lcd_err_t i80_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
     mp_lcd_err_t i80_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
     mp_lcd_err_t i80_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update);
@@ -89,17 +91,16 @@
     void write_color_swap_bytes16(mp_lcd_i80_bus_obj_t *self, void *color, size_t color_size);
     void write_rgb565_swap8(mp_lcd_i80_bus_obj_t *self, void *color, size_t color_size);
     void write_rgb565_swap16(mp_lcd_i80_bus_obj_t *self, void *color, size_t color_size);
-    /* end forward declarations */
+    // end forward declarations
 
 
-    /* function definitions */
-    /*
-     * Because the implimentation is bitbang it is not going to be anywhere near
-     * as fast as a hardware implimentation. There is also no DMA support so
-     * using double buffering is going to be a waste. There is no data rate that
-     * can be set since the code is going to run as fast as possible which is not
-     * going to come close to what the maximum bitrate the display is able to use.
-     */
+    // function definitions
+    //
+    // Because the implimentation is bitbang it is not going to be anywhere near
+    // as fast as a hardware implimentation. There is also no DMA support so
+    // using double buffering is going to be a waste. There is no data rate that
+    // can be set since the code is going to run as fast as possible which is not
+    // going to come close to what the maximum bitrate the display is able to use.
     static mp_obj_t mp_lcd_i80_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
         enum {
@@ -135,21 +136,21 @@
             ARG_pclk_active_low,
             ARG_pclk_idle_low,
         };
-        /*
-         * To keep the api consistant for portability reasons not all parameters
-         * are used. The ones that are used are:
-         * dc
-         * wr
-         * data0 - data15
-         * cs
-         * dc_cmd_high
-         * dc_data_high
-         * cmd_bits
-         * param_bits
-         * cs_active_high
-         * reverse_color_bits
-         * swap_color_bytes
-         */
+
+         // To keep the api consistant for portability reasons not all parameters
+         // are used. The ones that are used are:
+         // dc
+         // wr
+         // data0 - data15
+         // cs
+         // dc_cmd_high
+         // dc_data_high
+         // cmd_bits
+         // param_bits
+         // cs_active_high
+         // reverse_color_bits
+         // swap_color_bytes
+
         const mp_arg_t make_new_args[] = {
             { MP_QSTR_dc,                 MP_ARG_OBJ  | MP_ARG_REQUIRED },
             { MP_QSTR_wr,                 MP_ARG_OBJ  | MP_ARG_REQUIRED },
@@ -216,7 +217,7 @@
             #if defined(MP_HAL_PIN_SPEED_VERY_HIGH) && !defined(MICROPY_INCLUDED_MIMXRT_MPHALPORT_H)
                 mp_hal_pin_config_speed(self->bus_config.dc_gpio_num, MP_HAL_PIN_SPEED_VERY_HIGH);
                 mp_hal_pin_config_speed(self->bus_config.wr_gpio_num, MP_HAL_PIN_SPEED_VERY_HIGH);
-            #endif /* defined(MP_HAL_PIN_SPEED_VERY_HIGH) && !defined(MICROPY_INCLUDED_MIMXRT_MPHALPORT_H) */
+            #endif // defined(MP_HAL_PIN_SPEED_VERY_HIGH) && !defined(MICROPY_INCLUDED_MIMXRT_MPHALPORT_H)
 
             mp_hal_pin_write(self->bus_config.dc_gpio_num, self->panel_io_config.dc_levels.dc_data_level);
             mp_hal_pin_write(self->bus_config.wr_gpio_num, 0);
@@ -251,7 +252,7 @@
 
                 #if defined(MP_HAL_PIN_SPEED_VERY_HIGH) && !defined(MICROPY_INCLUDED_MIMXRT_MPHALPORT_H)
                     mp_hal_pin_config_speed(pin, MP_HAL_PIN_SPEED_VERY_HIGH);
-                #endif /* defined(MP_HAL_PIN_SPEED_VERY_HIGH) && !defined(MICROPY_INCLUDED_MIMXRT_MPHALPORT_H) */
+                #endif // defined(MP_HAL_PIN_SPEED_VERY_HIGH) && !defined(MICROPY_INCLUDED_MIMXRT_MPHALPORT_H)
                 mp_hal_pin_write(pin, 0);
             }
 
@@ -261,7 +262,7 @@
 
                 #if defined(MP_HAL_PIN_SPEED_VERY_HIGH) && !defined(MICROPY_INCLUDED_MIMXRT_MPHALPORT_H)
                     mp_hal_pin_config_speed(self->panel_io_config.cs_gpio_num, MP_HAL_PIN_SPEED_VERY_HIGH);
-                #endif /* defined(MP_HAL_PIN_SPEED_VERY_HIGH) && !defined(MICROPY_INCLUDED_MIMXRT_MPHALPORT_H) */
+                #endif // defined(MP_HAL_PIN_SPEED_VERY_HIGH) && !defined(MICROPY_INCLUDED_MIMXRT_MPHALPORT_H)
 
                 mp_hal_pin_write(self->panel_io_config.cs_gpio_num, !self->panel_io_config.flags.cs_active_high);
             }
@@ -272,7 +273,7 @@
             self->panel_io_handle.del = i80_del;
             self->panel_io_handle.init = i80_init;
             self->panel_io_handle.get_lane_count = i80_get_lane_count;
-        #endif /* defined(mp_hal_pin_output) || defined(IDF_VER) */
+        #endif // defined(mp_hal_pin_output) || defined(IDF_VER)
 
         return MP_OBJ_FROM_PTR(self);
     }
@@ -426,16 +427,16 @@
             self->write_color = write_color16;
         }
 
-        /*
-         * This might seem odd, it has a purpose. The byte swapping
-         * gets done on a global level, meaning it does it for all busses.
-         * because this is a bitbang implimentation and the data needs to be
-         * iterated over I am doing the byte byte swap at the same time as the
-         * transfer. The code above sets the needed function to handle the byte
-         * swapping if it has been set so we do not want to trigger the global
-         * byte awapping that is done. So since the correct function is now set we
-         * can set this flag to false so the global operation will nt occur.
-         */
+
+         // This might seem odd, it has a purpose. The byte swapping
+         // gets done on a global level, meaning it does it for all busses.
+         // because this is a bitbang implimentation and the data needs to be
+         // iterated over I am doing the byte byte swap at the same time as the
+         // transfer. The code above sets the needed function to handle the byte
+         // swapping if it has been set so we do not want to trigger the global
+         // byte awapping that is done. So since the correct function is now set we
+         // can set this flag to false so the global operation will nt occur.
+
         self->rgb565_byte_swap = false;
 
         return LCD_OK;
@@ -450,7 +451,7 @@
     }
 
 
-    /* transfer functions */
+    // transfer functions
     void write_color8(mp_lcd_i80_bus_obj_t *self, void *color, size_t color_size)
     {
         uint8_t *buf = (uint8_t *)color;
@@ -586,9 +587,10 @@
             buf++;
         }
     }
-    /* end transfer functions */
-    /* end function definitions */
+    // end transfer functions
+    // end function definitions
 #endif
+*/
 
 /* create micropython class */
 MP_DEFINE_CONST_OBJ_TYPE(

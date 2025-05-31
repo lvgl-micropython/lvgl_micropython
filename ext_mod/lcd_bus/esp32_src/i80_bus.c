@@ -6,6 +6,7 @@
 #include "lcd_bus_task.h"
 #include "modlcd_bus.h"
 #include "i80_bus.h"
+#include "bus_trans_done.h"
 
 // micropython includes
 #include "mphalport.h"
@@ -23,86 +24,79 @@
     #include "esp_lcd_panel_io.h"
     #include "esp_heap_caps.h"
     #include "hal/lcd_types.h"
+    #include "esp_task.h"
+
+    #ifndef SOC_LCD_I80_BUS_WIDTH
+        #define SOC_LCD_I80_BUS_WIDTH (16)
+    #endif
 
 
-    mp_lcd_err_t i80_del(mp_obj_t obj);
-    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool sw_rotation, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
-    mp_lcd_err_t i80_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
+    mp_lcd_err_t i80_del(mp_lcd_bus_obj_t *self_in);
+    mp_lcd_err_t i80_init(mp_lcd_bus_obj_t *self_in, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size,
+                          uint8_t cmd_bits, uint8_t param_bits);
 
-
-    static uint8_t i80_bus_count = 0;
-    static mp_lcd_i80_bus_obj_t **i80_bus_objs;
-
-
-    void mp_lcd_i80_bus_deinit_all(void)
+    static void i80_send_func(mp_lcd_bus_obj_t *self_in, int cmd, uint8_t *params, size_t params_len)
     {
-        // we need to copy the existing array to a new one so the order doesn't
-        // get all mucked up when objects get removed.
-        mp_lcd_i80_bus_obj_t *objs[i80_bus_count];
+        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)self_in;
+        esp_lcd_panel_io_tx_param(self->panel_io_handle, cmd, params, params_len);
+    }
 
-        for (uint8_t i=0;i<i80_bus_count;i++) {
-            objs[i] = i80_bus_objs[i];
+    static void i80_flush_func(mp_lcd_bus_obj_t *self_in, rotation_data_t *r_data, rotation_data_t *original_r_data,
+                               uint8_t *idle_fb, uint8_t last_update)
+    {
+
+        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)self_in;
+        if (self->bufs.partial != NULL) {
+            if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
+                cb_isr(self->callback);
+            }
+            self->trans_done = 1;
         }
 
-        for (uint8_t i=0;i<i80_bus_count;i++) {
-            i80_del(MP_OBJ_FROM_PTR(objs[i]));
+        if (last_update) {
+            esp_err_t ret = esp_lcd_panel_io_tx_color(self->panel_io_handle, r_data->cmd, idle_fb, r_data->color_size);
+
+            if (ret != 0) {
+                mp_printf(&mp_plat_print, "esp_lcd_panel_io_tx_color error (%d)\n", ret);
+            } else if (self->bufs.partial != NULL) {
+                uint8_t *temp_buf = self->bufs.active;
+                self->bufs.active = idle_fb;
+                self->bufs.idle = temp_buf;
+            }
         }
+    }
+
+
+    static bool i80_init_func(mp_lcd_bus_obj_t *self_in)
+    {
+        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *) self_in;
+
+        self->init.err = esp_lcd_new_i80_bus(&self->bus_config, &self->bus_handle);
+
+        if (self->init.err != 0) {
+            self->init.err_msg = MP_ERROR_TEXT("%d(esp_lcd_new_i80_bus)");
+            return false;
+        }
+
+        self->init.err = esp_lcd_new_panel_io_i80(self->bus_handle, &self->panel_io_config, &self->panel_io_handle);
+        if (self->init.err != 0) {
+            self->init.err_msg = MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_i80)");
+            return false;
+        }
+
+        return true;
     }
 
 
     static mp_obj_t mp_lcd_i80_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
-    
-        enum {
-            ARG_dc,
-            ARG_wr,
-            ARG_data0,
-            ARG_data1,
-            ARG_data2,
-            ARG_data3,
-            ARG_data4,
-            ARG_data5,
-            ARG_data6,
-            ARG_data7,
-            ARG_data8,
-            ARG_data9,
-            ARG_data10,
-            ARG_data11,
-            ARG_data12,
-            ARG_data13,
-            ARG_data14,
-            ARG_data15,
-            ARG_cs,
-            ARG_freq,
-            ARG_dc_idle_high,
-            ARG_dc_cmd_high,
-            ARG_dc_dummy_high,
-            ARG_dc_data_high,
-            ARG_cs_active_high,
-            ARG_reverse_color_bits,
-            ARG_pclk_active_low,
-            ARG_pclk_idle_low,
-        };
+        enum { ARG_dc, ARG_wr, ARG_data_pins, ARG_cs, ARG_freq, ARG_dc_idle_high, ARG_dc_cmd_high, ARG_dc_dummy_high,
+               ARG_dc_data_high, ARG_cs_active_high, ARG_reverse_color_bits, ARG_pclk_active_low, ARG_pclk_idle_low };
 
         const mp_arg_t make_new_args[] = {
             { MP_QSTR_dc,                 MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
             { MP_QSTR_wr,                 MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
-            { MP_QSTR_data0,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
-            { MP_QSTR_data1,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
-            { MP_QSTR_data2,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
-            { MP_QSTR_data3,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
-            { MP_QSTR_data4,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
-            { MP_QSTR_data5,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
-            { MP_QSTR_data6,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
-            { MP_QSTR_data7,              MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
-            { MP_QSTR_data8,              MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = -1       } },
-            { MP_QSTR_data9,              MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = -1       } },
-            { MP_QSTR_data10,             MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = -1       } },
-            { MP_QSTR_data11,             MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = -1       } },
-            { MP_QSTR_data12,             MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = -1       } },
-            { MP_QSTR_data13,             MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = -1       } },
-            { MP_QSTR_data14,             MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = -1       } },
-            { MP_QSTR_data15,             MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = -1       } },
+            { MP_QSTR_data_pins,          MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
             { MP_QSTR_cs,                 MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = -1       } },
             { MP_QSTR_freq,               MP_ARG_INT  | MP_ARG_KW_ONLY,  { .u_int = 10000000 } },
             { MP_QSTR_dc_idle_high,       MP_ARG_BOOL | MP_ARG_KW_ONLY,  { .u_bool = false  } },
@@ -116,49 +110,36 @@
         };
     
         mp_arg_val_t args[MP_ARRAY_SIZE(make_new_args)];
-        mp_arg_parse_all_kw_array(
-            n_args,
-            n_kw,
-            all_args,
-            MP_ARRAY_SIZE(make_new_args),
-            make_new_args,
-            args
-        );
+        mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(make_new_args), make_new_args, args);
     
         // create new object
         mp_lcd_i80_bus_obj_t *self = m_new_obj(mp_lcd_i80_bus_obj_t);
         self->base.type = &mp_lcd_i80_bus_type;
     
         self->callback = mp_const_none;
+        self->panel_io_handle = NULL;
 
         self->bus_config.dc_gpio_num = (int)args[ARG_dc].u_int;
         self->bus_config.wr_gpio_num = (int)args[ARG_wr].u_int;
         self->bus_config.clk_src = LCD_CLK_SRC_PLL160M;
-        self->bus_config.data_gpio_nums[0] = args[ARG_data0].u_int;
-        self->bus_config.data_gpio_nums[1] = args[ARG_data1].u_int;
-        self->bus_config.data_gpio_nums[2] = args[ARG_data2].u_int;
-        self->bus_config.data_gpio_nums[3] = args[ARG_data3].u_int;
-        self->bus_config.data_gpio_nums[4] = args[ARG_data4].u_int;
-        self->bus_config.data_gpio_nums[5] = args[ARG_data5].u_int;
-        self->bus_config.data_gpio_nums[6] = args[ARG_data6].u_int;
-        self->bus_config.data_gpio_nums[7] = args[ARG_data7].u_int;
-        self->bus_config.data_gpio_nums[8] = args[ARG_data8].u_int;
-        self->bus_config.data_gpio_nums[9] = args[ARG_data9].u_int;
-        self->bus_config.data_gpio_nums[10] = args[ARG_data10].u_int;
-        self->bus_config.data_gpio_nums[11] = args[ARG_data11].u_int;
-        self->bus_config.data_gpio_nums[12] = args[ARG_data12].u_int;
-        self->bus_config.data_gpio_nums[13] = args[ARG_data13].u_int;
-        self->bus_config.data_gpio_nums[14] = args[ARG_data14].u_int;
-        self->bus_config.data_gpio_nums[15] = args[ARG_data15].u_int;
 
-        uint8_t i = 0;
-        for (; i < SOC_LCD_I80_BUS_WIDTH; i++) {
-            if (self->bus_config.data_gpio_nums[i] == -1) {
-                break;
-            }
+        mp_obj_tuple_t *tuple = MP_OBJ_TO_PTR(args[ARG_data_pins].u_obj);
+        size_t i = 0;
+
+        if (tuple->len != 8 && tuple->len != 16) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("8 or 16 data pins are required"));
         }
 
-        self->bus_config.bus_width = (size_t) i;
+        for (; i < tuple->len; i++) {
+            self->bus_config.data_gpio_nums[i] = (int)mp_obj_get_int(tuple->items[i])
+        }
+
+        for (i++; i < SOC_LCD_I80_BUS_WIDTH; i++) {
+            self->bus_config.data_gpio_nums[i] = -1;
+        }
+
+        self->bus_config.bus_width = tuple->len;
+        self->num_lanes = (uint8_t)tuple->len;
 
         self->panel_io_config.cs_gpio_num = (int)args[ARG_cs].u_int;
         self->panel_io_config.pclk_hz = (uint32_t)args[ARG_freq].u_int;
@@ -206,28 +187,35 @@
         LCD_DEBUG_PRINT("pclk_active_neg=%d\n", self->panel_io_config.flags.pclk_active_neg)
         LCD_DEBUG_PRINT("pclk_idle_low=%d\n", self->panel_io_config.flags.pclk_idle_low)
 
-        self->panel_io_handle.init = &i80_init;
-        self->panel_io_handle.del = &i80_del;
-        self->panel_io_handle.get_lane_count = &i80_get_lane_count;
+        self->internal_cb_funcs.init = &i80_init;
+        self->internal_cb_funcs.deinit = &i80_del;
+
+        self->tx_data.flush_func = &i80_flush_func;
+        self->init.init_func = &i80_init_func;
+
+        self->tx_cmds.send_func = &i80_send_func;
 
         return MP_OBJ_FROM_PTR(self);
     }
-    
 
-    mp_lcd_err_t i80_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
+
+    mp_lcd_err_t i80_init(mp_lcd_bus_obj_t *self_in, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size,
+                          uint8_t cmd_bits, uint8_t param_bits)
     {
-        LCD_DEBUG_PRINT("i80_init(self, width=%i, height=%i, bpp=%i, buffer_size=%lu, rgb565_byte_swap=%i, cmd_bits=%i, param_bits=%i)\n", width, height, bpp, buffer_size, (uint8_t)rgb565_byte_swap, cmd_bits, param_bits)
+        LCD_DEBUG_PRINT("i80_init(self, width=%i, height=%i, bpp=%i, buffer_size=%lu, cmd_bits=%i, param_bits=%i)\n",
+                        width, height, bpp, buffer_size, cmd_bits, param_bits)
 
-        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)obj;
+        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)self_in;
 
-        if (self->panel_io_handle.panel_io != NULL) {
+        if (self->panel_io_handle != NULL) {
             return LCD_FAIL;
         }
 
-        self->rgb565_byte_swap = false;
+        LCD_DEBUG_PRINT("rgb565_byte_swap=%i\n",  (uint8_t)self->r_data.swap)
 
-        if (rgb565_byte_swap && bpp == 16) {
+        if (self->r_data.swap) {
             self->panel_io_config.flags.swap_color_bytes = 1;
+            self->r_data.swap = false;
         }
 
         self->panel_io_config.lcd_cmd_bits = (int)cmd_bits;
@@ -238,35 +226,26 @@
         LCD_DEBUG_PRINT("lcd_param_bits=%d\n", self->panel_io_config.lcd_param_bits)
         LCD_DEBUG_PRINT("max_transfer_bytes=%d\n", self->bus_config.max_transfer_bytes)
 
-        esp_err_t ret = esp_lcd_new_i80_bus(&self->bus_config, &self->bus_handle);
+        xTaskCreatePinnedToCore(
+                lcd_bus_task, "i80_task", LCD_DEFAULT_STACK_SIZE / sizeof(StackType_t),
+                self, ESP_TASK_PRIO_MAX - 1, &self->task.handle, 0);
 
-        if (ret != 0) {
-            mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_i80_bus)"), ret);
-        }
+        lcd_bus_lock_acquire(self->init.lock);
+        lcd_bus_lock_release(self->init.lock);
+        lcd_bus_lock_delete(self->init.lock);
 
-        ret = esp_lcd_new_panel_io_i80(self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io);
-
-        if (ret != 0) {
-            mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_i80)"), ret);
-        }
-
-        // add the new bus ONLY after successfull initilization of the bus
-        i80_bus_count++;
-        i80_bus_objs = m_realloc(i80_bus_objs, i80_bus_count * sizeof(mp_lcd_i80_bus_obj_t *));
-        i80_bus_objs[i80_bus_count - 1] = self;
-
-        return ret;
+        return self->init.err;
     }
 
 
-    mp_lcd_err_t i80_del(mp_obj_t obj)
+    mp_lcd_err_t i80_del(mp_lcd_bus_obj_t *self_in)
     {
         LCD_DEBUG_PRINT("i80_del(self)\n")
 
-        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)obj;
+        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)self_in;
 
-        if (self->panel_io_handle.panel_io != NULL) {
-            mp_lcd_err_t ret = esp_lcd_panel_io_del(self->panel_io_handle.panel_io);
+        if (self->panel_io_handle != NULL) {
+            mp_lcd_err_t ret = esp_lcd_panel_io_del(self->panel_io_handle);
             if (ret != 0) {
                 mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_panel_io_del)"), ret);
                 return ret;
@@ -278,53 +257,14 @@
                 return ret;
             }
 
-            self->panel_io_handle.panel_io = NULL;
+            self->panel_io_handle = NULL;
 
-            if (self->view1 != NULL) {
-                heap_caps_free(self->view1->items);
-                self->view1->items = NULL;
-                self->view1->len = 0;
-                self->view1 = NULL;
-                LCD_DEBUG_PRINT("i80_free_framebuffer(self, buf=1)\n")
-            }
-
-            if (self->view2 != NULL) {
-                heap_caps_free(self->view2->items);
-                self->view2->items = NULL;
-                self->view2->len = 0;
-                self->view2 = NULL;
-                LCD_DEBUG_PRINT("i80_free_framebuffer(self, buf=1)\n")
-            }
-
-            uint8_t i = 0;
-            for (;i<i80_bus_count;i++) {
-                if (i80_bus_objs[i] == self) {
-                    i80_bus_objs[i] = NULL;
-                    break;
-                }
-            }
-
-            for (uint8_t j=i + 1;j<i80_bus_count;j++) {
-                i80_bus_objs[j - i + 1] = i80_bus_objs[j];
-            }
-
-            i80_bus_count--;
-            i80_bus_objs = m_realloc(i80_bus_objs, i80_bus_count * sizeof(mp_lcd_i80_bus_obj_t *));
             return ret;
         } else {
             return LCD_FAIL;
         }
     }
 
-    mp_lcd_err_t i80_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
-    {
-        mp_lcd_i80_bus_obj_t *self = (mp_lcd_i80_bus_obj_t *)obj;
-        *lane_count = (uint8_t)self->bus_config.bus_width;
-
-        LCD_DEBUG_PRINT("i80_get_lane_count(self)-> %d\n", (uint8_t)self->bus_config.bus_width)
-
-        return LCD_OK;
-    }
 
     MP_DEFINE_CONST_OBJ_TYPE(
         mp_lcd_i80_bus_type,

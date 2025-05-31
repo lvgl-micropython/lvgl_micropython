@@ -1,3 +1,8 @@
+#include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
+
+#include "allocate_buffers.h"
 #include "esp_heap_caps.h"
 
 
@@ -29,4 +34,21 @@ void free_buffers(uint8_t *buf1, uint8_t *buf2)
         heap_caps_free(buf2);
         buf2 = NULL;
     }
+}
+
+
+bool allocate_framebuffer(void *buf, size_t size, uint32_t caps)
+{
+    buf = heap_caps_calloc(1, size, caps);
+    if (buf == NULL) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+
+void free_framebuffer(void *buf)
+{
+    if (buf != NULL) heap_caps_free(buf);
 }

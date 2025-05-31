@@ -8,17 +8,23 @@ if(ESP_PLATFORM)
     set(LCD_INCLUDES
         ${CMAKE_CURRENT_LIST_DIR}
         ${CMAKE_CURRENT_LIST_DIR}/esp32_include
+        ${CMAKE_CURRENT_LIST_DIR}/rotation/include
     )
 
     set(LCD_SOURCES
         ${CMAKE_CURRENT_LIST_DIR}/modlcd_bus.c
-        ${CMAKE_CURRENT_LIST_DIR}/lcd_types.c
+        ${CMAKE_CURRENT_LIST_DIR}/esp32_src/dsi_bus.c
+        ${CMAKE_CURRENT_LIST_DIR}/esp32_src/led_bus.c
         ${CMAKE_CURRENT_LIST_DIR}/esp32_src/i2c_bus.c
         ${CMAKE_CURRENT_LIST_DIR}/esp32_src/spi_bus.c
         ${CMAKE_CURRENT_LIST_DIR}/esp32_src/i80_bus.c
         ${CMAKE_CURRENT_LIST_DIR}/esp32_src/rgb_bus.c
-        ${CMAKE_CURRENT_LIST_DIR}/esp32_src/rgb_bus_rotation.c
-        ${CMAKE_CURRENT_LIST_DIR}/esp32_src/rgb565_dither.c
+        ${CMAKE_CURRENT_LIST_DIR}/esp32_src/allocate_buffers.c
+        ${CMAKE_CURRENT_LIST_DIR}/esp32_src/bus_trans_done.c
+        ${CMAKE_CURRENT_LIST_DIR}/esp32_src/lcd_bus_task.c
+
+        ${CMAKE_CURRENT_LIST_DIR}/rotation/src/dither.c
+        ${CMAKE_CURRENT_LIST_DIR}/rotation/src/rotation.c
     )
 
     # gets esp_lcd include paths

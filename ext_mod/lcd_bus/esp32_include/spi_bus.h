@@ -31,6 +31,7 @@
         uint32_t buffer_flags;
 
         uint8_t trans_done: 1;
+        uint8_t num_lanes: 5;
 
         lcd_task_t task;
         lcd_init_t init;
@@ -41,9 +42,11 @@
 
         rotation_data_t r_data;
 
-        lcd_panel_io_t panel_io_handle;
+        internal_cb_funcs_t internal_cb_funcs;
 
         // ********************** bus specific **********************
+
+        esp_lcd_panel_io_handle_t panel_io_handle;
         esp_lcd_panel_io_spi_config_t panel_io_config;
         spi_bus_config_t bus_config;
         esp_lcd_spi_bus_handle_t bus_handle;

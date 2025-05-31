@@ -21,11 +21,8 @@
     uint8_t instance_count = 0;
 
     mp_lcd_err_t sdl_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
-    mp_lcd_err_t sdl_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
-    mp_lcd_err_t sdl_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update);
     mp_lcd_err_t sdl_del(mp_obj_t obj);
-    mp_lcd_err_t sdl_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size,  bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
-    mp_lcd_err_t sdl_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
+    mp_lcd_err_t sdl_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, uint8_t cmd_bits, uint8_t param_bits);
 
     int flush_thread(void *self_in);
     int process_event(mp_lcd_sdl_bus_obj_t *self, SDL_Event *event);
@@ -37,14 +34,7 @@
         const mp_arg_t make_new_args[] = {{ MP_QSTR_flags, MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED, { .u_int = -1 } } };
 
         mp_arg_val_t args[MP_ARRAY_SIZE(make_new_args)];
-        mp_arg_parse_all_kw_array(
-            n_args,
-            n_kw,
-            all_args,
-            MP_ARRAY_SIZE(make_new_args),
-            make_new_args,
-            args
-        );
+        mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(make_new_args), make_new_args, args);
 
         // create new object
         mp_lcd_sdl_bus_obj_t *self = m_new_obj(mp_lcd_sdl_bus_obj_t);
@@ -77,37 +67,35 @@
         return MP_OBJ_FROM_PTR(self);
     }
 
-
-    mp_lcd_err_t sdl_rx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
+    static mp_obj_t sdl_bus_tx_param(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
     {
-        LCD_UNUSED(obj);
-        LCD_UNUSED(lcd_cmd);
-        LCD_UNUSED(param);
-        LCD_UNUSED(param_size);
-        return LCD_OK;
+        LCD_UNUSED(n_args);
+        return mp_const_none;
     }
 
+    MP_DEFINE_CONST_FUN_OBJ_KW(sdl_bus_tx_param_obj, 4, sdl_bus_tx_param);
 
-    mp_lcd_err_t sdl_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size)
+
+    static mp_obj_t sdl_bus_tx_color(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
     {
-        LCD_UNUSED(obj);
-        LCD_UNUSED(lcd_cmd);
-        LCD_UNUSED(param);
-        LCD_UNUSED(param_size);
-        return LCD_OK;
-    }
+        enum { ARG_self, ARG_cmd, ARG_data, ARG_x_start, ARG_y_start, ARG_x_end, ARG_y_end, ARG_dither, ARG_rotation, ARG_last_update };
+        static const mp_arg_t allowed_args[] = {
+            { MP_QSTR_self,        MP_ARG_OBJ  | MP_ARG_REQUIRED },
+            { MP_QSTR_cmd,         MP_ARG_INT  | MP_ARG_REQUIRED },
+            { MP_QSTR_data,        MP_ARG_OBJ  | MP_ARG_REQUIRED },
+            { MP_QSTR_x_start,     MP_ARG_INT  | MP_ARG_REQUIRED },
+            { MP_QSTR_y_start,     MP_ARG_INT  | MP_ARG_REQUIRED },
+            { MP_QSTR_x_end,       MP_ARG_INT  | MP_ARG_REQUIRED },
+            { MP_QSTR_y_end,       MP_ARG_INT  | MP_ARG_REQUIRED },
+            { MP_QSTR_dither,      MP_ARG_INT  | MP_ARG_REQUIRED },
+            { MP_QSTR_rotation,    MP_ARG_INT  | MP_ARG_REQUIRED },
+            { MP_QSTR_last_update, MP_ARG_BOOL | MP_ARG_REQUIRED },
+        };
 
-    mp_lcd_err_t sdl_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update)
-    {
-        LCD_UNUSED(x_start);
-        LCD_UNUSED(y_start);
-        LCD_UNUSED(x_end);
-        LCD_UNUSED(y_end);
-        LCD_UNUSED(color_size);
-        LCD_UNUSED(rotation);
-        LCD_UNUSED(last_update);
+        mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+        mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-        mp_lcd_sdl_bus_obj_t *self = MP_OBJ_TO_PTR(obj);
+        mp_lcd_sdl_bus_obj_t *self = (mp_lcd_sdl_bus_obj_t *)args[ARG_self].u_obj;
 
         int pitch = self->panel_io_config.width * self->panel_io_config.bytes_per_pixel;
 
@@ -120,12 +108,16 @@
             mp_call_function_n_kw(self->callback, 0, 0, NULL);
         }
 
-        return LCD_OK;
+        return mp_const_none;
     }
 
-    mp_lcd_err_t sdl_del(mp_obj_t obj)
+    MP_DEFINE_CONST_FUN_OBJ_KW(sdl_bus_tx_color_obj, 10, sdl_bus_tx_color);
+
+
+    static mp_obj_t sdl_bus_deinit(mp_obj_t self_in)
     {
-        mp_lcd_sdl_bus_obj_t *self = MP_OBJ_TO_PTR(obj);
+
+        mp_lcd_sdl_bus_obj_t *self = MP_OBJ_TO_PTR(self_in);
 
         SDL_DestroyTexture(self->texture);
         SDL_DestroyRenderer(self->renderer);
@@ -152,16 +144,33 @@
             SDL_Quit();
         }
 
-        return LCD_OK;
+        return mp_const_none;
     }
 
-    mp_lcd_err_t sdl_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
-    {
-        LCD_UNUSED(rgb565_byte_swap);
-        LCD_UNUSED(cmd_bits);
-        LCD_UNUSED(param_bits);
+    MP_DEFINE_CONST_FUN_OBJ_1(sdl_bus_deinit_obj, sdl_bus_deinit);
 
-        mp_lcd_sdl_bus_obj_t *self = MP_OBJ_TO_PTR(obj);
+
+    static mp_obj_t sdl_bus_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
+    {
+        enum { ARG_self, ARG_width, ARG_height, ARG_bpp, ARG_buffer_size, ARG_rgb565_byte_swap, ARG_sw_rotation, ARG_cmd_bits, ARG_param_bits };
+        static const mp_arg_t allowed_args[] = {
+            { MP_QSTR_self,             MP_ARG_OBJ  | MP_ARG_REQUIRED },
+            { MP_QSTR_width,            MP_ARG_INT  | MP_ARG_REQUIRED },
+            { MP_QSTR_height,           MP_ARG_INT  | MP_ARG_REQUIRED },
+            { MP_QSTR_bpp,              MP_ARG_INT  | MP_ARG_REQUIRED },
+            { MP_QSTR_buffer_size,      MP_ARG_INT  | MP_ARG_REQUIRED },
+            { MP_QSTR_rgb565_byte_swap, MP_ARG_BOOL | MP_ARG_REQUIRED },
+            { MP_QSTR_sw_rotation,      MP_ARG_BOOL | MP_ARG_REQUIRED },
+            { MP_QSTR_cmd_bits,         MP_ARG_INT  | MP_ARG_REQUIRED },
+            { MP_QSTR_param_bits,       MP_ARG_INT  | MP_ARG_REQUIRED },
+        };
+        mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+        mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+        mp_lcd_sdl_bus_obj_t *self = (mp_lcd_sdl_bus_obj_t *)MP_OBJ_TO_PTR(args[ARG_self].u_obj);
+
+        uint16_t width = (uint16_t)args[ARG_width].u_int;
+        uint16_t height = (uint16_t)args[ARG_height].u_int;
 
         self->panel_io_config.width = width;
         self->panel_io_config.height = height;
@@ -179,12 +188,12 @@
 
         self->renderer = SDL_CreateRenderer(self->window, -1, SDL_RENDERER_SOFTWARE);
 
-        self->panel_io_config.bytes_per_pixel = bpp / 8;
-        self->texture = SDL_CreateTexture(self->renderer, (SDL_PixelFormatEnum)buffer_size, SDL_TEXTUREACCESS_STREAMING, width, height);
+        self->panel_io_config.bytes_per_pixel = (uint8_t)args[ARG_bpp].u_int / 8;
+        self->texture = SDL_CreateTexture(self->renderer, (SDL_PixelFormatEnum)args[ARG_buffer_size].u_int, SDL_TEXTUREACCESS_STREAMING, width, height);
         SDL_SetTextureBlendMode(self->texture, SDL_BLENDMODE_BLEND);
         SDL_SetWindowSize(self->window, width, height);
 
-        self->rgb565_byte_swap = false;
+        self->r_data.swap = false;
         self->trans_done = true;
 
         instance_count += 1;
@@ -195,15 +204,11 @@
 
         self->inited = true;
 
-        return LCD_OK;
+        return mp_const_none;
     }
 
-    mp_lcd_err_t sdl_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
-    {
-        LCD_UNUSED(obj);
-        *lane_count = 1;
-        return LCD_OK;
-    }
+    MP_DEFINE_CONST_FUN_OBJ_KW(sdl_bus_init_obj, 8, sdl_bus_init);
+
 
     static mp_obj_t mp_lcd_sdl_poll_events(mp_obj_t self_in)
     {
@@ -598,14 +603,13 @@
     static const mp_rom_map_elem_t mp_lcd_sdl_bus_locals_dict_table[] = {
         { MP_ROM_QSTR(MP_QSTR_get_lane_count),       MP_ROM_PTR(&mp_lcd_bus_get_lane_count_obj)       },
         { MP_ROM_QSTR(MP_QSTR_register_callback),    MP_ROM_PTR(&mp_lcd_bus_register_callback_obj)    },
-        { MP_ROM_QSTR(MP_QSTR_tx_color),             MP_ROM_PTR(&mp_lcd_bus_tx_color_obj)             },
-        { MP_ROM_QSTR(MP_QSTR_rx_param),             MP_ROM_PTR(&mp_lcd_bus_rx_param_obj)             },
-        { MP_ROM_QSTR(MP_QSTR_tx_param),             MP_ROM_PTR(&mp_lcd_bus_tx_param_obj)             },
+        { MP_ROM_QSTR(MP_QSTR_tx_color),             MP_ROM_PTR(&sdl_bus_tx_color_obj)             },
+        { MP_ROM_QSTR(MP_QSTR_tx_param),             MP_ROM_PTR(&sdl_bus_tx_param_obj)             },
         { MP_ROM_QSTR(MP_QSTR_free_framebuffer),     MP_ROM_PTR(&mp_lcd_bus_free_framebuffer_obj)     },
         { MP_ROM_QSTR(MP_QSTR_allocate_framebuffer), MP_ROM_PTR(&mp_lcd_bus_allocate_framebuffer_obj) },
-        { MP_ROM_QSTR(MP_QSTR_init),                 MP_ROM_PTR(&mp_lcd_bus_init_obj)                 },
-        { MP_ROM_QSTR(MP_QSTR_deinit),               MP_ROM_PTR(&mp_lcd_bus_deinit_obj)               },
-        { MP_ROM_QSTR(MP_QSTR___del__),              MP_ROM_PTR(&mp_lcd_bus_deinit_obj)               },
+        { MP_ROM_QSTR(MP_QSTR_init),                 MP_ROM_PTR(&sdl_bus_init_obj)                 },
+        { MP_ROM_QSTR(MP_QSTR_deinit),               MP_ROM_PTR(&sdl_bus_deinit_obj)               },
+        { MP_ROM_QSTR(MP_QSTR___del__),              MP_ROM_PTR(&sdl_bus_deinit_obj)               },
         { MP_ROM_QSTR(MP_QSTR_set_window_size),      MP_ROM_PTR(&mp_lcd_sdl_set_window_size_obj)      },
         { MP_ROM_QSTR(MP_QSTR_realloc_buffer),       MP_ROM_PTR(&mp_lcd_sdl_realloc_buffer_obj)       },
         { MP_ROM_QSTR(MP_QSTR_register_quit_callback),    MP_ROM_PTR(&mp_lcd_sdl_register_quit_callback_obj)   },

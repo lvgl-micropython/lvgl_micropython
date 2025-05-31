@@ -56,7 +56,8 @@ class RGBDisplay(rgb_display_framework.RGBDisplayDriver):
             rgb565_byte_swap=rgb565_byte_swap,
             _cmd_bits=8,
             _param_bits=8,
-            _init_bus=True
+            _init_bus=True,
+            _sw_rotation=True
         )
 
     def init(self):

@@ -15,11 +15,15 @@ ifneq (,$(findstring -Wno-missing-field-initializers, $(CFLAGS_USERMOD)))
 endif
 
 SRC_USERMOD_C += $(MOD_DIR)/modlcd_bus.c
-SRC_USERMOD_C += $(MOD_DIR)/lcd_types.c
 SRC_USERMOD_C += $(MOD_DIR)/common_src/i2c_bus.c
 SRC_USERMOD_C += $(MOD_DIR)/common_src/i80_bus.c
 SRC_USERMOD_C += $(MOD_DIR)/common_src/spi_bus.c
 SRC_USERMOD_C += $(MOD_DIR)/common_src/rgb_bus.c
+SRC_USERMOD_C += $(MOD_DIR)/common_src/dsi_bus.c
+SRC_USERMOD_C += $(MOD_DIR)/common_src/led_bus.c
+SRC_USERMOD_C += $(MOD_DIR)/common_src/lcd_bus_task.c
+SRC_USERMOD_C += $(MOD_DIR)/common_src/allocate_buffers.c
+SRC_USERMOD_C += $(MOD_DIR)/common_src/bus_trans_done.c
 SRC_USERMOD_C += $(MOD_DIR)/sdl_bus/sdl_bus.c
 
 ifneq (,$(findstring unix, $(LV_PORT)))

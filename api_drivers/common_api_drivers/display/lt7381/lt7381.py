@@ -209,7 +209,7 @@ class LT7381(display_driver_framework.DisplayDriver):
         self.set_params(_CURH_L, x_start & 0xff)
         self.set_params(_CURH_H, (x_start >> 8) & 0xFF)
         self.set_params(_CURV_L, y_start & 0xFF)
-        self.set_params(_CURV_H, (y_start >> 8) & 0xFF)
+        self._disp_drv.tx_param(_CURV_H, (y_start >> 8) & 0xFF, True)
 
         return _MRWDP
 
@@ -236,4 +236,4 @@ class LT7381(display_driver_framework.DisplayDriver):
         data_view = color_p.__dereference__(size)
 
         self._data_bus.tx_color(cmd, data_view, x1, y1, x2, y2, self._rotation,
-                                self._disp_drv.flush_is_last())
+                                self._dither, self._disp_drv.flush_is_last())

@@ -34,28 +34,27 @@ class I2CBus:
     ):
         ...
 
-    def init(
-        self, width: int, height: int, bpp: int, buffer_size: int,
-        rgb565_byte_swap: bool, cmd_bits: int, param_bits: int, /
-    ) -> None:
+    def init(self, width: int, height: int, bpp: int, buffer_size: int,
+             rgb565_byte_swap: bool, sw_rotation: bool, cmd_bits: int, param_bits: int, /) -> None:
         ...
 
     def deinit(self) -> None:
         ...
 
-    def register_callback(self, callback: Callable[[Any, Any], None], /) -> None:
+    def register_callback(self, callback: Callable[[Any], None], /) -> None:
         ...
 
-    def tx_param(self, cmd: int, params: Optional[_BufferType] = None, /) -> None:
+    def tx_color(self, cmd: int, data: _BufferType, start_x: int, start_y: int, end_x: int, end_y: int,
+                 dither: bool, rotation: int, last_update: bool, /) -> None:
         ...
 
-    def tx_color(self, cmd: int, data: _BufferType, start_x: int, start_y: int, end_x: int, end_y: int, rotation: int, last_update: bool, /) -> None:
+    def tx_param(self, cmd: int, data: _BufferType, flush_is_next: bool, /) -> None:
         ...
 
     def get_lane_count(self) -> int:
         ...
 
-    def allocate_framebuffer(self, size: int, caps: int, /) -> Union[None, memoryview]:
+    def allocate_framebuffer(self, size: int, caps: int, /) -> None | memoryview:
         ...
 
     def free_framebuffer(self, framebuffer: memoryview, /) -> None:
@@ -81,28 +80,27 @@ class SPIBus:
     ):
         ...
 
-    def init(
-        self, width: int, height: int, bpp: int, buffer_size: int,
-        rgb565_byte_swap: bool, cmd_bits: int, param_bits: int, /
-    ) -> None:
+    def init(self, width: int, height: int, bpp: int, buffer_size: int,
+             rgb565_byte_swap: bool, sw_rotation: bool, cmd_bits: int, param_bits: int, /) -> None:
         ...
 
     def deinit(self) -> None:
         ...
 
-    def register_callback(self, callback: Callable[[Any, Any], None], /) -> None:
+    def register_callback(self, callback: Callable[[Any], None], /) -> None:
         ...
 
-    def tx_param(self, cmd: int, params: Optional[_BufferType] = None, /) -> None:
+    def tx_color(self, cmd: int, data: _BufferType, start_x: int, start_y: int, end_x: int, end_y: int,
+                 dither: bool, rotation: int, last_update: bool, /) -> None:
         ...
 
-    def tx_color(self, cmd: int, data: _BufferType, start_x: int, start_y: int, end_x: int, end_y: int, rotation: int, last_update: bool, /) -> None:
+    def tx_param(self, cmd: int, data: _BufferType, flush_is_next: bool, /) -> None:
         ...
 
     def get_lane_count(self) -> int:
         ...
 
-    def allocate_framebuffer(self, size: int, caps: int, /) -> Union[None, memoryview]:
+    def allocate_framebuffer(self, size: int, caps: int, /) -> None | memoryview:
         ...
 
     def free_framebuffer(self, framebuffer: memoryview, /) -> None:
@@ -122,82 +120,45 @@ class SDLBus:
     WINDOW_TOOLTIP: ClassVar[int] = ...
     WINDOW_POPUP_MENU: ClassVar[int] = ...
 
-    def __init__(
-        self,
-        *,
-        flags: int
-    ):
+    def __init__(self, *, flags: int):
         ...
 
-    def init(
-        self, width: int, height: int, bpp: int, buffer_size: int,
-        rgb565_byte_swap: bool, cmd_bits: int, param_bits: int, /
-    ) -> None:
+    def init(self, width: int, height: int, bpp: int, buffer_size: int,
+             rgb565_byte_swap: bool, sw_rotation: bool, cmd_bits: int, param_bits: int, /) -> None:
         ...
 
     def deinit(self) -> None:
         ...
 
-    def register_mouse_callback(
-        self,
-        callback: Callable[[list], None],
-        /
-    ) -> None:
+    def register_mouse_callback(self, callback: Callable[[list], None], /) -> None:
         ...
 
-    def register_window_callback(
-        self,
-        callback: Callable[[list], None],
-        /
-    ) -> None:
+    def register_window_callback(self, callback: Callable[[list], None], /) -> None:
         ...
 
-    def register_keypad_callback(
-        self,
-        callback: Callable[[list], None],
-        /
-    ) -> None:
+    def register_keypad_callback(self, callback: Callable[[list], None], /) -> None:
         ...
 
-    def register_quit_callback(
-        self,
-        callback: Callable[[], None],
-        /
-    ) -> None:
+    def register_quit_callback(self, callback: Callable[[], None], /) -> None:
         ...
 
-    def set_window_size(
-        self,
-        width: int,
-        height: int,
-        px_format: int,
-        ignore_size_chg: bool,
-        /
-    ) -> None:
+    def set_window_size(self, width: int, height: int, px_format: int, ignore_size_chg: bool, /) -> None:
         ...
 
-    def register_callback(
-        self,
-        callback: Callable[[Any, Any], None],
-        /
-    ) -> None:
+    def register_callback(self, callback: Callable[[Any], None], /) -> None:
         ...
 
-    def tx_param(
-        self,
-        cmd: int,
-        params: Optional[_BufferType] = None,
-        /
-    ) -> None:
+    def tx_color(self, cmd: int, data: _BufferType, start_x: int, start_y: int, end_x: int, end_y: int,
+                 dither: bool, rotation: int, last_update: bool, /) -> None:
         ...
 
-    def tx_color(self, cmd: int, data: _BufferType, start_x: int, start_y: int, end_x: int, end_y: int, rotation: int, last_update: bool, /) -> None:
+    def tx_param(self, cmd: int, data: _BufferType, flush_is_next: bool, /) -> None:
         ...
 
     def get_lane_count(self) -> int:
         ...
 
-    def allocate_framebuffer(self, size: int, caps: int, /) -> Union[None, memoryview]:
+    def allocate_framebuffer(self, size: int, caps: int, /) -> None | memoryview:
         ...
 
     def free_framebuffer(self, framebuffer: memoryview, /) -> None:
@@ -245,32 +206,30 @@ class RGBBus:
         pclk_active_low: bool = False,
         disp_active_low: bool = False,
         refresh_on_demand: bool = False,
-        rgb565_dither: bool = False
     ):
         ...
 
-    def init(
-        self, width: int, height: int, bpp: int, buffer_size: int,
-        rgb565_byte_swap: bool, cmd_bits: int, param_bits: int, /
-    ) -> None:
+    def init(self, width: int, height: int, bpp: int, buffer_size: int,
+             rgb565_byte_swap: bool, sw_rotation: bool, cmd_bits: int, param_bits: int, /) -> None:
         ...
 
     def deinit(self) -> None:
         ...
 
-    def register_callback(self, callback: Callable[[Any, Any], None], /) -> None:
+    def register_callback(self, callback: Callable[[Any], None], /) -> None:
         ...
 
-    def tx_param(self, cmd: int, params: Optional[_BufferType] = None, /) -> None:
+    def tx_color(self, cmd: int, data: _BufferType, start_x: int, start_y: int, end_x: int, end_y: int,
+                 dither: bool, rotation: int, last_update: bool, /) -> None:
         ...
 
-    def tx_color(self, cmd: int, data: _BufferType, start_x: int, start_y: int, end_x: int, end_y: int, rotation: int, last_update: bool, /) -> None:
+    def tx_param(self, cmd: int, data: _BufferType, flush_is_next: bool, /) -> None:
         ...
 
     def get_lane_count(self) -> int:
         ...
 
-    def allocate_framebuffer(self, size: int, caps: int, /) -> Union[None, memoryview]:
+    def allocate_framebuffer(self, size: int, caps: int, /) -> None | memoryview:
         ...
 
     def free_framebuffer(self, framebuffer: memoryview, /) -> None:
@@ -314,28 +273,128 @@ class I80Bus:
     ):
         ...
 
-    def init(
-        self, width: int, height: int, bpp: int, buffer_size: int,
-        rgb565_byte_swap: bool, cmd_bits: int, param_bits: int, /
-    ) -> None:
+    def init(self, width: int, height: int, bpp: int, buffer_size: int,
+             rgb565_byte_swap: bool, sw_rotation: bool, cmd_bits: int, param_bits: int, /) -> None:
         ...
 
     def deinit(self) -> None:
         ...
 
-    def register_callback(self, callback: Callable[[Any, Any], None], /) -> None:
+    def register_callback(self, callback: Callable[[Any], None], /) -> None:
         ...
 
-    def tx_color(self, cmd: int, data: _BufferType, start_x: int, start_y: int, end_x: int, end_y: int, rotation: int, last_update: bool, /) -> None:
+    def tx_color(self, cmd: int, data: _BufferType, start_x: int, start_y: int, end_x: int, end_y: int,
+                 dither: bool, rotation: int, last_update: bool, /) -> None:
         ...
 
-    def tx_param(self, cmd: int, data: _BufferType, /) -> None:
+    def tx_param(self, cmd: int, data: _BufferType, flush_is_next: bool, /) -> None:
         ...
 
     def get_lane_count(self) -> int:
         ...
 
-    def allocate_framebuffer(self, size: int, caps: int, /) -> Union[None, memoryview]:
+    def allocate_framebuffer(self, size: int, caps: int, /) -> None | memoryview:
+        ...
+
+    def free_framebuffer(self, framebuffer: memoryview, /) -> None:
+        ...
+
+
+class LEDBus:
+    RGB: ClassVar[int] = ...
+    RBG: ClassVar[int] = ...
+    GRB: ClassVar[int] = ...
+    GBR: ClassVar[int] = ...
+    BRG: ClassVar[int] = ...
+    BGR: ClassVar[int] = ...
+
+    def __init__(
+        self,
+        *,
+        data_pin: int = -1,
+        freq: int = 10000000,
+        byte_order: int = GRB,
+        msb_first: bool = True,
+        leds_per_pixel: int = 3,
+        white_color_temp: int = 3000,
+        blue_correct: bool = False,
+        high0: int = -1,
+        low0: int = -1,
+        high1: int = -1,
+        low1: int = -1,
+        res: int = -1,
+        spi_bus: machine.SPI.Bus | None = None,
+    ):
+        ...
+
+    def init(self, width: int, height: int, bpp: int, buffer_size: int,
+             rgb565_byte_swap: bool, sw_rotation: bool, cmd_bits: int, param_bits: int, /) -> None:
+        ...
+
+    def deinit(self) -> None:
+        ...
+
+    def register_callback(self, callback: Callable[[Any], None], /) -> None:
+        ...
+
+    def tx_color(self, cmd: int, data: _BufferType, start_x: int, start_y: int, end_x: int, end_y: int,
+                 dither: bool, rotation: int, last_update: bool, /) -> None:
+        ...
+
+    def tx_param(self, cmd: int, data: _BufferType, flush_is_next: bool, /) -> None:
+        ...
+
+    def get_lane_count(self) -> int:
+        ...
+
+    def allocate_framebuffer(self, size: int, caps: int, /) -> None | memoryview:
+        ...
+
+    def free_framebuffer(self, framebuffer: memoryview, /) -> None:
+        ...
+
+
+
+class DSIBus:
+
+    def __init__(
+        self,
+        *,
+        bus_id: int,
+        num_lanes: int,
+        freq: int,
+        lane_bit_rate: int,
+        panel_bpp: int,
+        hsync_front_porch: int,
+        hsync_back_porch: int,
+        hsync_pulse_width: int,
+        vsync_front_porch: int,
+        vsync_back_porch: int,
+        vsync_pulse_width: int,
+    ):
+        ...
+
+    def init(self, width: int, height: int, bpp: int, buffer_size: int,
+             rgb565_byte_swap: bool, sw_rotation: bool, cmd_bits: int, param_bits: int, /) -> None:
+        ...
+
+    def deinit(self) -> None:
+        ...
+
+    def register_callback(self, callback: Callable[[Any], None], /) -> None:
+        ...
+
+    def tx_color(self, cmd: int, data: _BufferType, start_x: int, start_y: int, end_x: int, end_y: int,
+                 dither: bool, rotation: int, last_update: bool, /) -> None:
+        ...
+
+    def tx_param(self, cmd: int, data: _BufferType, flush_is_next: bool, /) -> None:
+        ...
+
+    def get_lane_count(self) -> int:
+        ...
+
+    def allocate_framebuffer(self, size: int, caps: int, /) -> None | memoryview:
         ...
 
     def free_framebuffer(self, framebuffer: memoryview, /) -> None:

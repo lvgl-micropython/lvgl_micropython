@@ -1,34 +1,41 @@
 // Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
-#ifndef _I2C_BUS_H_
-    #define _I2C_BUS_H_
+#ifndef __I2C_BUS_H__
+    #define __I2C_BUS_H__
 
     //local_includes
     #include "modlcd_bus.h"
+    #include "mphalport.h"
+    #include "lcd_types.h"
 
     // micropython includes
     #include "py/obj.h"
+    #include "py/objarray.h"
     #include "py/runtime.h"
-
 
     typedef struct _mp_lcd_i2c_bus_obj_t {
         mp_obj_base_t base;
 
         mp_obj_t callback;
 
-        void *buf1;
-        void *buf2;
+        mp_obj_array_t *view1;
+        mp_obj_array_t *view2;
+
         uint32_t buffer_flags;
 
-        bool trans_done;
-        bool rgb565_byte_swap;
+        uint8_t trans_done: 1;
+        uint8_t num_lanes: 5;
 
-        lcd_panel_io_t panel_io_handle;
-        void *panel_io_config;
-        void *bus_config;
-        void *bus_handle;
+        lcd_task_t task;
+        lcd_init_t init;
+        lcd_bufs_t bufs;
 
-        int host;
+        lcd_tx_data_t tx_data;
+        lcd_tx_cmds_t tx_cmds;
+
+        rotation_data_t r_data;
+
+        internal_cb_funcs_t internal_cb_funcs;
 
     } mp_lcd_i2c_bus_obj_t;
 

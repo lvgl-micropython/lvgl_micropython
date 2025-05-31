@@ -29,7 +29,7 @@ class SSD1351(display_driver_framework.DisplayDriver):
         param_buf[2] = (x2 >> 8) & 0xFF
         param_buf[3] = x2 & 0xFF
 
-        self._data_bus.tx_param(_CASET, self._param_mv[:4])
+        self._data_bus.tx_param(_CASET, self._param_mv[:4], False)
 
         # Page addresses
         param_buf[0] = (y1 >> 8) & 0xFF
@@ -37,6 +37,6 @@ class SSD1351(display_driver_framework.DisplayDriver):
         param_buf[2] = (y2 >> 8) & 0xFF
         param_buf[3] = y2 & 0xFF
 
-        self._data_bus.tx_param(_PASET, self._param_mv[:4])
+        self._data_bus.tx_param(_PASET, self._param_mv[:4], True)
 
         return _RAMWR

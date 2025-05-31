@@ -5,19 +5,16 @@
 #include "lcd_bus_task.h"
 #include "modlcd_bus.h"
 #include "spi_bus.h"
+#include "bus_trans_done.h"
 #include "../../../micropy_updates/common/mp_spi_common.h"
 
 // esp-idf includes
 #include "driver/spi_common.h"
 #include "driver/spi_master.h"
-#include "soc/gpio_sig_map.h"
 #include "soc/spi_pins.h"
-#include "soc/soc_caps.h"
-#include "rom/gpio.h"
-#include "esp_err.h"
 #include "esp_lcd_panel_io.h"
-#include "esp_heap_caps.h"
 #include "hal/spi_types.h"
+#include "esp_task.h"
 
 // micropython includes
 #include "mphalport.h"
@@ -61,75 +58,41 @@ typedef struct _machine_hw_spi_obj_t {
 */
 
 
-mp_lcd_err_t spi_del(mp_obj_t obj);
-mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool sw_rotation, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
-mp_lcd_err_t spi_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
+mp_lcd_err_t spi_del(mp_lcd_bus_obj_t *self_in);
+mp_lcd_err_t spi_init(mp_lcd_bus_obj_t *self_in, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size,
+                      uint8_t cmd_bits, uint8_t param_bits);
 void spi_deinit_callback(mp_machine_hw_spi_device_obj_t *device);
 
 
-static uint8_t spi_bus_count = 0;
-static mp_lcd_spi_bus_obj_t **spi_bus_objs;
-
-
-void mp_lcd_spi_bus_deinit_all(void)
+static void spi_send_func(mp_lcd_bus_obj_t *self_in, int cmd, uint8_t *params, size_t params_len)
 {
-    // we need to copy the existing array to a new one so the order doesn't
-    // get all mucked up when objects get removed.
-    mp_lcd_spi_bus_obj_t *objs[spi_bus_count];
+    mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)self_in;
+    esp_lcd_panel_io_tx_param(self->panel_io_handle, cmd, params, params_len);
 
-    for (uint8_t i=0;i<spi_bus_count;i++) {
-        objs[i] = spi_bus_objs[i];
-    }
-
-    for (uint8_t i=0;i<spi_bus_count;i++) {
-        spi_del(MP_OBJ_FROM_PTR(objs[i]));
-    }
 }
 
 
-static bool spi_trans_done_cb(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
-{
-    mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)user_ctx;
-
-    if (self->active_fb == NULL) {
-        if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
-            cb_isr(self->callback);
-        }
-    } else if (!rgb_bus_event_isset_from_isr(&self->swap_bufs)) {
-        int8_t *idle_fb = self->idle_fb;
-        self->idle_fb = self->active_fb;
-        self->active_fb = idle_fb;
-        lcd_bus_event_set_from_isr(self->swap_bufs);
-    }
-    return false;
-}
-
-
-static void spi_flush_func(mp_lcd_bus_obj_t *self_in, rotation_data_t *r_data, rotation_data_t *original_r_data, uint8_t *idle_fb, uint8_t last_update)
+static void spi_flush_func(mp_lcd_bus_obj_t *self_in, rotation_data_t *r_data, rotation_data_t *original_r_data,
+                           uint8_t *idle_fb, uint8_t last_update)
 {
 
     mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)self_in;
-
-    if (self->callback != mp_const_none) {
-        cb_isr(self->callback);
+    if (self->bufs.partial != NULL) {
+        if (self->callback != mp_const_none && mp_obj_is_callable(self->callback)) {
+            cb_isr(self->callback);
+        }
+        self->trans_done = 1;
     }
 
     if (last_update) {
-        mp_lcd_err_t ret = esp_lcd_panel_draw_bitmap(
-            self->panel_handle,
-            0,
-            0,
-            r_data->dst_width,
-            r_data->dst_height,
-            idle_fb
-        );
+        esp_err_t ret = esp_lcd_panel_io_tx_color(self->panel_io_handle, r_data->cmd, idle_fb, r_data->color_size);
 
         if (ret != 0) {
-            mp_printf(&mp_plat_print, "esp_lcd_panel_draw_bitmap error (%d)\n", ret);
-        } else {
-            lcd_bus_event_clear(self->swap_bufs);
-            lcd_bus_event_wait(self->swap_bufs);
-            memcpy(self->idle_fb, self->active_fb, r_data->dst_width * r_data->dst_height * r_data->bytes_per_pixel);
+            mp_printf(&mp_plat_print, "esp_lcd_panel_io_tx_color error (%d)\n", ret);
+        } else if (self->bufs.partial != NULL) {
+            uint8_t *temp_buf = self->bufs.active;
+            self->bufs.active = idle_fb;
+            self->bufs.idle = temp_buf;
         }
     }
 }
@@ -138,9 +101,9 @@ static bool spi_init_func(mp_lcd_bus_obj_t *self_in)
 {
     mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *) self_in;
 
-    self->init_err = esp_lcd_new_panel_io_spi(self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io);
-    if (self->init_err != 0) {
-        self->init_err_msg = MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_spi)");
+    self->init.err = esp_lcd_new_panel_io_spi(self->bus_handle, &self->panel_io_config, &self->panel_io_handle);
+    if (self->init.err != 0) {
+        self->init.err_msg = MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_spi)");
         return false;
     }
 
@@ -149,19 +112,8 @@ static bool spi_init_func(mp_lcd_bus_obj_t *self_in)
 
 static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
 {
-     enum {
-        ARG_spi_bus,
-        ARG_dc,
-        ARG_freq,
-        ARG_cs,
-        ARG_dc_low_on_data,
-        ARG_lsb_first,
-        ARG_cs_high_active,
-        ARG_spi_mode,
-        ARG_dual,
-        ARG_quad,
-        ARG_octal
-    };
+     enum { ARG_spi_bus, ARG_dc, ARG_freq, ARG_cs, ARG_dc_low_on_data, ARG_lsb_first,
+            ARG_cs_high_active, ARG_spi_mode, ARG_dual, ARG_quad, ARG_octal };
 
     const mp_arg_t make_new_args[] = {
         { MP_QSTR_spi_bus,          MP_ARG_OBJ  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED      },
@@ -178,14 +130,7 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     };
 
     mp_arg_val_t args[MP_ARRAY_SIZE(make_new_args)];
-    mp_arg_parse_all_kw_array(
-        n_args,
-        n_kw,
-        all_args,
-        MP_ARRAY_SIZE(make_new_args),
-        make_new_args,
-        args
-    );
+    mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(make_new_args), make_new_args, args);
 
     // create new object
     mp_lcd_spi_bus_obj_t *self = m_new_obj(mp_lcd_spi_bus_obj_t);
@@ -196,14 +141,14 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     self->callback = mp_const_none;
 
     self->host = (spi_host_device_t)spi_bus->host;
-    self->panel_io_handle.panel_io = NULL;
+    self->panel_io_handle = NULL;
     self->bus_handle = (esp_lcd_spi_bus_handle_t)self->host;
 
     self->panel_io_config.cs_gpio_num = (int)args[ARG_cs].u_int;
     self->panel_io_config.dc_gpio_num = (int)args[ARG_dc].u_int;
     self->panel_io_config.spi_mode = (int)args[ARG_spi_mode].u_int;
     self->panel_io_config.pclk_hz = (unsigned int)args[ARG_freq].u_int;
-    self->panel_io_config.on_color_trans_done = &spi_trans_done_cb;
+    self->panel_io_config.on_color_trans_done = &bus_trans_done_cb;
     self->panel_io_config.user_ctx = self;
     self->panel_io_config.flags.dc_low_on_data = (unsigned int)args[ARG_dc_low_on_data].u_bool;
     self->panel_io_config.flags.lsb_first = (unsigned int)args[ARG_lsb_first].u_bool;
@@ -216,9 +161,10 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     if (!spi_bus->quad) self->panel_io_config.flags.quad_mode = 0;
     if (!spi_bus->octal) self->panel_io_config.flags.octal_mode = 0;
 
-    self->panel_io_handle.del = &spi_del;
-    self->panel_io_handle.init = &spi_init;
-    self->panel_io_handle.get_lane_count = &spi_get_lane_count;
+    if (self->panel_io_config.flags.sio_mode) self->num_lanes = 2;
+    else if (self->panel_io_config.flags.quad_mode) self->num_lanes = 4;
+    else if (self->panel_io_config.flags.octal_mode) self->num_lanes = 8;
+    else self->num_lanes = 1;
 
     self->spi_device.active = true;
     self->spi_device.base.type = &mp_machine_hw_spi_device_type;
@@ -226,8 +172,12 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
     self->spi_device.deinit = &spi_deinit_callback;
     self->spi_device.user_data = self;
 
+    self->tx_cmds.send_func = &spi_send_func;
     self->tx_data.flush_func = &spi_flush_func;
     self->init.init_func = &spi_init_func;
+
+    self->internal_cb_funcs.init = &spi_init;
+    self->internal_cb_funcs.deinit = &spi_del;
 
     LCD_DEBUG_PRINT("host=%d\n", self->host)
     LCD_DEBUG_PRINT("cs_gpio_num=%d\n", self->panel_io_config.cs_gpio_num)
@@ -245,59 +195,22 @@ static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args
 }
 
 
-void spi_deinit_callback(mp_machine_hw_spi_device_obj_t *device)
-{
-    mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)device->user_data;
-    spi_del(MP_OBJ_FROM_PTR(self));
-}
 
 
-mp_lcd_err_t spi_del(mp_obj_t obj)
+mp_lcd_err_t spi_del(mp_lcd_bus_obj_t *self_in)
 {
     LCD_DEBUG_PRINT("spi_del(self)\n")
 
-    mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
+    mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)self_in;
 
-    if (self->panel_io_handle.panel_io != NULL) {
-        mp_lcd_err_t ret = esp_lcd_panel_io_del(self->panel_io_handle.panel_io);
+    if (self->panel_io_handle != NULL) {
+        mp_lcd_err_t ret = esp_lcd_panel_io_del(self->panel_io_handle);
         if (ret != ESP_OK) {
             mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_panel_io_del)"), ret);
             return ret;
         }
 
-        self->panel_io_handle.panel_io = NULL;
-
-        if (self->view1 != NULL) {
-            heap_caps_free(self->view1->items);
-            self->view1->items = NULL;
-            self->view1->len = 0;
-            self->view1 = NULL;
-            LCD_DEBUG_PRINT("spi_free_framebuffer(self, buf=1)\n")
-        }
-
-        if (self->view2 != NULL) {
-            heap_caps_free(self->view2->items);
-            self->view2->items = NULL;
-            self->view2->len = 0;
-            self->view2 = NULL;
-            LCD_DEBUG_PRINT("spi_free_framebuffer(self, buf=1)\n")
-        }
-
-        uint8_t i= 0;
-        for (;i<spi_bus_count;i++) {
-            if (spi_bus_objs[i] == self) {
-                spi_bus_objs[i] = NULL;
-                break;
-            }
-        }
-
-        for (uint8_t j=i + 1;j<spi_bus_count;j++) {
-            spi_bus_objs[j - i + 1] = spi_bus_objs[j];
-        }
-
-        spi_bus_count--;
-        spi_bus_objs = m_realloc(spi_bus_objs, spi_bus_count * sizeof(mp_lcd_spi_bus_obj_t *));
-
+        self->panel_io_handle = NULL;
 
         mp_machine_hw_spi_bus_remove_device(&self->spi_device);
         self->spi_device.active = false;
@@ -312,13 +225,21 @@ mp_lcd_err_t spi_del(mp_obj_t obj)
     }
 }
 
-
-mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool sw_rotation, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits)
+void spi_deinit_callback(mp_machine_hw_spi_device_obj_t *device)
 {
-    LCD_DEBUG_PRINT("spi_init(self, width=%i, height=%i, bpp=%i, buffer_size=%lu, rgb565_byte_swap=%i, cmd_bits=%i, param_bits=%i)\n", width, height, bpp, buffer_size, (uint8_t)rgb565_byte_swap, cmd_bits, param_bits)
-    mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
+    mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)device->user_data;
+    spi_del(MP_OBJ_FROM_PTR(self));
+}
 
-    if (self->panel_io_handle.panel_io != NULL) {
+
+mp_lcd_err_t spi_init(mp_lcd_bus_obj_t *self_in, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size,
+                      uint8_t cmd_bits, uint8_t param_bits)
+{
+    LCD_DEBUG_PRINT("spi_init(self, width=%i, height=%i, bpp=%i, buffer_size=%lu, cmd_bits=%i, param_bits=%i)\n",
+                    width, height, bpp, buffer_size, cmd_bits, param_bits)
+    mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)self_in;
+
+    if (self->panel_io_handle != NULL) {
         return LCD_FAIL;
     }
 
@@ -326,36 +247,9 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
         mp_machine_hw_spi_bus_initilize(self->spi_device.spi_bus);
     }
 
-    if (bpp == 16) {
-        self->r_data.swap = (uint8_t)rgb565_byte_swap;
-    } else {
-        self->r_data.swap = 0;
-    }
-
-    self->r_data.sw_rotation = (uint8_t)sw_rotation;
-
     self->panel_io_config.trans_queue_depth = 10;
     self->panel_io_config.lcd_cmd_bits = (int)cmd_bits;
     self->panel_io_config.lcd_param_bits = (int)param_bits;
-
-    if (sw_rotation) {
-        int ret;
-        if (self->view2 == NULL) {
-            ret = allocate_buffers(1, self->view1->len, self->bufs.idle, NULL)
-            if (ret != 1) return LCD_ERR_NO_MEM;
-        } else {
-            ret = allocate_buffers(2, self->view1->len, self->bufs.idle, self->bufs.active)
-            if (ret != 2) return LCD_ERR_NO_MEM;
-        }
-    } else {
-        self->bufs.idle = (uint8_t *)self->view1->items;
-        if (self->view2 != NULL) {
-            self->bufs.active = (uint8_t *)self->view2->items;
-        } else {
-            self->active_fb = self->bufs.idle
-        }
-
-    }
 
     LCD_DEBUG_PRINT("lcd_cmd_bits=%d\n", self->panel_io_config.lcd_cmd_bits)
     LCD_DEBUG_PRINT("lcd_param_bits=%d\n", self->panel_io_config.lcd_param_bits)
@@ -363,126 +257,18 @@ mp_lcd_err_t spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
     LCD_DEBUG_PRINT("trans_queue_depth=%i\n", (uint8_t)self->panel_io_config.trans_queue_depth)
 
     xTaskCreatePinnedToCore(
-                lcd_bus_task, "rgb_task", DEFAULT_STACK_SIZE / sizeof(StackType_t),
+                lcd_bus_task, "spi_task", LCD_DEFAULT_STACK_SIZE / sizeof(StackType_t),
                 self, ESP_TASK_PRIO_MAX - 1, &self->task.handle, 0);
 
     lcd_bus_lock_acquire(self->init.lock);
     lcd_bus_lock_release(self->init.lock);
     lcd_bus_lock_delete(self->init.lock);
 
-    if (self->init.err != LCD_OK) {
-        mp_raise_msg_varg(&mp_type_ValueError, self->init.err_msg, self->init.err);
-        return self->init.err;
-    } else {
+    if (self->init.err == LCD_OK) {
         mp_machine_hw_spi_bus_add_device(&self->spi_device);
-
-        // add the new bus ONLY after successfull initilization of the bus
-        spi_bus_count++;
-        spi_bus_objs = m_realloc(spi_bus_objs, spi_bus_count * sizeof(mp_lcd_spi_bus_obj_t *));
-        spi_bus_objs[spi_bus_count - 1] = self;
-
-        return LCD_OK;
     }
+    return self->init.err;
 }
-
-
-mp_lcd_err_t spi_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update, bool dither)
-    {
-        LCD_DEBUG_PRINT("spi_tx_color(self, lcd_cmd=%d, color, color_size=%d, x_start=%d, y_start=%d, x_end=%d, y_end=%d)\n", lcd_cmd, color_size, x_start, y_start, x_end, y_end)
-
-        mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
-
-        if (self->r_data.sw_rotation == 1) {
-            self->partial_buf = (uint8_t *)color;
-        } else if (dither && self->partial_buf == NULL) {
-            int ret = 0
-
-            if (self->view2 != NULL) {
-                ret = allocate_buffers(2, self->view1->len, self->idle_fb, self->active_fb);
-            } else {
-                ret = allocate_buffers(1, self->view1->len, self->idle_fb, NULL);
-            }
-
-            if (ret == -1) {
-                dither = false;
-                self.idle_fb = (uint8_t *)color;
-            }
-
-        } else if (!dither && self->partial_buf != NULL) {
-            free_buffers(self->idle_fb, self->active_fb);
-            self->partial_buf = NULL;
-            self->idle_fb = (uint8_t *)color;
-        }
-
-        if (self->partial_buf == NULL && self->r_data.swap) {
-            rgb565_byte_swap((uint16_t *)color, (uint32_t)(color_size / 2));
-        }
-
-        lcd_bus_lock_acquire(self->tx_color_lock);
-
-        self->r_data.last_update = (uint8_t)last_update;
-        self->color_size = color_size;
-        self->r_data.x_start = x_start;
-        self->r_data.y_start = y_start;
-        self->r_data.x_end = x_end;
-        self->r_data.y_end = y_end;
-        self->r_data.dst_width = x_end - x_start + 1;
-        self->r_data.dst_height = y_end - y_start + 1;
-        self->r_data.rotation = rotation;
-        self->r_data.dither = (uint8_t)dither;
-
-        lcd_bus_lock_release(self->copy_lock);
-
-        return LCD_OK;
-    }
-
-
-mp_lcd_err_t spi_get_lane_count(mp_obj_t obj, uint8_t *lane_count)
-{
-    mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
-
-    if (self->panel_io_config.flags.sio_mode) {
-        *lane_count = 2;
-    } else if (self->panel_io_config.flags.quad_mode) {
-        *lane_count = 4;
-    } else if (self->panel_io_config.flags.octal_mode) {
-        *lane_count = 8;
-    } else {
-        *lane_count = 1;
-    }
-
-    LCD_DEBUG_PRINT("spi_get_lane_count(self) -> %i\n", (uint8_t)(*lane_count))
-
-    return LCD_OK;
-}
-
-
-mp_obj_t mp_spi_bus_get_host(mp_obj_t obj)
-{
-    mp_lcd_spi_bus_obj_t *self = (mp_lcd_spi_bus_obj_t *)obj;
-
-    LCD_DEBUG_PRINT("mp_spi_bus_get_host(self) -> %i\n", (uint8_t)self->host)
-    return mp_obj_new_int((uint8_t)self->host);
-}
-
-MP_DEFINE_CONST_FUN_OBJ_1(mp_spi_bus_get_host_obj, mp_spi_bus_get_host);
-
-
-static const mp_rom_map_elem_t mp_lcd_spi_bus_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_get_host),             MP_ROM_PTR(&mp_spi_bus_get_host_obj)             },
-    { MP_ROM_QSTR(MP_QSTR_get_lane_count),       MP_ROM_PTR(&mp_lcd_bus_get_lane_count_obj)       },
-    { MP_ROM_QSTR(MP_QSTR_allocate_framebuffer), MP_ROM_PTR(&mp_lcd_bus_allocate_framebuffer_obj) },
-    { MP_ROM_QSTR(MP_QSTR_free_framebuffer),     MP_ROM_PTR(&mp_lcd_bus_free_framebuffer_obj)     },
-    { MP_ROM_QSTR(MP_QSTR_register_callback),    MP_ROM_PTR(&mp_lcd_bus_register_callback_obj)    },
-    { MP_ROM_QSTR(MP_QSTR_tx_param),             MP_ROM_PTR(&mp_lcd_bus_tx_param_obj)             },
-    { MP_ROM_QSTR(MP_QSTR_tx_color),             MP_ROM_PTR(&mp_lcd_bus_tx_color_obj)             },
-    { MP_ROM_QSTR(MP_QSTR_rx_param),             MP_ROM_PTR(&mp_lcd_bus_rx_param_obj)             },
-    { MP_ROM_QSTR(MP_QSTR_init),                 MP_ROM_PTR(&mp_lcd_bus_init_obj)                 },
-    { MP_ROM_QSTR(MP_QSTR_deinit),               MP_ROM_PTR(&mp_lcd_bus_deinit_obj)               },
-    { MP_ROM_QSTR(MP_QSTR___del__),              MP_ROM_PTR(&mp_lcd_bus_deinit_obj)               },
-};
-
-static MP_DEFINE_CONST_DICT(mp_lcd_spi_bus_locals_dict, mp_lcd_spi_bus_locals_dict_table);
 
 
 MP_DEFINE_CONST_OBJ_TYPE(
@@ -490,5 +276,5 @@ MP_DEFINE_CONST_OBJ_TYPE(
     MP_QSTR_SPI_Bus,
     MP_TYPE_FLAG_NONE,
     make_new, mp_lcd_spi_bus_make_new,
-    locals_dict, (mp_obj_dict_t *)&mp_lcd_spi_bus_locals_dict
+    locals_dict, (mp_obj_dict_t *)&mp_lcd_bus_locals_dict
 );

@@ -10,8 +10,9 @@ if TYPE_CHECKING:
     import array  # NOQA
     import io_expander_framework  # NOQA
 
-import lcd_bus
 
+import lcd_bus
+import spi3wire  # NOQA
 
 # Constants
 
@@ -59,7 +60,8 @@ class DisplayDriver:
     _frame_buffer2: Optional[_BufferType] = ...
     _backup_set_memory_location: Optional[Callable] = ...
     _rotation: int = ...
-    _spi_3wire: lcd_bus.SPI3Wire = None
+    _spi_3wire: spi3wire.Spi3Wire = None
+    _dither: bool = ...
 
     # Default values of "power" and "backlight" are reversed logic! 0 means ON.
     # You can change this by setting backlight_on and power_on arguments.
@@ -87,6 +89,12 @@ class DisplayDriver:
     # buf = heap_caps.malloc(
     #     buffer_size, heap_caps.CAP_INTERNAL | heap_caps.CAP_DMA
     # )
+
+    def set_dither(self, value: bool) -> None:
+        ...
+
+    def get_dither(self) -> bool:
+        ...
 
     @staticmethod
     def get_default() -> "DisplayDriver":

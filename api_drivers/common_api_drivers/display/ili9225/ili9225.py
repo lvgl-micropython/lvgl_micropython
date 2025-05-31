@@ -35,28 +35,28 @@ class ILI9225(display_driver_framework.DisplayDriver):
 
         param_buf[0] = (x1 >> 8) & 0xFF
         param_buf[1] = x1 & 0xFF
-        self._data_bus.tx_param(_HWINADDR1, self._param_mv[:2])
+        self._data_bus.tx_param(_HWINADDR1, self._param_mv[:2], False)
 
         param_buf[0] = (x2 >> 8) & 0xFF
         param_buf[1] = x2 & 0xFF
-        self._data_bus.tx_param(_HWINADDR2, self._param_mv[:2])
+        self._data_bus.tx_param(_HWINADDR2, self._param_mv[:2], False)
 
         # Page addresses
         param_buf[0] = (y1 >> 8) & 0xFF
         param_buf[1] = y1 & 0xFF
-        self._data_bus.tx_param(_VWINADDR1, self._param_mv[:2])
+        self._data_bus.tx_param(_VWINADDR1, self._param_mv[:2], False)
 
         param_buf[0] = (y2 >> 8) & 0xFF
         param_buf[1] = y2 & 0xFF
-        self._data_bus.tx_param(_VWINADDR2, self._param_mv[:2])
+        self._data_bus.tx_param(_VWINADDR2, self._param_mv[:2], False)
 
         param_buf[0] = (x1 >> 8) & 0xFF
         param_buf[1] = x1 & 0xFF
-        self._data_bus.tx_param(_RAMADDRSET1, self._param_mv[:2])
+        self._data_bus.tx_param(_RAMADDRSET1, self._param_mv[:2], False)
 
         param_buf[0] = (y1 >> 8) & 0xFF
         param_buf[1] = y1 & 0xFF
-        self._data_bus.tx_param(_RAMADDRSET2, self._param_mv[:2])
+        self._data_bus.tx_param(_RAMADDRSET2, self._param_mv[:2], True)
 
         return _RAMWR
 

@@ -20,7 +20,7 @@
 /* end includes */
 
 
-#ifdef MP_PORT_UNIX
+// #ifdef MP_PORT_UNIX
     static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
         LCD_UNUSED(type);
@@ -32,51 +32,20 @@
         return mp_const_none;
     }
 
+/*
 #else
     #ifdef MICROPY_PY_NRF
        #include "modules/machine/spi.h"
     #endif
 
-    /*
-    typedef enum _mp_spi_state_t {
-        MP_SPI_STATE_STOPPED,
-        MP_SPI_STATE_STARTED,
-        MP_SPI_STATE_SENDING
-    } mp_spi_state_t;
-
-    typedef struct _machine_hw_spi_bus_obj_t {
-        uint8_t host;
-        mp_obj_t sck;
-        mp_obj_t mosi;
-        mp_obj_t miso;
-        int16_t active_devices;
-        mp_spi_state_t state;
-        void *user_data;
-    } machine_hw_spi_bus_obj_t;
-
-
-    typedef struct _machine_hw_spi_obj_t {
-        mp_obj_base_t base;
-        uint32_t baudrate;
-        uint8_t polarity;
-        uint8_t phase;
-        uint8_t bits;
-        uint8_t firstbit;
-        mp_obj_t cs;
-        machine_hw_spi_bus_obj_t *spi_bus;
-        void *user_data;
-    } machine_hw_spi_obj_t;
-
-    */
-
-    /* macros */
+    // macros
     #define CS_ON() { if (self->panel_io_config.cs_gpio != mp_const_none) mp_hal_pin_write((mp_hal_pin_obj_t)mp_hal_get_pin_obj(self->panel_io_config.cs_gpio), self->panel_io_config.flags.cs_high_active); }
     #define CS_OFF() { if (self->panel_io_config.cs_gpio != mp_const_none) mp_hal_pin_write((mp_hal_pin_obj_t)mp_hal_get_pin_obj(self->panel_io_config.cs_gpio), !self->panel_io_config.flags.cs_high_active); }
     #define DC_CMD() { mp_hal_pin_write(self->panel_io_config.dc_gpio, self->panel_io_config.flags.dc_low_on_data); }
     #define DC_DATA() { mp_hal_pin_write(self->panel_io_config.dc_gpio, !self->panel_io_config.flags.dc_low_on_data); }
-    /* end macros */
+    // end macros
 
-    /* forward declarations */
+    // forward declarations
     mp_lcd_err_t s_spi_del(mp_obj_t obj);
     mp_lcd_err_t s_spi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
     mp_lcd_err_t s_spi_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
@@ -88,10 +57,10 @@
     void send_param_8(mp_lcd_spi_bus_obj_t *self, void *param, size_t param_size);
     void send_cmd_16(mp_lcd_spi_bus_obj_t *self, int lcd_cmd);
     void send_cmd_8(mp_lcd_spi_bus_obj_t *self, int lcd_cmd);
-    /* end forward declarations */
+    // end forward declarations
 
 
-    /* function definitions */
+    // function definitions
     static mp_obj_t mp_lcd_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
         enum {
@@ -170,7 +139,7 @@
         self->panel_io_handle.tx_color = s_spi_tx_color;
         self->panel_io_handle.get_lane_count = s_spi_get_lane_count;
 
-    #endif /* !defined(IDF_VER) */
+    #endif // !defined(IDF_VER)
 
         return MP_OBJ_FROM_PTR(self);
     }
@@ -314,11 +283,10 @@
 
     MP_DEFINE_CONST_FUN_OBJ_1(s_spi_bus_get_host_obj, s_spi_bus_get_host);
 
-    /* sending functions
-     * These functions are here so a constant checking of the bit depth doesn't
-     * need to be done. The functions gets stored in a structure according to the
-     * bit depth the user has supplied.
-    */
+    // sending functions
+    // These functions are here so a constant checking of the bit depth doesn't
+    // need to be done. The functions gets stored in a structure according to the
+    // bit depth the user has supplied.
     void send_param_16(mp_lcd_spi_bus_obj_t *self, void *param, size_t param_size)
     {
         self->panel_io_config.spi_transfer(
@@ -364,9 +332,9 @@
         DC_DATA();
 
     }
-    /* end sending functions */
+    // end sending functions
 
-    /* end function definitions */
+    // end function definitions
 
 
 #endif
@@ -389,13 +357,12 @@ static const mp_rom_map_elem_t mp_lcd_spi_bus_locals_dict_table[] = {
 
 static MP_DEFINE_CONST_DICT(mp_lcd_spi_bus_locals_dict, mp_lcd_spi_bus_locals_dict_table);
 
-/* create micropython class */
-/* create micropython class */
+*/
 MP_DEFINE_CONST_OBJ_TYPE(
     mp_lcd_spi_bus_type,
     MP_QSTR_SPI_Bus,
     MP_TYPE_FLAG_NONE,
     make_new, mp_lcd_spi_bus_make_new,
-    locals_dict, (mp_obj_dict_t *)&mp_lcd_spi_bus_locals_dict
+    locals_dict, (mp_obj_dict_t *)&mp_lcd_bus_locals_dict
 );
-/* end create micropython class */
+

@@ -134,7 +134,7 @@ class AXS15231B(display_driver_framework.DisplayDriver):
             cmd <<= 8
             cmd |= _WRITE_CMD << 24
 
-        self._data_bus.tx_param(cmd, params)
+        self._data_bus.tx_param(cmd, params, False)
 
     def _set_memory_location(self, x1: int, y1: int, x2: int, y2: int):
         if y1 == 0:
@@ -148,18 +148,19 @@ class AXS15231B(display_driver_framework.DisplayDriver):
         param_buf[1] = x1 & 0xFF
         param_buf[2] = (x2 >> 8) & 0xFF
         param_buf[3] = x2 & 0xFF
-
-        self._data_bus.tx_param(_CASET, self._param_mv)
-
         if self.__qspi:
+            self._data_bus.tx_param(_CASET, self._param_mv, True)
+
             cmd &= 0xFF
             cmd <<= 8
             cmd |= _WRITE_COLOR << 2
         else:
+            self._data_bus.tx_param(_CASET, self._param_mv, False)
+
             param_buf[0] = (y1 >> 8) & 0xFF
             param_buf[1] = y1 & 0xFF
             param_buf[2] = (y2 >> 8) & 0xFF
             param_buf[3] = y2 & 0xFF
-            self._data_bus.tx_param(_RASET, self._param_mv)
+            self._data_bus.tx_param(_RASET, self._param_mv, True)
 
         return cmd

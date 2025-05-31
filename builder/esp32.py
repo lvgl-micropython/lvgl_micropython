@@ -540,6 +540,13 @@ def parse_args(extra_args, lv_cflags, brd):
         extra_args = esp32_args(extra_args)
     elif board == 'ESP32_GENERIC_S3':
         extra_args = esp32_s3_args(extra_args)
+    elif board == 'ESP32_GENERIC_P4':
+        try:
+            shutil.copytree('esp32_p4_board/ESP32_GENERIC_P4', 'lib/micropython/ports/esp32/boards/ESP32_GENERIC_P4')
+        except OSError:
+            pass
+
+        extra_args = esp32_s3_args(extra_args)
 
     extra_args = repl_args(extra_args)
 
@@ -1009,25 +1016,26 @@ if not os.path.exists('micropy_updates/originals/esp32'):
 
 
 def update_mpthreadport():
-    data = read_file('esp32', MPTHREADPORT_PATH)
-
-    if '_CORE_ID' not in data:
-        data = data.replace('MP_TASK_COREID', '_CORE_ID')
-
-        new_data = [
-            '#if MICROPY_PY_THREAD',
-            '',
-            '#if (MP_USE_DUAL_CORE && !CONFIG_FREERTOS_UNICORE)',
-            '    #define _CORE_ID    tskNO_AFFINITY',
-            '#else',
-            '    #define _CORE_ID    MP_TASK_COREID',
-            '#endif',
-            ''
-        ]
-
-        data = data.replace('#if MICROPY_PY_THREAD', '\n'.join(new_data), 1)
-
-        write_file(MPTHREADPORT_PATH, data)
+    # data = read_file('esp32', MPTHREADPORT_PATH)
+    #
+    # if '_CORE_ID' not in data:
+    #     data = data.replace('MP_TASK_COREID', '_CORE_ID')
+    #
+    #     new_data = [
+    #         '#if MICROPY_PY_THREAD',
+    #         '',
+    #         '#if (MP_USE_DUAL_CORE && !CONFIG_FREERTOS_UNICORE)',
+    #         '    #define _CORE_ID    tskNO_AFFINITY',
+    #         '#else',
+    #         '    #define _CORE_ID    MP_TASK_COREID',
+    #         '#endif',
+    #         ''
+    #     ]
+    #
+    #     data = data.replace('#if MICROPY_PY_THREAD', '\n'.join(new_data), 1)
+    #
+    #     write_file(MPTHREADPORT_PATH, data)
+    pass
 
 
 def update_panic_handler():
@@ -1066,12 +1074,29 @@ def update_mpconfigboard():
 def update_mpconfigport():
     data = read_file('esp32', MPCONFIGPORT_PATH)
 
+    # data = data.replace(
+    #     '#define MICROPY_PY_MACHINE_ADC              (1)',
+    #     '#ifndef CONFIG_IDF_TARGET_ESP32P4\n'
+    #     '#define MICROPY_PY_MACHINE_ADC              (1)'
+    # )
+    # data = data.replace(
+    #     '#define MICROPY_PY_MACHINE_ADC_BLOCK        (1)',
+    #     '#define MICROPY_PY_MACHINE_ADC_BLOCK        (1)\n'
+    #     '#endif'
+    # )
+    data = data.replace(
+        '#define MICROPY_PY_NETWORK_HOSTNAME_DEFAULT "mpy-esp32c6"',
+        '#define MICROPY_PY_NETWORK_HOSTNAME_DEFAULT "mpy-esp32c6"\n'
+        '#elif CONFIG_IDF_TARGET_ESP32P4\n'
+        '#define MICROPY_PY_NETWORK_HOSTNAME_DEFAULT "mpy-esp32p4"'
+    )
+
     if custom_board_path is None:
         repl_data = [
-            '#ifndef USB_SERIAL_JTAG_PACKET_SZ_BYTES',
-            '#define USB_SERIAL_JTAG_PACKET_SZ_BYTES (64)',
-            '#endif',
-            '',
+            # '#ifndef USB_SERIAL_JTAG_PACKET_SZ_BYTES',
+            # '#define USB_SERIAL_JTAG_PACKET_SZ_BYTES (64)',
+            # '#endif',
+            # '',
             '#ifdef MICROPY_HW_UART_REPL_BAUD',
             '#undef MICROPY_HW_UART_REPL_BAUD',
             '#endif',
@@ -1091,7 +1116,12 @@ def update_mpconfigport():
                 '#ifdef MICROPY_HW_ENABLE_USBDEV',
                 '#undef MICROPY_HW_ENABLE_USBDEV',
                 '#endif',
-                f'#define MICROPY_HW_ENABLE_USBDEV  ({int(enable_cdc_repl.lower() == "y")})'
+                f'#define MICROPY_HW_ENABLE_USBDEV  ({int(enable_cdc_repl.lower() == "y")})',
+                '',
+                '#ifdef MICROPY_HW_USB_CDC',
+                '#undef MICROPY_HW_USB_CDC',
+                '#endif',
+                '#define MICROPY_HW_USB_CDC  (MICROPY_HW_ENABLE_USBDEV)'
             ])
 
         if enable_jtag_repl is not None:
@@ -1099,8 +1129,7 @@ def update_mpconfigport():
                 '#ifdef MICROPY_HW_ESP_USB_SERIAL_JTAG',
                 '#undef MICROPY_HW_ESP_USB_SERIAL_JTAG',
                 '#endif',
-                f'#define MICROPY_HW_ESP_USB_SERIAL_JTAG  ({int(enable_jtag_repl.lower() == "y")})',
-                '#define USB_SERIAL_JTAG_PACKET_SZ_BYTES 	(64)'
+                f'#define MICROPY_HW_ESP_USB_SERIAL_JTAG  ({int(enable_jtag_repl.lower() == "y")})'
             ])
 
         repl_data.extend([
@@ -1115,24 +1144,21 @@ def update_mpconfigport():
         )
 
     pattern = (
-        '#if !(CONFIG_IDF_TARGET_ESP32 && CONFIG_SPIRAM && '
-        'CONFIG_SPIRAM_CACHE_WORKAROUND)\n'
+        '#if !(CONFIG_IDF_TARGET_ESP32 && CONFIG_SPIRAM && CONFIG_SPIRAM_CACHE_WORKAROUND)\n'
         '#define MICROPY_WRAP_MP_BINARY_OP(f) IRAM_ATTR f\n'
         '#endif'
     )
 
     if pattern in data:
         pattern = (
-            '#if !(CONFIG_IDF_TARGET_ESP32 && CONFIG_SPIRAM '
-            '&& CONFIG_SPIRAM_CACHE_WORKAROUND)\n'
+            '#if !(CONFIG_IDF_TARGET_ESP32 && CONFIG_SPIRAM && CONFIG_SPIRAM_CACHE_WORKAROUND)\n'
         )
         data = data.replace(
             '#define MICROPY_WRAP_MP_SCHED_EXCEPTION(f) IRAM_ATTR f\n',
             ''
         )
         data = data.replace(
-            '#define MICROPY_WRAP_MP_SCHED_KEYBOARD_INTERRUPT(f) '
-            'IRAM_ATTR f\n',
+            '#define MICROPY_WRAP_MP_SCHED_KEYBOARD_INTERRUPT(f) IRAM_ATTR f\n',
             ''
         )
         data = data.replace(
@@ -1146,93 +1172,95 @@ def update_mpconfigport():
                       'IRAM_ATTR f\n'
         )
 
-    has_dual_core = 'MP_USE_DUAL_CORE' in data
+    # has_dual_core = 'MP_USE_DUAL_CORE' in data
+    #
+    # data = data.split('\n')
+    #
+    # for i, line in enumerate(data):
+    #     if has_dual_core and line.startswith('#define MP_USE_DUAL_CORE'):
+    #         data[i] = (
+    #             '#define MP_USE_DUAL_CORE                    '
+    #             f'({int(dual_core_threads)})'
+    #         )
+    #         continue
+    #
+    #     if line.startswith('#define MICROPY_PY_THREAD_GIL'):
+    #         data[i] = (
+    #             f'#define MICROPY_PY_THREAD_GIL               '
+    #             f'({int(not dual_core_threads)})'
+    #         )
+    #         if not has_dual_core:
+    #             data[i] += (
+    #                 '\n#define MP_USE_DUAL_CORE                    '
+    #                 f'({int(dual_core_threads)})'
+    #             )
+    #         continue
+    #
+    #     if line.startswith('#define MICROPY_TASK_STACK_SIZE'):
+    #         data[i] = (
+    #             f'#define MICROPY_TASK_STACK_SIZE           ({task_stack_size})'
+    #         )
+    #         continue
 
-    data = data.split('\n')
-
-    for i, line in enumerate(data):
-        if has_dual_core and line.startswith('#define MP_USE_DUAL_CORE'):
-            data[i] = (
-                '#define MP_USE_DUAL_CORE                    '
-                f'({int(dual_core_threads)})'
-            )
-            continue
-
-        if line.startswith('#define MICROPY_PY_THREAD_GIL'):
-            data[i] = (
-                f'#define MICROPY_PY_THREAD_GIL               '
-                f'({int(not dual_core_threads)})'
-            )
-            if not has_dual_core:
-                data[i] += (
-                    '\n#define MP_USE_DUAL_CORE                    '
-                    f'({int(dual_core_threads)})'
-                )
-            continue
-
-        if line.startswith('#define MICROPY_TASK_STACK_SIZE'):
-            data[i] = (
-                f'#define MICROPY_TASK_STACK_SIZE           ({task_stack_size})'
-            )
-            continue
-
-    data = '\n'.join(data)
+    # data = '\n'.join(data)
 
     write_file(MPCONFIGPORT_PATH, data)
 
 
 def update_main():
-    data = read_file('esp32', MAIN_PATH)
+    # data = read_file('esp32', MAIN_PATH)
 
-    rep_data = [
-        '#if SOC_LCD_I80_SUPPORTED',
-        '#include "../../../../ext_mod/lcd_bus/esp32_include/i80_bus.h"',
-        '#endif',
-        '',
-        '#if SOC_LCD_RGB_SUPPORTED',
-        '#include "../../../../ext_mod/lcd_bus/esp32_include/rgb_bus.h"',
-        '#endif',
-        '',
-        '#include "../../../../ext_mod/lcd_bus/esp32_include/spi_bus.h"',
-        '#include "../../../../ext_mod/lcd_bus/esp32_include/i2c_bus.h"',
-        '#include "../../../../ext_mod/spi3wire/include/spi3wire.h"',
-        '#include "../../../../micropy_updates/common/mp_spi_common.h"',
-        '',
-        '#if MICROPY_BLUETOOTH_NIMBLE'
-    ]
+    # rep_data = [
+    #     '#if SOC_LCD_I80_SUPPORTED',
+    #     '#include "../../../../ext_mod/lcd_bus/esp32_include/i80_bus.h"',
+    #     '#endif',
+    #     '',
+    #     '#if SOC_LCD_RGB_SUPPORTED',
+    #     '#include "../../../../ext_mod/lcd_bus/esp32_include/rgb_bus.h"',
+    #     '#endif',
+    #     '',
+    #     '#include "../../../../ext_mod/lcd_bus/esp32_include/spi_bus.h"',
+    #     '#include "../../../../ext_mod/lcd_bus/esp32_include/i2c_bus.h"',
+    #     '#include "../../../../ext_mod/spi3wire/include/spi3wire.h"',
+    #     '#include "../../../../micropy_updates/common/mp_spi_common.h"',
+    #     '',
+    #     '#if MICROPY_BLUETOOTH_NIMBLE'
+    # ]
 
-    data = data.replace(
-        '#if MICROPY_BLUETOOTH_NIMBLE',
-        '\n'.join(rep_data),
-        1
-    )
+    # data = data.replace(
+    #     '#if MICROPY_BLUETOOTH_NIMBLE',
+    #     '\n'.join(rep_data),
+    #     1
+    # )
 
-    rep_data = [
-        'soft_reset_exit:',
-        ' ',
-        '#if SOC_LCD_I80_SUPPORTED',
-        '    mp_lcd_i80_bus_deinit_all();',
-        '#endif',
-        '    ',
-        '#if SOC_LCD_RGB_SUPPORTED',
-        '   mp_lcd_rgb_bus_deinit_all();',
-        '#endif',
-        '    ',
-        '    mp_lcd_spi_bus_deinit_all();',
-        '    ',
-        '    mp_lcd_i2c_bus_deinit_all();',
-        '    ',
-        '    mp_spi3wire_deinit_all();',
-        '    ',
-        '    mp_machine_hw_spi_bus_deinit_all();'
-    ]
+    # rep_data = [
+    #     'soft_reset_exit:',
+    #     ' ',
+    #     '#if SOC_LCD_I80_SUPPORTED',
+    #     '    mp_lcd_i80_bus_deinit_all();',
+    #     '#endif',
+    #     '    ',
+    #     '#if SOC_LCD_RGB_SUPPORTED',
+    #     '   mp_lcd_rgb_bus_deinit_all();',
+    #     '#endif',
+    #     '    ',
+    #     '    mp_lcd_spi_bus_deinit_all();',
+    #     '    ',
+    #     '    mp_lcd_i2c_bus_deinit_all();',
+    #     '    ',
+    #     '    mp_spi3wire_deinit_all();',
+    #     '    ',
+    #     '    mp_machine_hw_spi_bus_deinit_all();'
+    # ]
 
-    data = data.replace(
-        'soft_reset_exit:',
-        '\n'.join(rep_data)
-    )
+    # data = data.replace(
+    #     'soft_reset_exit:',
+    #     '\n'.join(rep_data)
+    # )
 
-    write_file(MAIN_PATH, data)
+    # write_file(MAIN_PATH, data)
+
+    pass
 
 
 def build_sdkconfig(*args):
@@ -1249,8 +1277,8 @@ def build_sdkconfig(*args):
         'CONFIG_ESPTOOLPY_FLASHSIZE_32MB=n',
         'CONFIG_ESPTOOLPY_FLASHSIZE_64MB=n',
         'CONFIG_ESPTOOLPY_FLASHSIZE_128MB=n',
-        'CONFIG_COMPILER_OPTIMIZATION_SIZE=n',
-        'CONFIG_COMPILER_OPTIMIZATION_PERF=n',
+        # 'CONFIG_COMPILER_OPTIMIZATION_SIZE=n',
+        # 'CONFIG_COMPILER_OPTIMIZATION_PERF=n',
         'CONFIG_COMPILER_OPTIMIZATION_CHECKS_SILENT=y'
     ]
 
@@ -1315,8 +1343,8 @@ def build_sdkconfig(*args):
 
     if optimize_size:
         base_config.append('CONFIG_COMPILER_OPTIMIZATION_SIZE=y')
-    else:
-        base_config.append('CONFIG_COMPILER_OPTIMIZATION_PERF=y')
+    # else:
+    #     base_config.append('CONFIG_COMPILER_OPTIMIZATION_PERF=y')
 
     if oct_flash:
         base_config.append('CONFIG_ESPTOOLPY_OCT_FLASH=y')

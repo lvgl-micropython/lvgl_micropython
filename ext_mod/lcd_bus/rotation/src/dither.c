@@ -1,6 +1,11 @@
 
-#include "rgb565_dither.h"
+#include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
 #include <string.h>
+
+#include "dither.h"
+
 
 uint8_t* red_thresh = NULL;
 uint8_t* green_thresh = NULL;
@@ -9,9 +14,13 @@ uint8_t* blue_thresh = NULL;
 
 void dither_deinit(void)
 {
-    if (red_thresh != NULL) free(red_threshresh);
+    if (red_thresh != NULL) free(red_thresh);
     if (green_thresh != NULL) free(green_thresh);
     if (blue_thresh != NULL) free(blue_thresh);
+
+    red_thresh = NULL;
+    green_thresh = NULL;
+    blue_thresh = NULL;
     return;
 }
 

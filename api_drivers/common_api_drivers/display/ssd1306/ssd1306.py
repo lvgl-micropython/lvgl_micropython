@@ -140,11 +140,11 @@ class SSD1306(display_driver_framework.DisplayDriver):
 
         self._param_buf[0] = x1
         self._param_buf[1] = x2
-        self.set_params(_SET_COL_ADDR, self._param_mv[:2])
+        self._data_bus.tx_param(_SET_COL_ADDR, self._param_mv[:2], False)
 
         self._param_buf[0] = y1
         self._param_buf[1] = y2
-        self.set_params(_SET_PAGE_ADDR, self._param_mv[:2])
+        self._data_bus.tx_param(_SET_PAGE_ADDR, self._param_mv[:2], True)
 
         size = (
             (area.x2 - area.x1 + 1) *
@@ -156,4 +156,4 @@ class SSD1306(display_driver_framework.DisplayDriver):
         # what converts from the C_Array object the binding passes into a
         # memoryview object that can be passed to the bus drivers
         data_view = color_p.__dereference__(size)
-        self._data_bus.tx_color(0, data_view, x1, y1, x2, y2, self._rotation, self._disp_drv.flush_is_last())
+        self._data_bus.tx_color(0, data_view, x1, y1, x2, y2, self._rotation, self._dither, self._disp_drv.flush_is_last())

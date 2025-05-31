@@ -169,7 +169,7 @@ class NV3041A(display_driver_framework.DisplayDriver):
 
     def set_params(self, cmd, params=None):
         cmd = self.__cmd_modifier(cmd)
-        self._data_bus.tx_param(cmd, params)
+        self._data_bus.tx_param(cmd, params, False)
 
     def _set_memory_location(self, x1: int, y1: int, x2: int, y2: int):
         return self._dummy_set_memory_location(x1, y1, x2, y2)
@@ -182,7 +182,7 @@ class NV3041A(display_driver_framework.DisplayDriver):
         param_buf[2] = (x2 >> 8) & 0xFF
         param_buf[3] = x2 & 0xFF
 
-        self._data_bus.tx_param(self.__caset, self._param_mv)
+        self._data_bus.tx_param(self.__caset, self._param_mv, True)
 
     def _flush_cb(self, _, area, color_p):
         x1 = area.x1 + self._offset_x
@@ -199,8 +199,11 @@ class NV3041A(display_driver_framework.DisplayDriver):
 
         data_view = color_p.__dereference__(size)
 
-        # Divide buffer in 2 chunks:
-        first_chunk = int(size / 2)
+        half_height = int(height / 2)
 
-        self._data_bus.tx_color(self.__ramwr, data_view[:first_chunk], x1, y1, x2, y2, self._rotation, False)
-        self._data_bus.tx_color(self.__ramwrc, data_view[first_chunk:], x1, y1, x2, y2, self._rotation, self._disp_drv.flush_is_last())
+        first_chunk = width * half_height * lv.color_format_get_size(self._color_space)
+
+        self._data_bus.tx_color(self.__ramwr, data_view[:first_chunk], x1, y1, x2, half_height - 1, self._rotation,
+                                self._dither, False)
+        self._data_bus.tx_color(self.__ramwrc, data_view[first_chunk:], x1, height - half_height - 1, x2, y2, self._rotation,
+                                self._dither, self._disp_drv.flush_is_last())

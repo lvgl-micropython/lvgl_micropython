@@ -18,9 +18,15 @@
 #include "esp_lcd_panel_ops.h"
 
 #include "lcd_bus_task.h"
-#include "rgb565_dither.h"
+#include "lcd_types.h"
 
 #include <string.h>
+
+
+void lcd_bus_event_init(lcd_bus_event_t *event) {
+    event->handle = xEventGroupCreateStatic(&event->buffer);
+}
+
 
 
 void lcd_bus_event_delete(lcd_bus_event_t *event)
@@ -54,8 +60,8 @@ static void rgb565_byte_swap(void *buf, size_t buf_size_px)
 {
     uint16_t *buf16 = (uint16_t *)buf;
 
-    for (size_t i=0;i<buf_size_px; buf16++) {
-        *buf16 =  (*buf16 << 8) | (*buf16 >> 8);
+    for (size_t i=0;i<buf_size_px; i++) {
+        buf16[i] = (buf16[i] << 8) | (buf16[i] >> 8);
     }
 }
 
@@ -63,47 +69,75 @@ static void rgb565_byte_swap(void *buf, size_t buf_size_px)
 void lcd_bus_task(void *self_in) {
     mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)self_in;
 
-    if (!self->init_func(self)) {
-        lcd_bus_lock_release(self->init_lock);
+    if (!self->init.init_func(self)) {
+        lcd_bus_lock_release(self->init.lock);
         return;
     }
 
     uint8_t *idle_fb;
-    bool last_update;
 
-    uint8_t bytes_per_pixel = self->bytes_per_pixel;
-    lcd_bus_lock_acquire(self->copy_lock);
+    lcd_bus_lock_acquire(self->task.lock);
 
-    self->init_err = LCD_OK;
-    lcd_bus_lock_release(self->init_lock);
+    self->init.err = LCD_OK;
+    lcd_bus_lock_release(self->init.lock);
 
     rotation_data_t *r_data = malloc(sizeof(rotation_data_t));
     rotation_data_t *original_r_data = malloc(sizeof(rotation_data_t));
 
-    bool exit = lcd_bus_event_isset(&self->copy_task_exit);
+    lcd_cmd_t *cmd = NULL;
+
+    bool exit = lcd_bus_event_isset(&self->task.exit);
     while (!exit) {
-        lcd_bus_lock_acquire(self->copy_lock);
+        lcd_bus_lock_acquire(self->task.lock);
 
-        idle_fb = self->idle_fb;
+        lcd_bus_lock_acquire(self->tx_cmds.lock);
 
-        memcpy(r_data, &self->r_data, sizeof(rotation_data_t))
-        memcpy(original_r_data, &self->r_data, sizeof(rotation_data_t))
+        uint8_t i = 0;
+        for (;i<self->tx_cmds.cmds_len; i++) {
+            cmd = self->tx_cmds.cmds[i];
 
-        if (self->partial_buf != NULL) {
+            self->tx_cmds.send_func(self, cmd->cmd, cmd->params, cmd->params_len);
+            if (cmd->params != NULL) free(cmd->params);
+            if (cmd->flush_is_next) {
+                free(cmd);
+                break;
+            } else {
+                free(cmd);
+            }
+        }
 
-            copy_pixels((void *)idle_fb, (void *)self->partial_buf, r_data);
+        for (uint8_t j=i;j<self->tx_cmds.cmds_len - 1;j++) {
+            self->tx_cmds.cmds[j - i] = self->tx_cmds.cmds[j + 1];
+        }
 
-            lcd_bus_lock_release(self->tx_color_lock);
+        self->tx_cmds.cmds_len -= i + 1;
+        self->tx_cmds.cmds = realloc(self->tx_cmds.cmds, self->tx_cmds.cmds_len * sizeof(lcd_cmd_t *));
 
-            self->flush_func(self, r_data, original_r_data, idle_fb, last_update);
-        } else if (r_data->sw_rotation != 1) {
+        lcd_bus_lock_release(self->tx_cmds.lock);
+
+        idle_fb = self->bufs.idle;
+
+        memcpy(r_data, &self->r_data, sizeof(rotation_data_t));
+        memcpy(original_r_data, &self->r_data, sizeof(rotation_data_t));
+
+        if (self->bufs.partial != NULL) {
+
+            copy_pixels((void *)idle_fb, (void *)self->bufs.partial, r_data);
+
+            lcd_bus_lock_release(self->tx_data.lock);
+
+            self->tx_data.flush_func(self, r_data, original_r_data, idle_fb, r_data->last_update);
+        } else if (r_data->sw_rotation == 0) {
             if (r_data->swap) {
                 rgb565_byte_swap((uint16_t *)idle_fb, r_data->color_size / 2);
             }
-            self->flush_cb(self, r_data, original_r_data, idle_fb, last_update);
+
+            lcd_bus_lock_release(self->tx_data.lock);
+
+            self->tx_data.flush_func(self, r_data, original_r_data, idle_fb, r_data->last_update);
         }
 
-        exit = rgb_bus_event_isset(&self->copy_task_exit);
+        exit = lcd_bus_event_isset(&self->task.exit);
     }
 }
 

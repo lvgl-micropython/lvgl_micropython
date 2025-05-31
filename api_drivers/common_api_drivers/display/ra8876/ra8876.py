@@ -556,32 +556,32 @@ class RA8876(display_driver_framework.DisplayDriver):
 
         # set active window start X/Y
         buf[0] = x_start & 0xFF
-        self.set_params(_AWUL_X0, mv)
+        self._data_bus.tx_param(_AWUL_X0, mv, False)
         buf[0] = (x_start >> 8) & 0xFF
-        self.set_params(_AWUL_X1, mv)
+        self._data_bus.tx_param(_AWUL_X1, mv, False)
         buf[0] = y_start & 0xFF
-        self.set_params(_AWUL_Y0, mv)
+        self._data_bus.tx_param(_AWUL_Y0, mv, False)
         buf[0] = (y_start >> 8) & 0xFF
-        self.set_params(_AWUL_Y1, mv)
+        self._data_bus.tx_param(_AWUL_Y1, mv, False)
 
         # set active window width and height
         buf[0] = (x_end - x_start) & 0xFF
-        self.set_params(_AW_WTH0, mv)
+        self._data_bus.tx_param(_AW_WTH0, mv, False)
         buf[0] = ((x_end - x_start) >> 8) & 0xFF
-        self.set_params(_AW_WTH1, mv)
+        self._data_bus.tx_param(_AW_WTH1, mv, False)
         buf[0] = (y_end - y_start) & 0xFF
-        self.set_params(_AW_HT0, mv)
+        self._data_bus.tx_param(_AW_HT0, mv, False)
         buf[0] = ((y_end - y_start) >> 8) & 0xFF
-        self.set_params(_AW_HT1, mv)
+        self._data_bus.tx_param(_AW_HT1, mv, False)
 
         # set cursor
         buf[0] = x_start & 0xff
-        self.set_params(_CURH0, mv)
+        self._data_bus.tx_param(_CURH0, mv, False)
         buf[0] = (x_start >> 8) & 0xFF
-        self.set_params(_CURH1, mv)
+        self._data_bus.tx_param(_CURH1, mv, False)
         buf[0] = y_start & 0xFF
-        self.set_params(_CURV0, mv)
+        self._data_bus.tx_param(_CURV0, mv, False)
         buf[0] = (y_start >> 8) & 0xFF
-        self.set_params(_CURV1, mv)
+        self._data_bus.tx_param(_CURV1, mv, True)
 
         return _MRWDP

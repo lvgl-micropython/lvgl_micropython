@@ -166,7 +166,7 @@ class SPD2010(display_driver_framework.DisplayDriver):
 
     def set_params(self, cmd, params=None):
         cmd = self.__cmd_modifier(cmd)
-        self._data_bus.tx_param(cmd, params)
+        self._data_bus.tx_param(cmd, params, False)
 
     def _set_memory_location(self, x1: int, y1: int, x2: int, y2: int):
         param_buf = self._param_buf  # NOQA
@@ -176,14 +176,14 @@ class SPD2010(display_driver_framework.DisplayDriver):
         param_buf[2] = (x2 >> 8) & 0xFF
         param_buf[3] = x2 & 0xFF
 
-        self._data_bus.tx_param(self.__caset, self._param_mv)
+        self._data_bus.tx_param(self.__caset, self._param_mv, False)
 
         param_buf[0] = (y1 >> 8) & 0xFF
         param_buf[1] = y1 & 0xFF
         param_buf[2] = (y2 >> 8) & 0xFF
         param_buf[3] = y2 & 0xFF
 
-        self._data_bus.tx_param(self.__raset, self._param_mv)
+        self._data_bus.tx_param(self.__raset, self._param_mv, True)
 
     def _flush_cb(self, _, area, color_p):
         x1 = area.x1 + self._offset_x
@@ -199,4 +199,5 @@ class SPD2010(display_driver_framework.DisplayDriver):
         size = width * height * lv.color_format_get_size(self._color_space)
 
         data_view = color_p.__dereference__(size)
-        self._data_bus.tx_color(self.__ramwr, data_view, x1, y1, x2, y2, self._rotation, False)
+        self._data_bus.tx_color(self.__ramwr, data_view, x1, y1, x2, y2, self._rotation,
+                                self._dither, self._disp_drv.flush_is_last())

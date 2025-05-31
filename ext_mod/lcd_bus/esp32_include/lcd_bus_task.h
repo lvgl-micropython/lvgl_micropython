@@ -18,8 +18,9 @@
         StaticEventGroup_t buffer;
     } lcd_bus_event_t;
 
+    void lcd_bus_event_init(lcd_bus_event_t *event);
 
-    #define lcd_bus_event_init(lcd_bus_event_t *event) event.handle = xEventGroupCreateStatic(&event.buffer)
+
     #define lcd_bus_event_wait(event) xEventGroupWaitBits(event.handle, (1 << 0), pdFALSE, pdTRUE, portMAX_DELAY)
     #define lcd_bus_event_set(event) xEventGroupSetBits(event.handle, (1 << 0))
     #define lcd_bus_event_clear(event) xEventGroupClearBits(event.handle, (1 << 0))
