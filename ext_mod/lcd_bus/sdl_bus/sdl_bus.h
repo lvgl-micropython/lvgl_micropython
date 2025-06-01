@@ -68,6 +68,8 @@
             bool ignore_size_chg;
             bool inited;
 
+            uint8_t *buf1;
+
         } mp_lcd_sdl_bus_obj_t;
 
         extern const mp_obj_type_t mp_lcd_sdl_bus_type;

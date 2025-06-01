@@ -210,10 +210,10 @@
         }
 
         for (; i < tuple->len; i++) {
-            self->panel_io_config.data_gpio_nums[i] = (int)mp_obj_get_int(tuple->items[i])
+            self->panel_io_config.data_gpio_nums[i] = (int)mp_obj_get_int(tuple->items[i]);
         }
 
-        for (i++; i < SOC_LCD_I80_BUS_WIDTH; i++) {
+        for (i++; i < 16; i++) {
             self->panel_io_config.data_gpio_nums[i] = -1;
         }
 
@@ -352,7 +352,7 @@
 
         xTaskCreatePinnedToCore(
                 lcd_bus_task, "rgb_task", LCD_DEFAULT_STACK_SIZE / sizeof(StackType_t),
-                self, ESP_TASK_PRIO_MAX - 1, &self->task.handle, 0);
+                self, ESP_TASK_PRIO_MAX - 1, (TaskHandle_t *)&self->task.handle, 0);
 
         lcd_bus_lock_acquire(self->init.lock);
         lcd_bus_lock_release(self->init.lock);

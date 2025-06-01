@@ -6,6 +6,10 @@
 
 #include "dither.h"
 
+#include "py/obj.h"
+#include "py/runtime.h"
+#include "py/misc.h"
+
 
 uint8_t* red_thresh = NULL;
 uint8_t* green_thresh = NULL;
@@ -14,9 +18,9 @@ uint8_t* blue_thresh = NULL;
 
 void dither_deinit(void)
 {
-    if (red_thresh != NULL) free(red_thresh);
-    if (green_thresh != NULL) free(green_thresh);
-    if (blue_thresh != NULL) free(blue_thresh);
+    if (red_thresh != NULL) m_free(red_thresh);
+    if (green_thresh != NULL) m_free(green_thresh);
+    if (blue_thresh != NULL) m_free(blue_thresh);
 
     red_thresh = NULL;
     green_thresh = NULL;
@@ -28,7 +32,7 @@ void dither_deinit(void)
 bool dither_init(void)
 {
     if (red_thresh == NULL) {
-        red_thresh = (uint8_t *)malloc(64);
+        red_thresh = (uint8_t *)m_malloc(64);
         if (red_thresh != NULL) {
             memcpy(red_thresh,
                 (uint8_t []){
@@ -45,7 +49,7 @@ bool dither_init(void)
     }
 
     if (green_thresh == NULL) {
-        green_thresh = (uint8_t *)malloc(64);
+        green_thresh = (uint8_t *)m_malloc(64);
         if (green_thresh != NULL) {
             memcpy(green_thresh,
                 (uint8_t []){
@@ -61,7 +65,7 @@ bool dither_init(void)
         }
     }
     if (blue_thresh == NULL) {
-        blue_thresh = (uint8_t *)malloc(64);
+        blue_thresh = (uint8_t *)m_malloc(64);
         if (blue_thresh != NULL) {
             memcpy(blue_thresh,
                 (uint8_t []){

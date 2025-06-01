@@ -360,7 +360,7 @@ static MP_DEFINE_CONST_DICT(mp_lcd_spi_bus_locals_dict, mp_lcd_spi_bus_locals_di
 */
 MP_DEFINE_CONST_OBJ_TYPE(
     mp_lcd_spi_bus_type,
-    MP_QSTR_SPI_Bus,
+    MP_QSTR_SPIBus,
     MP_TYPE_FLAG_NONE,
     make_new, mp_lcd_spi_bus_make_new,
     locals_dict, (mp_obj_dict_t *)&mp_lcd_bus_locals_dict

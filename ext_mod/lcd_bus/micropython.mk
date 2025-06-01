@@ -9,6 +9,7 @@ LVGL_BINDING_DIR = $(subst /ext_mod/lcd_bus,,$(MOD_DIR))
 CFLAGS_USERMOD += -I$(MOD_DIR)
 CFLAGS_USERMOD += -I$(MOD_DIR)/common_include
 CFLAGS_USERMOD += -I$(MOD_DIR)/sdl_bus
+CFLAGS_USERMOD += -I$(MOD_DIR)/rotation/include
 
 ifneq (,$(findstring -Wno-missing-field-initializers, $(CFLAGS_USERMOD)))
     CFLAGS_USERMOD += -Wno-missing-field-initializers
@@ -24,6 +25,8 @@ SRC_USERMOD_C += $(MOD_DIR)/common_src/led_bus.c
 SRC_USERMOD_C += $(MOD_DIR)/common_src/lcd_bus_task.c
 SRC_USERMOD_C += $(MOD_DIR)/common_src/allocate_buffers.c
 SRC_USERMOD_C += $(MOD_DIR)/common_src/bus_trans_done.c
+SRC_USERMOD_C += $(MOD_DIR)/rotation/src/rotation.c
+SRC_USERMOD_C += $(MOD_DIR)/rotation/src/dither.c
 SRC_USERMOD_C += $(MOD_DIR)/sdl_bus/sdl_bus.c
 
 ifneq (,$(findstring unix, $(LV_PORT)))

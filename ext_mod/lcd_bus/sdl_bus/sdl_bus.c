@@ -20,13 +20,8 @@
 
     uint8_t instance_count = 0;
 
-    mp_lcd_err_t sdl_tx_param(mp_obj_t obj, int lcd_cmd, void *param, size_t param_size);
-    mp_lcd_err_t sdl_del(mp_obj_t obj);
-    mp_lcd_err_t sdl_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, uint8_t cmd_bits, uint8_t param_bits);
-
     int flush_thread(void *self_in);
     int process_event(mp_lcd_sdl_bus_obj_t *self, SDL_Event *event);
-
 
     static mp_obj_t mp_lcd_sdl_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
@@ -44,13 +39,6 @@
         self->callback = mp_const_none;
 
         self->panel_io_config.flags = args[ARG_flags].u_int;
-
-        self->panel_io_handle.del = sdl_del;
-        self->panel_io_handle.init = sdl_init;
-        self->panel_io_handle.tx_param = sdl_tx_param;
-        self->panel_io_handle.rx_param = sdl_rx_param;
-        self->panel_io_handle.tx_color = sdl_tx_color;
-        self->panel_io_handle.get_lane_count = sdl_get_lane_count;
 
         self->pointer_event = (pointer_event_t){
             .x=0,
@@ -96,6 +84,9 @@
         mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
         mp_lcd_sdl_bus_obj_t *self = (mp_lcd_sdl_bus_obj_t *)args[ARG_self].u_obj;
+        mp_buffer_info_t bufinfo;
+        mp_get_buffer_raise(args[ARG_data].u_obj, &bufinfo, MP_BUFFER_RW);
+        uint8_t * color = (uint8_t *)bufinfo.buf;
 
         int pitch = self->panel_io_config.width * self->panel_io_config.bytes_per_pixel;
 
@@ -174,6 +165,8 @@
 
         self->panel_io_config.width = width;
         self->panel_io_config.height = height;
+
+        self->buf1 = (uint8_t *)self->view1->items;
 
         SDL_StartTextInput();
 
@@ -326,24 +319,22 @@
         mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
         mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-        mp_lcd_sdl_bus_obj_t *self = MP_OBJ_TO_PTR(args[ARG_self].u_obj);
-
-        void *buf;
-        size_t size = (size_t)args[ARG_size].u_int;
-
         if (args[ARG_buf_num].u_int == 1) {
-            self->buf1 = m_realloc(self->buf1, size);
-            buf = self->buf1;
-            memset(self->buf1, 0x00, size);
-        } else {
-            self->buf2 = m_realloc(self->buf2, size);
-            buf = self->buf2;
-            memset(self->buf2, 0x00, size);
-        }
+            mp_lcd_sdl_bus_obj_t *self = MP_OBJ_TO_PTR(args[ARG_self].u_obj);
+            size_t size = (size_t)args[ARG_size].u_int;
 
-        mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE, size, buf));
-        view->typecode |= 0x80; // used to indicate writable buffer
-        return MP_OBJ_FROM_PTR(view);
+            self->view1->items = m_realloc(self->view1->items, size);
+            self->view1->len = size;
+            memset(self->view1->items, 0x00, size);
+            self->buf1 = (uint8_t *)self->view1->items;
+
+            return MP_OBJ_FROM_PTR(self->view1);
+        } else {
+            return mp_const_none;
+            // self->buf2 = m_realloc(self->buf2, size);
+            // buf = self->buf2;
+            // memset(self->buf2, 0x00, size);
+        }
     }
 
     MP_DEFINE_CONST_FUN_OBJ_KW(mp_lcd_sdl_realloc_buffer_obj, 3, mp_lcd_sdl_realloc_buffer);

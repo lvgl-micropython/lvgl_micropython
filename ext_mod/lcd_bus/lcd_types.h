@@ -54,6 +54,10 @@
         } mp_lcd_err_t;
     #endif
 
+    typedef struct _lcd_bus_lock_t lcd_bus_lock_t;
+    typedef struct _lcd_bus_event_t lcd_bus_event_t;
+    typedef void * lcd_bus_task_handle_t;
+
     typedef struct _mp_lcd_bus_obj_t mp_lcd_bus_obj_t;
 
     typedef void (*flush_func_t)(mp_lcd_bus_obj_t *self_in, rotation_data_t *r_data, rotation_data_t *original_r_data, uint8_t *idle_fb, uint8_t last_update);
@@ -76,7 +80,7 @@
 
 
     typedef struct _lcd_task_t {
-        TaskHandle_t handle;
+        lcd_bus_task_handle_t handle;
         lcd_bus_event_t exit;
         lcd_bus_lock_t lock;
     } lcd_task_t;
@@ -140,5 +144,12 @@
 
         internal_cb_funcs_t internal_cb_funcs;
     };
+
+    void lcd_bus_event_init(lcd_bus_event_t *event);
+    void lcd_bus_event_delete(lcd_bus_event_t *event);
+    bool lcd_bus_event_isset(lcd_bus_event_t *event);
+    bool lcd_bus_event_isset_from_isr(lcd_bus_event_t *event);
+    void lcd_bus_lock_init(lcd_bus_lock_t *lock);
+    void lcd_bus_task(void *self_in);
 
 #endif /* _LCD_TYPES_H_ */

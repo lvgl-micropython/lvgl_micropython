@@ -1,4 +1,9 @@
+#include <stdbool.h>
+#include "bus_trans_done.h"
+#include "lcd_types.h"
 
+#include "py/obj.h"
+#include "py/runtime.h"
 
 
 bool bus_trans_done_cb(void *user_ctx)

@@ -350,7 +350,6 @@ static mp_obj_t mp_lcd_bus_deinit(mp_obj_t self_in)
 
     if (self->view1 != NULL) {
         free_framebuffer(self->view1->items);
-        heap_caps_free(self->view1->items);
         self->view1->items = NULL;
         self->view1->len = 0;
         self->view1 = NULL;

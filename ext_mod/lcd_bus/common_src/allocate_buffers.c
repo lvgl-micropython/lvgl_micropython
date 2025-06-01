@@ -1,4 +1,11 @@
+#include <stdint.h>
+#include <inttypes.h>
+
 #include "allocate_buffers.h"
+#include "py/obj.h"
+#include "py/runtime.h"
+#include "py/misc.h"
+
 
 int allocate_buffers(uint8_t num_buffs, size_t buf_size, uint8_t *buf1, uint8_t *buf2)
 {
@@ -8,7 +15,7 @@ int allocate_buffers(uint8_t num_buffs, size_t buf_size, uint8_t *buf1, uint8_t 
     } else if (num_buffs == 2) {
         buf2 = m_malloc(buf_size);
         if (buf2 == NULL) {
-            m_free(buf1)
+            m_free(buf1);
             buf1 = NULL;
             return -1;
         } else {
