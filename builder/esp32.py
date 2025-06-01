@@ -16,7 +16,7 @@ from . import (
     scrub_build_folder
 )
 
-IDF_VER = '5.2.0'
+IDF_VER = '5.4.0'
 
 
 def get_partition_file_name(otp):

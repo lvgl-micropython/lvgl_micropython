@@ -65,6 +65,10 @@ _SDL_PIXELFORMAT_UYVY = const(0x59565955)
 _active_event_poll = False
 
 
+BYTE_ORDER_RGB = display_driver_framework.BYTE_ORDER_RGB
+BYTE_ORDER_BGR = display_driver_framework.BYTE_ORDER_BGR
+
+
 class SDLDisplay(display_driver_framework.DisplayDriver):
 
     def __init__(
@@ -149,10 +153,15 @@ class SDLDisplay(display_driver_framework.DisplayDriver):
             lv.COLOR_FORMAT.RAW_ALPHA: _SDL_PIXELFORMAT_RGBA8888  # NOQA
         }
 
-        cf = self._cf = mapping.get(color_space, None)
+        cf = mapping.get(color_space, None)
 
         if cf is None:
             raise RuntimeError('Color format is not supported')
+
+        if cf == _SDL_PIXELFORMAT_RGB24 and self._color_byte_order == BYTE_ORDER_BGR:
+            cf = _SDL_PIXELFORMAT_BGR24
+
+        self._cf = cf
 
         data_bus.init(
             display_width,
