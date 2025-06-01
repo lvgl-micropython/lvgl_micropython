@@ -1092,6 +1092,8 @@ def update_mpconfigport():
     )
 
     if custom_board_path is None:
+
+        # doesn't work
         repl_data = [
             # '#ifndef USB_SERIAL_JTAG_PACKET_SZ_BYTES',
             # '#define USB_SERIAL_JTAG_PACKET_SZ_BYTES (64)',
@@ -1103,6 +1105,7 @@ def update_mpconfigport():
             f'#define MICROPY_HW_UART_REPL_BAUD  ({uart_repl_bitrate})'
         ]
 
+        # doesn't work
         if enable_uart_repl is not None:
             repl_data.extend([
                 '#ifdef MICROPY_HW_ENABLE_UART_REPL',
@@ -1111,6 +1114,7 @@ def update_mpconfigport():
                 f'#define MICROPY_HW_ENABLE_UART_REPL  ({int(enable_uart_repl.lower() == "y")})'
             ])
 
+        # doesn't work
         if enable_cdc_repl is not None:
             repl_data.extend([
                 '#ifdef MICROPY_HW_ENABLE_USBDEV',
