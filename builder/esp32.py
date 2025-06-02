@@ -1392,7 +1392,10 @@ def compile(*args):  # NOQA
     if custom_board_path is None:
 
         if partition_size == -1:
-            p_size = 0x25A000
+            if board == 'ESP32_GENERIC_P4':
+                p_size = 0x299000
+            else:
+                p_size = 0x264000
         else:
             p_size = partition_size
 
