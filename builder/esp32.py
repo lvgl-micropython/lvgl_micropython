@@ -1248,6 +1248,8 @@ def build_sdkconfig(*args):
         return
 
     base_config = [
+        '',
+        'CONFIG_ESP_TIMER_SUPPORTS_ISR_DISPATCH_METHOD=y',
         'CONFIG_ESPTOOLPY_AFTER_NORESET=y',
         'CONFIG_PARTITION_TABLE_CUSTOM=y',
         'CONFIG_ESPTOOLPY_FLASHSIZE_2MB=n',
