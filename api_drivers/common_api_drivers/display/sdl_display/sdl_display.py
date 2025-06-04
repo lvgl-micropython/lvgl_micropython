@@ -265,12 +265,8 @@ class SDLDisplay(display_driver_framework.DisplayDriver):
 
     def __del__(self):
         self._remove_timer()
-        self._displays.remove(self)
-
-        self._disp_drv.remove_event_cb_with_user_data(
-            self._release_disp_cb, None)
-        self._disp_drv.delete()
-        self._data_bus.deinit()
+        self._disp_drv.remove_event_cb_with_user_data(self._release_disp_cb, None)
+        display_driver_framework.DisplayDriver.__del__(self)
 
     def set_offset(self, x, y):
         rot90 = lv.DISPLAY_ROTATION._90  # NOQA

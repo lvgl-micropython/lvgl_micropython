@@ -509,10 +509,15 @@ class DisplayDriver:
             self._power_pin.value(not value)
 
     def delete(self):
-        self._disp_drv.delete()
+        raise NotImplementedError('You must delete the instance by using `del {instance}`')
 
     def __del__(self):
-        self._disp_drv.delete()
+        if self in self._displays:
+            self._displays.remove(self)
+            self._disp_drv.delete()
+
+        if not self._displays and lv.is_initialized():
+            lv.deinit()
 
     def reset(self):
         if self._reset_pin is None:
