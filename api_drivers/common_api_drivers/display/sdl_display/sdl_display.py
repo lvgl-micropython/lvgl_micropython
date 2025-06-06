@@ -169,6 +169,7 @@ class SDLDisplay(display_driver_framework.DisplayDriver):
             lv.color_format_get_size(color_space) * 8,
             cf,
             False,
+            False,
             8,
             8
         )
