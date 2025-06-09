@@ -246,6 +246,11 @@ def create_lvgl_header():
 
 
 if __name__ == '__main__':
+    
+    if 'EXTRA_CFLAGS' not in os.environ:
+        os.environ['EXTRA_CFLAGS'] = f'-Wno-unterminated-string-initialization'
+    elif '-Wno-unterminated-string-initialization' not in os.environ['EXTRA_CFLAGS']:
+        os.environ['EXTRA_CFLAGS'] += f' -Wno-unterminated-string-initialization'
 
     from builder import set_mp_version
 

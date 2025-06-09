@@ -478,20 +478,10 @@ def esp32_s3_args(extra_args):
         action='store_true'
     )
 
-    esp_argParser.add_argument(
-        '--enable_fb_test',
-        dest='optimum_fb_size',
-        default=False,
-        action='store_true'
-    )
-
     esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
 
     oct_flash = esp_args.oct_flash
     board_variant = esp_args.board_variant
-    optimum_fb_size = str(int(esp_args.optimum_fb_size))
-
-    os.environ['EXTRA_CFLAGS'] = f'-DLCD_RGB_OPTIMUM_FB_SIZE={optimum_fb_size}'
 
     return extra_args
 
@@ -755,8 +745,6 @@ def environ_helper(idf_path):
 
         spawn(env_cmds, out_to_screen=False)
 
-    env['EXTRA_CFLAGS'] = f'-DLCD_RGB_OPTIMUM_FB_SIZE={optimum_fb_size}'
-
     return env
 
 
@@ -850,7 +838,6 @@ def setup_idf_environ():
     else:
         cmds = []
 
-    env['EXTRA_CFLAGS'] = f'-DLCD_RGB_OPTIMUM_FB_SIZE={optimum_fb_size}'
     return env, cmds
 
 
