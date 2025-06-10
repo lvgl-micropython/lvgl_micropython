@@ -33,11 +33,6 @@
         #include "py/obj.h"
         #include "py/objarray.h"
 
-
-    #if CONFIG_IDF_TARGET_ESP32S3
-        #define RGB_LCD_BUS_NEEDS_SEPARATE_RESTART_LINK 1
-    #endif
-
         typedef struct {
             esp_lcd_panel_t base;  // Base class of generic lcd panel
             int panel_id;          // LCD panel ID
@@ -52,9 +47,9 @@
             esp_pm_lock_handle_t pm_lock; // Power management lock
             size_t num_dma_nodes;  // Number of DMA descriptors that used to carry the frame buffer
             gdma_channel_handle_t dma_chan; // DMA channel handle
-            gdma_link_list_handle_t dma_fb_links[RGB_LCD_PANEL_MAX_FB_NUM]; // DMA link lists for multiple frame buffers
+            gdma_link_list_handle_t dma_fb_links[3]; // DMA link lists for multiple frame buffers
             gdma_link_list_handle_t dma_bb_link; // DMA link list for bounce buffer
-        #if RGB_LCD_BUS_NEEDS_SEPARATE_RESTART_LINK
+        #if CONFIG_IDF_TARGET_ESP32S3
             gdma_link_list_handle_t dma_restart_link; // DMA link list for restarting the DMA
         #endif
             uint8_t *fbs[3]; // Frame buffers
