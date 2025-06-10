@@ -19,6 +19,8 @@
         #include "esp_lcd_panel_ops.h"
         #include "esp_lcd_panel_interface.h"
         #include "esp_lcd_panel_rgb.h"
+        #include "esp_private/gdma.h"
+        #include "esp_private/gdma_link.h"
 
         #include "freertos/FreeRTOS.h"
         #include "freertos/task.h"
@@ -31,6 +33,11 @@
         #include "py/obj.h"
         #include "py/objarray.h"
 
+
+    #if CONFIG_IDF_TARGET_ESP32S3
+        #define RGB_LCD_BUS_NEEDS_SEPARATE_RESTART_LINK 1
+    #endif
+
         typedef struct {
             esp_lcd_panel_t base;  // Base class of generic lcd panel
             int panel_id;          // LCD panel ID
@@ -39,15 +46,22 @@
             size_t fb_bits_per_pixel; // Frame buffer color depth, in bpp
             size_t num_fbs;           // Number of frame buffers
             size_t output_bits_per_pixel; // Color depth seen from the output data line. Default to fb_bits_per_pixel, but can be changed by YUV-RGB conversion
-            size_t sram_trans_align;  // Alignment for framebuffer that allocated in SRAM
-            size_t psram_trans_align; // Alignment for framebuffer that allocated in PSRAM
+            size_t dma_burst_size;  // DMA transfer burst size
             int disp_gpio_num;     // Display control GPIO, which is used to perform action like "disp_off"
             intr_handle_t intr;    // LCD peripheral interrupt handle
             esp_pm_lock_handle_t pm_lock; // Power management lock
             size_t num_dma_nodes;  // Number of DMA descriptors that used to carry the frame buffer
+            gdma_channel_handle_t dma_chan; // DMA channel handle
+            gdma_link_list_handle_t dma_fb_links[RGB_LCD_PANEL_MAX_FB_NUM]; // DMA link lists for multiple frame buffers
+            gdma_link_list_handle_t dma_bb_link; // DMA link list for bounce buffer
+        #if RGB_LCD_BUS_NEEDS_SEPARATE_RESTART_LINK
+            gdma_link_list_handle_t dma_restart_link; // DMA link list for restarting the DMA
+        #endif
             uint8_t *fbs[3]; // Frame buffers
+            uint8_t *bounce_buffer[2]; // Pointer to the bounce buffers
+            size_t fb_size;        // Size of frame buffer, in bytes
+            size_t bb_size;        // Size of the bounce buffer, in bytes. If not-zero, the driver uses two bounce buffers allocated from internal memory
             uint8_t cur_fb_index;  // Current frame buffer index
-            uint8_t bb_fb_index;  // Current frame buffer index which used by bounce buffer
         } rgb_panel_t;
 
         typedef struct _rgb_bus_lock_t {

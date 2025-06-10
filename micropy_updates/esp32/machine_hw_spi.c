@@ -431,7 +431,7 @@ mp_obj_t machine_hw_spi_bus_make_new(const mp_obj_type_t *type, size_t n_args, s
     if (args[ARG_dual_pins].u_obj != mp_const_none) {
         mp_obj_tuple_t *dual_data_pins = MP_OBJ_TO_PTR(args[ARG_dual_pins].u_obj);
 
-        if (dual_data_pins->len != 4) {
+        if (dual_data_pins->len != 2) {
             mp_raise_msg_varg(
                 &mp_type_ValueError,
                 MP_ERROR_TEXT("2 pins needed for quad SPI not %d"),
