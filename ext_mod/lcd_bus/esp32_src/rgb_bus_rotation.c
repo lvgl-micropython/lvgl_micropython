@@ -307,7 +307,7 @@
             exit = rgb_bus_event_isset(&self->copy_task_exit);
         }
 
-        LCD_DEBUG_PRINT(&mp_plat_print, "rgb_bus_copy_task - STOPPED\n")
+        LCD_DEBUG_PRINT("rgb_bus_copy_task - STOPPED\n")
     }
 
 
