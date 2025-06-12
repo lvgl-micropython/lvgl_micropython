@@ -346,7 +346,7 @@
                     MIN(x_end, dst_width), MIN(y_end, dst_height),
                     dst_width, dst_height, bytes_per_pixel, rgb565_dither);
         } else {
-            y_end += 1;
+            y_end += 1; // removes black lines between blocks
             if (rotate == RGB_BUS_ROTATION_90 || rotate == RGB_BUS_ROTATION_270) {
                 x_start = MIN(x_start, dst_height);
                 x_end = MIN(x_end, dst_height);
@@ -380,7 +380,7 @@
         if(x_start == 0 && x_end == (dst_width - 1) && !rgb565_dither) {
             memcpy(dst, src, dst_width * (y_end - y_start + 1) * bytes_per_pixel);
         } else {
-            uint32_t src_bytes_per_line = (x_end - x_start) * bytes_per_pixel;
+            uint32_t src_bytes_per_line = (x_end - x_start + 1) * bytes_per_pixel;
             uint32_t dst_bytes_per_line = dst_width * bytes_per_pixel;
 
             if (rgb565_dither) {
@@ -409,7 +409,7 @@
         uint32_t i;
         uint32_t j;
 
-        uint32_t src_bytes_per_line = x_end - x_start;
+        uint32_t src_bytes_per_line = x_end - x_start + 1;
         uint32_t offset = y_start * src_bytes_per_line + x_start;
 
         switch (rotate) {
@@ -436,6 +436,7 @@
                         src++;
                         i--;
                     }
+                    src++;
                 }
                 break;
 
@@ -468,7 +469,7 @@
         uint32_t i;
         uint32_t j;
 
-        uint32_t src_bytes_per_line = x_end - x_start;
+        uint32_t src_bytes_per_line = x_end - x_start + 1;
         uint32_t offset = y_start * src_bytes_per_line + x_start;
 
         if (rgb565_dither) {
@@ -498,6 +499,7 @@
                             src++;
                             i--;
                         }
+                        src++;
                     }
                     break;
 
@@ -545,7 +547,8 @@
                             src++;
                             i--;
                         }
-                    }
+                        src++;
+                }
                     break;
 
                 // SWAP_XY   MIRROR_X
@@ -577,7 +580,7 @@
         uint32_t i;
         uint32_t j;
 
-        uint32_t src_bytes_per_line = (x_end - x_start) * 3;
+        uint32_t src_bytes_per_line = (x_end - x_start + 1) * 3;
         uint32_t offset = y_start * src_bytes_per_line + x_start * 3;
 
         switch (rotate) {
@@ -605,6 +608,7 @@
                         src += 3;
                         i -= 3;
                     }
+                    src++;
                 }
                 break;
 
@@ -636,7 +640,7 @@
         uint32_t i;
         uint32_t j;
 
-        uint32_t src_bytes_per_line = x_end - x_start;
+        uint32_t src_bytes_per_line = x_end - x_start + 1;
         uint32_t offset = y_start * src_bytes_per_line + x_start;
 
         switch (rotate) {
@@ -663,6 +667,7 @@
                         src++;
                         i--;
                     }
+                    src++;
                 }
                 break;
 
