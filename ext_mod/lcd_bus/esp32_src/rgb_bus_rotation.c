@@ -222,11 +222,6 @@
             if (self->partial_buf == NULL) break;
             last_update = self->last_update;
 
-
-        #if LCD_RGB_OPTIMUM_FB_SIZE
-            self->optimum_fb.flush_count += 1;
-        #endif
-
             idle_fb = self->idle_fb;
 
             copy_pixels(
@@ -269,23 +264,6 @@
             }
 
             if (last_update) {
-
-            #if LCD_RGB_OPTIMUM_FB_SIZE
-                if (self->optimum_fb.curr_index == 254) {
-                    self->optimum_fb.curr_index = 0;
-                } else {
-                    self->optimum_fb.curr_index += 1;
-                }
-                if (self->optimum_fb.sample_count < 255) {
-                    self->optimum_fb.sample_count += 1;
-                }
-                self->optimum_fb.samples[self->optimum_fb.curr_index] = self->optimum_fb.flush_count;
-                self->optimum_fb.flush_count = 0;
-
-                rgb_bus_lock_release(&self->optimum_fb.lock);
-                rgb_bus_lock_acquire(&self->optimum_fb.lock, -1);
-            #endif
-
                 mp_lcd_err_t ret = esp_lcd_panel_draw_bitmap(
                     self->panel_handle,
                     0,

@@ -69,16 +69,6 @@
             StaticEventGroup_t buffer;
         } rgb_bus_event_t;
 
-    #if LCD_RGB_OPTIMUM_FB_SIZE
-        typedef struct _rgb_bus_optimum_fb_size_t {
-            uint16_t flush_count;
-            uint8_t sample_count;
-            uint8_t curr_index;
-            uint16_t *samples;
-            rgb_bus_lock_t lock;
-        } rgb_bus_optimum_fb_size_t;
-    #endif
-
         typedef struct _mp_lcd_rgb_bus_obj_t {
             mp_obj_base_t base;
 
@@ -126,10 +116,6 @@
             mp_lcd_err_t init_err;
             mp_rom_error_text_t init_err_msg;
 
-        #if LCD_RGB_OPTIMUM_FB_SIZE
-            rgb_bus_optimum_fb_size_t optimum_fb;
-        #endif
-
         } mp_lcd_rgb_bus_obj_t;
 
         void rgb_bus_event_init(rgb_bus_event_t *event);
@@ -153,7 +139,6 @@
         extern const mp_obj_type_t mp_lcd_rgb_bus_type;
 
         extern void mp_lcd_rgb_bus_deinit_all(void);
-
 
     #endif /* _ESP32_RGB_BUS_H_ */
 #else

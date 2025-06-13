@@ -102,7 +102,6 @@
             ARG_de_idle_high,
             ARG_pclk_idle_high,
             ARG_pclk_active_low,
-            ARG_refresh_on_demand,
             ARG_rgb565_dither
         };
 
@@ -139,7 +138,6 @@
             { MP_QSTR_de_idle_high,       MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
             { MP_QSTR_pclk_idle_high,     MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
             { MP_QSTR_pclk_active_low,    MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
-            { MP_QSTR_refresh_on_demand,  MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
             { MP_QSTR_rgb565_dither,      MP_ARG_BOOL | MP_ARG_KW_ONLY, { .u_bool = false  } },
         };
 
@@ -190,9 +188,8 @@
         self->panel_io_config.data_gpio_nums[14] = (int)args[ARG_data14].u_int;
         self->panel_io_config.data_gpio_nums[15] = (int)args[ARG_data15].u_int;
         self->panel_io_config.disp_gpio_num = -1;   // -1 means no GPIO is assigned to this function
-        self->panel_io_config.sram_trans_align = 8;
-        self->panel_io_config.psram_trans_align = 64;
-        self->panel_io_config.flags.refresh_on_demand = (uint32_t)args[ARG_refresh_on_demand].u_bool;
+        self->panel_io_config.dma_burst_size = 64
+        self->panel_io_config.flags.refresh_on_demand = 0;
         self->panel_io_config.flags.fb_in_psram = 0;
         self->panel_io_config.flags.double_fb = 0;
 
@@ -398,14 +395,6 @@
         rgb_bus_lock_init(&self->init_lock);
         rgb_bus_lock_acquire(&self->init_lock, -1);
 
-
-    #if LCD_RGB_OPTIMUM_FB_SIZE
-        rgb_bus_lock_init(&self->optimum_fb.lock);
-        rgb_bus_lock_acquire(&self->optimum_fb.lock, -1);
-        self->optimum_fb.samples = (uint16_t *)malloc(sizeof(uint16_t) * 255);
-        self->optimum_fb.curr_index = 254;
-    #endif
-
         LCD_DEBUG_PRINT("h_res=%lu\n", self->panel_io_config.timings.h_res)
         LCD_DEBUG_PRINT("v_res=%lu\n", self->panel_io_config.timings.v_res)
         LCD_DEBUG_PRINT("bits_per_pixel=%d\n", self->panel_io_config.bits_per_pixel)
@@ -469,70 +458,11 @@
         return LCD_OK;
     }
 
-#if LCD_RGB_OPTIMUM_FB_SIZE
-
-    static void rgb_bus_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest)
-    {
-        mp_lcd_rgb_bus_obj_t *self = MP_OBJ_TO_PTR(self_in);
-
-        if (attr == MP_QSTR_avg_flushes_per_update) {
-            if (dest[0] == MP_OBJ_NULL) {
-                uint32_t total = 0;
-
-                rgb_bus_lock_acquire(&self->optimum_fb.lock, -1);
-                for (uint8_t i=0;i<self->optimum_fb.sample_count;i++) {
-                    total += (uint32_t)self->optimum_fb.samples[i];
-                }
-
-                uint16_t avg = (uint16_t)(total / (uint32_t)self->optimum_fb.sample_count);
-
-                rgb_bus_lock_release(&self->optimum_fb.lock);
-
-                dest[0] = mp_obj_new_int_from_uint(avg);
-            } else if (dest[1]) {
-                uint16_t value = (uint16_t)mp_obj_get_int_truncated(dest[1]);
-
-                if (value == 0) {
-                    rgb_bus_lock_acquire(&self->optimum_fb.lock, -1);
-                    for (uint8_t i=0;i<self->optimum_fb.sample_count;i++) {
-                        self->optimum_fb.samples[i] = 0;
-                    }
-
-                    self->optimum_fb.sample_count = 0;
-                    self->optimum_fb.curr_index = 254;
-                    rgb_bus_lock_release(&self->optimum_fb.lock);
-
-                    dest[0] = MP_OBJ_NULL;
-                }
-            }
-        } else if (dest[0] == MP_OBJ_NULL) {
-            const mp_obj_type_t *type = mp_obj_get_type(self_in);
-            while (MP_OBJ_TYPE_HAS_SLOT(type, locals_dict)) {
-                // generic method lookup
-                // this is a lookup in the object (ie not class or type)
-                assert(MP_OBJ_TYPE_GET_SLOT(type, locals_dict)->base.type == &mp_type_dict); // MicroPython restriction, for now
-                mp_map_t *locals_map = &MP_OBJ_TYPE_GET_SLOT(type, locals_dict)->map;
-                mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(attr), MP_MAP_LOOKUP);
-                if (elem != NULL) {
-                    mp_convert_member_lookup(self_in, type, elem->value, dest);
-                    break;
-                }
-                if (MP_OBJ_TYPE_GET_SLOT_OR_NULL(type, parent) == NULL) break;
-                // search parents
-                type = MP_OBJ_TYPE_GET_SLOT(type, parent);
-            }
-        }
-    }
-#endif
-
     MP_DEFINE_CONST_OBJ_TYPE(
         mp_lcd_rgb_bus_type,
         MP_QSTR_RGBBus,
         MP_TYPE_FLAG_NONE,
         make_new, mp_lcd_rgb_bus_make_new,
-    #if LCD_RGB_OPTIMUM_FB_SIZE
-        attr, rgb_bus_attr,
-    #endif
         locals_dict, (mp_obj_dict_t *)&mp_lcd_bus_locals_dict
     );
 
