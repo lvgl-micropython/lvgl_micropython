@@ -1251,6 +1251,9 @@ def build_sdkconfig(*args):
         'CONFIG_COMPILER_OPTIMIZATION_CHECKS_SILENT=y'
     ]
 
+    if board == 'ESP32_GENERIC_S3':
+        base_config.insert(1, 'CONFIG_SPIRAM_XIP_FROM_PSRAM=y')
+
     if DEBUG:
         base_config.extend([
             'CONFIG_BOOTLOADER_LOG_LEVEL_NONE=n',

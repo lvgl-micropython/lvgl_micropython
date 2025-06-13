@@ -33,11 +33,11 @@ freq = 16000000
 hsync_front_porch = 8
 hsync_back_porch = 8
 hsync_pulse_width = 4
-hsync_idle_low = true
+hsync_idle_low = false
 vsync_front_porch = 8
 vsync_back_porch = 8
 vsync_pulse_width = 4
-vsync_idle_low = true
+vsync_idle_low = false
 de_idle_high = false
 pclk_idle_high = false
 pclk_active_low = true
@@ -52,8 +52,8 @@ freq = 400000
 
 [I2C.Device.indev_device]
 bus = "i2c_bus"
-dev_id = "ft6x36.I2C_ADDR"
-reg_bits = "ft6x36.BITS"
+dev_id = "gt911.I2C_ADDR"
+reg_bits = "gt911.BITS"
 
 
 [RGBDisplay.display]
@@ -72,8 +72,20 @@ params = [true]
 params = []
 
 
-[FT6x36.indev]
+[gt911.indev]
 device = "indev_device"
+
+
+[indev.firmware_config.fw_config]
+
+[fw_config.width]
+value=800
+
+[fw_config.height]
+value=480
+
+[fw_config.save]
+params=[]
 
 
 [display.set_backlight]
