@@ -11,7 +11,7 @@ class KeypadDriver(_indev_base.IndevBase):
 
         super().__init__()
         self._set_type(lv.INDEV_TYPE.KEYPAD)  # NOQA
-        indev_drv.enable(True)  # NOQA
+        self._indev_drv.enable(True)  # NOQA
 
     def _get_key(self):
         # this method needs to be overridden.
