@@ -161,13 +161,13 @@ class SDLKeyboard(keypad_framework.KeypadDriver):
 
     def __init__(self, *args, **kwargs):  # NOQA
         super().__init__()
-        self.__last_key = -1
+        self.__last_key = ord(' ')
         self.__current_state = self.RELEASED
 
         self.group = lv.group_create()
         self.group.set_default()  # NOQA
         self.set_group(self.group)
-        self.set_mode(lv.INDEV_MODE.EVENT)  # NOQA
+        # self.set_mode(lv.INDEV_MODE.EVENT)  # NOQA
 
         self._py_disp_drv._data_bus.register_keypad_callback(self._keypad_cb)  # NOQA
 
@@ -245,7 +245,7 @@ class SDLKeyboard(keypad_framework.KeypadDriver):
         else:
             self.__current_state = self.RELEASED
 
-        micropython.schedule(SDLKeyboard.read, self)
+        # micropython.schedule(SDLKeyboard.read, self)
 
     def _get_key(self):
         return self.__current_state, self.__last_key

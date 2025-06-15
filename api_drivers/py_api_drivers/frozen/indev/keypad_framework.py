@@ -7,7 +7,7 @@ import _indev_base
 class KeypadDriver(_indev_base.IndevBase):
 
     def __init__(self):  # NOQA
-        self._last_key = -1
+        self._last_key = ord(' ')
 
         super().__init__()
         self._set_type(lv.INDEV_TYPE.KEYPAD)  # NOQA
