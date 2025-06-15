@@ -188,7 +188,7 @@
         self->panel_io_config.data_gpio_nums[14] = (int)args[ARG_data14].u_int;
         self->panel_io_config.data_gpio_nums[15] = (int)args[ARG_data15].u_int;
         self->panel_io_config.disp_gpio_num = -1;   // -1 means no GPIO is assigned to this function
-        self->panel_io_config.dma_burst_size = 64
+        self->panel_io_config.dma_burst_size = 64;
         self->panel_io_config.flags.refresh_on_demand = 0;
         self->panel_io_config.flags.fb_in_psram = 0;
         self->panel_io_config.flags.double_fb = 0;

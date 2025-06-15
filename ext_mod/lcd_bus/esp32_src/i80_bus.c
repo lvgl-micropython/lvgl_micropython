@@ -158,7 +158,7 @@
         }
 
         self->bus_config.bus_width = (size_t) i;
-        self->bus_config.dma_burst_size = 64
+        self->bus_config.dma_burst_size = 64;
 
         self->panel_io_config.cs_gpio_num = (int)args[ARG_cs].u_int;
         self->panel_io_config.pclk_hz = (uint32_t)args[ARG_freq].u_int;
