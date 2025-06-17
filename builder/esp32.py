@@ -477,8 +477,17 @@ def esp32_s3_args(extra_args):
         dest='oct_flash',
         action='store_true'
     )
+    esp_argParser.add_argument(
+        '--py-freertos',
+        help='espose FreeRTOS to Python',
+        dest='py_freertos',
+        action='store_true'
+    )
 
     esp_args, extra_args = esp_argParser.parse_known_args(extra_args)
+
+    if esp_args.py_freertos:
+        os.environ['PY_FREERTOS'] = '1'
 
     oct_flash = esp_args.oct_flash
     board_variant = esp_args.board_variant
@@ -984,6 +993,7 @@ def find_esp32_ports(chip):
 
 SDKCONFIG_PATH = f'build/sdkconfig.board'
 
+MPTHREADPORT_H_PATH = 'lib/micropython/ports/esp32/mpthreadport.h'
 MPTHREADPORT_PATH = 'lib/micropython/ports/esp32/mpthreadport.c'
 MPCONFIGPORT_PATH = 'lib/micropython/ports/esp32/mpconfigport.h'
 PANICHANDLER_PATH = 'lib/micropython/ports/esp32/panichandler.c'
@@ -996,8 +1006,55 @@ if not os.path.exists('micropy_updates/originals/esp32'):
 
 
 def update_mpthreadport():
-    # data = read_file('esp32', MPTHREADPORT_PATH)
-    #
+    h_data = read_file('esp32', MPTHREADPORT_H_PATH)
+
+    if 'typedef mp_thread_mutex_t mp_thread_recursive_mutex_t;' not in h_data:
+        new_data = [
+            '} mp_thread_mutex_t;',
+            '',
+            '#if MICROPY_PY_THREAD_GIL == 0',
+            'typedef mp_thread_mutex_t mp_thread_recursive_mutex_t;',
+            'void mp_thread_recursive_mutex_init(mp_thread_recursive_mutex_t *mutex);',
+            'int mp_thread_recursive_mutex_lock(mp_thread_recursive_mutex_t *mutex, int wait);',
+            'void mp_thread_recursive_mutex_unlock(mp_thread_recursive_mutex_t *mutex);',
+            '#endif'
+        ]
+
+        h_data = h_data.replace(
+            '} mp_thread_mutex_t;',
+            '\n'.join(new_data)
+        )
+
+        c_data = read_file('esp32', MPTHREADPORT_PATH)
+
+        new_data = [
+            '} mp_thread_t;',
+            '',
+            '#if MICROPY_PY_THREAD_GIL == 0',
+            'void mp_thread_recursive_mutex_init(mp_thread_recursive_mutex_t *mutex)',
+            '{',
+            '    mutex->handle = xSemaphoreCreateRecursiveMutexStatic(&mutex->buffer);',
+            '    xSemaphoreGiveRecursive(mutex->handle);',
+            '}',
+            '',
+            'int mp_thread_recursive_mutex_lock(mp_thread_recursive_mutex_t *mutex, int wait)',
+            '{',
+            '    return pdTRUE == xSemaphoreTakeRecursive(mutex->handle, pdMS_TO_TICKS((uint32_t)wait));',
+            '}',
+            '',
+            'void mp_thread_recursive_mutex_unlock(mp_thread_recursive_mutex_t *mutex)',
+            '{',
+            '    xSemaphoreGiveRecursive(mutex->handle);',
+            '}',
+            '#endif'
+        ]
+        c_data = c_data.replace(
+            '} mp_thread_t;',
+            '\n'.join(new_data)
+        )
+
+        write_file(MPTHREADPORT_PATH, c_data)
+
     # if '_CORE_ID' not in data:
     #     data = data.replace('MP_TASK_COREID', '_CORE_ID')
     #
@@ -1014,7 +1071,7 @@ def update_mpthreadport():
     #
     #     data = data.replace('#if MICROPY_PY_THREAD', '\n'.join(new_data), 1)
     #
-    #     write_file(MPTHREADPORT_PATH, data)
+    write_file(MPTHREADPORT_H_PATH, h_data)
     pass
 
 
@@ -1420,7 +1477,7 @@ def compile(*args):  # NOQA
                 app_size = app_size.split('micropython.bin size', 1)[1]
                 app_size = int(app_size.split(':', 1)[0].strip(), 16)
 
-                partition.set_app_size(app_size)
+                partition.set_app_size(app_size)  # NOQA
                 partition.save()
 
                 sys.stdout.write(
