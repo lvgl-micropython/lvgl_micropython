@@ -193,9 +193,13 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_xTaskCreateStatic_obj, 6, 6, mp_xTaskCrea
 
 static mp_obj_t mp_vTaskDelete(mp_obj_t xTaskToDelete_in)
 {
-    mp_obj_freertos_task_t *xTaskToDelete = MP_OBJ_TO_PTR(xTaskToDelete_in);
+    if (xTaskToDelete_in == mp_const_none) {
+        vTaskDelete(NULL);
+    } else {
+        mp_obj_freertos_task_t *xTaskToDelete = MP_OBJ_TO_PTR(xTaskToDelete_in);
+        vTaskDelete(xTaskToDelete->task.handle);
+    }
 
-    vTaskDelete(xTaskToDelete->task.handle);
     return mp_const_none;
 }
 

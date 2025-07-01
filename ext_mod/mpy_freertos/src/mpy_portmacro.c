@@ -250,6 +250,7 @@ static mp_obj_t mp_portDISABLE_INTERRUPTS(void)
 
 MP_DEFINE_CONST_FUN_OBJ_0(mp_portDISABLE_INTERRUPTS_obj, mp_portDISABLE_INTERRUPTS);
 
+
 static mp_obj_t mp_portENABLE_INTERRUPTS(void)
 {
     portENABLE_INTERRUPTS();
