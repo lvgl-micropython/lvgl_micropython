@@ -469,7 +469,7 @@ def get_lvgl():
         'git submodule update --init --depth=1 -- lib/lvgl'
     ]
     print()
-    print('collecting LVGL')
+    print('collecting LVGL v9.3.0')
     print('this might take a while...')
     result, _ = spawn(cmd_, spinner=True)
     if result != 0:
