@@ -2865,12 +2865,18 @@ generated_callbacks = collections.OrderedDict()
 
 
 def build_callback_func_arg(arg, index, func, func_name = None):
-    arg_type = get_type(arg.type, remove_quals = True)
+    arg_type = get_type(arg.type, remove_quals = False)
     cast = '(void*)' if isinstance(arg.type, c_ast.PtrDecl) else '' # needed when field is const. casting to void overrides it
-    if arg_type not in lv_to_mp or not lv_to_mp[arg_type]:
-        try_generate_type(arg.type)
+
+    if arg_type == 'char *':
+        converter = 'ptr_to_mp'
+    else:
+        arg_type = get_type(arg.type, remove_quals = True)
         if arg_type not in lv_to_mp or not lv_to_mp[arg_type]:
-            raise MissingConversionException("Callback: Missing conversion to %s" % arg_type)
+            try_generate_type(arg.type)
+            if arg_type not in lv_to_mp or not lv_to_mp[arg_type]:
+                raise MissingConversionException("Callback: Missing conversion to %s" % arg_type)
+        converter = lv_to_mp[arg_type]
 
     arg_metadata = {'c_type': arg_type, 'py_type': get_py_type(arg_type)}
 
@@ -2880,8 +2886,9 @@ def build_callback_func_arg(arg, index, func, func_name = None):
         arg_metadata['name'] = None
 
     callback_metadata[func_name]['args'].append(arg_metadata)
+
     return 'mp_args[{i}] = {convertor}({cast}arg{i});'.format(
-                convertor = lv_to_mp[arg_type],
+                convertor = converter,
                 i = index, cast = cast)
 
 
