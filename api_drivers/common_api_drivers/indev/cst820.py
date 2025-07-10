@@ -1,4 +1,4 @@
-# Copyright (c) 2024 - 2025 Kevin G. Schlosser
+# Based on cst816s, Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
 from micropython import const  # NOQA
 import pointer_framework
@@ -40,7 +40,7 @@ _BPC1H = const(0xB2)
 _BPC1L = const(0xB3)
 
 _ChipID = const(0xA7)
-_ChipIDValue = const(0xB5)
+_ChipIDValue = const(0xB7) # 0xB5=cst816s, 0xB7=cst820
 
 _ProjID = const(0xA8)
 _FwVersion = const(0xA9)
@@ -153,7 +153,7 @@ _En1v8 = const(0x01)
 _DisAutoSleep = const(0xFE)
 
 
-class CST816S(pointer_framework.PointerDriver):
+class CST820(pointer_framework.PointerDriver):
 
     def _read_reg(self, reg):
         self._tx_buf[0] = reg
@@ -261,9 +261,9 @@ class CST816S(pointer_framework.PointerDriver):
 
         self._write_reg(_DisAutoSleep, 0x00)
         time.sleep_ms(10)  # NOQA
-        self._write_reg(_DisAutoSleep, 0xFE)
+        self._write_reg(_DisAutoSleep, 0x01)
         time.sleep_ms(50)  # NOQA
-        self._write_reg(_DisAutoSleep, 0xFE)
+        self._write_reg(_DisAutoSleep, 0x01)
         time.sleep_ms(50)  # NOQA
         self._write_reg(_DisAutoSleep, int(not auto_sleep))
 
@@ -277,7 +277,7 @@ class CST816S(pointer_framework.PointerDriver):
         if en:
             self._write_reg(_DisAutoSleep, 0x00)
         else:
-            self._write_reg(_DisAutoSleep, 0xFE)
+            self._write_reg(_DisAutoSleep, 0x01)
 
     def hw_reset(self):
         if self._reset_pin is None:
