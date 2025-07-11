@@ -43,6 +43,10 @@ class AXS15231(pointer_framework.PointerDriver):
         self._rx_buf = bytearray(8)
         self._rx_mv = memoryview(self._rx_buf)
 
+        self.__last_x = -1
+        self.__last_y = -1
+        self.__last_state = self.RELEASED
+
     def _read_data(self):
         self._device.write(self._tx_mv)
         self._device.read(buf=self._rx_mv)
@@ -69,12 +73,13 @@ class AXS15231(pointer_framework.PointerDriver):
         touch_data = self._read_data()
 
         if touch_data:
-            x = touch_data[0].x
-            y = touch_data[0].y
+            self.__last_x = touch_data[0].x
+            self.__last_y = touch_data[0].y
 
             if touch_data[0].event == 1:
-                return self.RELEASED, x, y
+                self.__last_state = self.RELEASED
 
-            return self.PRESSED, x, y
-        else:
-            return None
+            else:
+                self.__last_state = self.PRESSED
+
+        return self.__last_state, self.__last_x, self.__last_y
