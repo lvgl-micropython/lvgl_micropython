@@ -19,6 +19,7 @@ _MADCTL_MV = const(0x20)
 TYPE_B = 1
 TYPE_R_RED = 2
 TYPE_R_GREEN = 3
+TYPE_R_BLUE = 4
 
 
 class ST7735(display_driver_framework.DisplayDriver):
