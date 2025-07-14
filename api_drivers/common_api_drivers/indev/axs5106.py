@@ -18,7 +18,7 @@ class AXS5106(pointer_framework.PointerDriver):
         self._tx_buf[0] = reg
         self._rx_mv[:num_bytes] = bytearray([0x00] * num_bytes)
         self._device.write(self._tx_mv[:1])
-        self._device.read(self._rx_mv[:num_bytes])
+        self._device.read(buf=self._rx_mv[:num_bytes])
 
     def __init__(
         self,
