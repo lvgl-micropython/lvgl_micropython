@@ -54,6 +54,8 @@ class AXS5106(pointer_framework.PointerDriver):
             time.sleep_ms(10)  # NOQA
             self._reset_pin.value(0)
             time.sleep_ms(10)  # NOQA
+            self._reset_pin.value(1)
+            time.sleep_ms(10)  # NOQA
 
     def _get_coords(self):
         self._read_reg(_POINTS_REG, 14)
