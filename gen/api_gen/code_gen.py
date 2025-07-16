@@ -38,17 +38,17 @@ def eprint(*args_, **kwargs):
     print(*args_, file=sys.stderr, **kwargs)
 
 
-script_path = os.path.dirname(os.path.abspath(__file__))
-project_path = os.path.abspath(os.path.join(script_path, '..'))
-pycparser_path = os.path.join(project_path, 'lib', 'pycparser')
+SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
+PROJECT_PATH = os.path.abspath(os.path.join(SCRIPT_PATH, '..', '..'))
+PYCPARSER_PATH = os.path.join(PROJECT_PATH, 'lib', 'pycparser')
 
 
-sys.path.insert(0, os.path.abspath(pycparser_path))
+sys.path.insert(0, os.path.abspath(PYCPARSER_PATH))
 from pycparser import c_parser, c_ast, c_generator  # NOQA
 import pycparser  # NOQA
 
 
-fake_libc_path = os.path.join(script_path, 'fake_libc')
+FAKE_LIB_C_PATH = os.path.join(SCRIPT_PATH, 'fake_libc')
 
 
 # ---------------- monkey patch code for pycparser -------------------------
@@ -75,8 +75,6 @@ def _repr(obj):
 
 
 def Node__repr__(self):
-    """ Generates a python representation of the current node
-    """
     result = f'{self.__class__.__name__}('
     res = []
 
@@ -99,105 +97,90 @@ def Node__repr__(self):
     return result
 
 
-#
-# Argument parsing
-#
-argParser = argparse.ArgumentParser()
-
-argParser.add_argument('-I', '--include', dest='include',
-                       help='Preprocesor include path',
-                       metavar='<Include Path>', action='append', default=[])
-
-argParser.add_argument('-D', '--define', dest='define',
-                       help='Define preprocessor macro', metavar='<Macro Name>',
-                       action='append', default=[])
-
-argParser.add_argument('--module_name', dest='module_name',
-                       help='Module name', metavar='<Module name string>',
-                       action='store')
-
-argParser.add_argument('--module_prefix', dest='module_prefix',
-                       help='Module prefix that starts every function name',
-                       metavar='<Prefix string>', action='store')
-
-argParser.add_argument('--metadata', dest='metadata',
-                       help='Optional file to emit metadata (introspection)',
-                       metavar='<MetaData File Name>', action='store')
-
-argParser.add_argument('--board', dest='board', help='Board or OS',
-                       metavar='<Board or OS>', action='store', default='')
-
-argParser.add_argument('--output', dest='output',
-                       help='Output file path', metavar='<Output path>',
-                       action='store')
-
-argParser.add_argument('--debug', dest='debug',
-                       help='enable debugging output', action='store_true')
-
-argParser.add_argument('--header_file', dest='header',
-                       action='store', default=None)
-
-args, unknownargs = argParser.parse_known_args()
-
-module_name = args.module_name
-module_prefix = args.module_prefix if args.module_prefix else args.module_name
-input_header = args.header
-DEBUG = args.debug
-
-lvgl_path = os.path.dirname(input_header)
-private_header = os.path.join(lvgl_path, 'src', 'lvgl_private.h')
-
-lv_config_path = os.path.abspath(os.path.join(lvgl_path, '..', 'lv_conf.h'))
-gen_json_path = os.path.join(lvgl_path, 'scripts/gen_json')
-
-sys.path.insert(0, gen_json_path)
-
-original_nodes = {}
+def patch_pycparser():
+    c_ast._repr = _repr
+    setattr(c_ast.Node, '__repr__', Node__repr__)
 
 
-for key, value in c_ast.__dict__.items():
-    if inspect.isclass(value):
-        original_nodes[key] = value
+def run_fixed_gen_json(lv_config_path):
+    original_nodes = {}
+
+    for key, value in c_ast.__dict__.items():
+        if inspect.isclass(value):
+            original_nodes[key] = value
 
 
-import fixed_gen_json  # NOQA
+    import fixed_gen_json  # NOQA
+
+    json_ast = fixed_gen_json.run(
+        lv_config_path,
+        os.path.join(PROJECT_PATH, 'build', 'lvgl_header.h'),
+        False
+    )
+
+    lvgl_json = json_ast.to_dict()
+
+    for key, value in original_nodes.items():
+        setattr(c_ast, key, value)
+
+    return lvgl_json
 
 
-json_ast = fixed_gen_json.run(
-    lv_config_path,
-    os.path.join(project_path, 'build', 'lvgl_header.h'),
-    False
-)
+class _LOG:
 
-lvgl_json = json_ast.to_dict()
+    def __init__(self, debug):
+        if debug:
+            self.log_file = open(os.path.join(os.path.dirname(__file__), 'log.txt'), 'w')
+            self.__call__ = self.__log_on
+        else:
+            self.log_file = None
+            self.__call__ = self.__log_off
 
+    def __log_off(self, *_):
+        pass
 
-for key, value in original_nodes.items():
-    setattr(c_ast, key, value)
-
-
-c_ast._repr = _repr
-setattr(c_ast.Node, '__repr__', Node__repr__)
-
-
-pp_file = args.output.rsplit('.', 1)[0] + '.pp'
-
-if DEBUG:
-    log_file = open(os.path.join(os.path.dirname(__file__), 'log.txt'), 'w')
-
-
-def LOG(*ags):
-    if DEBUG:
+    def __log_on(self, *ags):
         ags = ' '.join(str(ag) for ag in ags)
-        log_file.write(ags + '\n')
-        log_file.flush()
+        self.log_file.write(ags + '\n')
+        self.log_file.flush()
 
 
-# this block of code is used to handle the generation of the preprocessor
-# output. Since pycparser has the ability to call the compiler internally
-# there is no need to do it from cmake. Data doesn't need to be going in
-# and out of cmake like that when it can all be done in a single location.
-# it makes things easier.
+LOG = None
+
+
+def run(args, unknownargs):
+    global LOG
+
+    module_name = args.module_name
+
+    if args.module_prefix:
+        module_prefix = args.module_prefix
+    else:
+        module_prefix = args.module_name
+
+    input_header = args.header
+    debug = args.debug
+    includes = args.include
+    defines = args.define
+    output = args.output
+
+    lvgl_path = os.path.dirname(input_header)
+    private_header = os.path.join(lvgl_path, 'src', 'lvgl_private.h')
+
+    lv_config_path = os.path.abspath(os.path.join(lvgl_path, '..', 'lv_conf.h'))
+    gen_json_path = os.path.join(lvgl_path, 'scripts/gen_json')
+
+    sys.path.insert(0, gen_json_path)
+
+    lvgl_json = run_fixed_gen_json(lv_config_path)
+
+    patch_pycparser()
+
+    LOG = _LOG(debug)
+
+    get_preprocessor_output(output, input_header, includes,
+                            defines, *unknownargs)
+
 
 # This function only gets used when compiling under Windows for Windows.
 # It collects SDL2 and reorganizes the folder structure so the SDK include path
@@ -269,146 +252,106 @@ def get_sdl2():
     return os.path.abspath(sdl_include_path), dll_path
 
 
-# when compiling under Windows we want to set up a build system that
-# points to all the right things to allow pycparser to work correctly
-# when generating the preprocessor output. I have not yet fully determined
-# the best way to handle the pyMSVC dependency as it is not needed for
-# folks running any other OS except Windows.
-if sys.platform.startswith('win'):
-    try:
-        import pyMSVC  # NOQA
-    except ImportError:
-        sys.stderr.write(
-            '\nThe pyMSVC library is missing, '
-            'please run "pip install pyMSVC" to install it.\n'
-        )
+def get_preprocessor_output(output, input_header, includes_, defines, *addl_args):
+    # this block of code is used to handle the generation of the preprocessor
+    # output. Since pycparser has the ability to call the compiler internally
+    # there is no need to do it from cmake. Data doesn't need to be going in
+    # and out of cmake like that when it can all be done in a single location.
+    # it makes things easier.
+
+    # when compiling under Windows we want to set up a build system that
+    # points to all the right things to allow pycparser to work correctly
+    # when generating the preprocessor output. I have not yet fully determined
+    # the best way to handle the pyMSVC dependency as it is not needed for
+    # folks running any other OS except Windows.
+
+    pp_file = output.rsplit('.', 1)[0] + '.pp'
+
+    if sys.platform.startswith('win'):
+        try:
+            import pyMSVC  # NOQA
+        except ImportError:
+            sys.stderr.write(
+                '\nThe pyMSVC library is missing, '
+                'please run "pip install pyMSVC" to install it.\n'
+            )
+            sys.stderr.flush()
+            sys.exit(-500)
+
+        env = pyMSVC.setup_environment()  # NOQA
+        cpp_cmd = ['cl', '/std:c11', '/nologo', '/P']
+        output_pp = f'/Fi"{pp_file}"'
+        include_path_env_key = 'INCLUDE'
+
+    # elif sys.platform.startswith('darwin'):
+    #     include_path_env_key = 'C_INCLUDE_PATH'
+    #     cpp_cmd = [
+    #         'clang', '-std=c11', '-E', '-DINT32_MIN=0x80000000',
+    #     ]
+    #     output_pp = f' >> "{pp_file}"'
+    else:
+        include_path_env_key = 'C_INCLUDE_PATH'
+        cpp_cmd = [
+            'gcc', '-std=c11', '-E', '-Wno-incompatible-pointer-types',
+        ]
+        output_pp = f' >> "{pp_file}"'
+
+    if include_path_env_key not in os.environ:
+        os.environ[include_path_env_key] = ''
+
+    os.environ[include_path_env_key] = (
+        f'{FAKE_LIB_C_PATH}{os.pathsep}{os.environ[include_path_env_key]}'
+    )
+
+    if 'PATH' not in os.environ:
+        os.environ['PATH'] = ''
+
+    os.environ['PATH'] = (
+        f'{FAKE_LIB_C_PATH}{os.pathsep}{os.environ["PATH"]}'
+    )
+
+    # cpp_cmd.extend(
+    #     [
+    #         '-DLV_LVGL_H_INCLUDE_SIMPLE',
+    #         '-DLV_CONF_INCLUDE_SIMPLE',
+    #         '-DLV_USE_DEV_VERSION'
+    #     ]
+    # )
+
+    cpp_cmd.extend([f'-D{define}' for define in defines])
+    cpp_cmd.extend(['-DPYCPARSER', '-E', f'-I{FAKE_LIB_C_PATH}'])
+    cpp_cmd.extend([f'-I{include}' for include in includes_])
+    cpp_cmd.append(f'"{input_header}"')
+
+    if sys.platform.startswith('win'):
+        cpp_cmd.insert(len(cpp_cmd) - 2, output_pp)
+    else:
+        cpp_cmd.append(output_pp)
+
+    cpp_cmd.extend(list(addl_args))
+
+    cpp_cmd = ' '.join(cpp_cmd)
+
+    p = subprocess.Popen(
+        cpp_cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=os.environ,
+        shell=True
+    )
+    out, err_ = p.communicate()
+    exit_code = p.returncode
+
+    if not os.path.exists(pp_file):
+        sys.stdout.write(out.decode('utf-8').strip() + '\n')
+        sys.stdout.write('EXIT CODE: ' + str(exit_code) + '\n')
+        sys.stderr.write(err_.decode('utf-8').strip() + '\n')
+        sys.stdout.flush()
         sys.stderr.flush()
-        sys.exit(-500)
 
-    env = pyMSVC.setup_environment()  # NOQA
-    cpp_cmd = ['cl', '/std:c11', '/nologo', '/P']
-    output_pp = f'/Fi"{pp_file}"'
-    include_path_env_key = 'INCLUDE'
+        raise RuntimeError('Unknown Failure')
 
-# elif sys.platform.startswith('darwin'):
-#     include_path_env_key = 'C_INCLUDE_PATH'
-#     cpp_cmd = [
-#         'clang', '-std=c11', '-E', '-DINT32_MIN=0x80000000',
-#     ]
-#     output_pp = f' >> "{pp_file}"'
-else:
-    include_path_env_key = 'C_INCLUDE_PATH'
-    cpp_cmd = [
-        'gcc', '-std=c11', '-E', '-Wno-incompatible-pointer-types',
-    ]
-    output_pp = f' >> "{pp_file}"'
-
-
-if include_path_env_key not in os.environ:
-    os.environ[include_path_env_key] = ''
-
-os.environ[include_path_env_key] = (
-    f'{fake_libc_path}{os.pathsep}{os.environ[include_path_env_key]}'
-)
-
-if 'PATH' not in os.environ:
-    os.environ['PATH'] = ''
-
-os.environ['PATH'] = (
-    f'{fake_libc_path}{os.pathsep}{os.environ["PATH"]}'
-)
-
-# cpp_cmd.extend(
-#     [
-#         '-DLV_LVGL_H_INCLUDE_SIMPLE',
-#         '-DLV_CONF_INCLUDE_SIMPLE',
-#         '-DLV_USE_DEV_VERSION'
-#     ]
-# )
-
-
-cpp_cmd.extend([f'-D{define}' for define in args.define])
-cpp_cmd.extend(['-DPYCPARSER', '-E', f'-I{fake_libc_path}'])
-cpp_cmd.extend([f'-I{include}' for include in args.include])
-cpp_cmd.append(f'"{input_header}"')
-
-
-if sys.platform.startswith('win'):
-    cpp_cmd.insert(len(cpp_cmd) - 2, output_pp)
-else:
-    cpp_cmd.append(output_pp)
-
-
-cpp_cmd.extend(unknownargs)
-
-cpp_cmd = ' '.join(cpp_cmd)
-
-p = subprocess.Popen(
-    cpp_cmd,
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE,
-    env=os.environ,
-    shell=True
-)
-out, err = p.communicate()
-exit_code = p.returncode
-
-if not os.path.exists(pp_file):
-    sys.stdout.write(out.decode('utf-8').strip() + '\n')
-    sys.stdout.write('EXIT CODE: ' + str(exit_code) + '\n')
-    sys.stderr.write(err.decode('utf-8').strip() + '\n')
-    sys.stdout.flush()
-    sys.stderr.flush()
-
-    raise RuntimeError('Unknown Failure')
-
-
-#
-# AST parsing helper functions
-#
-@memoize
-def remove_declname(ast_):
-    if hasattr(ast_, 'declname'):
-        ast_.declname = None
-    if isinstance(ast_, tuple):
-        remove_declname(ast_[1])
-        return
-    for i, c1 in enumerate(ast_.children()):
-        child = ast_.children()[i]
-        remove_declname(child)
-
-
-@memoize
-def add_default_declname(ast_, name_):
-    if hasattr(ast_, 'declname'):
-        if ast_.declname is None:
-            ast_.declname = name_
-
-    if isinstance(ast_, tuple):
-        add_default_declname(ast_[1], name_)
-        return
-
-    for i, c1 in enumerate(ast_.children()):
-        child = ast_.children()[i]
-        add_default_declname(child, name_)
-
-
-@memoize
-def convert_array_to_ptr(ast_):
-    if hasattr(ast_, 'type') and isinstance(ast_.type, c_ast.ArrayDecl):
-        if hasattr(ast_.type, 'quals'):
-            quals = ast_.type.quals
-        else:
-            quals = []
-
-        ast_.type = c_ast.PtrDecl(quals, ast_.type.type)
-
-    if isinstance(ast_, tuple):
-        return convert_array_to_ptr(ast_[1])
-
-    for i, c1 in enumerate(ast_.children()):
-        child = ast_.children()[i]
-        convert_array_to_ptr(child)
+    return pp_file
 
 
 @memoize
@@ -500,22 +443,8 @@ def get_name(type_):
     return gen.visit(type_)
 
 
-# Create a function prototype AST from a function AST
-@memoize
-def function_prototype(func):
-    bare_func = copy.deepcopy(func)
-    remove_declname(bare_func)
-
-    ptr_decl = c_ast.PtrDecl(quals=[], type=bare_func.type)
-    func_proto = c_ast.Typename(name=None, quals=[], align=[], type=ptr_decl)
-
-    return func_proto
-
-
-#
 # module specific text patterns
 # IGNORECASE and "lower" are used to match both function and enum names
-#
 base_obj_name = 'obj'
 base_obj_type = f'{module_prefix}_{base_obj_name}_t'
 lv_ext_pattern = (
@@ -1114,221 +1043,6 @@ int_constants = []
 class MissingConversionException(ValueError):
     pass
 
-
-mp_to_lv = {
-    'mp_obj_t': '(mp_obj_t)',
-    'va_list': None,
-    'void *': 'mp_to_ptr',
-    'const uint8_t *': 'mp_to_ptr',
-    'const void *': 'mp_to_ptr',
-    'bool': 'mp_obj_is_true',
-    'char *': '(char*)convert_from_str',
-    'char **': 'mp_write_ptr_C_Pointer',
-    'const char *': 'convert_from_str',
-    'const char **': 'mp_write_ptr_C_Pointer',
-    '%s_obj_t *' % module_prefix: 'mp_to_lv',
-    'uint8_t': '(uint8_t)mp_obj_get_int',
-    'uint16_t': '(uint16_t)mp_obj_get_int',
-    'uint32_t': '(uint32_t)mp_obj_get_int',
-    'uint64_t': '(uint64_t)mp_obj_get_ull',
-    'unsigned': '(unsigned)mp_obj_get_int',
-    'unsigned int': '(unsigned int)mp_obj_get_int',
-    'unsigned char': '(unsigned char)mp_obj_get_int',
-    'unsigned short': '(unsigned short)mp_obj_get_int',
-    'unsigned long': '(unsigned long)mp_obj_get_int',
-    'unsigned long int': '(unsigned long int)mp_obj_get_int',
-    'unsigned long long': '(unsigned long long)mp_obj_get_ull',
-    'unsigned long long int': '(unsigned long long int)mp_obj_get_ull',
-    'int8_t': '(int8_t)mp_obj_get_int',
-    'int16_t': '(int16_t)mp_obj_get_int',
-    'int32_t': '(int32_t)mp_obj_get_int',
-    'int64_t': '(int64_t)mp_obj_get_ull',
-    'size_t': '(size_t)mp_obj_get_int',
-    'int': '(int)mp_obj_get_int',
-    'char': '(char)mp_obj_get_int',
-    'short': '(short)mp_obj_get_int',
-    'long': '(long)mp_obj_get_int',
-    'long int': '(long int)mp_obj_get_int',
-    'long long': '(long long)mp_obj_get_ull',
-    'long long int': '(long long int)mp_obj_get_ull',
-    'float': '(float)mp_obj_get_float',
-}
-
-lv_to_mp = {
-    'mp_obj_t': '(mp_obj_t)',
-    'va_list': None,
-    'void *': 'ptr_to_mp',
-    'const uint8_t *': 'ptr_to_mp',
-    'const void *': 'ptr_to_mp',
-    'bool': 'convert_to_bool',
-    'char *': 'convert_to_str',
-    'char **': 'mp_read_ptr_C_Pointer',
-    'const char *': 'convert_to_str',
-    'const char **': 'mp_read_ptr_C_Pointer',
-    '%s_obj_t *' % module_prefix: 'lv_to_mp',
-    'uint8_t': 'mp_obj_new_int_from_uint',
-    'uint16_t': 'mp_obj_new_int_from_uint',
-    'uint32_t': 'mp_obj_new_int_from_uint',
-    'uint64_t': 'mp_obj_new_int_from_ull',
-    'unsigned': 'mp_obj_new_int_from_uint',
-    'unsigned int': 'mp_obj_new_int_from_uint',
-    'unsigned char': 'mp_obj_new_int_from_uint',
-    'unsigned short': 'mp_obj_new_int_from_uint',
-    'unsigned long': 'mp_obj_new_int_from_uint',
-    'unsigned long int': 'mp_obj_new_int_from_uint',
-    'unsigned long long': 'mp_obj_new_int_from_ull',
-    'unsigned long long int': 'mp_obj_new_int_from_ull',
-    'int8_t': 'mp_obj_new_int',
-    'int16_t': 'mp_obj_new_int',
-    'int32_t': 'mp_obj_new_int',
-    'int64_t': 'mp_obj_new_int_from_ll',
-    'size_t': 'mp_obj_new_int_from_uint',
-    'int': 'mp_obj_new_int',
-    'char': 'mp_obj_new_int',
-    'short': 'mp_obj_new_int',
-    'long': 'mp_obj_new_int',
-    'long int': 'mp_obj_new_int',
-    'long long': 'mp_obj_new_int_from_ll',
-    'long long int': 'mp_obj_new_int_from_ll',
-    'float': 'mp_obj_new_float',
-}
-
-lv_mp_type = {
-    'mp_obj_t': '%s*' % base_obj_type,
-    'va_list': None,
-    'void *': 'void*',
-    'const uint8_t *': 'void*',
-    'const void *': 'void*',
-    'bool': 'bool',
-    'char *': 'char*',
-    'char **': 'char**',
-    'const char *': 'char*',
-    'const char **': 'char**',
-    '%s_obj_t *' % module_prefix: '%s*' % base_obj_type,
-    'uint8_t': 'int',
-    'uint16_t': 'int',
-    'uint32_t': 'int',
-    'uint64_t': 'int',
-    'unsigned': 'int',
-    'unsigned int': 'int',
-    'unsigned char': 'int',
-    'unsigned short': 'int',
-    'unsigned long': 'int',
-    'unsigned long int': 'int',
-    'unsigned long long': 'int',
-    'unsigned long long int': 'int',
-    'int8_t': 'int',
-    'int16_t': 'int',
-    'int32_t': 'int',
-    'int64_t': 'int',
-    'size_t': 'int',
-    'int': 'int',
-    'char': 'int',
-    'short': 'int',
-    'long': 'int',
-    'long int': 'int',
-    'long long': 'int',
-    'long long int': 'int',
-    'void': None,
-    'float': 'float',
-}
-
-json_c_to_py_types = {
-    'mp_obj_t': f'"{base_obj_type}"',
-    'va_list': '*args',
-    'void *': 'Any',
-    'void *[]': 'Any',
-    'char *[]': 'List[str]',
-    'uint8_t *': 'Union[str, List[int]]',
-    'uint16_t *': 'List[int]',
-    'uint32_t *': 'List[int]',
-    'uint64_t *': 'List[int]',
-    'int8_t *': 'List[int]',
-    'int16_t *': 'List[int]',
-    'int32_t *': 'List[int]',
-    'int64_t *': 'List[int]',
-    'const uint8_t *': 'str',
-    'const uint16_t *': 'List[int]',
-    'const uint32_t *': 'List[int]',
-    'const uint64_t *': 'List[int]',
-    'const uint8_t **': 'List[bytes]',
-    'const uint16_t **': 'List[List[int]]',
-    'const uint32_t **': 'List[List[int]]',
-    'const uint64_t **': 'List[List[int]]',
-    'const int8_t *': 'List[int]',
-    'const int16_t *': 'List[int]',
-    'const int32_t *': 'List[int]',
-    'const int64_t *': 'List[int]',
-    'const int8_t **': 'List[List[int]]',
-    'const int16_t **': 'List[List[int]]',
-    'const int32_t **': 'List[List[int]]',
-    'const int64_t **': 'List[List[int]]',
-    'const void *': 'Any',
-    'bool': 'bool',
-    'char *': 'str',
-    'char **': 'List[str]',
-    'const char *': 'str',
-    'const char **': 'List[str]',
-    'uint8_t': 'int',
-    'uint16_t': 'int',
-    'uint32_t': 'int',
-    'uint64_t': 'int',
-    'unsigned': 'int',
-    'unsigned int': 'int',
-    'unsigned char': 'str',
-    'const unsigned char': 'str',
-    'unsigned char *': 'str',
-    'unsigned char **': 'List[str]',
-    'const unsigned char *': 'str',
-    'const unsigned char **':  'List[str]',
-    'unsigned short': 'int',
-    'unsigned long': 'int',
-    'unsigned long int': 'int',
-    'unsigned long long': 'int',
-    'unsigned long long int': 'int',
-
-    'const unsigned short': 'int',
-    'const unsigned long': 'int',
-    'const unsigned long int': 'int',
-    'const unsigned long long': 'int',
-    'const unsigned long long int': 'int',
-
-
-    'int8_t': 'int',
-    'int16_t': 'int',
-    'int32_t': 'int',
-    'int64_t': 'int',
-    'size_t': 'int',
-    'int': 'int',
-    'char': 'str',
-
-    'short': 'int',
-    'long': 'int',
-    'long int': 'int',
-    'long long': 'int',
-    'long long int': 'int',
-
-    'const short': 'int',
-    'const long': 'int',
-    'const long int': 'int',
-    'const long long': 'int',
-    'const long long int': 'int',
-
-    'short *': 'List[int]',
-    'long *': 'List[int]',
-    'long int *': 'List[int]',
-    'long long *': 'List[int]',
-    'long long int *': 'List[int]',
-
-    'const short *': 'List[int]',
-    'const long *': 'List[int]',
-    'const long int *': 'List[int]',
-    'const long long *': 'List[int]',
-    'const long long int *': 'List[int]',
-
-    'void': 'None',
-    'float': 'float',
-}
 
 lv_to_mp_byref = {}
 lv_to_mp_funcptr = {}
@@ -2209,6 +1923,42 @@ def gen_callback_func(func, func_name_=None, user_data_argument=False):
 generated_funcs = collections.OrderedDict()
 
 
+
+@memoize
+def add_default_declname(ast_, name_):
+    if hasattr(ast_, 'declname'):
+        if ast_.declname is None:
+            ast_.declname = name_
+
+    if isinstance(ast_, tuple):
+        add_default_declname(ast_[1], name_)
+        return
+
+    for i, c1 in enumerate(ast_.children()):
+        child = ast_.children()[i]
+        add_default_declname(child, name_)
+
+
+
+@memoize
+def convert_array_to_ptr(ast_):
+    if hasattr(ast_, 'type') and isinstance(ast_.type, c_ast.ArrayDecl):
+        if hasattr(ast_.type, 'quals'):
+            quals = ast_.type.quals
+        else:
+            quals = []
+
+        ast_.type = c_ast.PtrDecl(quals, ast_.type.type)
+
+    if isinstance(ast_, tuple):
+        return convert_array_to_ptr(ast_[1])
+
+    for i, c1 in enumerate(ast_.children()):
+        child = ast_.children()[i]
+        convert_array_to_ptr(child)
+
+
+
 def build_mp_func_arg(arg, index, func, obj_name_):  # NOQA
     if isinstance(arg, c_ast.EllipsisParam):
         raise MissingConversionException("Cannot convert ellipsis param")
@@ -2372,6 +2122,33 @@ def emit_func_obj(func_obj_name, func_name_, param_count, func_ptr, is_static):
 
     print(templates.func_obj_decl(func_name_, func_obj_name, func_ptr,
                                   param_count, builtin_macro))
+
+
+# AST parsing helper functions
+@memoize
+def remove_declname(ast_):
+    if hasattr(ast_, 'declname'):
+        ast_.declname = None
+    if isinstance(ast_, tuple):
+        remove_declname(ast_[1])
+        return
+    for i, c1 in enumerate(ast_.children()):
+        child = ast_.children()[i]
+        remove_declname(child)
+
+
+# Create a function prototype AST from a function AST
+@memoize
+def function_prototype(func):
+    bare_func = copy.deepcopy(func)
+    remove_declname(bare_func)
+
+    ptr_decl = c_ast.PtrDecl(quals=[], type=bare_func.type)
+    func_proto = c_ast.Typename(name=None, quals=[], align=[], type=ptr_decl)
+
+    return func_proto
+
+
 
 
 def gen_mp_func(func, obj_name_):

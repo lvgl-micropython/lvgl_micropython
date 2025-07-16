@@ -522,7 +522,7 @@ static mp_obj_t lv_to_mp_struct(const mp_obj_type_t *type, void *lv_struct)
     mp_lv_struct_t *self = m_new_obj(mp_lv_struct_t);
 
     *self = (mp_lv_struct_t){
-        .base = {type},
+        .base = { type },
         .data = lv_struct
     };
 
