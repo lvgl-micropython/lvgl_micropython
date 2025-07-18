@@ -1322,7 +1322,7 @@ typedef struct mp_lv_obj_type_t {{
 static const mp_lv_obj_type_t mp_lv_{base_obj}_type;
 static const mp_lv_obj_type_t *mp_lv_obj_types[];
 
-static inline const mp_obj_type_t *get_BaseObj_type()
+static const mp_obj_type_t *get_BaseObj_type()
 {{
     return mp_lv_{base_obj}_type.mp_obj_type;
 }}
@@ -1482,7 +1482,7 @@ typedef struct mp_lv_obj_t {
     LV_OBJ_T *callbacks;
 } mp_lv_obj_t;
 
-static inline LV_OBJ_T *mp_to_lv(mp_obj_t mp_obj)
+static LV_OBJ_T *mp_to_lv(mp_obj_t mp_obj)
 {
     if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
     mp_obj_t native_obj = get_native_obj(mp_obj);
@@ -1497,7 +1497,7 @@ static inline LV_OBJ_T *mp_to_lv(mp_obj_t mp_obj)
     return mp_lv_obj->lv_obj;
 }
 
-static inline LV_OBJ_T *mp_get_callbacks(mp_obj_t mp_obj)
+static LV_OBJ_T *mp_get_callbacks(mp_obj_t mp_obj)
 {
     if (mp_obj == NULL || mp_obj == mp_const_none) return NULL;
     mp_lv_obj_t *mp_lv_obj = MP_OBJ_TO_PTR(get_native_obj(mp_obj));
@@ -1509,7 +1509,7 @@ static inline LV_OBJ_T *mp_get_callbacks(mp_obj_t mp_obj)
     return mp_lv_obj->callbacks;
 }
 
-static inline const mp_obj_type_t *get_BaseObj_type();
+static const mp_obj_type_t *get_BaseObj_type();
 
 static void mp_lv_delete_cb(lv_event_t * e)
 {
@@ -1522,7 +1522,7 @@ static void mp_lv_delete_cb(lv_event_t * e)
     }
 }
 
-static inline mp_obj_t lv_to_mp(LV_OBJ_T *lv_obj)
+static mp_obj_t lv_to_mp(LV_OBJ_T *lv_obj)
 {
     if (lv_obj == NULL) return mp_const_none;
     mp_lv_obj_t *self = (mp_lv_obj_t*)lv_obj->user_data;
@@ -1652,17 +1652,17 @@ typedef struct mp_lv_obj_type_t {
 
 #endif
 
-static inline mp_obj_t convert_to_bool(bool b)
+static mp_obj_t convert_to_bool(bool b)
 {
     return b? mp_const_true: mp_const_false;
 }
 
-static inline mp_obj_t convert_to_str(const char *str)
+static mp_obj_t convert_to_str(const char *str)
 {
     return str? mp_obj_new_str(str, strlen(str)): mp_const_none;
 }
 
-static inline const char *convert_from_str(mp_obj_t str)
+static const char *convert_from_str(mp_obj_t str)
 {
     if (str == NULL || str == mp_const_none)
         return NULL;
@@ -1691,7 +1691,7 @@ static mp_lv_struct_t *mp_to_lv_struct(mp_obj_t mp_obj)
     return mp_lv_struct;
 }
 
-static inline size_t get_lv_struct_size(const mp_obj_type_t *type)
+static size_t get_lv_struct_size(const mp_obj_type_t *type)
 {
     mp_obj_dict_t *self = MP_OBJ_TO_PTR(MP_OBJ_TYPE_GET_SLOT(type, locals_dict));
     mp_map_elem_t *elem = mp_map_lookup(&self->map, MP_OBJ_NEW_QSTR(MP_QSTR___SIZE__), MP_MAP_LOOKUP);
@@ -1944,7 +1944,7 @@ static MP_DEFINE_CONST_OBJ_TYPE(
 
 static const mp_lv_struct_t mp_lv_null_obj = { {&mp_blob_type}, NULL };
 
-static inline mp_obj_t ptr_to_mp(void *data)
+static mp_obj_t ptr_to_mp(void *data)
 {
     return lv_to_mp_struct(&mp_blob_type, data);
 }
@@ -1965,7 +1965,7 @@ static mp_obj_t mp_lv_cast(mp_obj_t type_obj, mp_obj_t ptr_obj)
 
 // Cast instance. Can be used in ISR when memory allocation is prohibited
 
-static inline mp_obj_t mp_lv_cast_instance(mp_obj_t self_in, mp_obj_t ptr_obj)
+static mp_obj_t mp_lv_cast_instance(mp_obj_t self_in, mp_obj_t ptr_obj)
 {
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(self_in);
     self->data = mp_to_ptr(ptr_obj);
@@ -2534,7 +2534,7 @@ def try_generate_struct(struct_name, struct):
 
 static const mp_obj_type_t mp_{sanitized_struct_name}_type;
 
-static inline void* mp_write_ptr_{sanitized_struct_name}(mp_obj_t self_in)
+static void* mp_write_ptr_{sanitized_struct_name}(mp_obj_t self_in)
 {{
     mp_lv_struct_t *self = MP_OBJ_TO_PTR(cast(self_in, &mp_{sanitized_struct_name}_type));
     return ({struct_tag}{struct_name}*)self->data;
@@ -2542,7 +2542,7 @@ static inline void* mp_write_ptr_{sanitized_struct_name}(mp_obj_t self_in)
 
 #define mp_write_{sanitized_struct_name}(struct_obj) *(({struct_tag}{struct_name}*)mp_write_ptr_{sanitized_struct_name}(struct_obj))
 
-static inline mp_obj_t mp_read_ptr_{sanitized_struct_name}(void *field)
+static mp_obj_t mp_read_ptr_{sanitized_struct_name}(void *field)
 {{
     return lv_to_mp_struct(&mp_{sanitized_struct_name}_type, field);
 }}
@@ -2775,7 +2775,7 @@ def try_generate_type(type_ast):
             try:
                 print("#define %s NULL\n" % func_ptr_name)
                 gen_mp_func(func, None)
-                print("static inline mp_obj_t mp_lv_{f}(void *func){{ return mp_lv_funcptr(&mp_{f}_mpobj, func, NULL, MP_QSTR_, NULL); }}\n".format(
+                print("static mp_obj_t mp_lv_{f}(void *func){{ return mp_lv_funcptr(&mp_{f}_mpobj, func, NULL, MP_QSTR_, NULL); }}\n".format(
                     f=func_ptr_name))
                 lv_to_mp_funcptr[ptr_type] = func_ptr_name
                 # eprint("/* --> lv_to_mp_funcptr[%s] = %s */" % (ptr_type, func_ptr_name))
