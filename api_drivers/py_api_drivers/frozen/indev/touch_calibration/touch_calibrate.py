@@ -88,7 +88,6 @@ def calibrate(indev, cal_data):
         lcd_bus._pump_main_thread()  # NOQA
         time.sleep_ms(5)  # NOQA
 
-    label.delete()
     count = 0
     while count < 100:
         count += 1
@@ -113,7 +112,15 @@ def calibrate(indev, cal_data):
     for i in range(3):
         print('point', i + 1, 'of 3')
 
+        label.set_text(f'Point {i + 1} of 3')
+        label.center()
+
         target.set_pos(*coords[i])
+        lcd_bus._pump_main_thread()  # NOQA
+        time.sleep_ms(2000)  # NOQA
+
+        label.set_text('Press and hold\n  red circle')
+        label.center()
         lcd_bus._pump_main_thread()  # NOQA
 
         time.sleep_ms(1000)  # NOQA
@@ -126,7 +133,21 @@ def calibrate(indev, cal_data):
             else:
                 state = 0
 
+            text_on = True
+            text_count = 75
+
             while touch is None or not state:
+                if text_count == 75:
+                    text_count = 0
+                    if text_on:
+                        label.set_text('')
+                    else:
+                        label.set_text('Press and hold\n  red circle')
+                    label.center()
+
+                    text_on = not text_on
+
+                text_count += 1
                 time.sleep_ms(10)  # NOQA
                 lcd_bus._pump_main_thread()  # NOQA
                 touch = indev._get_coords()  # NOQA
@@ -137,10 +158,21 @@ def calibrate(indev, cal_data):
                     state = 0
 
             x, y = touch[1:]
+            label.set_text(
+                f'Touch {j + 1} of 8 collected\n'
+                f'x: {x}\n'
+                f'y: {y}'
+                )
+            label.center()
+            lcd_bus._pump_main_thread()  # NOQA
+
             captured_points[i]['x'].append(x)
             captured_points[i]['y'].append(y)
 
             print('  ', j + 1, 'of 8:', (x, y))
+            time.sleep_ms(1000)  # NOQA
+
+        time.sleep_ms(2000)  # NOQA
 
     print()
     print('averaged trimmed points')
@@ -154,16 +186,31 @@ def calibrate(indev, cal_data):
         points['y'] = int(sum(points['y']) / 6)
 
         print('  point', i + 1, 'of 3:', (points['x'], points['y']))
+        label.set_text(
+            f'Averaged trimmed point {i + 1}\n'
+            f'x: {points["x"]}\n'
+            f'y: {points["y"]}'
+        )
+        label.center()
+        lcd_bus._pump_main_thread()  # NOQA
+        time.sleep_ms(1000)  # NOQA
 
-    if captured_points[0]['x'] > captured_points[1]['x']:
-        mirror_x = True
-    else:
-        mirror_x = False
+    label.set_text('')
+    label.center()
+    lcd_bus._pump_main_thread()  # NOQA
 
-    if captured_points[0]['y'] > captured_points[2]['y']:
-        mirror_y = True
-    else:
-        mirror_y = False
+    # if captured_points[0]['x'] > captured_points[1]['x']:
+    #     mirror_x = True
+    # else:
+    #     mirror_x = False
+    #
+    # if captured_points[0]['y'] > captured_points[2]['y']:
+    #     mirror_y = True
+    # else:
+    #     mirror_y = False
+
+    mirror_x = False
+    mirror_y = False
 
     print('mirroring')
     print('  mirrored x:', mirror_x)
@@ -221,10 +268,32 @@ def calibrate(indev, cal_data):
         cal_data.mirrorX = mirror_x
         cal_data.mirrorY = mirror_y
 
+        label.set_text(
+            f'Calibration values\n'
+            f'alphaX: {round(alphaX, 6)}\n'
+            f'betaX: {round(betaX, 6)}\n'
+            f'deltaX: {round(deltaX, 6)}\n'
+            f'alphaY: {round(betaX, 6)}\n'
+            f'betaY: {round(alphaX, 6)}\n'
+            f'deltaY: {round(betaX, 6)}'
+        )
+        label.center()
+        lcd_bus._pump_main_thread()  # NOQA
+        time.sleep_ms(5000)  # NOQA
+
     except ZeroDivisionError:
         print('Error in calculation please try again.')
         res = False
+        label.set_text('ERROR')
+        label.center()
+        lcd_bus._pump_main_thread()  # NOQA
+        time.sleep_ms(1000)  # NOQA
+
     else:
+        label.set_text('FINISHED')
+        label.center()
+        lcd_bus._pump_main_thread()  # NOQA
+        time.sleep_ms(1000)  # NOQA
         res = True
 
     lv.screen_load(old_scrn)  # NOQA
