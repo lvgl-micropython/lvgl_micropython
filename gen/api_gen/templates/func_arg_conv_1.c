@@ -1,1 +1,0 @@
-void */*#~0~#*/ = mp_lv_callback(mp_args[/*#~1~#*/], &/*#~2~#*/_callback, MP_QSTR_/*#~2~#*/, /*#~3~#*/, /*#~4~#*/, (mp_lv_get_user_data)/*#~5~#*/, (mp_lv_set_user_data)/*#~6~#*/);

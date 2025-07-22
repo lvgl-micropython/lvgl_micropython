@@ -6,26 +6,68 @@ import pycparser
 from pycparser import c_ast
 
 
-class CGenerator(object):
+FILTER_LIST = [
+    'core/lv_obj_property.h',
+    'draw/lv_image_decoder.h',
+    'draw/lv_draw_mask.h',
+    'draw/sw/blend/lv_draw_sw_blend_to_al88.h',
+    'draw/sw/blend/lv_draw_sw_blend_to_argb8888.h',
+    'draw/sw/blend/lv_draw_sw_blend_to_argb8888_premultiplied.h',
+    'draw/sw/blend/lv_draw_sw_blend_to_i1.h',
+    'draw/sw/blend/lv_draw_sw_blend_to_l8.h',
+    'draw/sw/blend/lv_draw_sw_blend_to_rgb565.h',
+    'draw/sw/blend/lv_draw_sw_blend_to_rgb565_swapped.h',
+    'draw/sw/blend/lv_draw_sw_blend_to_rgb888.h',
+    'draw/sw/lv_draw_sw.h',
+    'draw/sw/lv_draw_sw_grad.h',
+    'draw/sw/lv_draw_sw_mask.h',
+    'draw/sw/lv_draw_sw_utils.h',
+    'font/lv_font_fmt_txt.h',
+    'misc/cache',
+    'misc/lv_iter.h',
+    'misc/lv_ll.h',
+    'misc/lv_lru.h',
+    'misc/lv_profiler_builtin.h',
+    'misc/lv_rb.h',
+    'misc/lv_text_ap.h',
+    'misc/lv_tree.h',
+    'misc/lv_utils.h',
+    'others/xml',
+    'stdlib',
+    'lv_api_map_v8.h',
+    'lv_api_map_v9_0.h',
+    'lv_api_map_v9_1.h',
+    'lv_conf_internal.h',
+    'lv_conf_kconfig.h',
+    'lvgl.h'
+]
+
+
+class JSONGenerator(object):
 
     def __init__(self, private_only=False):
         self.private_only = private_only
 
     def filter_node(self, n):
         if hasattr(n, 'coord') and n.coord is not None:
-            if 'fake_libc' in n.coord.file:
+            file = n.coord.file.replace('\\', '/')
+
+            if 'fake_libc' in file:
                 return True
 
-            if '_private.h' in n.coord.file:
+            if '_private.h' in file:
                 if self.private_only:
                     return False
 
                 return True
 
             # filter out the files that are in LVGL but are not part of the LVGL API
-            file = os.path.split(n.coord.file)[-1]
-            if not file.startswith('lv_'):
+            if not os.path.split(n.coord.file)[-1].startswith('lv_'):
                 return True
+
+            for item in FILTER_LIST:
+                if item in file:
+                    return True
 
         if self.private_only:
             return True
@@ -276,7 +318,7 @@ class CGenerator(object):
 
                 quals, field_type = self.get_quals_and_type(field_type)
 
-                type_ = dict(name=field_type, type='type')
+                type_ = dict(name=field_type, ctype='type')
                 field = dict(ctype='field', type=type_, name=field_name,
                              quals=quals, bits=bits)
 
@@ -293,7 +335,7 @@ class CGenerator(object):
             if '=' in member:
                 member = member.split('=', 1)[0].strip()
 
-            member = dict(ctype='enum_member', name=member)
+            member = dict(ctype='enum_member', name=member.replace(',', '').strip())
             members[i] = member
 
         return members
@@ -348,6 +390,10 @@ class CGenerator(object):
         new_params = []
         curly_brace = 0
         param = ''
+
+        param_names = []
+        param_types = []
+
         for char in params:
             if char == '{':
                 curly_brace += 1
@@ -455,7 +501,11 @@ class CGenerator(object):
 
             self.check_array(param)
 
+            param['index'] = i
             params[i] = param
+
+        if params == ['void']:
+            params = []
 
         if not callback:
             ret_type, func_name = func.rsplit(' ', 1)
@@ -624,106 +674,14 @@ class CGenerator(object):
         else:
             return self.visit(n)
 
+    @staticmethod
+    def parse(input_header: str, pp: str, private_filter: bool) -> dict:
+        cparser = pycparser.CParser()
+        ast = cparser.parse(pp, input_header)
 
-def pp_to_json(pp_data, input_header):
-    cparser = pycparser.CParser()
-    ast = cparser.parse(pp_data, input_header)
-
-    generator = CGenerator(False)
-    pp = generator.visit(ast)
-
-    generator = CGenerator(True)
-    pp_private = generator.visit(ast)
-
-    def _sort(data):
-        res = {}
-        data = json.loads(data)
-        for itm_ in data:
-            ctype = itm_['ctype']
-            if ctype not in res:
-                res[ctype] = []
-
-            res[ctype].append(itm_)
+        generator = JSONGenerator(private_filter)
+        res = json.loads(generator.visit(ast))
         return res
-
-    sorted_api = _sort(pp)
-    sorted_api_private = _sort(pp_private)
-
-    typedefs = {}
-
-    used_typedefs = set()
-
-    for typedef in sorted_api['typedef']:
-        type_name = typedef['type']['name']
-
-        if type_name is None:
-            continue
-
-        if type_name.startswith('_lv') or type_name.startswith('lv_'):
-            typedefs[type_name] = typedef['name']
-
-    def iter_json(dct):
-        for key, value in list(dct.items()):
-            if isinstance(value, dict):
-                iter_json(value)
-            elif isinstance(value, list):
-                for itm_ in value:
-                    if isinstance(itm_, dict):
-                        iter_json(itm_)
-
-            elif isinstance(value, str):
-                if value in typedefs:
-                    dct.clear()
-                    dct['ctype'] = 'type'
-                    dct['name'] = typedefs[value]
-                    used_typedefs.add(value)
-                    break
-                elif value.endswith('*'):
-                    tmp_value, pointer = value.rsplit(' ', 1)
-
-                    if tmp_value in typedefs:
-                        dct.clear()
-                        dct['ctype'] = 'type'
-                        dct['name'] = typedefs[tmp_value] + ' ' + pointer
-                        used_typedefs.add(tmp_value)
-                        break
-
-    for k, v in sorted_api.items():
-        if k == 'typedef':
-            continue
-
-        for item in v:
-            iter_json(item)
-
-    for k, v in sorted_api_private.items():
-        if k == 'typedef':
-            continue
-
-        for item in v:
-            iter_json(item)
-
-    for typedef in used_typedefs:
-        del typedefs[typedef]
-
-    for typedef in sorted_api['typedef']:
-        typedef_type_name = typedef['type']['name']
-
-        if typedef_type_name in typedefs:
-            continue
-
-        sorted_api['typedef'].remove(typedef)
-
-    sorted_api['union'] = []
-
-    for typedef in sorted_api['typedef'][:]:
-
-        if typedef['type']['ctype'] in ('struct', 'enum', 'union'):
-            sorted_api['typedef'].remove(typedef)
-
-            typedef['type']['name'] = typedef['name']
-            sorted_api[typedef['type']['ctype']].append(typedef['type'])
-
-    return sorted_api, sorted_api_private
 
 
 if __name__ == '__main__':
@@ -731,7 +689,7 @@ if __name__ == '__main__':
     with open(r'lvgl.pp', 'r') as f:
         _data = f.read()
 
-    s_api, s_api_p = pp_to_json(_data, r'../../lib/lvgl/lvgl.h')
+    json_api = JSONGenerator.parse(r'../../lib/lvgl/lvgl.h', _data, private_filter=False)
 
     # This is a check to see if something went
     # amiss with the encoding of the JSON data
@@ -762,8 +720,8 @@ if __name__ == '__main__':
                     raise RuntimeError()
 
 
-    for items in s_api.values():
+    for items in json_api.values():
         for itm in items:
             iter_j(itm)
 
-    print(json.dumps(s_api, indent=4))
+    print(json.dumps(json_api, indent=4))

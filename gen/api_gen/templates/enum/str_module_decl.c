@@ -1,0 +1,2 @@
+    { MP_ROM_QSTR(MP_QSTR_/*#~0~#*/), MP_ROM_PTR(&mp_/*#~1~#*/) }
+
