@@ -36,7 +36,7 @@ class SSD1306(display_driver_framework.DisplayDriver):
         backlight_on_state=STATE_HIGH,
         offset_x=0,
         offset_y=0,
-        color_space=lv.COLOR_FORMAT.RGB888,  # NOQA
+        color_space=LV.COLOR_FORMAT.I1,  # NOQA
         rgb565_byte_swap=False
     ):
 
@@ -126,7 +126,9 @@ class SSD1306(display_driver_framework.DisplayDriver):
             self.set_params(_DISP_OFF)
 
     def _flush_cb(self, _, area, color_p):
-
+        # display ram is 8192 bits in size. the is evenly divided into 8 pages.
+        # each page holds
+        # 8 pages 1024 bits (128 bytes)
         x1 = 0
         x2 = self.display_width - 1
 
@@ -146,14 +148,10 @@ class SSD1306(display_driver_framework.DisplayDriver):
         self._param_buf[1] = y2
         self.set_params(_SET_PAGE_ADDR, self._param_mv[:2])
 
-        size = (
-            (area.x2 - area.x1 + 1) *
-            (area.y2 - area.y1 + 1) *
-            lv.color_format_get_size(self._color_space)
-        )
+        size = int((area.x2 - area.x1 + 1) * (area.y2 - area.y1 + 1) / 8)
 
         # we have to use the __dereference__ method because this method is
         # what converts from the C_Array object the binding passes into a
         # memoryview object that can be passed to the bus drivers
         data_view = color_p.__dereference__(size)
-        self._data_bus.tx_color(0, data_view, x1, y1, x2, y2, self._rotation, self._disp_drv.flush_is_last())
+        self._data_bus.tx_color(-1, data_view, x1, y1, x2, y2, self._rotation, self._disp_drv.flush_is_last())
