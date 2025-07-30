@@ -43,11 +43,7 @@ class SSD1306(display_driver_framework.DisplayDriver):
         if not isinstance(data_bus, (lcd_bus.SPIBus, lcd_bus.I2CBus)):
             raise ValueError('Only SPI and I2C lcd busses allowed')
 
-        buf_size = int(
-            display_width *
-            display_height *
-            lv.color_format_get_size(color_space)
-        )
+        buf_size = int(display_width * display_height // 8)
 
         if frame_buffer1 is None:
 
