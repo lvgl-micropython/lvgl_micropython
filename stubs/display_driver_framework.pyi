@@ -223,7 +223,7 @@ class DisplayDriver:
     def delete_refr_timer(self) -> None:
         ...
 
-    def invert_colors(self) -> None:
+    def set_color_inversion(self, value: bool) -> None:
         ...
 
     def set_default(self) -> None:
