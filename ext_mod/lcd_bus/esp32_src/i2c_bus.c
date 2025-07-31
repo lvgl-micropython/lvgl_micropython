@@ -148,7 +148,7 @@ mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
     self->panel_io_config.lcd_cmd_bits = (int)cmd_bits;
     self->panel_io_config.lcd_param_bits = (int)param_bits;
 
-    ret = esp_lcd_new_panel_io_i2c(self->port , &self->panel_io_config, &self->panel_io_handle.panel_io);
+    mp_lcd_err_t ret = esp_lcd_new_panel_io_i2c(self->port , &self->panel_io_config, &self->panel_io_handle.panel_io);
 
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_i2c)"), ret);
