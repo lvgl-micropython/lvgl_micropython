@@ -36,7 +36,7 @@ class SSD1306(display_driver_framework.DisplayDriver):
         backlight_on_state=STATE_HIGH,
         offset_x=0,
         offset_y=0,
-        color_space=LV.COLOR_FORMAT.I1,  # NOQA
+        color_space=lv.COLOR_FORMAT.I1,  # NOQA
         rgb565_byte_swap=False
     ):
 

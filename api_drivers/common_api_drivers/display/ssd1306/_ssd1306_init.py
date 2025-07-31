@@ -35,7 +35,7 @@ def init(self):
 
     self.set_params(_SET_SEG_REMAP | 0x01)
 
-    param_buf[0] = self.height - 1
+    param_buf[0] = self.display_height - 1
     self.set_params(_SET_MUX_RATIO, param_mv[:1])
 
     self.set_params(_SET_COM_OUT_DIR | 0x08)
@@ -43,7 +43,7 @@ def init(self):
     param_buf[0] = 0x00
     self.set_params(_SET_DISP_OFFSET, param_mv[:1])
 
-    if self.width > 2 * self.height:
+    if self.width > 2 * self.display_height:
         param_buf[0] = 0x02
     else:
         param_buf[0] = 0x12
