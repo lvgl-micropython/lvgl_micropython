@@ -1401,6 +1401,8 @@ def build_sdkconfig(*args):
     with open(SDKCONFIG_PATH, 'w') as f:
         f.write('\n'.join(base_config))
 
+    return args
+
 
 def revert_custom_board():
     if custom_board_path is None:
@@ -1424,7 +1426,7 @@ def compile(*args):  # NOQA
     if ccache:
         env['IDF_CCACHE_ENABLE'] = '1'
 
-    build_sdkconfig(*args)
+    args = build_sdkconfig(*args)
 
     if custom_board_path is None:
 
@@ -1447,7 +1449,7 @@ def compile(*args):  # NOQA
 
     try:
         cmd_ = compile_cmd[:]
-        cmd_.extend(list(args))
+        cmd_.extend(args)
 
         ret_code, output = spawn(cmd_, env=env, cmpl=True)
 
