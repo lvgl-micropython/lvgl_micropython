@@ -28,49 +28,38 @@ static uint8_t i2c_bus_count = 0;
 static mp_lcd_i2c_bus_obj_t **i2c_bus_objs;
 
 
+typedef struct _i2c_obj_t {
+    mp_obj_base_t base;
+    i2c_port_t port : 8;
+    gpio_num_t scl : 8;
+    gpio_num_t sda : 8;
+} _i2c_obj_t;
+
+
 void mp_lcd_i2c_bus_deinit_all(void)
 {
     // we need to copy the existing array to a new one so the order doesn't
     // get all mucked up when objects get removed.
-    mp_lcd_i2c_bus_obj_t *objs[i2c_bus_count];
-
-    for (uint8_t i=0;i<i2c_bus_count;i++) {
-        objs[i] = i2c_bus_objs[i];
-    }
-
-    for (uint8_t i=0;i<i2c_bus_count;i++) {
-        i2c_del(MP_OBJ_FROM_PTR(objs[i]));
-    }
 }
 
 
 static mp_obj_t mp_lcd_i2c_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
 {
     enum {
-        ARG_sda,
-        ARG_scl,
+        ARG_i2c_bus,
         ARG_addr,
-        ARG_host,
         ARG_control_phase_bytes,
         ARG_dc_bit_offset,
-        ARG_freq,
         ARG_dc_low_on_data,
-        ARG_sda_pullup,
-        ARG_scl_pullup,
         ARG_disable_control_phase
     };
 
     const mp_arg_t make_new_args[] = {
-        { MP_QSTR_sda,                   MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
-        { MP_QSTR_scl,                   MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
+        { MP_QSTR_i2c_bus,               MP_ARG_OBJ  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
         { MP_QSTR_addr,                  MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
-        { MP_QSTR_host,                  MP_ARG_INT  | MP_ARG_KW_ONLY,  {.u_int = 0         } },
         { MP_QSTR_control_phase_bytes,   MP_ARG_INT  | MP_ARG_KW_ONLY,  {.u_int = 1         } },
         { MP_QSTR_dc_bit_offset,         MP_ARG_INT  | MP_ARG_KW_ONLY,  {.u_int = 6         } },
-        { MP_QSTR_freq,                  MP_ARG_INT  | MP_ARG_KW_ONLY,  {.u_int = 100000    } },
-        { MP_QSTR_dc_low_on_data,        MP_ARG_BOOL | MP_ARG_KW_ONLY,  {.u_bool = false    } },
-        { MP_QSTR_sda_pullup,            MP_ARG_BOOL | MP_ARG_KW_ONLY,  {.u_bool = true     } },
-        { MP_QSTR_scl_pullup,            MP_ARG_BOOL | MP_ARG_KW_ONLY,  {.u_bool = true     } },
+        { MP_QSTR_dc_low_on_data,        MP_ARG_BOOL | MP_ARG_KW_ONLY,  {.u_bool = true     } },
         { MP_QSTR_disable_control_phase, MP_ARG_BOOL | MP_ARG_KW_ONLY,  {.u_bool = false    } }
     };
 
@@ -90,17 +79,9 @@ static mp_obj_t mp_lcd_i2c_bus_make_new(const mp_obj_type_t *type, size_t n_args
 
     self->callback = mp_const_none;
 
-    self->host = args[ARG_host].u_int;
-    self->bus_handle = (esp_lcd_i2c_bus_handle_t)((uint32_t)self->host);
+    _i2c_obj_t *bus = MP_OBJ_TO_PTR(args[ARG_i2c_bus].u_obj);
 
-    self->bus_config.mode = I2C_MODE_MASTER;
-    self->bus_config.sda_io_num = (int)args[ARG_sda].u_int;
-    self->bus_config.scl_io_num = (int)args[ARG_scl].u_int;
-    self->bus_config.sda_pullup_en = (bool)args[ARG_sda_pullup].u_bool;
-    self->bus_config.scl_pullup_en = (bool)args[ARG_scl_pullup].u_bool;
-    self->bus_config.master.clk_speed = (uint32_t)args[ARG_freq].u_int;
-    self->bus_config.clk_flags = I2C_SCLK_SRC_FLAG_FOR_NOMAL;
-
+    self->port = bus->port;
     self->panel_io_config.dev_addr = (uint32_t)args[ARG_addr].u_int;
     self->panel_io_config.on_color_trans_done = bus_trans_done_cb;
     self->panel_io_config.user_ctx = self;
@@ -129,12 +110,6 @@ mp_lcd_err_t i2c_del(mp_obj_t obj)
             return ret;
         }
 
-        ret = i2c_driver_delete(self->host);
-        if (ret != 0) {
-            mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(i2c_driver_delete)"), ret);
-            return ret;
-        }
-
         self->panel_io_handle.panel_io = NULL;
 
         if (self->view1 != NULL) {
@@ -152,22 +127,7 @@ mp_lcd_err_t i2c_del(mp_obj_t obj)
             self->view2 = NULL;
             LCD_DEBUG_PRINT("i2c_free_framebuffer(self, buf=1)\n")
         }
-
-        uint8_t i= 0;
-        for (;i<i2c_bus_count;i++) {
-            if (i2c_bus_objs[i] == self) {
-                i2c_bus_objs[i] = NULL;
-                break;
-            }
-        }
-
-        for (uint8_t j=i + 1;j<i2c_bus_count;j++) {
-            i2c_bus_objs[j - i + 1] = i2c_bus_objs[j];
-        }
-
-        i2c_bus_count--;
-        i2c_bus_objs = m_realloc(i2c_bus_objs, i2c_bus_count * sizeof(mp_lcd_i2c_bus_obj_t *));
-
+        
         return ret;
     } else {
         return LCD_FAIL;
@@ -188,30 +148,13 @@ mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp
     self->panel_io_config.lcd_cmd_bits = (int)cmd_bits;
     self->panel_io_config.lcd_param_bits = (int)param_bits;
 
-    mp_lcd_err_t ret = i2c_param_config(self->host, &self->bus_config);
-    if (ret != 0) {
-        mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(i2c_param_config)"), ret);
-        return ret;
-    }
-
-    ret = i2c_driver_install(self->host, I2C_MODE_MASTER, 0, 0, 0);
-    if (ret != 0) {
-        mp_raise_msg_varg(&mp_type_OSError, MP_ERROR_TEXT("%d(i2c_driver_install)"), ret);
-        return ret;
-    }
-
-    ret = esp_lcd_new_panel_io_i2c(self->bus_handle , &self->panel_io_config, &self->panel_io_handle.panel_io);
+    mp_lcd_err_t ret = esp_lcd_new_panel_io_i2c(self->port , &self->panel_io_config, &self->panel_io_handle.panel_io);
 
     if (ret != 0) {
         mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_i2c)"), ret);
         return ret;
     }
-
-    // add the new bus ONLY after successfull initilization of the bus
-    i2c_bus_count++;
-    i2c_bus_objs = m_realloc(i2c_bus_objs, i2c_bus_count * sizeof(mp_lcd_i2c_bus_obj_t *));
-    i2c_bus_objs[i2c_bus_count - 1] = self;
-
+    
     return ret;
 }
 

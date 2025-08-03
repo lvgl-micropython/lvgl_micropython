@@ -30,10 +30,8 @@
 
         lcd_panel_io_t panel_io_handle;
         esp_lcd_panel_io_i2c_config_t panel_io_config;
-        i2c_config_t bus_config;
+        i2c_port_t port;
         esp_lcd_i2c_bus_handle_t bus_handle;
-
-        int host;
 
     } mp_lcd_i2c_bus_obj_t;
 
