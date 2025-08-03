@@ -1,0 +1,99 @@
+[MCU.esp32]
+BOARD = "ESP32_GENERIC_S3"
+BOARD_VARIANT = "SPIRAM_OCT"
+flash_size = 16
+enable_jtag_repl = 'n'
+enable_cdc_repl = 'y'
+enable_uart_repl = 'n'
+CONFIG_FREERTOS_HZ='y'
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240='y'
+CONFIG_ESPTOOLPY_FLASHMODE_QIO='y'
+CONFIG_ESPTOOLPY_FLASHFREQ_120M='y'
+CONFIG_IDF_EXPERIMENTAL_FEATURES='y'
+CONFIG_SPIRAM_SPEED_120M='y'
+CONFIG_SPIRAM_FETCH_INSTRUCTIONS='y'
+CONFIG_SPIRAM_RODATA='y'
+CONFIG_ESP32S3_DATA_CACHE_LINE_64B='y'
+CONFIG_COMPILER_OPTIMIZATION_PERF='y'
+
+[RGBBus.display_bus]
+data0 = 14
+data1 = 38
+data2 = 18
+data3 = 17
+data4 = 10
+data5 = 39
+data6 = 0
+data7 = 45
+data8 = 48
+data9 = 47
+data10 = 21
+data11 = 1
+data12 = 2
+data13 = 42
+data14 = 41
+data15 = 40
+hsync = 46
+vsync = 3
+de = 5
+pclk = 7
+freq = 12000000
+hsync_front_porch = 8
+hsync_back_porch = 8
+hsync_pulse_width = 4
+hsync_idle_low = true
+vsync_front_porch = 8
+vsync_back_porch = 8
+vsync_pulse_width = 4
+vsync_idle_low = false
+de_idle_high = false
+pclk_idle_high = false
+pclk_active_low = true
+
+
+[I2C.Bus.i2c_bus]
+host = 0
+scl = 9
+sda = 8
+freq = 400000
+
+
+[I2C.Device.indev_device]
+bus = "i2c_bus"
+dev_id = "gt911.I2C_ADDR"
+reg_bits = "gt911.BITS"
+
+
+[RGBDisplay.display]
+data_bus = "display_bus"
+display_width = 800
+display_height = 480
+color_space = "lv.COLOR_FORMAT.RGB565"
+
+
+[display.set_power]
+params = [true]
+
+
+[display.init]
+params = []
+
+[GT911.indev]
+device = "indev_device"
+
+[indev.firmware_config.fw_config]
+
+[fw_config.width]
+value=800
+
+[fw_config.height]
+value=480
+
+[fw_config.save]
+params=[]
+
+[display.set_backlight]
+params = [100]
+
+[task_handler.TaskHandler]
+params=[]
