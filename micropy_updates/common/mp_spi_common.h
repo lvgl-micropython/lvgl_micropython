@@ -21,20 +21,25 @@
         mp_obj_base_t base;
         uint8_t host;
         mp_obj_t sck;
-        mp_obj_t data0;
-        mp_obj_t data1;
-        mp_obj_t data2;
-        mp_obj_t data3;
+        mp_obj_t data0; // mosi
+        mp_obj_t data1; // miso
+        mp_obj_t data2; // quadwp
+        mp_obj_t data3; // quadhd
+        // octal pins
         mp_obj_t data4;
         mp_obj_t data5;
         mp_obj_t data6;
         mp_obj_t data7;
-        bool dual;
-        bool quad;
-        bool octal;
-        uint8_t device_count;
+
+        // flags if these types of SPI is available at the bus
+        uint8_t dual: 1;
+        uint8_t quad: 1;
+        uint8_t octal: 1;
+        uint8_t device_count: 5;
         mp_machine_hw_spi_device_obj_t **devices;
         mp_machine_hw_spi_state_t state;
+
+        // stores the spi bus specific to a port
         const void *user_data;
         void (*deinit)(mp_machine_hw_spi_bus_obj_t *bus);
     };
@@ -42,16 +47,21 @@
     struct _mp_machine_hw_spi_device_obj_t {
         mp_obj_base_t base;
         uint32_t freq;
-        uint8_t polarity;
-        uint8_t phase;
+        uint8_t polarity: 1;
+        uint8_t phase: 1;
         uint8_t bits;
-        uint8_t firstbit;
-        bool dual;
-        bool quad;
-        bool octal;
-        bool active;
+        uint8_t firstbit: 1;
+        uint8_t dual: 1;
+        uint8_t quad: 1;
+        uint8_t octal: 1;
+        uint8_t active: 1;
         mp_obj_t cs;
+        uint8_t cs_high_active: 1;
         mp_machine_hw_spi_bus_obj_t *spi_bus;
+        uint8_t mem_addr_size;
+        uint32_t mem_addr;
+        uint8_t mem_addr_set: 1;
+        uint8_t reduce_max_trans: 1;
         void *user_data;
         void (*deinit)(mp_machine_hw_spi_device_obj_t *device);
     };

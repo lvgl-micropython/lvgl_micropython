@@ -681,6 +681,11 @@ class JSONGenerator(object):
 
         generator = JSONGenerator(private_filter)
         res = json.loads(generator.visit(ast))
+
+        file = os.path.join(os.path.dirname(__file__), 'first_dump.json')
+        with open(file, 'w') as f:
+            f.write(json.dumps(res, indent=4))
+
         return res
 
 

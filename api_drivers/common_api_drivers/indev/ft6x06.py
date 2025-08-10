@@ -7,7 +7,6 @@ import focaltech_touch
 import pointer_framework
 
 I2C_ADDR = 0x38
-BITS = 8
 
 _FT6206_CHIPID = const(0x06)
 _FT6x06_CHIPID = const(0x11)

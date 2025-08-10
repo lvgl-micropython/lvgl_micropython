@@ -73,18 +73,18 @@ GYRO_RATE_62_HZ = const(7)
 GYRO_RATE_31_HZ = const(8)
 
 I2C_ADDR = 0x6B
-BITS = 8
+_BITS = const(8)
 
 
 class QMI8658C(imu_sensor_framework.IMUSensorFramework):
 
     def _read_reg(self, reg):
-        self._device.read_mem(reg, self._rx_mv[:1])
+        self._device.readfrom_mem_into(reg, self._rx_mv[:1])
         return self._rx_buf[0]
 
     def _write_reg(self, reg, data):
         self._tx_buf[0] = data
-        self._device.write_mem(reg, self._tx_mv[:1])
+        self._device.writeto_mem(reg, self._tx_mv[:1])
 
     def __init__(self, device, delay_between_samples=100):
 
@@ -94,6 +94,8 @@ class QMI8658C(imu_sensor_framework.IMUSensorFramework):
         self._tx_mv = memoryview(self._tx_buf)
         self._rx_buf = bytearray(6)
         self._rx_mv = memoryview(self._rx_buf)
+
+        device.set_mem_addr_size(_BITS)
 
         if self._read_reg(_VERSION_REG) != 0x05:
             raise RuntimeError("Failed to find QMI8658C")

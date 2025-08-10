@@ -2,19 +2,19 @@
 BOARD = "ESP32_GENERIC_S3"
 BOARD_VARIANT = "SPIRAM_OCT"
 flash_size = 16
-enable_jtag_repl = 'n'
-enable_cdc_repl = 'y'
-enable_uart_repl = 'n'
-CONFIG_FREERTOS_HZ='y'
-CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240='y'
-CONFIG_ESPTOOLPY_FLASHMODE_QIO='y'
-CONFIG_ESPTOOLPY_FLASHFREQ_120M='y'
-CONFIG_IDF_EXPERIMENTAL_FEATURES='y'
-CONFIG_SPIRAM_SPEED_120M='y'
-CONFIG_SPIRAM_FETCH_INSTRUCTIONS='y'
-CONFIG_SPIRAM_RODATA='y'
-CONFIG_ESP32S3_DATA_CACHE_LINE_64B='y'
-CONFIG_COMPILER_OPTIMIZATION_PERF='y'
+enable_jtag_repl = "n"
+enable_cdc_repl = "y"
+enable_uart_repl = "n"
+CONFIG_FREERTOS_HZ = "y"
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240 = "y"
+CONFIG_ESPTOOLPY_FLASHMODE_QIO = "y"
+CONFIG_ESPTOOLPY_FLASHFREQ_120M = "y"
+CONFIG_IDF_EXPERIMENTAL_FEATURES = "y"
+CONFIG_SPIRAM_SPEED_120M = "y"
+CONFIG_SPIRAM_FETCH_INSTRUCTIONS = "y"
+CONFIG_SPIRAM_RODATA = "y"
+CONFIG_ESP32S3_DATA_CACHE_LINE_64B = "y"
+CONFIG_COMPILER_OPTIMIZATION_PERF = "y"
 
 [RGBBus.display_bus]
 data0 = 14
@@ -37,11 +37,11 @@ hsync = 46
 vsync = 3
 de = 5
 pclk = 7
-freq = 12000000
+freq = 13000000
 hsync_front_porch = 8
 hsync_back_porch = 8
 hsync_pulse_width = 4
-hsync_idle_low = true
+hsync_idle_low = false
 vsync_front_porch = 8
 vsync_back_porch = 8
 vsync_pulse_width = 4
@@ -70,10 +70,8 @@ display_width = 800
 display_height = 480
 color_space = "lv.COLOR_FORMAT.RGB565"
 
-
 [display.set_power]
 params = [true]
-
 
 [display.init]
 params = []

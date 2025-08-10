@@ -10,7 +10,7 @@ import pointer_framework
 _AXS_MAX_TOUCH_NUMBER = const(1)
 _AXS_TOUCH_POINT_NUM = const(1)
 I2C_ADDR = 0x3B
-BITS = 8
+_BITS = const(8)
 
 
 class TouchRecord:
@@ -31,6 +31,7 @@ class AXS15231(pointer_framework.PointerDriver):
         startup_rotation=lv.DISPLAY_ROTATION._0,  # NOQA
         debug=False
     ):
+        device.set_mem_addr_size(_BITS)
         self._device = device
 
         super().__init__(touch_cal, startup_rotation, debug)
@@ -48,8 +49,8 @@ class AXS15231(pointer_framework.PointerDriver):
         self.__last_state = self.RELEASED
 
     def _read_data(self):
-        self._device.write(self._tx_mv)
-        self._device.read(buf=self._rx_mv)
+        self._device.writeto(self._tx_mv)
+        self._device.readfrom_into(self._rx_mv)
 
         touch_points = []
         data = self._rx_buf

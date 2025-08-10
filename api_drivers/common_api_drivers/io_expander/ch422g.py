@@ -1,7 +1,6 @@
 from micropython import const  # NOQA
 import io_expander_framework
-import i2c
-
+import machine
 
 EXIO1 = 0x01
 EXIO2 = 0x02
@@ -14,7 +13,7 @@ EXIO8 = 0x08
 
 
 I2C_ADDR = 0x24  # 36 00100100
-BITS = 8
+_BITS = const(8)
 
 _CH422G_REG_IN = const(0x26)  # 38  00100110
 _CH422G_REG_OUT = const(0x38)  # 56 00111000
@@ -26,9 +25,9 @@ _REG_DIRECTION = const(2)
 
 class Pin(io_expander_framework.Pin):
     _output_states = 0x00
-    _i2c_bus: i2c.I2C.Bus = None
-    _reg_in: i2c.I2C.Device = None
-    _reg_out: i2c.I2C.Device = None
+    _i2c_bus = None
+    _reg_in = None
+    _reg_out = None
     _reg_int_pins = []
 
     @classmethod
@@ -37,15 +36,20 @@ class Pin(io_expander_framework.Pin):
             raise ValueError('device has already been set')
 
         cls._device = device
+        cls._device.set_mem_addr_size(_BITS)
 
-        cls._reg_in = i2c.I2C.Device(
-            bus=device._bus,  # NOQA
-            dev_id=_CH422G_REG_IN
+        cls._reg_in = machine.I2C.Device(
+            i2c_bus=device.get_bus(),  # NOQA
+            addr=_CH422G_REG_IN,
+
         )
-        cls._reg_out = i2c.I2C.Device(
-            bus=device._bus,  # NOQA
-            dev_id=_CH422G_REG_OUT
+        cls._reg_in.set_mem_addr_size(_BITS)
+
+        cls._reg_out = machine.I2C.Device(
+            i2c_bus=device.get_bus(),  # NOQA
+            addr=_CH422G_REG_OUT
         )
+        cls._reg_out.set_mem_addr_size(_BITS)
 
     @property
     def __bit(self):
@@ -64,11 +68,11 @@ class Pin(io_expander_framework.Pin):
             value &= 0xFF
 
             self._buf[0] = 0x01
-            Pin._device.write(self._mv[:1])
+            self._device.write(self._mv[:1])
 
             self._buf[0] = value
             # _i2c_device.write_mem(_CH422G_REG_OUT, self._mv[:1])
-            Pin._reg_out.write(self._mv[:1])
+            self._reg_out.write(self._mv[:1])
             self._output = value
 
         elif reg == _REG_DIRECTION:
@@ -78,12 +82,14 @@ class Pin(io_expander_framework.Pin):
     def _read_reg(self, reg):
         if reg == _REG_INPUT:
             # _i2c_device.read_mem(_CH422G_REG_IN, buf=self._mv[:1])
-            Pin._reg_in.read(buf=self._mv[:1])
+            self._reg_in.readinto(self._mv[:1])
             return self._buf[0]
         elif reg == _REG_OUTPUT:
             return self._output
         elif reg == _REG_DIRECTION:
             return self._mode
+
+        return None
 
     def _set_dir(self, direction):
         if direction == self.OPEN_DRAIN:

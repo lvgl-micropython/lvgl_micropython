@@ -29,7 +29,7 @@ _X_CORD_RES_REG = const(0x8146)
 _Y_CORD_RES_REG = const(0x8148)
 
 I2C_ADDR = 0x5D
-BITS = 16
+_BITS = const(16)
 
 _ADDR2 = const(0x14)
 
@@ -37,19 +37,17 @@ _ADDR2 = const(0x14)
 class GT911(pointer_framework.PointerDriver):
 
     def _read_reg(self, reg, num_bytes=None, buf=None):
-        self._tx_buf[0] = reg >> 8
-        self._tx_buf[1] = reg & 0xFF
         if num_bytes is not None:
-            self._device.write_readinto(self._tx_mv[:2], self._rx_mv[:num_bytes])
+            self._device.write_readinto(reg, self._rx_mv[:num_bytes])
         else:
-            self._device.write_readinto(self._tx_mv[:2], buf)
+            self._device.write_readinto(reg, buf)
 
     def _write_reg(self, reg, value=None, buf=None):
         if value is not None:
             self._tx_buf[0] = value
-            self._device.write_mem(reg, self._tx_mv[:1])
+            self._device.writeto_mem(reg, self._tx_mv[:1])
         elif buf is not None:
-            self._device.write_mem(reg, buf)
+            self._device.writeto_mem(reg, buf)
 
     def __init__(
         self,
@@ -65,6 +63,7 @@ class GT911(pointer_framework.PointerDriver):
         self._rx_buf = bytearray(6)
         self._rx_mv = memoryview(self._rx_buf)
 
+        device.set_mem_addr_size(_BITS)
         self._device = device
 
         self.__x = 0

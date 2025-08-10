@@ -68,13 +68,10 @@ class Pin(object):
 
     @classmethod
     def set_device(cls, device):
-        if cls._device is not None:
-            raise ValueError('device has already been set')
-
-        cls._device = device
+        raise NotImplementedError
 
     def __init__(self, id, mode=-1, pull=-1, value=-1):  # NOQA
-        if Pin._device is None:
+        if self._device is None:
             raise RuntimeError('The expander device has not been set')
 
         self._id = id
@@ -102,7 +99,7 @@ class Pin(object):
 
     def irq(self, handler, trigger=IRQ_RISING | IRQ_FALLING):
         if self._mode == self.IN:
-            if self.__class__._int_pin is None:
+            if self._int_pin is None:
                 raise ValueError(
                     'You need to call Pin.set_int_pin(pin_num) '
                     'before setting the pins IRQ'
@@ -113,11 +110,11 @@ class Pin(object):
 
             if handler is None:
                 self._irq = None
-                if self in self.__class__._reg_int_pins:
-                    self.__class__._reg_int_pins.remove(self)
+                if self in self._reg_int_pins:
+                    self._reg_int_pins.remove(self)
             else:
-                if self not in self.__class__._reg_int_pins:
-                    self.__class__._reg_int_pins.append(self)
+                if self not in self._reg_int_pins:
+                    self._reg_int_pins.append(self)
 
                 self._irq = (handler, trigger)
 

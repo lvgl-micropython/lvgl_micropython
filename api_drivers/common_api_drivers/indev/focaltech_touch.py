@@ -36,6 +36,7 @@ _RELEASECODE_REG = const(0xAF)
 _PANEL_ID_REG = const(0xA8)
 
 _G_MODE = const(0xA4)
+_BITS = const(8)
 
 
 class FocalTechTouch(pointer_framework.PointerDriver):
@@ -54,6 +55,7 @@ class FocalTechTouch(pointer_framework.PointerDriver):
         self._rx_buf = bytearray(5)
         self._rx_mv = memoryview(self._rx_buf)
 
+        device.set_mem_addr_size(_BITS)
         self._device = device
         self._factors = factors
 
@@ -91,9 +93,8 @@ class FocalTechTouch(pointer_framework.PointerDriver):
         )
 
     def _get_coords(self):
-        self._tx_buf[0] = _TD_STAT_REG
         try:
-            self._device.write_readinto(self._tx_mv, self._rx_mv)
+            self._device.readfrom_mem_into(_TD_STAT_REG, self._rx_mv)
         except OSError:
             return None
 
@@ -113,12 +114,9 @@ class FocalTechTouch(pointer_framework.PointerDriver):
         return self.PRESSED, x, y
 
     def _read_reg(self, reg):
-        self._tx_buf[0] = reg
         self._rx_buf[0] = 0x00
-
-        self._device.write_readinto(self._tx_mv[:1], self._rx_mv[:1])
+        self._device.readfrom_mem_into(reg, self._rx_mv[:1])
 
     def _write_reg(self, reg, value):
-        self._tx_buf[0] = reg
-        self._tx_buf[1] = value
-        self._device.write(self._tx_mv[:2])
+        self._tx_buf[0] = value
+        self._device.writeto_mem(reg, self._tx_mv[:1])

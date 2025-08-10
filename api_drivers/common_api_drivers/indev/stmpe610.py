@@ -8,7 +8,7 @@ import time
 
 
 I2C_ADDR = 0x41
-BITS = 8
+_BITS = const(8)
 
 _SYS_CTRL1_REG = const(0x03)
 _SYS_CTRL1_RESET = const(0x02)
@@ -49,17 +49,11 @@ _TSC_I_DRIVE_50MA = const(0x01)
 class STMPE610(pointer_framework.PointerDriver):
 
     def _read_reg(self, reg, num_bytes):
-        self._tx_buf[0] = reg
-
-        self._device.write_readinto(
-            self._tx_mv[:num_bytes],
-            self._rx_mv[:num_bytes]
-        )
+        self._device.readfrom_mem_into(reg, self._rx_mv[:num_bytes])
 
     def _write_reg(self, reg, value):
-        self._tx_buf[0] = reg
-        self._tx_buf[1] = value
-        self._device.write(self._tx_mv[:2])
+        self._tx_buf[0] = value
+        self._device.writeto_mem(reg, self._tx_mv[:1])
 
     def __init__(
         self,
@@ -68,6 +62,7 @@ class STMPE610(pointer_framework.PointerDriver):
         startup_rotation=pointer_framework.lv.DISPLAY_ROTATION._0,  # NOQA
         debug=False
     ):
+        device.set_mem_addr_size(_BITS)
         self._device = device
 
         self._tx_buf = bytearray(4)

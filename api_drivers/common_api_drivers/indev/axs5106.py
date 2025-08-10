@@ -9,16 +9,14 @@ import time
 _POINTS_REG = const(0X01)
 
 I2C_ADDR = 0x63
-BITS = 8
+_BITS = const(8)
 
 
 class AXS5106(pointer_framework.PointerDriver):
 
     def _read_reg(self, reg, num_bytes):
-        self._tx_buf[0] = reg
         self._rx_mv[:num_bytes] = bytearray([0x00] * num_bytes)
-        self._device.write(self._tx_mv[:1])
-        self._device.read(buf=self._rx_mv[:num_bytes])
+        self._device.readfrom_mem_into(reg, self._rx_mv[:num_bytes])
 
     def __init__(
         self,
@@ -28,6 +26,7 @@ class AXS5106(pointer_framework.PointerDriver):
         startup_rotation=pointer_framework.lv.DISPLAY_ROTATION._0,  # NOQA
         debug=False
     ):
+        device.set_mem_addr_size(_BITS)
         self._tx_buf = bytearray(1)
         self._tx_mv = memoryview(self._tx_buf)
         self._rx_buf = bytearray(14)

@@ -217,16 +217,9 @@ def __main__(input_header, output_file, includes, defines, *compiler_options, de
     pp_file = get_preprocessor_output(output_file, input_header, includes,
                                       defines, *compiler_options)
 
-
-    from pycparser.c_generator import CGenerator
-    generator = CGenerator()
-
-    with open(r'C:\Users\drsch\PycharmProjects\lvgl_micropython\gen\api_gen\lvgl.pp', 'r') as f:
+    with open(pp_file, 'r') as f:
         data = f.read()
 
-    print(generator.visit(data))
-    raise RuntimeError
-
-    json_data = pp_to_json.JSONGenerator.parse(input_header, f.read(), False)
+    json_data = pp_to_json.JSONGenerator.parse(input_header, data, False)
     return json_reader.CGenerator.parse(json_data)
     

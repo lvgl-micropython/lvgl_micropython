@@ -8,7 +8,6 @@ import pointer_framework
 
 
 I2C_ADDR = const(0x38)
-BITS = 8
 
 _FT6x36_CHIPID_1 = const(0x36)
 _FT6x36_CHIPID_2 = const(0x64)

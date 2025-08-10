@@ -7,7 +7,7 @@ import machine  # NOQA
 
 
 I2C_ADDR = 0x15
-BITS = 8
+_BITS = const(8)
 
 # 0x00: No gesture
 # 0x01: Swipe up
@@ -157,15 +157,12 @@ _DisAutoSleep = const(0xFE)
 class CST816S(pointer_framework.PointerDriver):
 
     def _read_reg(self, reg):
-        self._tx_buf[0] = reg
         self._rx_buf[0] = 0x00
-
-        self._device.write_readinto(self._tx_mv[:1], self._rx_mv[:1])
+        self._device.readfrom_mem_into(reg, self._rx_mv[:1])
 
     def _write_reg(self, reg, value):
-        self._tx_buf[0] = reg
-        self._tx_buf[1] = value
-        self._device.write(self._tx_mv[:2])
+        self._tx_buf[0] = value
+        self._device.writeto_mem(reg, self._tx_mv[:1])
 
     def __init__(
         self,
@@ -179,7 +176,7 @@ class CST816S(pointer_framework.PointerDriver):
         self._tx_mv = memoryview(self._tx_buf)
         self._rx_buf = bytearray(1)
         self._rx_mv = memoryview(self._rx_buf)
-
+        device.set_mem_addr_size(_BITS)
         self._device = device
 
         if not isinstance(reset_pin, int):

@@ -13,7 +13,7 @@ import machine  # NOQA
 import time
 
 I2C_ADDR = 0x53
-BITS = 8
+_BITS = const(8)
 
 
 class _tp_status_high_t:
@@ -91,6 +91,7 @@ class SPD2010T(pointer_framework.PointerDriver):
         self._rx_buf = bytearray(64)
         self._rx_mv = memoryview(self._rx_buf)
 
+        device.set_mem_addr_size(_BITS)
         self._device = device
 
         self.__x = 0

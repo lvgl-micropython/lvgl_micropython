@@ -28,13 +28,24 @@ _CONFIGURATION_REG = const(0x06)
 
 # 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, or 0x27
 I2C_ADDR = 0x20
-BITS = 8
+_BITS = const(8)
 
 
 class Pin(io_expander_framework.Pin):
     _config_settings = 0x00
     _output_states = 0x00
+
+    _int_pin = None
     _reg_int_pins = []
+    _device = None
+
+    @classmethod
+    def set_device(cls, device):
+        if cls._device is not None:
+            raise ValueError('device has already been set')
+
+        cls._device = device
+        cls._device.set_mem_addr_size(_BITS)
 
     @property
     def __bit(self):
@@ -43,13 +54,13 @@ class Pin(io_expander_framework.Pin):
     def __read_reg(self, reg):
         self._buf[0] = 0
         self._buf[1] = 0
-        Pin._device.read_mem(reg, buf=self._mv)
+        self._device.readfrom_mem_into(reg, self._mv)
         return self._buf[0] << 8 | self._buf[1]
 
     def __write_reg(self, reg, value):
         self._buf[0] = value >> 8 & 0xFF
         self._buf[1] = value & 0xFF
-        Pin._device.write_mem(reg, buf=self._mv)
+        self._device.writeto_mem(reg, self._mv)
 
     def _set_dir(self, direction):
         if direction == self.OUT:

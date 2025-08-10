@@ -9,7 +9,6 @@ _GEST_ID = const(0x01)
 _TD_STATUS = const(0x02)
 
 I2C_ADDR = 0x38
-BITS = 8
 
 _FT5x36_CHIPID_1 = const(0x11)
 _FT5x36_CHIPID_2 = const(0x12)

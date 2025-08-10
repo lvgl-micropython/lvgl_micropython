@@ -7,7 +7,7 @@ import machine  # NOQA
 
 
 I2C_ADDR = 0x1A
-BITS = 16
+_BITS = const(16)
 
 # 4 byte read
 # PROJECT_ID = byte2 << 8 | byte3
@@ -55,22 +55,16 @@ _TOUCH_COUNT_MASK = const(0x0F)
 class CST328(pointer_framework.PointerDriver):
 
     def _read_reg(self, reg, num_bytes):
-        self._tx_buf[0] = reg >> 8
-        self._tx_buf[1] = reg & 0xFF
-
         self._rx_buf[:num_bytes] = bytearray([0x00] * num_bytes)
-
-        self._device.write_readinto(self._tx_mv[:2], self._rx_mv[:num_bytes])
+        self._device.readfrom_mem_into(reg, self._rx_mv[:num_bytes])
 
     def _write_reg(self, reg, value=None):
-        self._tx_buf[0] = reg >> 8
-        self._tx_buf[1] = reg & 0xFF
-
         if value is None:
-            self._device.write(self._tx_mv[:2])
+            self._tx_buf[0] = 0x00
+            self._device.writeto_mem(reg, self._tx_mv[:1])
         else:
-            self._tx_buf[2] = value
-            self._device.write(self._tx_mv[:3])
+            self._tx_buf[0] = value
+            self._device.writeto_mem(reg, self._tx_mv[:1])
 
     def __init__(
         self,
@@ -84,7 +78,7 @@ class CST328(pointer_framework.PointerDriver):
         self._tx_mv = memoryview(self._tx_buf)
         self._rx_buf = bytearray(6)
         self._rx_mv = memoryview(self._rx_buf)
-
+        device.set_mem_addr_size(_BITS)
         self._device = device
 
         if not isinstance(reset_pin, int):

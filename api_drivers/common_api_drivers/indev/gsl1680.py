@@ -10,25 +10,23 @@ _STATUS_REG = const(0xE0)
 _PAGE_REG = const(0xF0)
 
 I2C_ADDR = 0x40
-BITS = 8
+_BITS = const(16)
 
 
 class GSL1680(pointer_framework.PointerDriver):
 
     def _read_reg(self, reg, num_bytes=None, buf=None):
-        self._tx_buf[0] = reg >> 8
-        self._tx_buf[1] = reg & 0xFF
         if num_bytes is not None:
-            self._device.write_readinto(self._tx_mv[:2], self._rx_mv[:num_bytes])
+            self._device.readfrom_mem_into(reg, self._rx_mv[:num_bytes])
         else:
-            self._device.write_readinto(self._tx_mv[:2], buf)
+            self._device.readfrom_mem_into(reg, buf)
 
     def _write_reg(self, reg, value=None, buf=None):
         if value is not None:
             self._tx_buf[0] = value
-            self._device.write_mem(reg, self._tx_mv[:1])
+            self._device.writeto_mem(reg, self._tx_mv[:1])
         elif buf is not None:
-            self._device.write_mem(reg, buf)
+            self._device.writeto_mem(reg, buf)
 
     def __init__(
         self,
@@ -43,6 +41,7 @@ class GSL1680(pointer_framework.PointerDriver):
         self._rx_buf = bytearray(24)
         self._rx_mv = memoryview(self._rx_buf)
 
+        device.set_mem_addr_size(_BITS)
         self._device = device
 
         if isinstance(wake_pin, int):
