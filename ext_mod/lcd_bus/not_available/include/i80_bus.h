@@ -1,7 +1,7 @@
 // Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
 #ifndef _I80_BUS_H_
-    #define _RGB_BUS_H_
+    #define _I80_BUS_H_
 
     //local_includes
     #include "modlcd_bus.h"
