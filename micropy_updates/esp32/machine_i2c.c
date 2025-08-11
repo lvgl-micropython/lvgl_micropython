@@ -346,8 +346,8 @@ mp_obj_t machine_hw_i2c_device_make_new(const mp_obj_type_t *type, size_t n_args
 
     enum { ARG_i2c_bus, ARG_addr, ARG_freq, ARG_timeout };
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_i2c_bus, MP_ARG_KW_ONLY | MP_ARG_OBJ | MP_ARG_REQUIRED                  } },
-        { MP_QSTR_addr,    MP_ARG_KW_ONLY | MP_ARG_INT | MP_ARG_REQUIRED                  } },
+        { MP_QSTR_i2c_bus, MP_ARG_KW_ONLY | MP_ARG_OBJ | MP_ARG_REQUIRED                    },
+        { MP_QSTR_addr,    MP_ARG_KW_ONLY | MP_ARG_INT | MP_ARG_REQUIRED                    },
         { MP_QSTR_freq,    MP_ARG_KW_ONLY | MP_ARG_INT, { .u_int = 400000                 } },
         { MP_QSTR_timeout, MP_ARG_KW_ONLY | MP_ARG_INT, { .u_int = I2C_DEFAULT_TIMEOUT_US } },
     };
