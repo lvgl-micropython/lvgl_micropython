@@ -55,7 +55,7 @@ static const void *_get_func(size_t index)
 {
     mp_map_elem_t * table = mp_machine_i2c_locals_dict.map.table;
     mp_rom_map_elem_t *rom_table = (mp_rom_map_elem_t *)table;
-    mp_rom_obj_t value = rom_table[index].value;
+    mp_rom_obj_t value = (mp_rom_obj_t)((mp_rom_map_elem_t)rom_table[index]).value;
 
     if (value.u32.lo == NULL) return value.u32.hi;
     else return value.u32.lo;
