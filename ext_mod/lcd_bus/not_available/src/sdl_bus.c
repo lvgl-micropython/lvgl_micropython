@@ -26,6 +26,6 @@ MP_DEFINE_CONST_OBJ_TYPE(
     mp_lcd_sdl_bus_type,
     MP_QSTR_SDLBus,
     MP_TYPE_FLAG_NONE,
-    make_new, mp_lcd_sdl_bus_make_new,
+    make_new, mp_lcd_sdl_bus_make_new
 );
 
