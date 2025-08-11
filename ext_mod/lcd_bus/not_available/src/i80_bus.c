@@ -27,7 +27,7 @@ mp_obj_t mp_lcd_i80_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_
 
 MP_DEFINE_CONST_OBJ_TYPE(
     mp_lcd_i80_bus_type,
-    MP_QSTR_RGBBus,
+    MP_QSTR_I80Bus,
     MP_TYPE_FLAG_NONE,
     make_new, mp_lcd_i80_bus_make_new
 );
