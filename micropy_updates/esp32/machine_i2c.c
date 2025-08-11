@@ -51,7 +51,7 @@
 static machine_hw_i2c_obj_t machine_hw_i2c_bus_obj[I2C_NUM_MAX];
 
 
-static void *_get_func(size_t index)
+static const void *_get_func(size_t index)
 {
     mp_map_elem_t *table = mp_machine_i2c_locals_dict.map.table;
     mp_map_elem_t *elem = &(table[index]);
@@ -61,71 +61,71 @@ static void *_get_func(size_t index)
 
 
 typedef mp_obj_t (*machine_i2c_scan_func_t)(mp_obj_t self_in);
-static mp_obj_fun_builtin_fixed_t *machine_i2c_scan_func_obj = _get_func(1);
-static machine_i2c_scan_func_t machine_i2c_scan = machine_i2c_scan_func_obj->fun._1;
+static const mp_obj_fun_builtin_fixed_t *machine_i2c_scan_func_obj = _get_func(1);
+static const machine_i2c_scan_func_t machine_i2c_scan = (const machine_i2c_scan_func_t)machine_i2c_scan_func_obj->fun._1;
 
 MP_DEFINE_CONST_FUN_OBJ_1(new_machine_i2c_scan_obj, machine_i2c_scan);
 
 
 typedef mp_obj_t (*machine_i2c_readinto_func_t)(size_t n_args, const mp_obj_t *args);
-static mp_obj_fun_builtin_var_t *machine_i2c_readinto_func_obj = _get_func(4);
-static machine_i2c_readinto_func_t machine_i2c_readinto = machine_i2c_readinto_func_obj->fun.var;
+static const mp_obj_fun_builtin_var_t *machine_i2c_readinto_func_obj = _get_func(4);
+static const machine_i2c_readinto_func_t machine_i2c_readinto = (const machine_i2c_readinto_func_t)machine_i2c_readinto_func_obj->fun.var;
 
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(new_machine_i2c_readinto_obj, 2, 3, machine_i2c_readinto);
 
 
 typedef mp_obj_t (*machine_i2c_write_func_t)(mp_obj_t self_in, mp_obj_t buf_in);
-static mp_obj_fun_builtin_fixed_t *machine_i2c_write_func_obj = _get_func(5);
-static machine_i2c_write_func_t machine_i2c_write = machine_i2c_write_func_obj->fun._2;
+static const mp_obj_fun_builtin_fixed_t *machine_i2c_write_func_obj = _get_func(5);
+static const machine_i2c_write_func_t machine_i2c_write = (const machine_i2c_write_func_t)machine_i2c_write_func_obj->fun._2;
 
 MP_DEFINE_CONST_FUN_OBJ_2(new_machine_i2c_write_obj, machine_i2c_write);
 
 
 typedef mp_obj_t (*machine_i2c_readfrom_func_t)(size_t n_args, const mp_obj_t *args)
-static mp_obj_fun_builtin_var_t *machine_i2c_readfrom_func_obj = _get_func(6);
-static machine_i2c_readfrom_func_t machine_i2c_readfrom = machine_i2c_readfrom_func_obj->fun.var;
+static const mp_obj_fun_builtin_var_t *machine_i2c_readfrom_func_obj = _get_func(6);
+static const machine_i2c_readfrom_func_t machine_i2c_readfrom = (const machine_i2c_readfrom_func_t)machine_i2c_readfrom_func_obj->fun.var;
 
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(new_machine_i2c_readfrom_obj, 3, 4, machine_i2c_readfrom);
 
 
 typedef mp_obj_t (*machine_i2c_readfrom_into_func_t)(size_t n_args, const mp_obj_t *args);
-static mp_obj_fun_builtin_var_t *machine_i2c_readfrom_into_func_obj = _get_func(7);
-static machine_i2c_readfrom_into_func_t machine_i2c_readfrom_into = machine_i2c_readfrom_into_func_obj->fun.var;
+static const mp_obj_fun_builtin_var_t *machine_i2c_readfrom_into_func_obj = _get_func(7);
+static const machine_i2c_readfrom_into_func_t machine_i2c_readfrom_into = (const machine_i2c_readfrom_into_func_t)machine_i2c_readfrom_into_func_obj->fun.var;
 
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(new_machine_i2c_readfrom_into_obj, 3, 4, machine_i2c_readfrom_into);
 
 
 typedef mp_obj_t (*machine_i2c_writeto_func_t)(size_t n_args, const mp_obj_t *args);
-static mp_obj_fun_builtin_var_t *machine_i2c_writeto_func_obj = _get_func(8);
-static machine_i2c_writeto_func_t machine_i2c_writeto = machine_i2c_writeto_func_obj->fun.var;
+static const mp_obj_fun_builtin_var_t *machine_i2c_writeto_func_obj = _get_func(8);
+static const machine_i2c_writeto_func_t machine_i2c_writeto = (const machine_i2c_writeto_func_t)machine_i2c_writeto_func_obj->fun.var;
 
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(new_machine_i2c_writeto_obj, 3, 4, machine_i2c_writeto)
 
 
 typedef mp_obj_t (*machine_i2c_writevto_func_t)(size_t n_args, const mp_obj_t *args);
-static mp_obj_fun_builtin_var_t *machine_i2c_writevto_func_obj = _get_func(9);
-static machine_i2c_writevto_func_t machine_i2c_writevto = machine_i2c_writevto_func_obj->fun.var;
+static const mp_obj_fun_builtin_var_t *machine_i2c_writevto_func_obj = _get_func(9);
+static const machine_i2c_writevto_func_t machine_i2c_writevto = (const machine_i2c_writevto_func_t)machine_i2c_writevto_func_obj->fun.var;
 
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(new_machine_i2c_writevto_obj, 3, 4, machine_i2c_writevto);
 
 
 typedef mp_obj_t (*machine_i2c_readfrom_mem_func_t)(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args);
-static mp_obj_fun_builtin_var_t *machine_i2c_readfrom_mem_func_obj = _get_func(10);
-static machine_i2c_readfrom_mem_func_t machine_i2c_readfrom_mem = machine_i2c_readfrom_mem_func_obj->fun.kw;
+static const mp_obj_fun_builtin_var_t *machine_i2c_readfrom_mem_func_obj = _get_func(10);
+static const machine_i2c_readfrom_mem_func_t machine_i2c_readfrom_mem = (const machine_i2c_readfrom_mem_func_t)machine_i2c_readfrom_mem_func_obj->fun.kw;
 
 MP_DEFINE_CONST_FUN_OBJ_KW(new_machine_i2c_readfrom_mem_obj, 1, machine_i2c_readfrom_mem);
 
 
 typedef mp_obj_t (*machine_i2c_readfrom_mem_into_func_t)(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args);
-static mp_obj_fun_builtin_var_t *machine_i2c_readfrom_mem_into_func_obj = _get_func(11);
-static machine_i2c_readfrom_mem_into_func_t machine_i2c_readfrom_mem_into = machine_i2c_readfrom_mem_into_func_obj->fun.kw;
+static const mp_obj_fun_builtin_var_t *machine_i2c_readfrom_mem_into_func_obj = _get_func(11);
+static const machine_i2c_readfrom_mem_into_func_t machine_i2c_readfrom_mem_into = (const machine_i2c_readfrom_mem_into_func_t)machine_i2c_readfrom_mem_into_func_obj->fun.kw;
 
 MP_DEFINE_CONST_FUN_OBJ_KW(new_machine_i2c_readfrom_mem_into_obj, 1, machine_i2c_readfrom_mem_into);
 
 
 typedef mp_obj_t (*machine_i2c_writeto_mem_func_t)(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args);
-static mp_obj_fun_builtin_var_t *machine_i2c_writeto_mem_func_obj = _get_func(12);
-static machine_i2c_writeto_mem_func_t machine_i2c_writeto_mem = machine_i2c_writeto_mem_func_obj->fun.kw;
+static const mp_obj_fun_builtin_var_t *machine_i2c_writeto_mem_func_obj = _get_func(12);
+static const machine_i2c_writeto_mem_func_t machine_i2c_writeto_mem = (const machine_i2c_writeto_mem_func_t)machine_i2c_writeto_mem_func_obj->fun.kw;
 
 static MP_DEFINE_CONST_FUN_OBJ_KW(new_machine_i2c_writeto_mem_obj, 1, machine_i2c_writeto_mem);
 
