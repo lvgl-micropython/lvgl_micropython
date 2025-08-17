@@ -154,7 +154,7 @@ class AXS15231B(display_driver_framework.DisplayDriver):
         if self.__qspi:
             cmd &= 0xFF
             cmd <<= 8
-            cmd |= _WRITE_COLOR << 2
+            cmd |= _WRITE_COLOR << 24
         else:
             param_buf[0] = (y1 >> 8) & 0xFF
             param_buf[1] = y1 & 0xFF
