@@ -8,6 +8,9 @@ import lcd_utils
 _LILYGO_KB_BRIGHTNESS_CMD = const(0x01)
 _LILYGO_KB_ALT_B_BRIGHTNESS_CMD = const(0x02)
 
+group = lv.group_create()
+group.set_default()
+
 
 class Keyboard(keypad_framework.KeypadDriver):
     def __init__(self, device, debug=False):  # NOQA
@@ -16,7 +19,13 @@ class Keyboard(keypad_framework.KeypadDriver):
         self._brightness = 0
         self._brightness_default = 127
 
+        self._buffer = bytearray(1)
+        self._mv = memoryview(self._buffer)
+
         super().__init__()
+
+        self.set_group(group)
+        self.enable(1)
 
     def set_default_brioghtness(self, value):
         value = lcd_utils.remap(float(value), 0.0, 100.0, 30.0, 255.0)
@@ -72,7 +81,10 @@ class Keyboard(keypad_framework.KeypadDriver):
         # lv.KEY.PREV = 0x0B
         # lv.KEY.HOME = 0x02
         # lv.KEY.END = 0x03
-        key = bytearray(self._device.read_mem(0x00, num_bytes=1))[0]
+
+        self._device.read(buf=self._mv)
+        key = self._buffer[0]
+
         if key == 0x00:  # no key
             return None
         elif key == 0x08:  # backspace
@@ -89,9 +101,10 @@ class Keyboard(keypad_framework.KeypadDriver):
             # key else convert to hex
             if 127 > k >= 32:
                 k = chr(k)
+                print('RAW KEY:', k)
             else:
                 k = hex(k)
-            print('RAW KEY:', hex(k))
+                print('RAW KEY:', hex(k))
 
         return self.PRESSED, key
 

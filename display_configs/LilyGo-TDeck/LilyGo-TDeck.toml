@@ -41,19 +41,25 @@ reg_bits = 8
 
 [ST7789.display]
 data_bus = "display_bus"
-display_width = 320
-display_height = 240
+display_width = 240
+display_height = 320
 backlight_pin = 42
 backlight_on_state = "st7789.STATE_PWM"
 color_space = "lv.COLOR_FORMAT.RGB565"
 color_byte_order = "st7789.BYTE_ORDER_BGR"
 rgb565_byte_swap = true
 
+[display._ORIENTATION_TABLE]
+value = [0, 160, 192, 96]
+
 [display.set_power]
 params = [true]
 
 [display.init]
 params = []
+
+display.set_rotation]
+params = [3]
 
 [gt911.touch]
 device = "touch_device"
@@ -66,6 +72,7 @@ up_pin = 3
 down_pin = 2
 left_pin = 15
 right_pin = 1
+press_pin = 0
 
 [power.Button.pwr_button]
 pin = 10
