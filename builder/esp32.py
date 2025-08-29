@@ -441,6 +441,35 @@ def common_args(extra_args):
     components = esp_args.components
     user_c_modules = esp_args.user_c_modules
 
+    for i, c_module in enumerate(user_c_modules):
+        if c_module.startswith('http'):
+            git_address, c_module = c_module.rsplit(':', 1)
+            if '@' in git_address:
+                git_address, checkout = git_address.split('@', 1)
+            else:
+                checkout = None
+
+            c_module_name = os.path.split(git_address)[-1]
+
+            c_module = os.path.join(SCRIPT_DIR, 'ext_mod', c_module_name, c_module)
+            user_c_modules[i] = c_module
+
+            cmds = [
+                ['cd', f'ext_mod']
+                ['git', 'clone', git_address],
+                ['cd', c_module_name]
+            ]
+
+            if checkout is not None:
+                cmds.append(['git', 'checkout', checkout])
+
+            cmds.append(['git', 'submodule', 'init'])
+
+            exit_code, data = spawn(cmds, out_to_screen=False, spinner=True)
+            if exit_code:
+                print(data)
+                sys.exit(exit_code)
+
     if custom_board_path is None:
         skip_partition_resize = esp_args.skip_partition_resize
         partition_size = esp_args.partition_size
