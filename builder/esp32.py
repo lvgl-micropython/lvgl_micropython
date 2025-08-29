@@ -455,7 +455,7 @@ def common_args(extra_args):
             user_c_modules[i] = c_module
 
             cmds = [
-                ['cd', f'ext_mod']
+                ['cd', 'ext_mod'],
                 ['git', 'clone', git_address],
                 ['cd', c_module_name]
             ]
