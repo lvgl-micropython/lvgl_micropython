@@ -220,7 +220,7 @@ esp_err_t rmt_new_led_strip_encoder(const led_strip_encoder_config_t *config, rm
             .level1 = config->bit1_duration1 < 0 ? 0 : 1,
             .duration1 = bit1_duration1 * config->resolution / 1000000000,
         },
-        .flags.msb_first = config->bit_order // WS2812 transfer bit order: G7...G0R7...R0B7...B0
+        .flags.msb_first = 1 // WS2812 transfer bit order: G7...G0R7...R0B7...B0
     };
 
 
