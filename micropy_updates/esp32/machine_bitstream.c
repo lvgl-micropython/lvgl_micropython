@@ -119,7 +119,6 @@ typedef struct {
 } rmt_led_strip_encoder_t;
 
 
-RMT_ENCODER_FUNC_ATTR
 static size_t rmt_encode_led_strip(rmt_encoder_t *encoder, rmt_channel_handle_t channel, const void *primary_data, size_t data_size, rmt_encode_state_t *ret_state)
 {
     rmt_led_strip_encoder_t *led_encoder = __containerof(encoder, rmt_led_strip_encoder_t, base);
