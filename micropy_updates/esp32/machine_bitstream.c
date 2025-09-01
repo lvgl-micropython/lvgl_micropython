@@ -180,23 +180,19 @@ esp_err_t rmt_new_led_strip_encoder(const led_strip_encoder_config_t *config, rm
 {
     esp_err_t ret = ESP_OK;
     rmt_led_strip_encoder_t *led_encoder = NULL;
-    if (!(config && ret_encoder)) {
-        return ESP_ERR_INVALID_ARG;
-    }
+    if (!(config && ret_encoder)) return ESP_ERR_INVALID_ARG;
 
     led_encoder = rmt_alloc_encoder_mem(sizeof(rmt_led_strip_encoder_t));
-    if (!led_encoder) {
-        return ESP_ERR_NO_MEM;
-    }
+    if (!led_encoder) return ESP_ERR_NO_MEM;
+
     led_encoder->base.encode = rmt_encode_led_strip;
     led_encoder->base.del = rmt_del_led_strip_encoder;
     led_encoder->base.reset = rmt_led_strip_encoder_reset;
 
     uint32_t bit0_duration0 = 0;
     uint32_t bit0_duration1 = 0;
-
     uint32_t bit1_duration0 = 0;
-    uint32_t bit2_duration1 = 0;
+    uint32_t bit1_duration1 = 0;
 
     if (config->bit0_duration0 < 0) bit0_duration0 = (uint32_t)(-config->bit0_duration0);
     else bit0_duration0 = (uint32_t)config->bit0_duration0;
@@ -223,19 +219,16 @@ esp_err_t rmt_new_led_strip_encoder(const led_strip_encoder_config_t *config, rm
             .level1 = config->bit1_duration1 < 0 ? 0 : 1,
             .duration1 = bit1_duration1 * config->resolution / 1000000000,
         },
-        .flags.msb_first = 1 // WS2812 transfer bit order: G7...G0R7...R0B7...B0
+        .flags.msb_first = 1
     };
 
 
-    ret = rmt_new_bytes_encoder(&bytes_encoder_config, &led_encoder->bytes_encoder)
-    if (err != ESP_OK) {
-        goto err;
-    }
+    ret = rmt_new_bytes_encoder(&bytes_encoder_config, &led_encoder->bytes_encoder);
+    if (ret != ESP_OK) goto err;
+
     rmt_copy_encoder_config_t copy_encoder_config = {};
-    ret = rmt_new_copy_encoder(&copy_encoder_config, &led_encoder->copy_encoder)
-    if (err != ESP_OK) {
-        goto err;
-    }
+    ret = rmt_new_copy_encoder(&copy_encoder_config, &led_encoder->copy_encoder);
+    if (ret != ESP_OK) goto err;
 
     uint32_t reset_duration;
 
@@ -262,10 +255,11 @@ err:
         free(led_encoder);
     }
     return ret;
+}
 
 
 // Use the reserved RMT channel to stream high/low data on the specified pin.
-static void machine_bitstream_high_low_rmt(mp_hal_pin_obj_t pin, uint32_t *timing_ns, const uint8_t *buf, size_t len, uint8_t channel_id) {
+void machine_bitstream_high_low_rmt(mp_hal_pin_obj_t pin, uint32_t *timing_ns, const uint8_t *buf, size_t len, uint8_t channel_id) {
 
     ((void)channel_id);
 
@@ -295,11 +289,11 @@ static void machine_bitstream_high_low_rmt(mp_hal_pin_obj_t pin, uint32_t *timin
         .loop_count = 0, // no transfer loop
     };
 
-    check_esp_err(rmt_transmit(channel_handle, encoder_handle, buf, len, &tx_config)));
+    check_esp_err(rmt_transmit(channel_handle, encoder_handle, buf, len, &tx_config));
 
     // Wait 50% longer than we expect (if every bit takes the maximum time).
     uint32_t timeout_ms = (3 * len / 2) * (1 + (8 * MAX(timing_ns[0] + timing_ns[1], timing_ns[2] + timing_ns[3])) / 1000);
-    check_esp_err(rmt_tx_wait_all_done(config.channel, pdMS_TO_TICKS(timeout_ms)));
+    check_esp_err(rmt_tx_wait_all_done(channel_handle, pdMS_TO_TICKS(timeout_ms)));
 
     // Uninstall the driver.
     check_esp_err(rmt_del_led_strip_encoder(encoder_handle));

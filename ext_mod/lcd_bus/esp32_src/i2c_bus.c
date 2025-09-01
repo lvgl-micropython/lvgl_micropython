@@ -18,14 +18,9 @@
 #include <string.h>
 
 
-
 mp_lcd_err_t i2c_del(mp_obj_t obj);
 mp_lcd_err_t i2c_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
 mp_lcd_err_t i2c_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
-
-
-static uint8_t i2c_bus_count = 0;
-static mp_lcd_i2c_bus_obj_t **i2c_bus_objs;
 
 
 typedef struct _i2c_obj_t {
