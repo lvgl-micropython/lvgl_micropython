@@ -102,11 +102,11 @@ static void IRAM_ATTR machine_bitstream_high_low_bitbang(mp_hal_pin_obj_t pin, u
 
 typedef struct {
     uint32_t resolution; /*!< Encoder resolution, in Hz */
-    int32_t bit0_duration0;
-    int32_t bit0_duration1;
-    int32_t bit1_duration0;
-    int32_t bit1_duration1;
-    int32_t reset_duration;
+    int64_t bit0_duration0;
+    int64_t bit0_duration1;
+    int64_t bit1_duration0;
+    int64_t bit1_duration1;
+    int64_t reset_duration;
 } led_strip_encoder_config_t;
 
 
@@ -166,7 +166,6 @@ static esp_err_t rmt_del_led_strip_encoder(rmt_encoder_t *encoder)
 }
 
 
-RMT_ENCODER_FUNC_ATTR
 static esp_err_t rmt_led_strip_encoder_reset(rmt_encoder_t *encoder)
 {
     rmt_led_strip_encoder_t *led_encoder = __containerof(encoder, rmt_led_strip_encoder_t, base);
@@ -181,29 +180,34 @@ esp_err_t rmt_new_led_strip_encoder(const led_strip_encoder_config_t *config, rm
 {
     esp_err_t ret = ESP_OK;
     rmt_led_strip_encoder_t *led_encoder = NULL;
-    ESP_GOTO_ON_FALSE(config && ret_encoder, ESP_ERR_INVALID_ARG, err, TAG, "invalid argument");
+    if (!(config && ret_encoder)) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
     led_encoder = rmt_alloc_encoder_mem(sizeof(rmt_led_strip_encoder_t));
-    ESP_GOTO_ON_FALSE(led_encoder, ESP_ERR_NO_MEM, err, TAG, "no mem for led strip encoder");
+    if (!led_encoder) {
+        return ESP_ERR_NO_MEM;
+    }
     led_encoder->base.encode = rmt_encode_led_strip;
     led_encoder->base.del = rmt_del_led_strip_encoder;
     led_encoder->base.reset = rmt_led_strip_encoder_reset;
 
-    uint32_t bit0_duration0;
-    uint32_t bit0_duration1;
+    uint32_t bit0_duration0 = 0;
+    uint32_t bit0_duration1 = 0;
 
-    uint32_t bit1_duration0;
-    uint32_t bit2_duration1;
+    uint32_t bit1_duration0 = 0;
+    uint32_t bit2_duration1 = 0;
 
-    if (config->bit0_duration0 < 0) bit0_duration0 = (uint32_t)-config->bit0_duration0;
+    if (config->bit0_duration0 < 0) bit0_duration0 = (uint32_t)(-config->bit0_duration0);
     else bit0_duration0 = (uint32_t)config->bit0_duration0;
 
-    if (config->bit0_duration1 < 0) bit0_duration1 = (uint32_t)-config->bit0_duration1;
+    if (config->bit0_duration1 < 0) bit0_duration1 = (uint32_t)(-config->bit0_duration1);
     else bit0_duration1 = (uint32_t)config->bit0_duration1;
 
-    if (config->bit1_duration0 < 0) bit1_duration0 = (uint32_t)-config->bit1_duration0;
+    if (config->bit1_duration0 < 0) bit1_duration0 = (uint32_t)(-config->bit1_duration0);
     else bit1_duration0 = (uint32_t)config->bit1_duration0;
 
-    if (config->bit1_duration1 < 0) bit1_duration1 = (uint32_t)-config->bit1_duration1;
+    if (config->bit1_duration1 < 0) bit1_duration1 = (uint32_t)(-config->bit1_duration1);
     else bit1_duration1 = (uint32_t)config->bit1_duration1;
 
     rmt_bytes_encoder_config_t bytes_encoder_config = {
@@ -223,9 +227,15 @@ esp_err_t rmt_new_led_strip_encoder(const led_strip_encoder_config_t *config, rm
     };
 
 
-    ESP_GOTO_ON_ERROR(rmt_new_bytes_encoder(&bytes_encoder_config, &led_encoder->bytes_encoder), err, TAG, "create bytes encoder failed");
+    ret = rmt_new_bytes_encoder(&bytes_encoder_config, &led_encoder->bytes_encoder)
+    if (err != ESP_OK) {
+        goto err;
+    }
     rmt_copy_encoder_config_t copy_encoder_config = {};
-    ESP_GOTO_ON_ERROR(rmt_new_copy_encoder(&copy_encoder_config, &led_encoder->copy_encoder), err, TAG, "create copy encoder failed");
+    ret = rmt_new_copy_encoder(&copy_encoder_config, &led_encoder->copy_encoder)
+    if (err != ESP_OK) {
+        goto err;
+    }
 
     uint32_t reset_duration;
 
@@ -268,10 +278,10 @@ static void machine_bitstream_high_low_rmt(mp_hal_pin_obj_t pin, uint32_t *timin
 
     led_strip_encoder_config_t encoder_config = { 0 };
     encoder_config.resolution = RMT_LED_STRIP_RESOLUTION_HZ;
-    encoder_config.bit0_duration0 = (int32_t)timing_ns[0];
-    encoder_config.bit0_duration1 = -(int32_t)timing_ns[1];
-    encoder_config.bit1_duration0 = (int32_t)timing_ns[2];
-    encoder_config.bit1_duration1 = -(int32_t)timing_ns[3];
+    encoder_config.bit0_duration0 = (int64_t)timing_ns[0];
+    encoder_config.bit0_duration1 = -(int64_t)timing_ns[1];
+    encoder_config.bit1_duration0 = (int64_t)timing_ns[2];
+    encoder_config.bit1_duration1 = -(int64_t)timing_ns[3];
     encoder_config.reset_duration = -50000;
 
     rmt_channel_handle_t channel_handle = NULL;
