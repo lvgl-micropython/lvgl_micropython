@@ -179,6 +179,7 @@ To compile you will need Python >= 3.10 for for all build types.
     * cmake
     * ninja-build
     * python
+    * python3-venv
     * libusb-1.0-0-dev
     
   * macOS
