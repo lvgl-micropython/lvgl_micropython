@@ -86,7 +86,7 @@ class SDLDisplay(display_driver_framework.DisplayDriver):
         backlight_on_state=display_driver_framework.STATE_HIGH,  # NOQA
         offset_x=0,
         offset_y=0,
-        color_byte_order=display_driver_framework.BYTE_ORDER_RGB,  # NOQA
+        color_byte_order=BYTE_ORDER_RGB,  # NOQA
         color_space=lv.COLOR_FORMAT.RGB888,  # NOQA
         rgb565_byte_swap=False  # NOQA
     ):
@@ -104,7 +104,7 @@ class SDLDisplay(display_driver_framework.DisplayDriver):
             backlight_on_state=display_driver_framework.STATE_HIGH,
             offset_x=offset_x,
             offset_y=offset_y,
-            color_byte_order=display_driver_framework.BYTE_ORDER_RGB,
+            color_byte_order=color_byte_order,
             color_space=color_space,
             rgb565_byte_swap=False,
             _init_bus=False
