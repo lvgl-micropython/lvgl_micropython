@@ -80,8 +80,13 @@ class PointerDriver(_indev_base.IndevBase):
     def _calc_coords(self, x, y):
         if self.is_calibrated:
             cal = self._cal
-            x = int(round(x * cal.alphaX + y * cal.betaX + cal.deltaX))
-            y = int(round(x * cal.alphaY + y * cal.betaY + cal.deltaY))
+            xt, yt = x, y  # preserve raw coords
+
+            xs = xt * cal.alphaX + yt * cal.betaX + cal.deltaX
+            ys = xt * cal.alphaY + yt * cal.betaY + cal.deltaY
+
+            x = int(round(xs))
+            y = int(round(ys))            
 
             if cal.mirrorX:
                 x = self._orig_width - x - 1
