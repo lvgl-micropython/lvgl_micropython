@@ -109,6 +109,7 @@ def calibrate(indev, cal_data):
     target.remove_flag(lv.obj.FLAG.CHECKABLE)  # NOQA
     target.remove_flag(lv.obj.FLAG.SCROLLABLE)  # NOQA
 
+    instruction_text = 'Press and hold\n  red square'
     for i in range(3):
         print('point', i + 1, 'of 3')
 
@@ -119,7 +120,7 @@ def calibrate(indev, cal_data):
         lcd_bus._pump_main_thread()  # NOQA
         time.sleep_ms(2000)  # NOQA
 
-        label.set_text('Press and hold\n  red circle')
+        label.set_text(instruction_text)
         label.center()
         lcd_bus._pump_main_thread()  # NOQA
 
@@ -142,7 +143,7 @@ def calibrate(indev, cal_data):
                     if text_on:
                         label.set_text('')
                     else:
-                        label.set_text('Press and hold\n  red circle')
+                        label.set_text(instruction_text)
                     label.center()
 
                     text_on = not text_on
@@ -209,6 +210,7 @@ def calibrate(indev, cal_data):
     # else:
     #     mirror_y = False
 
+    # The 3 point method uses an affine transformation so mirroring should not be needed.
     mirror_x = False
     mirror_y = False
 
