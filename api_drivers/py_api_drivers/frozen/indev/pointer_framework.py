@@ -77,50 +77,34 @@ class PointerDriver(_indev_base.IndevBase):
         # of (state, x, y) or None if no touch even has occured
         raise NotImplementedError
 
-    def _calc_coords(self, xt, yt):
-        """
-        Convert the raw touch coordinates into screen coordinates using
-        the calibration data if available.
-        :param xt: The raw x coordinate from the touch device
-        :param yt: The raw y coordinate from the touch device
-        :return: The converted (x, y) screen coordinates
-        """
-
-        # xs, ys are the transformed screen coordinates
-
+    def _calc_coords(self, x, y):
         if self.is_calibrated:  
             cal = self._cal
 
-            xs = xt * cal.alphaX + yt * cal.betaX + cal.deltaX
-            ys = xt * cal.alphaY + yt * cal.betaY + cal.deltaY
+            # save original x value for use in y calculation
+            xt = x
+            x = int(round(x * cal.alphaX + y * cal.betaX + cal.deltaX))
+            y = int(round(xt * cal.alphaY + y * cal.betaY + cal.deltaY))
 
-            # The above transformation should take care of mirroring if the calibration
-            # data has been collected using the 3 point calbration method. However,
-            # maybe mirroring would be useful if swapping calibration data between displays
-            # that are connected with the axes reversed.
             if cal.mirrorX:
-                xs = self._orig_width - xs - 1
+                x = self._orig_width - x - 1
             if cal.mirrorY:
-                ys = self._orig_height - ys - 1
+                y = self._orig_height - y - 1
         else:
-            # Assume touch coordinates map directly to screen coordinates
-
-            xs, ys = xt, yt # initialise in case neither rotation is applied
-
             if (
                 self._startup_rotation == lv.DISPLAY_ROTATION._180 or  # NOQA
                 self._startup_rotation == lv.DISPLAY_ROTATION._270  # NOQA
             ):
-                xs = self._orig_width - xt - 1
-                ys = self._orig_height - yt - 1
+                x = self._orig_width - x - 1
+                y = self._orig_height - y - 1
 
             if (
                 self._startup_rotation == lv.DISPLAY_ROTATION._90 or  # NOQA
                 self._startup_rotation == lv.DISPLAY_ROTATION._270  # NOQA
             ):
-                xs, ys = self._orig_height - yt - 1, xt
+                x, y = self._orig_height - y - 1, x
 
-        return int(round(xs)), int(round(ys))
+        return x, y
 
     def _read(self, drv, data):  # NOQA
         coords = self._get_coords()
