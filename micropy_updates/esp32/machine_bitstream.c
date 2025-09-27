@@ -90,228 +90,102 @@ static void IRAM_ATTR machine_bitstream_high_low_bitbang(mp_hal_pin_obj_t pin, u
     mp_hal_quiet_timing_exit(irq_state);
 }
 
+#if SOC_RMT_SUPPORTED
+
 /******************************************************************************/
 // RMT implementation
 
-#define RMT_LED_STRIP_RESOLUTION_HZ 10000000
-
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 3, 0)
+#include "rmt_private.h"
+#endif
 #include "driver/rmt_tx.h"
-#include "driver/rmt_common.h"
 #include "driver/rmt_encoder.h"
 
-
-typedef struct {
-    uint32_t resolution; /*!< Encoder resolution, in Hz */
-    int64_t bit0_duration0;
-    int64_t bit0_duration1;
-    int64_t bit1_duration0;
-    int64_t bit1_duration1;
-    int64_t reset_duration;
-} led_strip_encoder_config_t;
-
-
-typedef struct {
-    rmt_encoder_t base;
-    rmt_encoder_t *bytes_encoder;
-    rmt_encoder_t *copy_encoder;
-    int state;
-    rmt_symbol_word_t reset_code;
-} rmt_led_strip_encoder_t;
-
-
-static size_t rmt_encode_led_strip(rmt_encoder_t *encoder, rmt_channel_handle_t channel, const void *primary_data, size_t data_size, rmt_encode_state_t *ret_state)
-{
-    rmt_led_strip_encoder_t *led_encoder = __containerof(encoder, rmt_led_strip_encoder_t, base);
-    rmt_encoder_handle_t bytes_encoder = led_encoder->bytes_encoder;
-    rmt_encoder_handle_t copy_encoder = led_encoder->copy_encoder;
-    rmt_encode_state_t session_state = RMT_ENCODING_RESET;
-    rmt_encode_state_t state = RMT_ENCODING_RESET;
-    size_t encoded_symbols = 0;
-    switch (led_encoder->state) {
-        case 0: // send RGB data
-            encoded_symbols += bytes_encoder->encode(bytes_encoder, channel, primary_data, data_size, &session_state);
-            if (session_state & RMT_ENCODING_COMPLETE) {
-                led_encoder->state = 1; // switch to next state when current encoding session finished
-            }
-            if (session_state & RMT_ENCODING_MEM_FULL) {
-                state |= RMT_ENCODING_MEM_FULL;
-                goto out; // yield if there's no free space for encoding artifacts
-            }
-        // fall-through
-        case 1: // send reset code
-            encoded_symbols += copy_encoder->encode(copy_encoder, channel, &led_encoder->reset_code,
-                                                    sizeof(led_encoder->reset_code), &session_state);
-            if (session_state & RMT_ENCODING_COMPLETE) {
-                led_encoder->state = RMT_ENCODING_RESET; // back to the initial encoding session
-                state |= RMT_ENCODING_COMPLETE;
-            }
-            if (session_state & RMT_ENCODING_MEM_FULL) {
-                state |= RMT_ENCODING_MEM_FULL;
-                goto out; // yield if there's no free space for encoding artifacts
-            }
+static bool machine_bitstream_high_low_rmt(mp_hal_pin_obj_t pin, uint32_t *timing_ns, const uint8_t *buf, size_t len) {
+    // Use 40MHz clock (although 2MHz would probably be sufficient).
+    uint32_t clock_div = 2;
+    rmt_channel_handle_t channel = NULL;
+    rmt_tx_channel_config_t tx_chan_config = {
+        .clk_src = RMT_CLK_SRC_DEFAULT,
+        .gpio_num = pin,
+        .mem_block_symbols = 64,
+        .resolution_hz = APB_CLK_FREQ / clock_div,
+        .trans_queue_depth = 1,
+    };
+    if (rmt_new_tx_channel(&tx_chan_config, &channel) != ESP_OK) {
+        return false;
     }
-out:
-    *ret_state = state;
-    return encoded_symbols;
-}
+    check_esp_err(rmt_enable(channel));
 
+    // Get the tick rate in kHz (this will likely be 40000).
+    uint32_t counter_clk_khz = APB_CLK_FREQ / clock_div;
+    counter_clk_khz /= 1000;
 
-static esp_err_t rmt_del_led_strip_encoder(rmt_encoder_t *encoder)
-{
-    rmt_led_strip_encoder_t *led_encoder = __containerof(encoder, rmt_led_strip_encoder_t, base);
-    rmt_del_encoder(led_encoder->bytes_encoder);
-    rmt_del_encoder(led_encoder->copy_encoder);
-    free(led_encoder);
-    return ESP_OK;
-}
-
-
-static esp_err_t rmt_led_strip_encoder_reset(rmt_encoder_t *encoder)
-{
-    rmt_led_strip_encoder_t *led_encoder = __containerof(encoder, rmt_led_strip_encoder_t, base);
-    rmt_encoder_reset(led_encoder->bytes_encoder);
-    rmt_encoder_reset(led_encoder->copy_encoder);
-    led_encoder->state = RMT_ENCODING_RESET;
-    return ESP_OK;
-}
-
-
-esp_err_t rmt_new_led_strip_encoder(const led_strip_encoder_config_t *config, rmt_encoder_handle_t *ret_encoder)
-{
-    esp_err_t ret = ESP_OK;
-    rmt_led_strip_encoder_t *led_encoder = NULL;
-    if (!(config && ret_encoder)) return ESP_ERR_INVALID_ARG;
-
-    led_encoder = rmt_alloc_encoder_mem(sizeof(rmt_led_strip_encoder_t));
-    if (!led_encoder) return ESP_ERR_NO_MEM;
-
-    led_encoder->base.encode = rmt_encode_led_strip;
-    led_encoder->base.del = rmt_del_led_strip_encoder;
-    led_encoder->base.reset = rmt_led_strip_encoder_reset;
-
-    uint32_t bit0_duration0 = 0;
-    uint32_t bit0_duration1 = 0;
-    uint32_t bit1_duration0 = 0;
-    uint32_t bit1_duration1 = 0;
-
-    if (config->bit0_duration0 < 0) bit0_duration0 = (uint32_t)(-config->bit0_duration0);
-    else bit0_duration0 = (uint32_t)config->bit0_duration0;
-
-    if (config->bit0_duration1 < 0) bit0_duration1 = (uint32_t)(-config->bit0_duration1);
-    else bit0_duration1 = (uint32_t)config->bit0_duration1;
-
-    if (config->bit1_duration0 < 0) bit1_duration0 = (uint32_t)(-config->bit1_duration0);
-    else bit1_duration0 = (uint32_t)config->bit1_duration0;
-
-    if (config->bit1_duration1 < 0) bit1_duration1 = (uint32_t)(-config->bit1_duration1);
-    else bit1_duration1 = (uint32_t)config->bit1_duration1;
-
+    // Convert nanoseconds to pulse duration.
+    // Example: 500ns = 40000 * 500 / 1e6 = 20 ticks
+    // 20 ticks / 40MHz = 500e-9
     rmt_bytes_encoder_config_t bytes_encoder_config = {
         .bit0 = {
-            .level0 = config->bit0_duration0 < 0 ? 0 : 1,
-            .duration0 = bit0_duration0 * config->resolution / 1000000000,
-            .level1 = config->bit0_duration1 < 0 ? 0 : 1,
-            .duration1 = bit0_duration1 * config->resolution / 1000000000,
+            .level0 = 1,
+            .duration0 = (counter_clk_khz * timing_ns[0]) / 1e6,
+            .level1 = 0,
+            .duration1 = (counter_clk_khz * timing_ns[1]) / 1e6,
         },
         .bit1 = {
-            .level0 = config->bit1_duration0 < 0 ? 0 : 1,
-            .duration0 = bit1_duration0 * config->resolution / 1000000000,
-            .level1 = config->bit1_duration1 < 0 ? 0 : 1,
-            .duration1 = bit1_duration1 * config->resolution / 1000000000,
+            .level0 = 1,
+            .duration0 = (counter_clk_khz * timing_ns[2]) / 1e6,
+            .level1 = 0,
+            .duration1 = (counter_clk_khz * timing_ns[3]) / 1e6,
         },
         .flags.msb_first = 1
     };
 
-
-    ret = rmt_new_bytes_encoder(&bytes_encoder_config, &led_encoder->bytes_encoder);
-    if (ret != ESP_OK) goto err;
-
-    rmt_copy_encoder_config_t copy_encoder_config = {};
-    ret = rmt_new_copy_encoder(&copy_encoder_config, &led_encoder->copy_encoder);
-    if (ret != ESP_OK) goto err;
-
-    uint32_t reset_duration;
-
-    if (config->reset_duration < 0) reset_duration = (uint32_t)-config->reset_duration;
-    else reset_duration = (uint32_t)config->reset_duration;
-
-    led_encoder->reset_code = (rmt_symbol_word_t) {
-        .level0 = config->reset_duration < 0 ? 0 : 1,
-        .duration0 = reset_duration * config->resolution / 1000000000 / 2,
-        .level1 = config->reset_duration < 0 ? 0 : 1,
-        .duration1 = reset_duration * config->resolution / 1000000000 / 2,
-    };
-
-    *ret_encoder = &led_encoder->base;
-    return ESP_OK;
-err:
-    if (led_encoder) {
-        if (led_encoder->bytes_encoder) {
-            rmt_del_encoder(led_encoder->bytes_encoder);
-        }
-        if (led_encoder->copy_encoder) {
-            rmt_del_encoder(led_encoder->copy_encoder);
-        }
-        free(led_encoder);
-    }
-    return ret;
-}
-
-
-// Use the reserved RMT channel to stream high/low data on the specified pin.
-void machine_bitstream_high_low_rmt(mp_hal_pin_obj_t pin, uint32_t *timing_ns, const uint8_t *buf, size_t len, uint8_t channel_id) {
-
-    ((void)channel_id);
-
-    rmt_tx_channel_config_t channel_config = { 0 };
-    channel_config.gpio_num = pin;
-    channel_config.clk_src = RMT_CLK_SRC_DEFAULT;
-    channel_config.resolution_hz = RMT_LED_STRIP_RESOLUTION_HZ;
-    channel_config.mem_block_symbols = 64;
-    channel_config.trans_queue_depth = 1;
-
-    led_strip_encoder_config_t encoder_config = { 0 };
-    encoder_config.resolution = RMT_LED_STRIP_RESOLUTION_HZ;
-    encoder_config.bit0_duration0 = (int64_t)timing_ns[0];
-    encoder_config.bit0_duration1 = -(int64_t)timing_ns[1];
-    encoder_config.bit1_duration0 = (int64_t)timing_ns[2];
-    encoder_config.bit1_duration1 = -(int64_t)timing_ns[3];
-    encoder_config.reset_duration = -50000;
-
-    rmt_channel_handle_t channel_handle = NULL;
-    check_esp_err(rmt_new_tx_channel(&channel_config, &channel_handle));
-
-    rmt_encoder_handle_t encoder_handle = NULL;
-    check_esp_err(rmt_new_led_strip_encoder(&encoder_config, &encoder_handle));
-    check_esp_err(rmt_enable(channel_handle));
+    // Install the bits->highlow encoder.
+    rmt_encoder_handle_t encoder;
+    check_esp_err(rmt_new_bytes_encoder(&bytes_encoder_config, &encoder));
 
     rmt_transmit_config_t tx_config = {
-        .loop_count = 0, // no transfer loop
+        .loop_count = 0,
+        .flags.eot_level = 0,
     };
 
-    check_esp_err(rmt_transmit(channel_handle, encoder_handle, buf, len, &tx_config));
+    // Stream the byte data using the encoder.
+    rmt_encoder_reset(encoder);
+    check_esp_err(rmt_transmit(channel, encoder, buf, len, &tx_config));
 
-    // Wait 50% longer than we expect (if every bit takes the maximum time).
-    uint32_t timeout_ms = (3 * len / 2) * (1 + (8 * MAX(timing_ns[0] + timing_ns[1], timing_ns[2] + timing_ns[3])) / 1000);
-    check_esp_err(rmt_tx_wait_all_done(channel_handle, pdMS_TO_TICKS(timeout_ms)));
+    // Wait until completion.
+    rmt_tx_wait_all_done(channel, -1);
 
-    // Uninstall the driver.
-    check_esp_err(rmt_del_led_strip_encoder(encoder_handle));
-    check_esp_err(rmt_del_channel(channel_handle));
+    // Disable and release channel.
+    check_esp_err(rmt_del_encoder(encoder));
+    rmt_disable(channel);
+    #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 3, 0)
+    channel->del(channel);
+    #else
+    rmt_del_channel(channel);
+    #endif
 
     // Cancel RMT output to GPIO pin.
     esp_rom_gpio_connect_out_signal(pin, SIG_GPIO_OUT_IDX, false, false);
+
+    return true;
 }
+
+#endif // SOC_RMT_SUPPORTED
 
 /******************************************************************************/
 // Interface to machine.bitstream
 
 void machine_bitstream_high_low(mp_hal_pin_obj_t pin, uint32_t *timing_ns, const uint8_t *buf, size_t len) {
-    if (esp32_rmt_bitstream_channel_id < 0) {
+    #if SOC_RMT_SUPPORTED
+    // Falls back to bitbang if rmt_new_tx_channel() fails.
+    // Other ESP errors in RMT version still raise an exception.
+    if (!esp32_rmt_bitstream_enabled || !machine_bitstream_high_low_rmt(pin, timing_ns, buf, len)) {
         machine_bitstream_high_low_bitbang(pin, timing_ns, buf, len);
-    } else {
-        machine_bitstream_high_low_rmt(pin, timing_ns, buf, len, esp32_rmt_bitstream_channel_id);
     }
+    #else
+    machine_bitstream_high_low_bitbang(pin, timing_ns, buf, len);
+    #endif
 }
 
 #endif // MICROPY_PY_MACHINE_BITSTREAM
