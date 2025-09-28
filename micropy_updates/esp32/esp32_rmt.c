@@ -50,7 +50,6 @@
 // flexible and quite easy-to-use.
 //
 // This code exposes the RMT TX feature.
-https://github.com/micropython/micropython/pull/16293
 // Forward declaration
 extern const mp_obj_type_t esp32_rmt_type;
 
