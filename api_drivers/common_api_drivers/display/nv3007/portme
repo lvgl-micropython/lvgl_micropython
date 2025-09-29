@@ -1,0 +1,4 @@
+## Note: pulling from Arturo's working screen driver, comparing against GC9A01 
+
+
+vim *.py ~/2025_communicator_badge/inspiration/LovyanGFX/src/lgfx/v1/panel/Panel_NV3007.hpp ~/2025_communicator_badge/inspiration/LovyanGFX/src/lgfx/v1/panel/Panel_GC9A01.hpp
