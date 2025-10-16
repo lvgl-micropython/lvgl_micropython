@@ -1,4 +1,5 @@
 # Copyright (c) 2024 - 2025 Kevin G. Schlosser
+# NV3007 version (c) 2025 Elliot Williams who just ported init code taken from the internets
 
 import time
 from micropython import const  # NOQA
@@ -43,12 +44,9 @@ _CMD_COLMOD  = const(0x3A)
 _CMD_PIXSET  = const(0x3A)
 _CMD_GETSCANLINE= const(0x45)
 
-
 def init(self):
     param_buf = bytearray(12)
     param_mv = memoryview(param_buf)
-
-    ## Begin translation
 
     param_buf[0] = 0xa5
     self.set_params(0xFF, param_mv[:1])
@@ -264,7 +262,7 @@ def init(self):
     self.set_params(0xc6, param_mv[:1])
 
     param_buf[:2] = bytearray([0x33, 0x33]) #/ CLKCTRL16
-    self.set_paramw(0xC8, param_mv[:2])
+    self.set_params(0xC8, param_mv[:2])
 
     param_buf[0] = 0x68 #/ CLKCTRL17
     self.set_params(0xC9, param_mv[:1])

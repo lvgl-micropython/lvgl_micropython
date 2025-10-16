@@ -6,7 +6,6 @@ import lvgl as lv  # NOQA
 import lcd_bus  # NOQA
 import display_driver_framework
 
-### begin straight-up copy from GC9A01 driver
 STATE_HIGH = display_driver_framework.STATE_HIGH
 STATE_LOW = display_driver_framework.STATE_LOW
 STATE_PWM = display_driver_framework.STATE_PWM
@@ -23,7 +22,6 @@ _MADCTL_MY = const(0x80)  # 0=Top to Bottom, 1=Bottom to Top
 
 class NV3007(display_driver_framework.DisplayDriver):
 
-    ## this is probably wrong!
     _ORIENTATION_TABLE = (
         0,
         _MADCTL_MX | _MADCTL_MV,
@@ -31,30 +29,3 @@ class NV3007(display_driver_framework.DisplayDriver):
         _MADCTL_MY | _MADCTL_MV
     )
 
-    # virtual uint8_t getMadCtl(uint8_t r) const
-    # {
-    #   static constexpr uint8_t madctl_table[] =
-    #   {
-    #                                      0,
-    #     MAD_MV|MAD_MX|MAD_MH              ,
-    #            MAD_MX|MAD_MH|MAD_MY|MAD_ML,
-    #     MAD_MV|              MAD_MY|MAD_ML,
-    #                          MAD_MY|MAD_ML,
-    #     MAD_MV                            ,
-    #            MAD_MX|MAD_MH              ,
-    #     MAD_MV|MAD_MX|MAD_MY|MAD_MH|MAD_ML,
-    #   };
-    #   return madctl_table[r];
-    # }
-
-
-## end straight-up copy
-
-
-    ## other bits to implement:
-    # uint8_t getColMod(uint8_t bpp) const override { return 0x05; }
-    # uint8_t getMadCtl(uint8_t r) const override { return MAD_MV | MAD_MY; }
-    # _cfg.offset_y  = 12;
-
-    ## src/lgfx/v1/panel/Panel_NV3007.hpp
-    ##  _cfg.offset_y  = 12;
