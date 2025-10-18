@@ -7,6 +7,10 @@
 #include "i80_bus.h"
 #include "rgb_bus.h"
 
+#ifdef ESP_IDF_VERSION
+    #include "spi_bus_fast.h"
+#endif
+
 #ifdef MP_PORT_UNIX
     #include "sdl_bus.h"
 #endif
@@ -167,6 +171,12 @@ mp_obj_t mp_lcd_bus_tx_color(size_t n_args, const mp_obj_t *pos_args, mp_map_t *
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
+    LCD_DEBUG_PRINT("mp_lcd_bus_tx_color: cmd=0x%02X, x=%d-%d, y=%d-%d, last_update=%d\n", 
+                    (int)args[ARG_cmd].u_int, 
+                    (int)args[ARG_x_start].u_int, (int)args[ARG_x_end].u_int,
+                    (int)args[ARG_y_start].u_int, (int)args[ARG_y_end].u_int,
+                    (bool)args[ARG_last_update].u_bool)
+
     mp_lcd_bus_obj_t *self = (mp_lcd_bus_obj_t *)args[ARG_self].u_obj;
 
     mp_buffer_info_t bufinfo;
@@ -296,6 +306,11 @@ static const mp_rom_map_elem_t mp_module_lcd_bus_globals_table[] = {
     #ifdef MP_PORT_UNIX
         { MP_ROM_QSTR(MP_QSTR_SDLBus),         MP_ROM_PTR(&mp_lcd_sdl_bus_type)        },
     #endif
+    
+    #ifdef ESP_IDF_VERSION
+        { MP_ROM_QSTR(MP_QSTR_SPIBusFast),     MP_ROM_PTR(&mp_lcd_spi_bus_fast_type)   },
+    #endif
+    
     { MP_ROM_QSTR(MP_QSTR_DEBUG_ENABLED),    MP_ROM_INT(LCD_DEBUG) },
 
     #ifdef ESP_IDF_VERSION
