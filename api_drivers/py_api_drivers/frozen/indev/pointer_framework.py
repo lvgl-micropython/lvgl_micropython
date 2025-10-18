@@ -78,10 +78,13 @@ class PointerDriver(_indev_base.IndevBase):
         raise NotImplementedError
 
     def _calc_coords(self, x, y):
-        if self.is_calibrated:
+        if self.is_calibrated:  
             cal = self._cal
+
+            # save original x value for use in y calculation
+            xt = x
             x = int(round(x * cal.alphaX + y * cal.betaX + cal.deltaX))
-            y = int(round(x * cal.alphaY + y * cal.betaY + cal.deltaY))
+            y = int(round(xt * cal.alphaY + y * cal.betaY + cal.deltaY))
 
             if cal.mirrorX:
                 x = self._orig_width - x - 1
