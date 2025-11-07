@@ -82,9 +82,9 @@ class TaskHandler(object):
             self._callbacks.append((callback, event, user_data))
 
     def remove_event_cb(self, callback):
-        for i, obj in self._callbacks:
-            if obj[0] == callback:
-                self._callbacks.remove(obj)
+        for (cb, evt, data) in self._callbacks:
+            if cb == callback:
+                self._callbacks.remove((cb,evt,data))
                 break
 
     def deinit(self):
