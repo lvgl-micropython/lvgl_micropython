@@ -64,7 +64,7 @@ except ImportError:
 
             self._data_to_commit = data
 
-        def erase(self, key):
+        def erase_key(self, key):
             key = key.encode('utf-8')
 
             self._file.seek(0)
@@ -130,7 +130,7 @@ class TouchCalData(object):
                 self._mirrorX,
                 self._mirrorY
             ):
-                self._config.erase('ts_config')
+                self._config.erase_key('ts_config')
 
             else:
                 blob = struct.pack(
