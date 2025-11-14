@@ -7,8 +7,8 @@
     #include "lcd_types.h"
 
     // esp-idf includes
-    #include "esp_lcd_panel_io.h"
-    #include "driver/i2c.h"
+    // #include "esp_lcd_panel_io.h"
+    // #include "driver/i2c.h"
 
     // micropython includes
     #include "mphalport.h"
@@ -27,11 +27,12 @@
 
         bool trans_done;
         bool rgb565_byte_swap;
-
+        /*
         lcd_panel_io_t panel_io_handle;
         esp_lcd_panel_io_i2c_config_t panel_io_config;
         i2c_port_t port;
         esp_lcd_i2c_bus_handle_t bus_handle;
+        */
 
     } mp_lcd_i2c_bus_obj_t;
 
