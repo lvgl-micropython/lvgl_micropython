@@ -80,7 +80,7 @@ def calibrate(indev, cal_data):
     label.set_text('Touch Calibration')
     label.center()
 
-    lv.screen_load_anim(new_scrn, lv.SCR_LOAD_ANIM.FADE_IN, 500, 0, False)  # NOQA
+    lv.screen_load_anim(new_scrn, lv.SCREEN_LOAD_ANIM.FADE_IN, 500, 0, False)  # NOQA
 
     count = 0
     while count < 200:
