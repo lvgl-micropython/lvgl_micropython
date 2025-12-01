@@ -4,9 +4,6 @@
 [submodule "lib/SDL"]
 	path = lib/SDL
 	url = https://github.com/libsdl-org/SDL
-[submodule "lib/esp-idf"]
-	path = lib/esp-idf
-	url = https://github.com/espressif/esp-idf
 [submodule "lib/lvgl"]
 	path = lib/lvgl
 	url = https://github.com/lvgl/lvgl
