@@ -36,7 +36,7 @@ jobs:
     - name: Build macOS port
       run: python3 make.py macOS DISPLAY=sdl_display INDEV=sdl_pointer
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v5
       with:
         name: lvgl_micropy_macos
         path: build/lvgl_micropy_macos
@@ -47,12 +47,12 @@ jobs:
     runs-on: macos-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - uses: carlosperate/arm-none-eabi-gcc-action@v1.8.1
+    - uses: actions/checkout@v6
+    - uses: carlosperate/arm-none-eabi-gcc-action@v1.11.1
       with:
         release: 'latest' # The arm-none-eabi-gcc release to use.
 
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v6.1.0
       with:
         python-version: '3.10'
 
@@ -64,7 +64,7 @@ jobs:
 
     - name: Cached Deps
       id: cache-deps
-      uses: actions/cache@v4
+      uses: actions/cache@v4.3.0
       with:
         path: |
           lib/esp-idf
