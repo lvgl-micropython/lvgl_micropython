@@ -790,6 +790,8 @@ IDF_ENVIRON_SET = False
 
 
 def setup_idf_environ():
+    os.environ['IDF_COMPONENT_MANAGER'] = '1'
+
     global IDF_ENVIRON_SET
     # There were some modifications made with how the environment gets set up
     # @cheops put quite a bit of time in to research the best solution
