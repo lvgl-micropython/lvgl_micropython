@@ -977,6 +977,8 @@ def submodules():
     if 'GITHUB_RUN_ID' in os.environ:
         cmds.insert(0, [f'export "IDF_PATH={os.path.abspath(idf_path)}"'])
 
+    update_makefile()
+
     cmds.append(submodules_cmd[:])
 
     return_code, _ = spawn(cmds, env=env)
@@ -1481,7 +1483,6 @@ def compile(*args):  # NOQA
     update_mpconfigboard()
     update_mpconfigport()
     update_mkrules()
-    update_makefile()
 
     copy_micropy_updates('esp32')
 
