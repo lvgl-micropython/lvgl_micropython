@@ -174,6 +174,10 @@ def get_lvgl_version():
 
 
 def set_mp_version(port):
+    # TODO: disable this for the time being. I will need to add an include to point to
+    #       the version file
+    return
+
     mpconfigport = f'lib/micropython/ports/{port}/mpconfigport.h'
 
     with open(mpconfigport, 'rb') as f:
@@ -181,7 +185,7 @@ def set_mp_version(port):
 
     if 'MICROPY_BANNER_NAME_AND_VERSION' not in data:
         data += (
-            '\n\n#include "genhdr/mpversion.h"\n\n'
+            # '\n\n#include "genhdr/mpversion.h"\n\n'
             '\n\n#define MICROPY_BANNER_NAME_AND_VERSION '
             f'"LVGL ({get_lvgl_version()}) MicroPython (" MICROPY_VERSION_STRING '
             f'") Binding compiled on " MICROPY_BUILD_DATE\n\n'

@@ -1028,6 +1028,7 @@ MPCONFIGPORT_PATH = 'lib/micropython/ports/esp32/mpconfigport.h'
 PANICHANDLER_PATH = 'lib/micropython/ports/esp32/panichandler.c'
 MPHALPORT_PATH = 'lib/micropython/ports/esp32/mphalport.c'
 MAIN_PATH = 'lib/micropython/ports/esp32/main.c'
+MAKEFILE_PATH = 'lib/micropython/ports/esp32/Makefile'
 
 
 if not os.path.exists('micropy_updates/originals/esp32'):
@@ -1272,6 +1273,12 @@ def update_mkrules():
             f.write(data.encode('utf-8'))
 
 
+def update_makefile():
+    data = read_file('esp32', MAKEFILE_PATH)
+    data = data.replace('IDF_COMPONENT_MANAGER=0', 'IDF_COMPONENT_MANAGER=1')
+    write_file(MAKEFILE_PATH, data)
+
+
 def update_main():
     # data = read_file('esp32', MAIN_PATH)
 
@@ -1349,8 +1356,8 @@ def build_sdkconfig(*args):
         'CONFIG_COMPILER_OPTIMIZATION_CHECKS_SILENT=y'
     ]
 
-    if board == 'ESP32_GENERIC_S3':
-        base_config.insert(1, 'CONFIG_SPIRAM_XIP_FROM_PSRAM=y')
+    # if board == 'ESP32_GENERIC_S3':
+    #     base_config.insert(1, 'CONFIG_SPIRAM_XIP_FROM_PSRAM=y')
 
     if DEBUG:
         base_config.extend([
@@ -1474,6 +1481,7 @@ def compile(*args):  # NOQA
     update_mpconfigboard()
     update_mpconfigport()
     update_mkrules()
+    update_makefile()
 
     copy_micropy_updates('esp32')
 
