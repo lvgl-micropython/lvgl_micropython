@@ -10,19 +10,25 @@ jobs:
   macos-rel:
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
-    - uses: AButler/upload-release-assets@v3.0
+    - uses: AButler/upload-release-assets@v5.0
       with:
         files: "build/*"
         repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v6.1.0
       with:
-        python-version: '3.10'
+        python-version: '3.11'
 
-    - name: Install Dependencies
-      run: brew install --force ninja
+    - name: Install Deps
+      run: |
+        brew install --force ninja 
+        brew install --force sdl2
+        brew install --force libffi
+        git submodule update --init -- lib/pycparser
+        git submodule update --init --jobs 4 -- lib/micropython        
+        git submodule update --init --jobs 4 -- lib/lvgl
 
     - name: Build macOS port
       run: python3 make.py macOS DISPLAY=sdl_display INDEV=sdl_pointer
@@ -30,19 +36,27 @@ jobs:
   unix-rel:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
-    - uses: AButler/upload-release-assets@v3.0
+    - uses: AButler/upload-release-assets@v5.0
       with:
         files: "build/*"
         repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v6.1.0
       with:
-        python-version: '3.10'
+        python-version: '3.11'
 
     - name: Install Deps
-      run: sudo apt-get update && sudo apt-get install --assume-yes --allow-downgrades --allow-remove-essential --allow-change-held-packages build-essential pkg-config cmake ninja-build libffi-dev gnome-desktop-testing libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev fcitx-libs-dev libpipewire-0.3-dev libwayland-dev libdecor-0-dev ccache
+      #        sudo apt-get update && sudo apt-get install --assume-yes --allow-downgrades --allow-remove-essential --allow-change-held-packages build-essential pkg-config cmake ninja-build libffi-dev gnome-desktop-testing libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev fcitx-libs-dev libpipewire-0.3-dev libwayland-dev libdecor-0-dev
+      run: |
+        git submodule update --init -- lib/pycparser
+        git submodule update --init --jobs 4 -- lib/micropython
+        git submodule update --init --jobs 4 -- lib/lvgl        
+        git submodule update --init --jobs 4 -- lib/SDL
+        cd lib/SDL
+        git checkout release-2.30.2
+        cd ../..
 
     - name: Build Unix port
       run: python3 make.py unix DISPLAY=sdl_display INDEV=sdl_pointer
@@ -50,77 +64,106 @@ jobs:
   esp32-rel:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
-    - uses: AButler/upload-release-assets@v3.0
+    - uses: AButler/upload-release-assets@v5.0
       with:
         files: "build/*"
         repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v6.1.0
       with:
-        python-version: '3.10'
+        python-version: '3.11'
+
+    - name: Install Deps
+      #        sudo apt-get update && sudo apt-get install --assume-yes --allow-downgrades --allow-remove-essential --allow-change-held-packages build-essential pkg-config cmake ninja-build ccache
+      run: |
+        git submodule update --init --depth 1 -- lib/pycparser
+        git submodule update --init --depth 1 --jobs 4 -- lib/micropython        
+        git submodule update --init --depth 1 --jobs 4 -- lib/lvgl
+
+    - name: Get Build Deps
+      run: |
+        git submodule update --init --depth 1 --jobs 4 -- lib/esp-idf
+        cd lib/esp-idf
+        git submodule update --init --depth 1 --jobs 4 -- components/bt/host/nimble/nimble components/esp_wifi components/esptool_py/esptool components/lwip/lwip components/mbedtls/mbedtls components/bt/controller/lib_esp32 components/bt/controller/lib_esp32c3_family
+        cd ../..
+        export "IDF_PATH=${GITHUB_WORKSPACE}/lib/esp-idf"
+        ./lib/esp-idf/install.sh all
+
+    - name: Setup ESP-IDF
+      run: |
+        export "IDF_PATH=${GITHUB_WORKSPACE}/lib/esp-idf"
+        . ./lib/esp-idf/export.sh
 
     - name: ESP32_GENERIC-SPIRAM-4
-      run: python3 make.py esp32 BOARD=ESP32_GENERIC BOARD_VARIANT=SPIRAM --flash-size=4 DISPLAY=rgb_display DISPLAY=st7796 DISPLAY=st7789 DISPLAY=st7735 DISPLAY=ili9488 DISPLAY=ili9486 DISPLAY=ili9481 DISPLAY=ili9341 DISPLAY=ili9225 DISPLAY=ili9163 DISPLAY=gc9a01 INDEV=xpt2046 INDEV=gt911 INDEV=ft6x36 INDEV=ft6x06 INDEV=ft5x16 INDEV=ft5x06
+      run: python3 make.py esp32 BOARD=ESP32_GENERIC BOARD_VARIANT=SPIRAM --flash-size=4 DISPLAY=all INDEV=all EXPANDER=all --ccache --no-scrub
+
     - name: ESP32_GENERIC-SPIRAM-8
-      run: python3 make.py esp32 BOARD=ESP32_GENERIC BOARD_VARIANT=SPIRAM --flash-size=8 DISPLAY=rgb_display DISPLAY=st7796 DISPLAY=st7789 DISPLAY=st7735 DISPLAY=ili9488 DISPLAY=ili9486 DISPLAY=ili9481 DISPLAY=ili9341 DISPLAY=ili9225 DISPLAY=ili9163 DISPLAY=gc9a01 INDEV=xpt2046 INDEV=gt911 INDEV=ft6x36 INDEV=ft6x06 INDEV=ft5x16 INDEV=ft5x06
-    - name: ESP32_GENERIC-SPIRAM-16
-      run: python3 make.py esp32 BOARD=ESP32_GENERIC BOARD_VARIANT=SPIRAM --flash-size=16 DISPLAY=rgb_display DISPLAY=st7796 DISPLAY=st7789 DISPLAY=st7735 DISPLAY=ili9488 DISPLAY=ili9486 DISPLAY=ili9481 DISPLAY=ili9341 DISPLAY=ili9225 DISPLAY=ili9163 DISPLAY=gc9a01 INDEV=xpt2046 INDEV=gt911 INDEV=ft6x36 INDEV=ft6x06 INDEV=ft5x16 INDEV=ft5x06
+      run: python3 make.py esp32 BOARD=ESP32_GENERIC BOARD_VARIANT=SPIRAM --flash-size=8 DISPLAY=all INDEV=all EXPANDER=all --ccache --no-scrub
+
     - name: ESP32_GENERIC_S2-SPIRAM-4
-      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S2 BOARD_VARIANT=SPIRAM --flash-size=4 DISPLAY=rgb_display DISPLAY=st7796 DISPLAY=st7789 DISPLAY=st7735 DISPLAY=ili9488 DISPLAY=ili9486 DISPLAY=ili9481 DISPLAY=ili9341 DISPLAY=ili9225 DISPLAY=ili9163 DISPLAY=gc9a01 INDEV=xpt2046 INDEV=gt911 INDEV=ft6x36 INDEV=ft6x06 INDEV=ft5x16 INDEV=ft5x06
-    - name: ESP32_GENERIC_S3-SPIRAM-4
-      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM --flash-size=4 DISPLAY=rgb_display DISPLAY=st7796 DISPLAY=st7789 DISPLAY=st7735 DISPLAY=ili9488 DISPLAY=ili9486 DISPLAY=ili9481 DISPLAY=ili9341 DISPLAY=ili9225 DISPLAY=ili9163 DISPLAY=gc9a01 INDEV=xpt2046 INDEV=gt911 INDEV=ft6x36 INDEV=ft6x06 INDEV=ft5x16 INDEV=ft5x06
-    - name: ESP32_GENERIC_S3-SPIRAM-8
-      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM --flash-size=8 DISPLAY=rgb_display DISPLAY=st7796 DISPLAY=st7789 DISPLAY=st7735 DISPLAY=ili9488 DISPLAY=ili9486 DISPLAY=ili9481 DISPLAY=ili9341 DISPLAY=ili9225 DISPLAY=ili9163 DISPLAY=gc9a01 INDEV=xpt2046 INDEV=gt911 INDEV=ft6x36 INDEV=ft6x06 INDEV=ft5x16 INDEV=ft5x06
+      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S2 BOARD_VARIANT=SPIRAM --flash-size=4 DISPLAY=all INDEV=all EXPANDER=all --ccache --no-scrub
+
+    - name: ESP32_GENERIC_S3-4
+      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 --flash-size=4 DISPLAY=all INDEV=all EXPANDER=all --ccache --no-scrub
+
+    - name: ESP32_GENERIC_S3-8
+      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 --flash-size=8 DISPLAY=all INDEV=all EXPANDER=all --ccache --no-scrub
+
     - name: ESP32_GENERIC_S3-SPIRAM_OCT-8
-      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT --flash-size=8 DISPLAY=rgb_display DISPLAY=st7796 DISPLAY=st7789 DISPLAY=st7735 DISPLAY=ili9488 DISPLAY=ili9486 DISPLAY=ili9481 DISPLAY=ili9341 DISPLAY=ili9225 DISPLAY=ili9163 DISPLAY=gc9a01 INDEV=xpt2046 INDEV=gt911 INDEV=ft6x36 INDEV=ft6x06 INDEV=ft5x16 INDEV=ft5x06
+      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT --flash-size=8 DISPLAY=all INDEV=all EXPANDER=all --ccache --no-scrub
+
+    - name: ESP32_GENERIC_S3-SPIRAM_OCT-16
+      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT --flash-size=16 DISPLAY=all INDEV=all EXPANDER=all --ccache --no-scrub
+
     - name: ESP32_GENERIC_S3-SPIRAM_OCT-16_OCTFLASH
-      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT --flash-size=16 --octal-flash DISPLAY=rgb_display DISPLAY=st7796 DISPLAY=st7789 DISPLAY=st7735 DISPLAY=ili9488 DISPLAY=ili9486 DISPLAY=ili9481 DISPLAY=ili9341 DISPLAY=ili9225 DISPLAY=ili9163 DISPLAY=gc9a01 INDEV=xpt2046 INDEV=gt911 INDEV=ft6x36 INDEV=ft6x06 INDEV=ft5x16 INDEV=ft5x06
+      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT --flash-size=16 --octal-flash DISPLAY=all INDEV=all EXPANDER=all --ccache --no-scrub
+
     - name: ESP32_GENERIC_S3-SPIRAM_OCT-32_OCTFLASH
-      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT --flash-size=32 --octal-flash DISPLAY=rgb_display DISPLAY=st7796 DISPLAY=st7789 DISPLAY=st7735 DISPLAY=ili9488 DISPLAY=ili9486 DISPLAY=ili9481 DISPLAY=ili9341 DISPLAY=ili9225 DISPLAY=ili9163 DISPLAY=gc9a01 INDEV=xpt2046 INDEV=gt911 INDEV=ft6x36 INDEV=ft6x06 INDEV=ft5x16 INDEV=ft5x06
+      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT --flash-size=32 --octal-flash DISPLAY=all INDEV=all EXPANDER=all --ccache --no-scrub
 
-  rp2-rel:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
+#  rp2-rel:
+#    runs-on: ubuntu-latest
+#    steps:
+#    - uses: actions/checkout@v6
+#
+#    - uses: AButler/upload-release-assets@v5.0
+#      with:
+#        files: "build/*"
+#        repo-token: ${{ secrets.GITHUB_TOKEN }}
+#
+#    - uses: carlosperate/arm-none-eabi-gcc-action@v1.11.1
+#      with:
+#        release: '9-2019-q4'
+#
+#    - uses: actions/setup-python@v6.1.0
+#      with:
+#        python-version: '3.10'
 
-    - uses: AButler/upload-release-assets@v3.0
-      with:
-        files: "build/*"
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
+#    - name: Build Raspberry Pi PICO port
+#      run: python3 make.py rp2 submodules clean mpy_cross BOARD=RPI_PICO DISPLAY=st7796 DISPLAY=st7789 DISPLAY=st7735 DISPLAY=ili9488 DISPLAY=ili9486 DISPLAY=ili9481 DISPLAY=ili9341 DISPLAY=ili9225 DISPLAY=ili9163 DISPLAY=gc9a01 INDEV=xpt2046 INDEV=gt911 INDEV=ft6x36 INDEV=ft6x06 INDEV=ft5x16 INDEV=ft5x06
 
-    - uses: carlosperate/arm-none-eabi-gcc-action@v1.8.1
-      with:
-        release: '9-2019-q4'
-
-    - uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-
-    # - name: Build Raspberry Pi PICO port
-    #   run: python3 make.py rp2 submodules clean mpy_cross BOARD=RPI_PICO DISPLAY=st7796 DISPLAY=st7789 DISPLAY=st7735 DISPLAY=ili9488 DISPLAY=ili9486 DISPLAY=ili9481 DISPLAY=ili9341 DISPLAY=ili9225 DISPLAY=ili9163 DISPLAY=gc9a01 INDEV=xpt2046 INDEV=gt911 INDEV=ft6x36 INDEV=ft6x06 INDEV=ft5x16 INDEV=ft5x06
-
-  stm32-rel:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-
-    - uses: AButler/upload-release-assets@v3.0
-      with:
-        files: "build/*"
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-    - uses: carlosperate/arm-none-eabi-gcc-action@v1.8.1
-      with:
-        release: '9-2019-q4'
-
-    - uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-
-    # - name: STM32H7B3I_DK
-    #   run: python3 make.py stm32 submodules clean mpy_cross BOARD=STM32H7B3I_DK DISPLAY=st7796 DISPLAY=st7789 DISPLAY=st7735 DISPLAY=ili9488 DISPLAY=ili9486 DISPLAY=ili9481 DISPLAY=ili9341 DISPLAY=ili9225 DISPLAY=ili9163 DISPLAY=gc9a01 INDEV=xpt2046 INDEV=gt911 INDEV=ft6x36 INDEV=ft6x06 INDEV=ft5x16 INDEV=ft5x06
-
-    # - name: STM32H573I_DK
-    #   run: python3 make.py stm32 submodules clean mpy_cross BOARD=STM32H573I_DK DISPLAY=st7796 DISPLAY=st7789 DISPLAY=st7735 DISPLAY=ili9488 DISPLAY=ili9486 DISPLAY=ili9481 DISPLAY=ili9341 DISPLAY=ili9225 DISPLAY=ili9163 DISPLAY=gc9a01 INDEV=xpt2046 INDEV=gt911 INDEV=ft6x36 INDEV=ft6x06 INDEV=ft5x16 INDEV=ft5x06
+#  stm32-rel:
+#    runs-on: ubuntu-latest
+#    steps:
+#    - uses: actions/checkout@v6
+#
+#    - uses: AButler/upload-release-assets@v5.0
+#      with:
+#        files: "build/*"
+#        repo-token: ${{ secrets.GITHUB_TOKEN }}
+#
+#    - uses: carlosperate/arm-none-eabi-gcc-action@v1.11.1
+#      with:
+#        release: '9-2019-q4'
+#
+#    - uses: actions/setup-python@v6.1.0
+#      with:
+#        python-version: '3.10'
+#
+#    - name: STM32H7B3I_DK
+#      run: python3 make.py stm32 submodules clean mpy_cross BOARD=STM32H7B3I_DK DISPLAY=st7796 DISPLAY=st7789 DISPLAY=st7735 DISPLAY=ili9488 DISPLAY=ili9486 DISPLAY=ili9481 DISPLAY=ili9341 DISPLAY=ili9225 DISPLAY=ili9163 DISPLAY=gc9a01 INDEV=xpt2046 INDEV=gt911 INDEV=ft6x36 INDEV=ft6x06 INDEV=ft5x16 INDEV=ft5x06
+#
+#    - name: STM32H573I_DK
+#      run: python3 make.py stm32 submodules clean mpy_cross BOARD=STM32H573I_DK DISPLAY=st7796 DISPLAY=st7789 DISPLAY=st7735 DISPLAY=ili9488 DISPLAY=ili9486 DISPLAY=ili9481 DISPLAY=ili9341 DISPLAY=ili9225 DISPLAY=ili9163 DISPLAY=gc9a01 INDEV=xpt2046 INDEV=gt911 INDEV=ft6x36 INDEV=ft6x06 INDEV=ft5x16 INDEV=ft5x06
