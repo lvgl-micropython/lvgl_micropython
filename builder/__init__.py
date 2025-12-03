@@ -399,7 +399,7 @@ def generate_manifest(
             if not os.path.exists(tmp_file):
                 raise RuntimeError(f'File not found "{file}"')
 
-            if file.startswith('ft'):
+            if file.lower().startswith('ft'):
                 focaltech_touch = (
                     f'{script_dir}/api_drivers/common_api_drivers/'
                     f'indev/focaltech_touch.py'

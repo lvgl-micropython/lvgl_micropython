@@ -1023,7 +1023,6 @@ def find_esp32_ports(chip):
 
 
 SDKCONFIG_PATH = f'build/sdkconfig.board'
-
 MPTHREADPORT_H_PATH = 'lib/micropython/ports/esp32/mpthreadport.h'
 MPTHREADPORT_PATH = 'lib/micropython/ports/esp32/mpthreadport.c'
 MPCONFIGPORT_PATH = 'lib/micropython/ports/esp32/mpconfigport.h'
