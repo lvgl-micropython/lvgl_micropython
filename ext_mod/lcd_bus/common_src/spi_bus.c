@@ -236,6 +236,7 @@
         */
 
         // we take the transfer pointer from the bus inside the existing device
+        self->bus_handle = MP_OBJ_FROM_PTR(self->spi_bus);
         self->panel_io_config.spi_transfer = ((mp_machine_spi_p_t *)MP_OBJ_TYPE_GET_SLOT(&machine_spi_type, protocol))->transfer;
 
         return LCD_OK;
