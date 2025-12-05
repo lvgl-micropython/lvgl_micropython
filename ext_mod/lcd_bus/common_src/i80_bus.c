@@ -10,6 +10,7 @@
 #include "py/obj.h"
 #include "py/runtime.h"
 #include "py/objarray.h"
+#include "mphalport.h" // for mp_hal_pin_output
 
 //#include "mpconfigport.h"
 //#include "modmachine.h"

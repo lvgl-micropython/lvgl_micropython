@@ -64,6 +64,12 @@
             void *buf1;
             void *buf2;
 
+            /* buffer_flags is not used, but it needs to be here
+            *  otherwise function pointers are no more aligned 
+            *  with the pointer use in _mp_lcd_bus_obj_t
+            */
+            uint32_t buffer_flags;
+
             bool trans_done;
             bool rgb565_byte_swap;
 
