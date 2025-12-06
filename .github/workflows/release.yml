@@ -123,6 +123,12 @@ jobs:
     - name: ESP32_GENERIC_S3-SPIRAM_OCT-32_OCTFLASH
       run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT --flash-size=32 --octal-flash DISPLAY=all INDEV=all EXPANDER=all --ccache --no-scrub
 
+    - name: ESP32_GENERIC_P4-4
+      run: python3 make.py esp32 BOARD=ESP32_GENERIC_P4 --flash-size=4 DISPLAY=all INDEV=all EXPANDER=all --ccache --no-scrub
+
+    - name: ESP32_GENERIC_P4-8
+      run: python3 make.py esp32 BOARD=ESP32_GENERIC_P4 --flash-size=8 DISPLAY=all INDEV=all EXPANDER=all --ccache --no-scrub
+
 #  rp2-rel:
 #    runs-on: ubuntu-latest
 #    steps:
