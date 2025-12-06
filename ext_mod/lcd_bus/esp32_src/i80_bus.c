@@ -151,7 +151,12 @@
         self->bus_config.data_gpio_nums[15] = args[ARG_data15].u_int;
 
         uint8_t i = 0;
-        for (; i < SOC_LCD_I80_BUS_WIDTH; i++) {
+        #if CONFIG_IDF_TARGET_ESP32P4
+            uint8_t bus_width = SOC_LCDCAM_I80_BUS_WIDTH;
+        #else
+            uint8_t bus_width = SOC_LCD_I80_BUS_WIDTH;
+        #endif
+        for (; i < bus_width; i++) {
             if (self->bus_config.data_gpio_nums[i] == -1) {
                 break;
             }
