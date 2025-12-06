@@ -235,7 +235,7 @@ def repl_args(extra_args):
         action='store'
     )
 
-    if mcu in ('esp32s3', 'esp32s2', 'esp32c3', 'esp32c6'):
+    if mcu in ('esp32p4', 'esp32s3', 'esp32s2', 'esp32c3', 'esp32c6'):
         esp_argParser.add_argument(
             '--enable-cdc-repl',
             dest='enable_cdc_repl',
@@ -256,7 +256,7 @@ def repl_args(extra_args):
     enable_uart_repl = esp_args.enable_uart_repl
     uart_repl_bitrate = esp_args.uart_repl_bitrate
 
-    if mcu in ('esp32s3', 'esp32s2', 'esp32c3', 'esp32c6'):
+    if mcu in ('esp32p4', 'esp32s3', 'esp32s2', 'esp32c3', 'esp32c6'):
         enable_cdc_repl = esp_args.enable_cdc_repl
         enable_jtag_repl = esp_args.enable_jtag_repl
 
@@ -317,7 +317,7 @@ def common_args(extra_args):
         raise RuntimeError('Board is not currently supported')
 
     if board in (
-        'UM_NANOS3', 'ESP32_GENERIC_S3',
+        'UM_NANOS3', 'ESP32_GENERIC_S3', 'ESP32_GENERIC_P4'
         'UM_TINYS3', 'UM_TINYWATCHS3'
     ):
         def_flash_size = 8
@@ -484,7 +484,7 @@ def common_args(extra_args):
 optimum_fb_size = '0'
 
 
-def esp32_s3_args(extra_args):
+def esp32_s3_p4_args(extra_args):
     if custom_board_path is not None:
         return extra_args
 
@@ -566,8 +566,8 @@ def parse_args(extra_args, lv_cflags, brd):
 
     if board == 'ESP32_GENERIC':
         extra_args = esp32_args(extra_args)
-    elif board == 'ESP32_GENERIC_S3':
-        extra_args = esp32_s3_args(extra_args)
+    elif board in ('ESP32_GENERIC_S3', 'ESP32_GENERIC_P4'):
+        extra_args = esp32_s3_p4_args(extra_args)
 
     extra_args = repl_args(extra_args)
 
