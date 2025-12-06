@@ -48,6 +48,12 @@ jobs:
         export "IDF_PATH=${GITHUB_WORKSPACE}/lib/esp-idf"
         . ./lib/esp-idf/export.sh
 
+    - name: Build ESP32_GENERIC_P4 8
+      run: python3 make.py esp32 BOARD=ESP32_GENERIC_P4 --flash-size=8 DISPLAY=all INDEV=all EXPANDER=all --ccache --no-scrub
+
+    - name: Build ESP32_GENERIC_P4 C6_WIFI 8
+      run: python3 make.py esp32 BOARD=ESP32_GENERIC_P4 --flash-size=8 BOARD_VARIANT=C6_WIFI DISPLAY=all INDEV=all EXPANDER=all --ccache --no-scrub
+
     - name: Build ESP32_GENERIC_S3 4
       run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 DISPLAY=all INDEV=all EXPANDER=all --ccache --no-scrub
 
@@ -62,9 +68,6 @@ jobs:
 
     - name: Build ESP32_GENERIC_S3 OCT RAM/FLASH 16
       run: python3 make.py esp32 BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT --flash-size=16 --octal-flash DISPLAY=all INDEV=all EXPANDER=all --ccache --no-scrub
-
-    - name: Build ESP32_GENERIC_S2 4
-      run: python3 make.py esp32 BOARD=ESP32_GENERIC_S2 DISPLAY=all INDEV=all EXPANDER=all --ccache --no-scrub
 
     - uses: actions/upload-artifact@v5
       with:
