@@ -557,6 +557,8 @@ def esp32_args(extra_args):
 def parse_args(extra_args, lv_cflags, brd):
     global board
 
+    copy_micropy_updates('esp32')
+
     if brd is None:
         brd = 'ESP32_GENERIC'
 
@@ -1482,8 +1484,6 @@ def compile(*args):  # NOQA
     update_mpconfigboard()
     update_mpconfigport()
     update_mkrules()
-
-    copy_micropy_updates('esp32')
 
     try:
         cmd_ = compile_cmd[:]
