@@ -239,7 +239,7 @@ if sys.platform.startswith('win'):
     if args.board == 'win':
         sdl2_include, _ = get_sdl2()
         cpp_args.append(f'-I"{sdl2_include}"')
-        
+
 elif sys.platform.startswith('darwin'):
     cpp_args = ['-std=c11']
     cpp_path = 'clang'
@@ -583,8 +583,8 @@ parser = c_parser.CParser()
 gen = c_generator.CGenerator()
 
 ast = pycparser.parse_file(
-    args.input[0], 
-    use_cpp=True, 
+    args.input[0],
+    use_cpp=True,
     cpp_path=cpp_path,
     cpp_args=cpp_args
 )
@@ -711,7 +711,7 @@ structs_without_typedef = collections.OrderedDict((decl.type.name, decl.type) fo
 #         # check if it's found in `structs_without_typedef`. It actually has the typedef. Replace type with it.
 #         if typedef.type.name in structs_without_typedef:
 #             typedef.type = structs_without_typedef[struct_name]
-# 
+#
 # structs = collections.OrderedDict((typedef.declname, typedef.type) for typedef in struct_typedefs if typedef.declname and typedef.type.decls) # and not lv_base_obj_pattern.match(typedef.declname))
 structs.update(structs_without_typedef) # This is for struct without typedef
 explicit_structs = collections.OrderedDict((typedef.type.name, typedef.declname) for typedef in struct_typedefs if typedef.type.name) # and not lv_base_obj_pattern.match(typedef.type.name))
@@ -1161,6 +1161,9 @@ register_int_ptr_type('i64ptr',
 # Emit Header
 #
 
+if 'src/core/lv_global.h' not in args.input:
+    args.input.append('src/core/lv_global.h')
+
 print ("""
 /*
  * Auto-Generated file, DO NOT EDIT!
@@ -1236,7 +1239,7 @@ print("""
 #define GENMPY_UNUSED
 #endif // __GNUC__
 #endif // GENMPY_UNUSED
- 
+
 // Custom function mp object
 
 typedef mp_obj_t (*mp_fun_ptr_var_t)(size_t n, const mp_obj_t *, void *ptr);
@@ -1398,9 +1401,9 @@ static inline LV_OBJ_T *mp_get_callbacks(mp_obj_t mp_obj)
 
 static void mp_lv_delete_cb(lv_event_t * e)
 {
-    LV_OBJ_T *lv_obj = e->current_target;
-    if (lv_obj){
-        mp_lv_obj_t *self = lv_obj->user_data;
+    lv_obj_t *obj = (lv_obj_t *)lv_event_get_current_target(e);
+    if (obj){
+        mp_lv_obj_t *self = lv_obj_get_user_data(obj);
         if (self) {
             self->lv_obj = NULL;
         }
@@ -1410,7 +1413,7 @@ static void mp_lv_delete_cb(lv_event_t * e)
 static inline mp_obj_t lv_to_mp(LV_OBJ_T *lv_obj)
 {
     if (lv_obj == NULL) return mp_const_none;
-    mp_lv_obj_t *self = (mp_lv_obj_t*)lv_obj->user_data;
+    mp_lv_obj_t *self = (mp_lv_obj_t*)lv_obj_get_user_data(lv_obj);
     if (!self)
     {
         // Create the MP object
@@ -1421,7 +1424,7 @@ static inline mp_obj_t lv_to_mp(LV_OBJ_T *lv_obj)
         };
 
         // Register the Python object in user_data
-        lv_obj->user_data = self;
+        lv_obj_set_user_data(lv_obj, self);
 
         // Register a "Delete" event callback
         lv_obj_add_event_cb(lv_obj, mp_lv_delete_cb, LV_EVENT_DELETE, NULL);
@@ -3603,7 +3606,7 @@ if args.metadata:
 
     import stub_gen
 
-    stub_gen.run(args.metadata)
+    stub_gen.run(args.metadata, '')
 
 stdout.close()
 
