@@ -111,7 +111,7 @@ mp_machine_hw_spi_bus_obj_t rp2_machine_spi_bus_obj[] = {
         .miso = MP_OBJ_NULL,
         .active_devices = 0,
         .state = 0,
-        .user_data = (const void *)spi0
+        .user_data = (void *)spi0
     },
     {
         .host = 1,
@@ -120,7 +120,7 @@ mp_machine_hw_spi_bus_obj_t rp2_machine_spi_bus_obj[] = {
         .miso = MP_OBJ_NULL,
         .active_devices = 0,
         .state = 0,
-        .user_data = (const void *)spi1
+        .user_data = (void *)spi1
     }
 };
 
