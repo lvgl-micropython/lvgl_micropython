@@ -32,6 +32,7 @@ if custom_board_path is not None:
             'Supplied custom board path does not exist.'
         )
 
+    has_toml = False
     for file in os.listdir(custom_board_path):
         if file.endswith('.toml'):
             extra_args.insert(0, f'--toml={os.path.join(custom_board_path, file)}')
@@ -284,21 +285,92 @@ if __name__ == '__main__':
 
     get_submodules()
 
-    if custom_board_path is not None:
-        if custom_board_path.endswith('/') or custom_board_path.endswith('\\'):
-            custom_board_path = custom_board_path[:-1]
+    # Custom card management (classic format without TOML)
+    if custom_board_path is not None and args.toml is None:
+        from pathlib import Path
 
-        board_name = os.path.split(custom_board_path)[-1]
-        dst_path = f'lib/micropython/ports/{target}/boards/{board_name}'
-        if os.path.exists(dst_path):
+        custom_board_path = Path(custom_board_path).resolve()  # normalize
+        board_name = custom_board_path.name
+        dst_path = f"lib/micropython/ports/{target}/boards/{board_name}"
+
+        import re
+        errors = []
+        board_dir = Path(custom_board_path)
+        
+        # Partition file will be checked further
+        required_files = {
+            "board.json": board_dir / "board.json",
+            "mpconfigboard.h": board_dir / "mpconfigboard.h", 
+            "mpconfigboard.cmake": board_dir / "mpconfigboard.cmake",
+            "sdkconfig.board": board_dir / "sdkconfig.board"
+        }
+        
+        missing_files = [name for name, path in required_files.items() if not path.exists()]
+        errors.extend(f"Missing file: {name}" for name in missing_files)
+        
+        partitions_file = ''
+        partitions_path = ''
+
+        if "sdkconfig.board" not in missing_files:
+            sdkconfig_path = required_files["sdkconfig.board"]
+            content = sdkconfig_path.read_text()
+            
+            checks = [
+                (r'CONFIG_PARTITION_TABLE_CUSTOM=y', "Missing CONFIG_PARTITION_TABLE_CUSTOM=y"),
+                (r'CONFIG_ESPTOOLPY_FLASHSIZE_\d+MB=y', "No CONFIG_ESPTOOLPY_FLASHSIZE_*MB=y found"),
+            ]
+            
+            for pattern, error_msg in checks:
+                if not re.search(pattern, content):
+                    errors.append(error_msg)
+            
+            match = re.search(r'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME\s*=\s*"([^"]+)"', content)
+            if match:
+                partitions_file = Path(match.group(1)).name
+                partitions_path = board_dir / partitions_file
+                
+                if not partitions_path.exists():
+                    errors.append(f"Declared partitions file '{partitions_file}' not found")
+                
+            else:
+                errors.append("CONFIG_PARTITION_TABLE_CUSTOM_FILENAME not found")
+        
+        if errors:
+            error_lines = "\n".join(f"  • {e}" for e in errors)
+            raise RuntimeError(f"Invalid board '{board_name}':\n{error_lines}")
+        
+        print(f"✓ Valid custom board: {board_name}")
+        
+       # Move the partition table file to "ports/esp32/"" for proper MicroPython integration.
+
+        esp32_port_dir = Path(f"lib/micropython/ports/{target}")
+        target_partitions_path = esp32_port_dir / partitions_file
+        
+        esp32_port_dir.mkdir(parents=True, exist_ok=True)
+        
+        shutil.copy2(partitions_path, target_partitions_path)
+        print(f"✓ Copied partitions file to: {target_partitions_path}")
+
+        dst_path = Path(f"lib/micropython/ports/{target}/boards/{board_name}")
+        dst_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        if dst_path.exists():
             shutil.rmtree(dst_path)
-
-        shutil.copytree(custom_board_path, dst_path)
-
-        if board is None or board != board_name:
+        
+        shutil.copytree(board_dir, dst_path)
+        
+        final_board_name = board
+        if board is None:
             board = board_name
+        elif board != board_name:
+            print(f"Warning: Board name '{board}' differs from folder name '{board_name}'")
+            new_dst = Path(f"lib/micropython/ports/{target}/boards/{board}")
+            if dst_path.exists():
+                shutil.rmtree(dst_path)
+            shutil.copytree(board_dir, new_dst)
+            final_board_name = board
 
-        mod.custom_board_path = custom_board_path
+    mod.custom_board_path = custom_board_path
 
     extra_args, lv_cflags, board = mod.parse_args(extra_args, lv_cflags, board)
     extra_args = mod.build_commands(

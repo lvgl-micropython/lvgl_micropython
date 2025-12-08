@@ -6,7 +6,21 @@ __pycache__/
 # C extensions
 *.so
 
+# generated files
+gen/api_gen/templates/module.c
+gen/api_gen/templates/module/decl.c
+gen/api_gen/templates/module/helpers.c
+ext_mod/lvgl/lextab.py
+ext_mod/lvgl/yacctab.py
+lvgl.pyi
+
 # Distribution / packaging
+lib/micropython
+lib/esp-idf
+lib/lvgl
+lib/pycparser
+lib/SDL
+
 .Python
 build/
 develop-eggs/
