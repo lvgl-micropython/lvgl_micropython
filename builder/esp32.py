@@ -1339,8 +1339,6 @@ def update_main():
 
 
 def build_sdkconfig(*args):
-    if custom_board_path is not None:
-        return []
 
     base_config = [
         '',
@@ -1411,8 +1409,11 @@ def build_sdkconfig(*args):
                     base_config.append(
                         f'CONFIG_ESPTOOLPY_FLASH_SAMPLE_MODE_{itm}=n'
                     )
-
+    
             base_config.append(arg)
+            args.remove(arg)
+
+        elif arg.startswith("--"):
             args.remove(arg)
 
     base_config.append(f'CONFIG_ESPTOOLPY_FLASHSIZE_{flash_size}MB=y')
