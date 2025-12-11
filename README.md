@@ -1,3 +1,7 @@
+[![Unix build](https://github.com/lvgl-micropython/lvgl_micropython/actions/workflows/unix.yml/badge.svg)](https://github.com/lvgl-micropython/lvgl_micropython/actions/workflows/unix.yml)
+[![macOS build](https://github.com/lvgl-micropython/lvgl_micropython/actions/workflows/macOS.yml/badge.svg)](https://github.com/lvgl-micropython/lvgl_micropython/actions/workflows/macOS.yml)
+
+
 ***IMPORTANT READ ME FIRST***
 
 * DO NOT use any information from the official binding and try to use that when compiling this binding it is not going to work
