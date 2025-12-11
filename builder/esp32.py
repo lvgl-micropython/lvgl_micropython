@@ -1123,9 +1123,14 @@ def update_mpconfigboard():
     if custom_board_path is not None:
         return
 
+    if board == 'ESP32_GENERIC_P4' and board_variant:
+        filename = f'mpconfigvariant_{board_variant}.cmake'
+    else:
+        filename = 'mpconfigboard.cmake'
+
     mpconfigboard_cmake_path = (
         'lib/micropython/ports/esp32/boards/'
-        f'{board}/mpconfigboard.cmake'
+        f'{board}/{filename}'
     )
 
     data = read_file('esp32', mpconfigboard_cmake_path)
