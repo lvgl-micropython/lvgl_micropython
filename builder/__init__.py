@@ -486,7 +486,7 @@ def get_micropython():
         'git submodule update --init --depth=1 -- lib/micropython',
     ]
     print()
-    print('collecting MicroPython 1.27.0 (master)')
+    print('collecting MicroPython 1.27.0')
     result, _ = spawn(cmd_, spinner=True)
     if result != 0:
         sys.exit(result)
