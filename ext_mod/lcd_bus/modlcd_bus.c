@@ -6,6 +6,7 @@
 #include "i2c_bus.h"
 #include "i80_bus.h"
 #include "rgb_bus.h"
+#include "dsi_bus.h"
 
 #ifdef MP_PORT_UNIX
     #include "sdl_bus.h"
@@ -291,6 +292,9 @@ static const mp_rom_map_elem_t mp_module_lcd_bus_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_SPIBus),             MP_ROM_PTR(&mp_lcd_spi_bus_type)        },
     { MP_ROM_QSTR(MP_QSTR_I2CBus),             MP_ROM_PTR(&mp_lcd_i2c_bus_type)        },
     { MP_ROM_QSTR(MP_QSTR_I80Bus),             MP_ROM_PTR(&mp_lcd_i80_bus_type)        },
+    #ifdef SOC_MIPI_DSI_SUPPORTED
+    { MP_ROM_QSTR(MP_QSTR_DSIBus),             MP_ROM_PTR(&mp_lcd_dsi_bus_type)        },
+    #endif
     { MP_ROM_QSTR(MP_QSTR__pump_main_thread),  MP_ROM_PTR(&mp_lcd_bus__pump_main_thread_obj)       },
 
     #ifdef MP_PORT_UNIX
