@@ -6,7 +6,9 @@
 #include "i2c_bus.h"
 #include "i80_bus.h"
 #include "rgb_bus.h"
+#ifdef SOC_MIPI_DSI_SUPPORTED
 #include "dsi_bus.h"
+#endif
 
 #ifdef MP_PORT_UNIX
     #include "sdl_bus.h"
