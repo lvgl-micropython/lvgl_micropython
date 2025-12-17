@@ -42,7 +42,8 @@
             size_t num_fbs;           // Number of frame buffers
             size_t output_bits_per_pixel; // Color depth seen from the output data line. Default to fb_bits_per_pixel, but can be changed by YUV-RGB conversion
             size_t dma_burst_size;  // DMA transfer burst size
-            int disp_gpio_num;     // Display control GPIO, which is used to perform action like "disp_off"
+            // removed in ESP-IDF 5.5
+            // int disp_gpio_num;     // Display control GPIO, which is used to perform action like "disp_off"
             intr_handle_t intr;    // LCD peripheral interrupt handle
             esp_pm_lock_handle_t pm_lock; // Power management lock
             size_t num_dma_nodes;  // Number of DMA descriptors that used to carry the frame buffer
