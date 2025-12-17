@@ -9,6 +9,7 @@
 #include "mphalport.h"
 #include "py/obj.h"
 #include "py/runtime.h"
+#include "py/binary.h"
 
 // stdlib includes
 #include <string.h>
@@ -23,9 +24,7 @@
     #include "esp_lcd_panel_io.h"
     #include "esp_heap_caps.h"
     #include "hal/lcd_types.h"
-    #include "esp_lcd_mipi_dsi.h"
 
-    
     typedef struct {
         esp_lcd_panel_t base;         // Base class of generic lcd panel
         esp_lcd_dsi_bus_handle_t bus; // DSI bus handle
@@ -39,7 +38,7 @@
     mp_lcd_err_t dsi_del(mp_obj_t obj);
     mp_lcd_err_t dsi_init(mp_obj_t obj, uint16_t width, uint16_t height, uint8_t bpp, uint32_t buffer_size, bool rgb565_byte_swap, uint8_t cmd_bits, uint8_t param_bits);
     mp_lcd_err_t dsi_get_lane_count(mp_obj_t obj, uint8_t *lane_count);
-    mp_lcd_err_t dsi_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, , uint8_t rotation, bool last_update);
+    mp_lcd_err_t dsi_tx_color(mp_obj_t obj, int lcd_cmd, void *color, size_t color_size, int x_start, int y_start, int x_end, int y_end, uint8_t rotation, bool last_update);
     mp_obj_t dsi_allocate_framebuffer(mp_obj_t obj, uint32_t size, uint32_t caps);
     mp_obj_t dsi_free_framebuffer(mp_obj_t obj, mp_obj_t buf);
 
@@ -67,7 +66,8 @@
         enum {
             ARG_bus_id,
             ARG_data_lanes,
-            ARG_freq,
+            ARG_lane_bitrate,
+            ARG_clock_freq,
             ARG_virtual_channel,
             ARG_hsync_front_porch,
             ARG_hsync_back_porch,
@@ -80,7 +80,8 @@
         const mp_arg_t make_new_args[] = {
             { MP_QSTR_bus_id,             MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
             { MP_QSTR_data_lanes,         MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
-            { MP_QSTR_freq,               MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
+            { MP_QSTR_lane_bitrate,       MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
+            { MP_QSTR_clock_freq,         MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
             { MP_QSTR_virtual_channel,    MP_ARG_INT  | MP_ARG_KW_ONLY | MP_ARG_REQUIRED       },
             { MP_QSTR_hsync_front_porch,  MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 0       } },
             { MP_QSTR_hsync_back_porch,   MP_ARG_INT  | MP_ARG_KW_ONLY, { .u_int = 0       } },
@@ -108,7 +109,7 @@
 
         self->bus_config.bus_id = (int)args[ARG_bus_id].u_int;
         self->bus_config.num_data_lanes = (uint8_t)args[ARG_data_lanes].u_int;
-        self->bus_config.lane_bit_rate_mbps = (uint32_t)args[ARG_freq].u_int;
+        self->bus_config.lane_bit_rate_mbps = (uint32_t)args[ARG_lane_bitrate].u_int;
         self->bus_config.phy_clk_src = MIPI_DSI_PHY_CLK_SRC_DEFAULT;
 
         self->panel_io_config.virtual_channel = (uint8_t)args[ARG_virtual_channel].u_int;
@@ -116,7 +117,7 @@
         self->panel_config.virtual_channel = (uint8_t)args[ARG_virtual_channel].u_int;
         self->panel_config.dpi_clk_src = MIPI_DSI_DPI_CLK_SRC_DEFAULT;
 
-        self->panel_config.dpi_clock_freq_mhz = (uint32_t)args[ARG_freq].u_int;
+        self->panel_config.dpi_clock_freq_mhz = (uint8_t)args[ARG_clock_freq].u_int;
 
         self->panel_config.video_timing.hsync_back_porch = (uint32_t)args[ARG_hsync_back_porch].u_int;
         self->panel_config.video_timing.hsync_pulse_width = (uint32_t)args[ARG_hsync_pulse_width].u_int;
@@ -126,8 +127,6 @@
         self->panel_config.video_timing.vsync_front_porch = (uint32_t)args[ARG_vsync_front_porch].u_int;
 
         self->panel_config.num_fbs = 0;
-
-        self->bus_config.pclk_hz = (uint32_t)args[ARG_freq].u_int;
 
         LCD_DEBUG_PRINT("bus_id=%d\n", self->bus_config.bus_id)
         LCD_DEBUG_PRINT("num_data_lanes=%d\n", self->bus_config.num_data_lanes)
@@ -142,7 +141,6 @@
         LCD_DEBUG_PRINT("vsync_front_porch=%d\n", self->panel_config.video_timing.vsync_front_porch)
         LCD_DEBUG_PRINT("vsync_back_porch=%d\n", self->panel_config.video_timing.vsync_back_porch)
         LCD_DEBUG_PRINT("vsync_pulse_width=%d\n", self->panel_config.video_timing.vsync_pulse_width)
-        LCD_DEBUG_PRINT("pclk_hz[10]=%d\n", self->bus_config.pclk_hz)
 
         self->panel_io_handle.get_lane_count = &dsi_get_lane_count;
         self->panel_io_handle.del = &dsi_del;
@@ -175,7 +173,7 @@
                 self->rgb565_byte_swap = false;
                 break;
             default:
-                mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("unsopported bits per pixel.(%d)"), bpp);
+                mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("unsupported bits per pixel.(%d)"), bpp);
                 return LCD_ERR_INVALID_ARG;
         }
 
@@ -198,10 +196,10 @@
             return ret;
         }
 
-        ret = esp_lcd_new_panel_io_dsi(self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io);
+        ret = esp_lcd_new_panel_io_dbi(self->bus_handle, &self->panel_io_config, &self->panel_io_handle.panel_io);
 
         if (ret != 0) {
-            mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_dsi)"), ret);
+            mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_new_panel_io_dbi)"), ret);
             return ret;
         }
 
@@ -261,7 +259,7 @@
         }
 
 
-        mp_lcd_err_t ret = esp_lcd_panel_io_del(self->panel_io_handle.panel_io);
+        ret = esp_lcd_panel_io_del(self->panel_io_handle.panel_io);
         if (ret != 0) {
             mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("%d(esp_lcd_panel_io_del)"), ret);
             return ret;
@@ -329,9 +327,9 @@
          #endif
         }
 
-        void *buf = heap_caps_calloc(1, 1, MALLOC_CAP_INTERNAL);
+        void *buf = heap_caps_calloc(1, size, caps);
 
-        mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE, 1, buf));
+        mp_obj_array_t *view = MP_OBJ_TO_PTR(mp_obj_new_memoryview(BYTEARRAY_TYPECODE, size, buf));
         view->typecode |= 0x80; // used to indicate writable buffer
 
         uint32_t available =  (uint32_t)heap_caps_get_largest_free_block(caps);
