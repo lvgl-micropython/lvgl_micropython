@@ -33,9 +33,8 @@ class Pin(io_expander_framework.Pin):
 
     @classmethod
     def set_device(cls, device):
-        if cls._device is not None:
-            raise ValueError('device has already been set')
-
+        io_expander_framework.Pin.set_device(device)
+        
         cls._device = device
 
         cls._reg_in = i2c.I2C.Device(
