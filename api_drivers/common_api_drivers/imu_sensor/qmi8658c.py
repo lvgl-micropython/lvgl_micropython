@@ -34,18 +34,18 @@ def _encode_setting(rnge, rate):
 
 
 ACCEL_RANGE_2 = const(0)  # +/- 2g
-ACCEL_RANGE_4 = const(0x10)  # +/- 4g
-ACCEL_RANGE_8 = const(0x20)  # +/- 8g (default value)
-ACCEL_RANGE_16 = const(0x30)  # +/- 16g
+ACCEL_RANGE_4 = const(1)  # +/- 4g
+ACCEL_RANGE_8 = const(2)  # +/- 8g (default value)
+ACCEL_RANGE_16 = const(3)  # +/- 16g
 
 GYRO_RANGE_16 = const(0)  # +/- 16 deg/s
-GYRO_RANGE_32 = const(0x10)  # +/- 32 deg/s
-GYRO_RANGE_64 = const(0x20)  # +/- 64 deg/s
-GYRO_RANGE_128 = const(0x30)  # +/- 128 deg/s
-GYRO_RANGE_256 = const(0x40)  # +/- 256 deg/s (default value)
-GYRO_RANGE_512 = const(0x50)  # +/- 512 deg/s
-GYRO_RANGE_1024 = const(0x60)  # +/- 1024 deg/s
-GYRO_RANGE_2048 = const(0x70)  # +/- 2048 deg/s
+GYRO_RANGE_32 = const(1)  # +/- 32 deg/s
+GYRO_RANGE_64 = const(2)  # +/- 64 deg/s
+GYRO_RANGE_128 = const(3)  # +/- 128 deg/s
+GYRO_RANGE_256 = const(4)  # +/- 256 deg/s (default value)
+GYRO_RANGE_512 = const(5)  # +/- 512 deg/s
+GYRO_RANGE_1024 = const(6)  # +/- 1024 deg/s
+GYRO_RANGE_2048 = const(7)  # +/- 2048 deg/s
 
 ACCEL_RATE_8000_HZ = const(0)
 ACCEL_RATE_4000_HZ = const(1)
