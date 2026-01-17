@@ -89,7 +89,7 @@ class QMI8658C(imu_sensor_framework.IMUSensorFramework):
         self._tx_buf[0] = data
         self._device.write_mem(reg, self._tx_mv[:1])
 
-    def __init__(self, device, delay_between_samples=100):
+    def __init__(self, device, accel_range=ACCEL_RANGE_8, accel_rate=ACCEL_RATE_125_HZ, gyro_range=GYRO_RANGE_256, gyro_rate=GYRO_RATE_125_HZ, delay_between_samples=100):
 
         super().__init__(device, 0.0, delay_between_samples)
         self._device = device
@@ -101,15 +101,15 @@ class QMI8658C(imu_sensor_framework.IMUSensorFramework):
         if self._read_reg(_VERSION_REG) != 0x05:
             raise RuntimeError("Failed to find QMI8658C")
 
-        self._accel_range = ACCEL_RANGE_8
-        self._accel_rate = ACCEL_RATE_125_HZ
+        self._accel_range = accel_range
+        self._accel_rate = accel_rate
 
-        self._gyro_range = GYRO_RANGE_256
-        self._gyro_rate = GYRO_RATE_125_HZ
+        self._gyro_range = gyro_range
+        self._gyro_rate = gyro_rate
 
         self._write_reg(_CONFIG2_REG, 0x60)
-        self._write_reg(_ACCEL_SETTING_REG, _encode_setting(ACCEL_RANGE_8, ACCEL_RATE_125_HZ))
-        self._write_reg(_GYRO_SETTING_REG, _encode_setting(GYRO_RANGE_256, GYRO_RATE_125_HZ))
+        self._write_reg(_ACCEL_SETTING_REG, _encode_setting(self._accel_range, self._accel_rate))
+        self._write_reg(_GYRO_SETTING_REG, _encode_setting(self._gyro_range, self._gyro_rate))
 
         self._write_reg(_CONFIG5_REG, 0x00)  # No magnetometer
         self._write_reg(_CONFIG6_REG, 0x00)  # Disables Gyroscope And Accelerometer Low-Pass Filter
