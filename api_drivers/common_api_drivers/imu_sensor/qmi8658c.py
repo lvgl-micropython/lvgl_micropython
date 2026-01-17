@@ -1,6 +1,7 @@
 from micropython import const  # NOQA
 import imu_sensor_framework  # NOQA
 
+_ONE_G = const(9.807)
 
 _VERSION_REG = const(0x0)
 _REVISION_REG = const(0x1)
@@ -32,6 +33,8 @@ def _decode_settings(value):
 def _encode_setting(rnge, rate):
     return ((rnge & 0x7) << 4) | (rate & 0xF)
 
+def _int16(value):
+    return value - 0x10000 if value & 0x8000 else value
 
 ACCEL_RANGE_2 = const(0)  # +/- 2g
 ACCEL_RANGE_4 = const(1)  # +/- 4g
@@ -166,9 +169,13 @@ class QMI8658C(imu_sensor_framework.IMUSensorFramework):
 
         buf = self._rx_buf
 
-        x = buf[0] << 8 | buf[1]
-        y = buf[2] << 8 | buf[3]
-        z = buf[4] << 8 | buf[5]
+        x_raw = buf[1] << 8 | buf[0]
+        y_raw = buf[3] << 8 | buf[2]
+        z_raw = buf[5] << 8 | buf[4]
+
+        x = float(_int16(x_raw)) / (1 << (14 - self._accel_range)) * _ONE_G
+        y = float(_int16(y_raw)) / (1 << (14 - self._accel_range)) * _ONE_G
+        z = float(_int16(z_raw)) / (1 << (14 - self._accel_range)) * _ONE_G
 
         return x, y, z
 
@@ -176,9 +183,13 @@ class QMI8658C(imu_sensor_framework.IMUSensorFramework):
         self._device.read_mem(_GYRO_REG, buf=self._rx_mv[:6])
         buf = self._rx_buf
 
-        x = buf[0] << 8 | buf[1]
-        y = buf[2] << 8 | buf[3]
-        z = buf[4] << 8 | buf[5]
+        x_raw = buf[1] << 8 | buf[0]
+        y_raw = buf[3] << 8 | buf[2]
+        z_raw = buf[5] << 8 | buf[4]
+
+        x = float(_int16(x_raw)) / (1 << (11 - self._gyro_range))
+        y = float(_int16(y_raw)) / (1 << (11 - self._gyro_range))
+        z = float(_int16(z_raw)) / (1 << (11 - self._gyro_range))
 
         return x, y, z
 
