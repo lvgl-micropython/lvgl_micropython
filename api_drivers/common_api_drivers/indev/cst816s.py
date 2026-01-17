@@ -40,8 +40,10 @@ _BPC1H = const(0xB2)
 _BPC1L = const(0xB3)
 
 _ChipID = const(0xA7)
-_ChipIDValue = const(0xB5)
-_ChipIDValue2 = const(0xB6)
+_ChipIDValue = const(0xB4)
+_ChipIDValue2 = const(0xB5)
+_ChipIDValue3 = const(0xB6)
+_ExpectedChipIDs = (_ChipIDValue, _ChipIDValue2, _ChipIDValue3)
 
 _ProjID = const(0xA8)
 _FwVersion = const(0xA9)
@@ -206,8 +208,8 @@ class CST816S(pointer_framework.PointerDriver):
         self._read_reg(_FwVersion)
         print('FW Version:', hex(self._rx_buf[0]))
 
-        if chip_id not in (_ChipIDValue, _ChipIDValue2):
-            raise RuntimeError(f'Incorrect chip id ({hex(_ChipIDValue)})')
+        if chip_id not in _ExpectedChipIDs:
+            raise RuntimeError(f'Incorrect chip id: {hex(chip_id)}, expected: {", ".join(hex(v) for v in _ExpectedChipIDs)}')
 
         self._write_reg(_IrqCtl, _EnTouch | _EnChange)
 
