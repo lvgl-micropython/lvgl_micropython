@@ -79,7 +79,7 @@ BITS = 8
 class QMI8658C(imu_sensor_framework.IMUSensorFramework):
 
     def _read_reg(self, reg):
-        self._device.read_mem(reg, self._rx_mv[:1])
+        self._device.read_mem(reg, buf=self._rx_mv[:1])
         return self._rx_buf[0]
 
     def _write_reg(self, reg, data):
@@ -151,18 +151,18 @@ class QMI8658C(imu_sensor_framework.IMUSensorFramework):
 
     @property
     def timestamp(self) -> int:
-        self._device.read_mem(_TIME_REG, self._rx_mv[:3])
+        self._device.read_mem(_TIME_REG, buf=self._rx_mv[:3])
         return self._rx_buf[0] + (self._rx_buf[1] << 8) + (self._rx_buf[2] << 16)
 
     @property
     def temperature(self) -> float:
         """Chip temperature"""
-        self._device.read_mem(_TEMP_REG, self._rx_mv[:2])
+        self._device.read_mem(_TEMP_REG, buf=self._rx_mv[:2])
         temp = self._rx_buf[0] / 256 + self._rx_buf[1]
         return temp
 
     def _get_accelerometer(self):
-        self._device.read_mem(_ACCEL_REG, self._rx_mv[:6])
+        self._device.read_mem(_ACCEL_REG, buf=self._rx_mv[:6])
 
         buf = self._rx_buf
 
@@ -173,7 +173,7 @@ class QMI8658C(imu_sensor_framework.IMUSensorFramework):
         return x, y, z
 
     def _get_gyrometer(self):
-        self._device.read_mem(_GYRO_REG, self._rx_mv[:6])
+        self._device.read_mem(_GYRO_REG, buf=self._rx_mv[:6])
         buf = self._rx_buf
 
         x = buf[0] << 8 | buf[1]
