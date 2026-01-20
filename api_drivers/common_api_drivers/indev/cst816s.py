@@ -40,10 +40,8 @@ _BPC1H = const(0xB2)
 _BPC1L = const(0xB3)
 
 _ChipID = const(0xA7)
-_ChipIDValue = const(0xB4)
-_ChipIDValue2 = const(0xB5)
-_ChipIDValue3 = const(0xB6)
-_ExpectedChipIDs = (_ChipIDValue, _ChipIDValue2, _ChipIDValue3)
+# Known chip IDs for CST816S
+_ExpectedChipIDs = (const(0xB4), const(0xB5), const(0xB6))
 
 _ProjID = const(0xA8)
 _FwVersion = const(0xA9)
@@ -175,7 +173,8 @@ class CST816S(pointer_framework.PointerDriver):
         reset_pin=None,
         touch_cal=None,
         startup_rotation=pointer_framework.lv.DISPLAY_ROTATION._0,  # NOQA
-        debug=False
+        debug=False,
+        valid_ids=_ExpectedChipIDs
     ):
         self._tx_buf = bytearray(2)
         self._tx_mv = memoryview(self._tx_buf)
@@ -207,9 +206,15 @@ class CST816S(pointer_framework.PointerDriver):
 
         self._read_reg(_FwVersion)
         print('FW Version:', hex(self._rx_buf[0]))
-
-        if chip_id not in _ExpectedChipIDs:
-            raise RuntimeError(f'Incorrect chip id: {hex(chip_id)}, expected: {", ".join(hex(v) for v in _ExpectedChipIDs)}')
+        
+        if type(valid_ids) == int:
+            if chip_id != valid_ids:
+                raise RuntimeError(f'Incorrect chip id: {hex(chip_id)}, expected: {hex(valid_ids)}')
+        elif type(valid_ids) == tuple:
+            if chip_id not in valid_ids:
+                raise RuntimeError(f'Incorrect chip id: {hex(chip_id)}, expected: {", ".join(hex(v) for v in valid_ids)}')
+        else:
+            raise RuntimeError(f'Expected chip id needs to be int or tuple')
 
         self._write_reg(_IrqCtl, _EnTouch | _EnChange)
 
