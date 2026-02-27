@@ -173,7 +173,7 @@ class DisplayDriver:
                     backlight_on_state = STATE_HIGH
                 else:
                     self._backlight_pin = machine.PWM(
-                        self._backlight_pin, freq=38000)
+                        self._backlight_pin, freq=3800)
 
             if (
                 backlight_on_state != STATE_PWM and
