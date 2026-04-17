@@ -33,6 +33,8 @@ freq = 18000000
 hsync_front_porch = 1
 hsync_back_porch = 32
 hsync_pulse_width = 50
+# hsync_idle_low defaults to false; vsync_idle_low is explicitly true per the
+# official 4D Systems GFX4dESP32 library panel timing specification.
 hsync_idle_low = false
 vsync_front_porch = 1
 vsync_back_porch = 33
