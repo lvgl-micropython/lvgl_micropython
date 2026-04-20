@@ -42,3 +42,16 @@ Run that printed command to flash later.
 ## Common issue
 
 Do not use `--board-config` with GNU make. For this project, board presets are selected with `--toml=...`.
+
+## Troubleshooting (unstable / rolling image)
+
+If the picture looks unstable (for example text appears to "run through" the panel), this is usually RGB timing related.
+
+- This preset uses a conservative pixel clock (`freq = 12000000`) for better signal stability on ESP32-S3 RGB panels.
+- If your panel is still unstable, toggle `pclk_active_low` in `Gen4-ESP32-70CT.toml` (`true` <-> `false`) and rebuild.
+
+Rebuild command:
+
+```bash
+python make.py esp32 clean BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT --toml=display_configs/Gen4-ESP32-70CT/Gen4-ESP32-70CT.toml INDEV=ft5x46
+```
