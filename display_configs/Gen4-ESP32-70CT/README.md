@@ -10,7 +10,7 @@ This configuration targets the 4D Systems gen4-ESP32-70CT (800x480 capacitive to
 Run from the repository root:
 
 ```bash
-python3 make.py esp32 --toml=display_configs/Gen4-ESP32-70CT/Gen4-ESP32-70CT.toml
+python make.py esp32 clean BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT --toml=display_configs/Gen4-ESP32-70CT/Gen4-ESP32-70CT.toml INDEV=ft5x46
 ```
 
 ## Build + Flash in one step

@@ -54,8 +54,8 @@ freq = 400000
 
 [I2C.Device.indev_device]
 bus = "i2c_bus"
-dev_id = "ft5x06.I2C_ADDR"
-reg_bits = "ft5x06.BITS"
+dev_id = "ft5x46.I2C_ADDR"
+reg_bits = "ft5x46.BITS"
 
 
 [RGBDisplay.display]
@@ -74,7 +74,7 @@ params = [true]
 params = []
 
 
-[FT5x06.indev]
+[FT5x46.indev]
 device = "indev_device"
 
 
