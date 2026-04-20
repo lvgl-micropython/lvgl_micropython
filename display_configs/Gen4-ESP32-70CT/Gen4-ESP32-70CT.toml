@@ -77,6 +77,33 @@ params = []
 [FT5x46.indev]
 device = "indev_device"
 
+[indev._cal.alphaX]
+value = -0.011764519
+
+[indev._cal.betaX]
+value = 2.176436
+
+[indev._cal.deltaX]
+value = -4.7288592
+
+[indev._cal.alphaY]
+value = 2.270234
+
+[indev._cal.betaY]
+value = 0.0066771596
+
+[indev._cal.deltaY]
+value = 11.731292
+
+[indev._cal.mirrorX]
+value = false
+
+[indev._cal.mirrorY]
+value = false
+
+[indev._cal.save]
+params = []
+
 
 [display.set_backlight]
 params = [100]
