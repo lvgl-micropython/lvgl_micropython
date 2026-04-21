@@ -26,7 +26,7 @@
     #define MICROPY_CACHE_SIZE  0
 #endif
 #ifndef MICROPY_COLOR_DEPTH
-    #define MICROPY_COLOR_DEPTH  32
+    #define MICROPY_COLOR_DEPTH  16
 #endif
 #ifndef MICROPY_FLOAT
     #define MICROPY_FLOAT  0
@@ -159,13 +159,19 @@ extern void *mp_lv_roots;
 /*Align the start address of draw_buf addresses to this bytes*/
 #define LV_DRAW_BUF_ALIGN                       4
 
+/*Using matrix for transformations.
+ *Requirements:
+    `LV_USE_MATRIX = 1`.
+    The rendering engine needs to support 3x3 matrix transformations.*/
+#define LV_DRAW_TRANSFORM_USE_MATRIX            0
+
 /* If a widget has `style_opa < 255` (not `bg_opa`, `text_opa` etc) or not NORMAL blend mode
  * it is buffered into a "simple" layer before rendering. The widget can be buffered in smaller chunks.
  * "Transformed layers" (if `transform_angle/zoom` are set) use larger buffers
  * and can't be drawn in chunks. */
 
 /*The target buffer size for simple layer chunks.*/
-#define LV_DRAW_LAYER_SIMPLE_BUF_SIZE    (24 * 1024)   /*[bytes]*/
+#define LV_DRAW_LAYER_SIMPLE_BUF_SIZE    (128 * 1024)   /*[bytes]*/
 
 /* The stack size of the drawing thread.
  * NOTE: If FreeType or ThorVG is enabled, it is recommended to set it to 32KB or more.
@@ -190,6 +196,7 @@ extern void *mp_lv_roots;
 	#define LV_DRAW_SW_SUPPORT_L8			1
 	#define LV_DRAW_SW_SUPPORT_AL88			1
 	#define LV_DRAW_SW_SUPPORT_A8			1
+	#define LV_DRAW_SW_SUPPORT_I1			1
 
 	/* Set the number of draw unit.
      * > 1 requires an operating system enabled in `LV_USE_OS`
@@ -237,8 +244,13 @@ extern void *mp_lv_roots;
     #define LV_USE_VGLITE_BLIT_SPLIT 0
 
     #if LV_USE_OS
-        /* Enable VGLite draw async. Queue multiple tasks and flash them once to the GPU. */
-        #define LV_USE_VGLITE_DRAW_ASYNC 1
+        /* Use additional draw thread for VG-Lite processing.*/
+        #define LV_USE_VGLITE_DRAW_THREAD 1
+
+        #if LV_USE_VGLITE_DRAW_THREAD
+            /* Enable VGLite draw async. Queue multiple tasks and flash them once to the GPU. */
+            #define LV_USE_VGLITE_DRAW_ASYNC 1
+        #endif
     #endif
 
     /* Enable VGLite asserts. */
@@ -249,6 +261,11 @@ extern void *mp_lv_roots;
 #define LV_USE_DRAW_PXP 0
 
 #if LV_USE_DRAW_PXP
+    #if LV_USE_OS
+        /* Use additional draw thread for PXP processing.*/
+        #define LV_USE_PXP_DRAW_THREAD 1
+    #endif
+
     /* Enable PXP asserts. */
     #define LV_USE_PXP_ASSERT 0
 #endif
@@ -281,6 +298,10 @@ extern void *mp_lv_roots;
  * NOTE: The memory usage of a single gradient image is 4K bytes.
  */
 #define LV_VG_LITE_GRAD_CACHE_CNT 32
+
+    /* VG-Lite stroke maximum cache number.
+     */
+    #define LV_VG_LITE_STROKE_CACHE_CNT 32
 
 #endif
 
@@ -485,6 +506,13 @@ extern void *mp_lv_roots;
 
 /* Use `float` as `lv_value_precise_t` */
 #define LV_USE_FLOAT            MICROPY_FLOAT
+
+/*Enable matrix support
+ *Requires `LV_USE_FLOAT = 1`*/
+#define LV_USE_MATRIX           0
+
+/*Include `lvgl_private.h` in `lvgl.h` to access internal data and functions by default*/
+#define LV_USE_PRIVATE_API		0
 
 /*==================
  *   FONT USAGE
@@ -705,7 +733,7 @@ extern void *mp_lv_roots;
 #define LV_USE_THEME_SIMPLE 1
 
 /*A theme designed for monochrome displays*/
-#define LV_USE_THEME_MONO 0
+#define LV_USE_THEME_MONO 1
 
 /*==================
  * LAYOUTS
@@ -723,10 +751,13 @@ extern void *mp_lv_roots;
 
 /*File system interfaces for common APIs */
 
+/*Setting a default driver letter allows skipping the driver prefix in filepaths*/
+#define LV_FS_DEFAULT_DRIVE_LETTER '\0'
+
 /*API for fopen, fread, etc*/
 #define LV_USE_FS_STDIO 0
 #if LV_USE_FS_STDIO
-    #define LV_FS_STDIO_LETTER 'A'     /*Set an upper cased letter on which the drive will accessible (e.g. 'A')*/
+    #define LV_FS_STDIO_LETTER '\0'     /*Set an upper cased letter on which the drive will accessible (e.g. 'A')*/
     #define LV_FS_STDIO_PATH ""         /*Set the working directory. File/directory paths will be appended to it.*/
     #define LV_FS_STDIO_CACHE_SIZE 0    /*>0 to cache this number of bytes in lv_fs_read()*/
 #endif
@@ -981,6 +1012,7 @@ extern void *mp_lv_roots;
     #define LV_SDL_INCLUDE_PATH     <SDL2/SDL.h>
     #define LV_SDL_RENDER_MODE      LV_DISPLAY_RENDER_MODE_DIRECT   /*LV_DISPLAY_RENDER_MODE_DIRECT is recommended for best performance*/
     #define LV_SDL_BUF_COUNT        1    /*1 or 2*/
+    #define LV_SDL_ACCELERATED      1    /*1: Use hardware acceleration*/
     #define LV_SDL_FULLSCREEN       0    /*1: Make the window full screen by default*/
     #define LV_SDL_DIRECT_EXIT      1    /*1: Exit the application when all SDL windows are closed*/
     #define LV_SDL_MOUSEWHEEL_MODE  LV_SDL_MOUSEWHEEL_MODE_ENCODER  /*LV_SDL_MOUSEWHEEL_MODE_ENCODER/CROWN*/

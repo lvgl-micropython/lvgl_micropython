@@ -2,6 +2,8 @@
 BOARD = "ESP32_GENERIC_S3"
 BOARD_VARIANT = "SPIRAM_OCT"
 flash_size = 16
+# Reserve a larger app slot for LVGL + drivers on S3 builds.
+partition_size = 4194304
 enable_jtag_repl = 'n'
 enable_cdc_repl = 'n'
 enable_uart_repl = 'y'
@@ -78,22 +80,22 @@ params = []
 device = "indev_device"
 
 [indev._cal.alphaX]
-value = -0.011764519
+value = -0.047662752
 
 [indev._cal.betaX]
-value = 2.176436
+value = 2.1567396
 
 [indev._cal.deltaX]
-value = -4.7288592
+value = -8.058709
 
 [indev._cal.alphaY]
-value = 2.270234
+value = 2.3196948
 
 [indev._cal.betaY]
-value = 0.0066771596
+value = 0.03381479
 
 [indev._cal.deltaY]
-value = 11.731292
+value = -7.7237816
 
 [indev._cal.mirrorX]
 value = false
