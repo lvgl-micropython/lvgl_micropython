@@ -29,7 +29,7 @@ hsync = 39
 vsync = 41
 de = 40
 pclk = 42
-freq = 12000000
+freq = 10000000
 hsync_front_porch = 1
 hsync_back_porch = 32
 hsync_pulse_width = 50
@@ -42,7 +42,7 @@ vsync_pulse_width = 1
 vsync_idle_low = true
 de_idle_high = false
 pclk_idle_high = false
-pclk_active_low = true
+pclk_active_low = false
 
 
 [I2C.Bus.i2c_bus]

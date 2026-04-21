@@ -47,8 +47,8 @@ Do not use `--board-config` with GNU make. For this project, board presets are s
 
 If the picture looks unstable (for example text appears to "run through" the panel), this is usually RGB timing related.
 
-- This preset uses a conservative pixel clock (`freq = 12000000`) for better signal stability on ESP32-S3 RGB panels.
-- If your panel is still unstable, toggle `pclk_active_low` in `Gen4-ESP32-70CT.toml` (`true` <-> `false`) and rebuild.
+- This preset uses a conservative pixel clock (`freq = 10000000`) for better signal stability on ESP32-S3 RGB panels.
+- This preset defaults to `pclk_active_low = false`. If your panel is still unstable, toggle `pclk_active_low` in `Gen4-ESP32-70CT.toml` (`true` <-> `false`) and rebuild.
 
 Rebuild command:
 
