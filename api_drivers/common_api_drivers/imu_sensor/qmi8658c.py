@@ -1,6 +1,7 @@
 from micropython import const  # NOQA
 import imu_sensor_framework  # NOQA
 
+_ONE_G = const(9.807)
 
 _VERSION_REG = const(0x0)
 _REVISION_REG = const(0x1)
@@ -32,20 +33,22 @@ def _decode_settings(value):
 def _encode_setting(rnge, rate):
     return ((rnge & 0x7) << 4) | (rate & 0xF)
 
+def _int16(value):
+    return value - 0x10000 if value & 0x8000 else value
 
 ACCEL_RANGE_2 = const(0)  # +/- 2g
-ACCEL_RANGE_4 = const(0x10)  # +/- 4g
-ACCEL_RANGE_8 = const(0x20)  # +/- 8g (default value)
-ACCEL_RANGE_16 = const(0x30)  # +/- 16g
+ACCEL_RANGE_4 = const(1)  # +/- 4g
+ACCEL_RANGE_8 = const(2)  # +/- 8g (default value)
+ACCEL_RANGE_16 = const(3)  # +/- 16g
 
 GYRO_RANGE_16 = const(0)  # +/- 16 deg/s
-GYRO_RANGE_32 = const(0x10)  # +/- 32 deg/s
-GYRO_RANGE_64 = const(0x20)  # +/- 64 deg/s
-GYRO_RANGE_128 = const(0x30)  # +/- 128 deg/s
-GYRO_RANGE_256 = const(0x40)  # +/- 256 deg/s (default value)
-GYRO_RANGE_512 = const(0x50)  # +/- 512 deg/s
-GYRO_RANGE_1024 = const(0x60)  # +/- 1024 deg/s
-GYRO_RANGE_2048 = const(0x70)  # +/- 2048 deg/s
+GYRO_RANGE_32 = const(1)  # +/- 32 deg/s
+GYRO_RANGE_64 = const(2)  # +/- 64 deg/s
+GYRO_RANGE_128 = const(3)  # +/- 128 deg/s
+GYRO_RANGE_256 = const(4)  # +/- 256 deg/s (default value)
+GYRO_RANGE_512 = const(5)  # +/- 512 deg/s
+GYRO_RANGE_1024 = const(6)  # +/- 1024 deg/s
+GYRO_RANGE_2048 = const(7)  # +/- 2048 deg/s
 
 ACCEL_RATE_8000_HZ = const(0)
 ACCEL_RATE_4000_HZ = const(1)
@@ -79,14 +82,14 @@ BITS = 8
 class QMI8658C(imu_sensor_framework.IMUSensorFramework):
 
     def _read_reg(self, reg):
-        self._device.read_mem(reg, self._rx_mv[:1])
+        self._device.read_mem(reg, buf=self._rx_mv[:1])
         return self._rx_buf[0]
 
     def _write_reg(self, reg, data):
         self._tx_buf[0] = data
         self._device.write_mem(reg, self._tx_mv[:1])
 
-    def __init__(self, device, delay_between_samples=100):
+    def __init__(self, device, accel_range=ACCEL_RANGE_8, accel_rate=ACCEL_RATE_125_HZ, gyro_range=GYRO_RANGE_256, gyro_rate=GYRO_RATE_125_HZ, delay_between_samples=100):
 
         super().__init__(device, 0.0, delay_between_samples)
         self._device = device
@@ -98,15 +101,15 @@ class QMI8658C(imu_sensor_framework.IMUSensorFramework):
         if self._read_reg(_VERSION_REG) != 0x05:
             raise RuntimeError("Failed to find QMI8658C")
 
-        self._accel_range = ACCEL_RANGE_8
-        self._accel_rate = ACCEL_RATE_125_HZ
+        self._accel_range = accel_range
+        self._accel_rate = accel_rate
 
-        self._gyro_range = GYRO_RANGE_256
-        self._gyro_rate = GYRO_RATE_125_HZ
+        self._gyro_range = gyro_range
+        self._gyro_rate = gyro_rate
 
         self._write_reg(_CONFIG2_REG, 0x60)
-        self._write_reg(_ACCEL_SETTING_REG, _encode_setting(ACCEL_RANGE_8, ACCEL_RATE_125_HZ))
-        self._write_reg(_GYRO_SETTING_REG, _encode_setting(GYRO_RANGE_256, GYRO_RATE_125_HZ))
+        self._write_reg(_ACCEL_SETTING_REG, _encode_setting(self._accel_range, self._accel_rate))
+        self._write_reg(_GYRO_SETTING_REG, _encode_setting(self._gyro_range, self._gyro_rate))
 
         self._write_reg(_CONFIG5_REG, 0x00)  # No magnetometer
         self._write_reg(_CONFIG6_REG, 0x00)  # Disables Gyroscope And Accelerometer Low-Pass Filter
@@ -151,34 +154,42 @@ class QMI8658C(imu_sensor_framework.IMUSensorFramework):
 
     @property
     def timestamp(self) -> int:
-        self._device.read_mem(_TIME_REG, self._rx_mv[:3])
+        self._device.read_mem(_TIME_REG, buf=self._rx_mv[:3])
         return self._rx_buf[0] + (self._rx_buf[1] << 8) + (self._rx_buf[2] << 16)
 
     @property
     def temperature(self) -> float:
         """Chip temperature"""
-        self._device.read_mem(_TEMP_REG, self._rx_mv[:2])
+        self._device.read_mem(_TEMP_REG, buf=self._rx_mv[:2])
         temp = self._rx_buf[0] / 256 + self._rx_buf[1]
         return temp
 
     def _get_accelerometer(self):
-        self._device.read_mem(_ACCEL_REG, self._rx_mv[:6])
+        self._device.read_mem(_ACCEL_REG, buf=self._rx_mv[:6])
 
         buf = self._rx_buf
 
-        x = buf[0] << 8 | buf[1]
-        y = buf[2] << 8 | buf[3]
-        z = buf[4] << 8 | buf[5]
+        x_raw = buf[1] << 8 | buf[0]
+        y_raw = buf[3] << 8 | buf[2]
+        z_raw = buf[5] << 8 | buf[4]
+
+        x = float(_int16(x_raw)) / (1 << (14 - self._accel_range)) * _ONE_G
+        y = float(_int16(y_raw)) / (1 << (14 - self._accel_range)) * _ONE_G
+        z = float(_int16(z_raw)) / (1 << (14 - self._accel_range)) * _ONE_G
 
         return x, y, z
 
     def _get_gyrometer(self):
-        self._device.read_mem(_GYRO_REG, self._rx_mv[:6])
+        self._device.read_mem(_GYRO_REG, buf=self._rx_mv[:6])
         buf = self._rx_buf
 
-        x = buf[0] << 8 | buf[1]
-        y = buf[2] << 8 | buf[3]
-        z = buf[4] << 8 | buf[5]
+        x_raw = buf[1] << 8 | buf[0]
+        y_raw = buf[3] << 8 | buf[2]
+        z_raw = buf[5] << 8 | buf[4]
+
+        x = float(_int16(x_raw)) / (1 << (11 - self._gyro_range))
+        y = float(_int16(y_raw)) / (1 << (11 - self._gyro_range))
+        z = float(_int16(z_raw)) / (1 << (11 - self._gyro_range))
 
         return x, y, z
 
