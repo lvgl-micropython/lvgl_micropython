@@ -72,6 +72,11 @@
         mp_hal_pin_write(self->bus_config.data_gpio_nums[1], (buf[0] >> 1) & 1);   \
         mp_hal_pin_write(self->bus_config.data_gpio_nums[0], buf[0] & 1);          \
     }
+
+    // sleep_us(1) to ensure minimum WR pulse width, so that I can follow it with my logic analyzer
+    // can be eliminated after debugging
+    #define WR_PULSE()  { mp_hal_pin_write(self->bus_config.wr_gpio_num, 0)/*; sleep_us(1)*/; mp_hal_pin_write(self->bus_config.wr_gpio_num, 1);; }
+
     /* end macros */
 
 
@@ -102,7 +107,7 @@
      */
     static mp_obj_t mp_lcd_i80_bus_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
     {
-        enum {
+    enum {
             ARG_dc,
             ARG_wr,
             ARG_data0,
@@ -127,8 +132,8 @@
             ARG_dc_cmd_high,
             ARG_dc_dummy_high,
             ARG_dc_data_high,
-            ARG_cmd_bits,
-            ARG_param_bits,
+            //ARG_cmd_bits,
+            //ARG_param_bits,
             ARG_cs_active_high,
             ARG_reverse_color_bits,
             ARG_swap_color_bytes,
@@ -198,7 +203,8 @@
 
         self->callback = mp_const_none;
 
-        #if !defined(mp_hal_pin_output) && !defined(IDF_VER)
+        // mp_hal_pin_output if a function for rp2, so I have added PICO_HEAP_SIZE
+        #if !defined(mp_hal_pin_output) && !defined(IDF_VER) && !defined(PICO_HEAP_SIZE)
             mp_raise_msg(&mp_type_NotImplementedError, MP_ERROR_TEXT("LCD I80 but is not available for this MCU"));
         #else
             self->panel_io_config.user_ctx = self;
@@ -219,7 +225,7 @@
             #endif /* defined(MP_HAL_PIN_SPEED_VERY_HIGH) && !defined(MICROPY_INCLUDED_MIMXRT_MPHALPORT_H) */
 
             mp_hal_pin_write(self->bus_config.dc_gpio_num, self->panel_io_config.dc_levels.dc_data_level);
-            mp_hal_pin_write(self->bus_config.wr_gpio_num, 0);
+            mp_hal_pin_write(self->bus_config.wr_gpio_num, !self->panel_io_config.flags.cs_active_high);
 
             self->bus_config.data_gpio_nums[0] = (mp_hal_pin_obj_t)mp_hal_get_pin_obj(args[ARG_data0].u_obj);
             self->bus_config.data_gpio_nums[1] = (mp_hal_pin_obj_t)mp_hal_get_pin_obj(args[ARG_data1].u_obj);
@@ -284,51 +290,80 @@
 
         CS_LOW();
         DC_CMD();
-
+        
         if (self->bus_config.bus_width == 8) {
-            uint8_t *buf = NULL;
+            uint8_t buf[1];
             if (self->panel_io_config.lcd_cmd_bits == 8) {
                 buf[0] = (uint8_t)lcd_cmd;
                 WRITE8();
             } else {
                 buf[0] = (uint8_t)((uint16_t)lcd_cmd >> 8);
                 WRITE8();
-                WR_LOW();
-                WR_HIGH();
+                WR_PULSE();
                 buf[0] = (uint8_t)((uint16_t)lcd_cmd & 0xFF);
                 WRITE8();
             }
         } else {
-            uint16_t *buf = NULL;
+            uint16_t buf[1];
             buf[0] = (uint16_t)lcd_cmd;
             WRITE16();
         }
-
-        WR_LOW();
-        WR_HIGH();
+        
+        WR_PULSE();
 
         DC_DATA();
 
-         if (param != NULL) {
-             if (self->bus_config.bus_width == 8) {
-                 uint8_t *buf = (uint8_t *)param;
-                 uint16_t len = (uint16_t)param_size;
-                 while (len--) {
-                     WRITE8();
-                     WR_LOW();
-                     WR_HIGH();
-                     buf++;
+        if (param_size > 0 ) {
+            if (self->bus_config.bus_width == 8) {
+                if (self->panel_io_config.lcd_cmd_bits == 8) {
+                    // 8 bit param over 8 bit bus
+                    uint8_t *buf = (uint8_t *)param;
+                    uint16_t len = (uint16_t)param_size;
+                    while (len--) {
+                        WRITE8();
+                        WR_PULSE();
+                        buf++;
+                    }
+                } else {
+                    // 16 bit param over 8 bit bus
+                    uint16_t buf[1];
+                    uint16_t *p = (uint16_t *)param;
+                    uint16_t len = (uint16_t)(param_size / 2);
+                    while (len--) {
+                        buf[0] = (uint8_t)(*p >> 8);
+                        WRITE8();
+                        WR_PULSE();
+                        buf[0] = (uint8_t)(*p & 0xFF);
+                        WRITE8();
+                        WR_PULSE();
+                        p++;
+                    }
                  }
-             } else {
-                 uint16_t *buf = (uint16_t *)param;
-                 uint16_t len = (uint16_t)(param_size / 2);
-                 while (len--) {
-                     WRITE16();
-                     WR_LOW();
-                     WR_HIGH();
-                     buf++;
-                 }
-             }
+            } else {
+                if (self->panel_io_config.lcd_cmd_bits == 8) {
+                    // 8 bit param over 16 bit bus
+                    uint16_t buf[1];
+                    uint8_t *p = (uint8_t *)param;
+                    uint16_t len = (uint16_t)param_size;
+                    while (len--) {
+                        buf[0] = (uint16_t)(*p);
+                        WRITE16();
+                        WR_PULSE();
+                        //WR_LOW();
+                        //WR_HIGH();
+                        p++;
+                    }
+                } else {    
+                    // 16 bit param over 16 bit bus
+                    uint16_t *buf = (uint16_t *)param;
+                    uint16_t len = (uint16_t)(param_size);
+                    while (len--) {
+                        WRITE16();
+                        WR_PULSE();
+                        buf++;
+                    }
+                } 
+            }
         }
 
         CS_HIGH();
@@ -360,25 +395,23 @@
         DC_CMD();
 
         if (self->bus_config.bus_width == 8) {
-            uint8_t *buf = NULL;
+            uint8_t buf[1];
             if (self->panel_io_config.lcd_cmd_bits == 8) {
                 buf[0] = (uint8_t)lcd_cmd;
                 WRITE8();
             } else {
                 buf[0] = (uint8_t)((uint16_t)lcd_cmd >> 8);
                 WRITE8();
-                WR_LOW();
-                WR_HIGH();
+                WR_PULSE();
                 buf[0] = (uint8_t)((uint16_t)lcd_cmd & 0xFF);
                 WRITE8();
             }
         } else {
-            uint16_t *buf = NULL;
+            uint16_t buf[1];
             buf[0] = (uint16_t)lcd_cmd;
             WRITE16();
         }
-        WR_LOW();
-        WR_HIGH();
+        WR_PULSE();
         DC_DATA();
 
         self->write_color(self, color, color_size);
@@ -463,8 +496,7 @@
                 WRITE8();
             }
             buf++;
-            WR_LOW();
-            WR_HIGH();
+            WR_PULSE();
         }
     }
 
@@ -481,8 +513,7 @@
                 WRITE16();
             }
             buf++;
-            WR_LOW();
-            WR_HIGH();
+            WR_PULSE();
         }
     }
 
@@ -500,8 +531,7 @@
                 last = buf[0];
                 WRITE8();
             }
-            WR_LOW();
-            WR_HIGH();
+            WR_PULSE();
 
             buf = &bd[i * 2];
 
@@ -509,8 +539,7 @@
                 last = buf[0];
                 WRITE8();
             }
-            WR_LOW();
-            WR_HIGH();
+            WR_PULSE();
         }
     }
 
@@ -528,8 +557,7 @@
                 last = buf[0];
                 WRITE16();
             }
-            WR_LOW();
-            WR_HIGH();
+            WR_PULSE();
 
             buf = &bd[i * 2];
 
@@ -537,8 +565,7 @@
                 last = buf[0];
                 WRITE16();
             }
-            WR_LOW();
-            WR_HIGH();
+            WR_PULSE();
         }
     }
 
@@ -555,15 +582,13 @@
                 last = bd[0];
                 *buf = bd[0] << 8;
                 WRITE8();
-                WR_LOW();
-                WR_HIGH();
+                WR_PULSE();
                 *buf = bd[0] >> 8;
                 WRITE8();
                 WR_LOW();
                 WR_HIGH();
             }
-            WR_LOW();
-            WR_HIGH();
+            WR_PULSE();
             bd++;
         }
     }
@@ -581,8 +606,7 @@
                 last = buf[0];
                 WRITE16();
             }
-            WR_LOW();
-            WR_HIGH();
+            WR_PULSE();
             buf++;
         }
     }
