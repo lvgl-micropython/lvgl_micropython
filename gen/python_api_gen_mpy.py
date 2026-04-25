@@ -1513,9 +1513,9 @@ static const mp_obj_type_t *get_BaseObj_type();
 
 static void mp_lv_delete_cb(lv_event_t * e)
 {
-    LV_OBJ_T *lv_obj = e->current_target;
-    if (lv_obj){
-        mp_lv_obj_t *self = lv_obj->user_data;
+    lv_obj_t *obj = (lv_obj_t *)lv_event_get_current_target(e);
+    if (obj){
+        mp_lv_obj_t *self = lv_obj_get_user_data(obj);
         if (self) {
             self->lv_obj = NULL;
         }
@@ -1525,7 +1525,7 @@ static void mp_lv_delete_cb(lv_event_t * e)
 static mp_obj_t lv_to_mp(LV_OBJ_T *lv_obj)
 {
     if (lv_obj == NULL) return mp_const_none;
-    mp_lv_obj_t *self = (mp_lv_obj_t*)lv_obj->user_data;
+    mp_lv_obj_t *self = (mp_lv_obj_t*)lv_obj_get_user_data(lv_obj);
     if (!self)
     {
         // Find the object type
@@ -1548,7 +1548,7 @@ static mp_obj_t lv_to_mp(LV_OBJ_T *lv_obj)
         };
 
         // Register the Python object in user_data
-        lv_obj->user_data = self;
+        lv_obj_set_user_data(lv_obj, self);
 
         // Register a "Delete" event callback
         lv_obj_add_event_cb(lv_obj, mp_lv_delete_cb, LV_EVENT_DELETE, NULL);
