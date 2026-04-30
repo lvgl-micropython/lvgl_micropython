@@ -954,7 +954,7 @@ Bit orders are a tuple of durations. The first 2 numbers define a bit as 0 and t
 
 -----------------------------------------------------------
 
-https://github.com/fabse-hack/temp_humidity_micropython_lvgl
-
+- https://github.com/fabse-hack/temp_humidity_micropython_lvgl
+- Complete setup for the [Esp32-S2432028R (Cheap Yellow Display)](https://github.com/de-dh/ESP32-Cheap-Yellow-Display-Micropython-LVGL/tree/main) and for the [ESP32-JC3248W535](https://github.com/de-dh/ESP32-JC3248W535-Micropython-LVGL) with LVGL 9.4 Micropython examples.
 
 
