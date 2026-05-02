@@ -1695,6 +1695,11 @@ def compile(*args):  # NOQA
 
                     output = output.replace('(PORT)', PORT)
 
+                while 'esptool' in args:
+                    args.remove('esptool')
+
+                args.remove('-m')
+                
                 esptool.main(args)
                 print()
                 print('firmware flashed')
