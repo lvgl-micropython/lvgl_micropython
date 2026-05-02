@@ -5,7 +5,8 @@
 // local includes
 #include "lcd_types.h"
 #include "modlcd_bus.h"
-#include "spi_bus.h"
+// compiler doesn't find spi_bus.h without ../common_include/ ??
+#include "../common_include/spi_bus.h"
 #include "../../../micropy_updates/common/mp_spi_common.h"
 
 // micropython includes
@@ -14,6 +15,7 @@
 // #else
 #include "py/obj.h"
 #include "py/runtime.h"
+#include "extmod/modmachine.h" // for mp_machine_p_t
 
 // stdlib includes
 #include <string.h>
@@ -189,23 +191,26 @@
 
         mp_lcd_spi_bus_obj_t *self = MP_OBJ_TO_PTR(obj);
 
-        uint8_t bits;
+        // uint8_t bits; no more used
 
         if (cmd_bits == 16) {
             self->send_cmd = send_cmd_16;
-            bits = 16;
+            // bits = 16;
         } else {
             self->send_cmd = send_cmd_8;
-            bits = 8;
+            // bits = 8;
         }
 
         if (param_bits == 16) {
             self->send_param = send_param_16;
-            bits = 16;
+            // bits = 16;
         } else {
             self->send_param = send_param_8;
         }
 
+        /* constructor above takes a machine_hw_spi_device as argument
+           so we should not create another one
+        
         mp_obj_base_t *spi;
         mp_obj_t spi_args[12];
 
@@ -228,6 +233,11 @@
 
         self->bus_handle = spi;
         self->panel_io_config.spi_transfer = ((mp_machine_spi_p_t *)MP_OBJ_TYPE_GET_SLOT(spi->type, protocol))->transfer;
+        */
+
+        // we take the transfer pointer from the bus inside the existing device
+        self->bus_handle = MP_OBJ_FROM_PTR(self->spi_bus);
+        self->panel_io_config.spi_transfer = ((mp_machine_spi_p_t *)MP_OBJ_TYPE_GET_SLOT(&machine_spi_type, protocol))->transfer;
 
         return LCD_OK;
     }
