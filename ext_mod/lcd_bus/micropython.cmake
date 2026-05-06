@@ -15,6 +15,9 @@ if(ESP_PLATFORM)
         ${CMAKE_CURRENT_LIST_DIR}/lcd_types.c
         ${CMAKE_CURRENT_LIST_DIR}/esp32_src/i2c_bus.c
         ${CMAKE_CURRENT_LIST_DIR}/esp32_src/spi_bus.c
+        ${CMAKE_CURRENT_LIST_DIR}/esp32_src/spi_bus_fast.c
+        ${CMAKE_CURRENT_LIST_DIR}/esp32_src/spi_bus_fast_task.c
+        ${CMAKE_CURRENT_LIST_DIR}/esp32_src/spi_bus_fast_rotation.c
         ${CMAKE_CURRENT_LIST_DIR}/esp32_src/i80_bus.c
         ${CMAKE_CURRENT_LIST_DIR}/esp32_src/rgb_bus.c
         ${CMAKE_CURRENT_LIST_DIR}/esp32_src/rgb_bus_rotation.c
