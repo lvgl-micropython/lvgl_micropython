@@ -91,7 +91,9 @@ void machine_timer_deinit_all(void)
     pthread_mutex_unlock(&timer_lock);
 
     timer_polling = false;
-    pthread_join(timer_poll_thread_id, NULL);
+    if (timer_poll_thread_id != 0) {
+        pthread_join(timer_poll_thread_id, NULL);
+    }
     pthread_mutex_destroy(&timer_lock);
 
     timer = NULL;
