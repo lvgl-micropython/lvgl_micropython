@@ -1,6 +1,5 @@
 # Copyright (c) 2024 - 2025 Kevin G. Schlosser
 
-import sys
 import json
 import os
 
@@ -41,6 +40,14 @@ def build_function(name, func):
             arg_count += 1
 
         arg_type = arg['py_type']
+        # TODO: Replace this with proper function-pointer type parsing from metadata.
+        # This is needed to avoid breaking the python syntax due to unbalanced braces
+        # Current metadata can emit malformed values like "List[void (]".
+        if arg_type == 'List[void (]':
+            arg_type = 'List'
+        if arg_type == 'List[int (]':
+            arg_type = 'List[int]'
+
         if arg_name != 'self':
             arg_name = f'{arg_name}: {arg_type}'
 
@@ -81,6 +88,8 @@ def build_class(cls_name, cls):
     gen_attributes = [build_attribute(name, attr) for name, attr in
                       attributes.items()]
     gen_methods = []
+    # Avoid duplicate or shadowed methods and keep the generated output smaller.
+    seen_method_names = set()
 
     if c_type != 'enum' and 'members' not in cls and not cls_name.endswith(
         '_class'
@@ -93,7 +102,7 @@ def build_class(cls_name, cls):
                     name='self'
                 ),
                 dict(
-                    py_type=f'"obj"',
+                    py_type='"obj"',
                     c_type='lv_obj_t *',
                     name='parent'
                 ),
@@ -101,20 +110,30 @@ def build_class(cls_name, cls):
             c_type=f'lv_{cls_name}_create',
             py_type='method',
             scope=cls_name,
-            py_rtype=f'"{cls_name}"',
+            # __init__ must return None in Python, even if the C constructor returns a pointer.
+            py_rtype='None',
             c_rtype='lv_obj_t *'
 
         )
         gen_init = build_function('__init__', init_meth)
         gen_init = '\n'.join(f'    {line}' for line in gen_init.split('\n'))
         gen_methods.append(gen_init)
+        seen_method_names.add('__init__')
 
+    seen_subclasses = set()
     for subcls_name, subcls in classes.items():
+        if subcls_name in seen_subclasses:
+            continue
+        seen_subclasses.add(subcls_name)
         gen_cls = build_class(subcls_name, subcls)
         gen_cls = '\n'.join(f'    {line}' for line in gen_cls.split('\n'))
         gen_classes.append(gen_cls)
 
     for method_name, method in methods.items():
+        # avoid duplication
+        if method_name in seen_method_names:
+            continue
+        seen_method_names.add(method_name)
         if method['args']:
             method['args'][0]['name'] = 'self'
         else:
@@ -155,6 +174,7 @@ class _{cls_name}_type(TypedDict, total=False):
 
 '''
 
+# Struct constructors also return None in Python.
 struct_template = '''
 {gen_type}
 
@@ -162,7 +182,7 @@ class {cls_name}(object):
     """
     No Docstrings Yet
     """
-    def __init__(self, args: Optional[_{cls_name}_type] = dict(), /) -> "{cls_name}":
+    def __init__(self, args: Optional[_{cls_name}_type] = None, /) -> None:
         """
         No Docstrings Yet
         """
@@ -197,14 +217,21 @@ prop_get_template = '''\
        ...
 '''
 
+# Use decorators for setter-only properties.
 prop_set_template = '''\
+    @property
+    def {name}(self) -> {py_type}:
+       """
+       No Docstrings Yet
+       """
+       ...
+
+    @{name}.setter
     def {name}(self, value: {py_type}) -> None:
         """
         No Docstrings Yet
         """
         ...
-
-    {name} = property(fset={name})
 '''
 
 
@@ -217,8 +244,12 @@ def build_struct(cls_name, struct):
                           cls_attributes.items()]
     gen_methods = []
     gen_properties = []
+    seen_method_names = set()
 
     for method_name, method in methods.items():
+        if method_name in seen_method_names:
+            continue
+        seen_method_names.add(method_name)
         if method['args']:
             method['args'][0]['name'] = 'self'
         else:
@@ -235,6 +266,8 @@ def build_struct(cls_name, struct):
     init_args = []
 
     for name, prop in properties.items():
+        if name in seen_method_names:
+            continue
         py_type = prop['py_type']
 
         if py_type == 'uint8_t [0x100':
@@ -247,7 +280,7 @@ def build_struct(cls_name, struct):
         writeable = prop['is_readable']
 
         if writeable:
-            init_args.append(f'    {name}: {py_type} = ...')
+            init_args.append(f'    {name}: {py_type}')
 
         if readable and writeable:
             template = prop_get_set_template
@@ -297,6 +330,75 @@ struct_output = []
 
 
 enum_types = set()
+generated_class_names = set()
+generated_function_names = set()
+generated_variable_names = set()
+generated_constant_names = set()
+
+# Emit existing aliases as TypeAlias and deduplicate by name.
+FIXED_ALIASES = [
+    ('style_prop_t', 'int'),
+    ('grad_color_t', 'int'),
+    ('event_code_t', 'int'),
+    ('style_selector_t', 'int'),
+    ('anim_enable_t', 'int'),
+    ('event_list_t', 'int'),
+    ('ll_node_t', 'int'),
+    ('value_precise_t', 'float'),
+    ('fs_whence_t', 'int'),
+    ('screen_load_anim_t', 'int'),
+    ('_mp_int_wrapper', 'int'),
+    ('event_cb_t', 'Callable'),
+    ('group_edge_cb_t', 'Callable'),
+    ('group_focus_cb_t', 'Callable'),
+    ('indev_read_cb_t', 'Callable'),
+    ('anim_exec_xcb_t', 'Callable'),
+    ('cache_compare_cb_t', 'Callable'),
+    ('rb_compare_t', 'Callable'),
+    ('draw_buf_malloc_cb', 'Callable'),
+    ('draw_buf_free_cb', 'Callable'),
+    ('draw_buf_align_cb', 'Callable'),
+    ('draw_buf_invalidate_cache_cb', 'Callable'),
+    ('draw_buf_width_to_stride_cb', 'Callable'),
+    ('draw_glyph_cb_t', 'Callable'),
+    ('timer_handler_resume_cb_t', 'Callable'),
+    ('delay_cb_t', 'Callable'),
+    ('tick_get_cb_t', 'Callable'),
+]
+
+# These TypeAliases are referenced but not yet defined.
+# TODO: Replace these placeholders with proper types, or update the API generator
+# to capture them correctly from metadata.
+TODO_TYPE_ALIASES = [
+    ('color_hsv_t', 'Incomplete'),
+    ('draw_border_dsc_t', 'Incomplete'),
+    ('draw_box_shadow_dsc_t', 'Incomplete'),
+    ('draw_buf_align_cb_t', 'Callable'),
+    ('draw_buf_cache_operation_cb_t', 'Callable'),
+    ('draw_buf_copy_cb_t', 'Callable'),
+    ('draw_buf_free_cb_t', 'Callable'),
+    ('draw_buf_malloc_cb_t', 'Callable'),
+    ('draw_buf_width_to_stride_cb_t', 'Callable'),
+    ('draw_fill_dsc_t', 'Incomplete'),
+    ('draw_glyph_dsc_t', 'Incomplete'),
+    ('draw_triangle_dsc_t', 'Incomplete'),
+    ('hit_test_info_t', 'Incomplete'),
+    ('image', 'Incomplete  # Placeholder until concrete type metadata is available'),
+    ('indev_t', 'Incomplete'),
+    ('obj', 'Incomplete  # Placeholder until concrete type metadata is available'),
+    ('observer_cb_t', 'Callable'),
+    ('observer_t', 'Incomplete'),
+    ('subject_value_t', 'Incomplete'),
+    ('theme_t', 'Incomplete'),
+    ('timer_t', 'Incomplete'),
+    ('indev_gesture_type_t', 'int'),
+    ('iter_inspect_cb', 'Callable'),
+    ('iter_next_cb', 'Callable'),
+    ('screen_create_cb_t', 'Callable'),
+    ('theme_apply_cb_t', 'Callable'),
+    ('tree_walk_mode_t', 'int'),
+    ('void', 'None  # Maps C void to Python None'),
+]
 
 
 def read_enums(objs):
@@ -339,77 +441,86 @@ def read_enums(objs):
 
 def build_objects(objects):
     for name, obj in objects.items():
+        if name in generated_class_names:
+            continue
+        generated_class_names.add(name)
         object_output.append(build_class(name, obj))
 
 
 def build_functions(funcs):
     for name, func in funcs.items():
+        if name in generated_function_names:
+            continue
+        generated_function_names.add(name)
         func_output.append(build_function(name, func))
 
 
 def build_enums(enums):
     for name, enum in enums.items():
+        if name in generated_class_names:
+            continue
+        generated_class_names.add(name)
         enum['class_attributes'] = enum['members']
         enum_output.append(build_class(name, enum))
 
 
 def build_int_constants(int_constants):
     for name in int_constants.keys():
+        if name in generated_constant_names:
+            continue
+        generated_constant_names.add(name)
         constant_output.append(f'{name}: int = ...')
 
 
 def build_variables(variables):
     for name, variable in variables.items():
+        if name in generated_variable_names:
+            continue
+        generated_variable_names.add(name)
         py_type = variable['py_type']
         variable_output.append(f'{name}: {py_type} = ...')
 
 
 def build_structs(structs):
     for name, struct in structs.items():
+        if name in generated_class_names:
+            continue
+        generated_class_names.add(name)
         struct_output.append(build_struct(name, struct))
 
 
 def build_enum_types():
     res = []
-    for name in enum_types:
-        res.append(f'{name} = int')
+    for name in sorted(enum_types):
+        res.append(f'{name}: TypeAlias = int')
 
     return '\n'.join(res)
 
 
+def build_alias_block(alias_items, declared_names):
+    lines = []
+    for name, alias_type in alias_items:
+        if name in declared_names:
+            continue
+        lines.append(f'{name}: TypeAlias = {alias_type}')
+        declared_names.add(name)
+    return '\n'.join(lines)
+
+
 output_template = '''\
-from typing import Union, ClassVar, Callable, List, Any, TypedDict, Optional
+from __future__ import annotations
+
+from typing import Union, ClassVar, Callable, List, Any, TypedDict, Optional, TypeAlias
+from typing_extensions import Incomplete
 
 
 {enum_types}
-style_prop_t = int
-grad_color_t = int
-event_code_t = int
-style_selector_t = int
-anim_enable_t = int
-event_list_t = int
-ll_node_t = int
-value_precise_t = float
-fs_whence_t = int
-screen_load_anim_t = int
-_mp_int_wrapper = int
+{fixed_aliases}
 
-event_cb_t = Callable
-group_edge_cb_t = Callable
-group_focus_cb_t = Callable
-indev_read_cb_t = Callable
-anim_exec_xcb_t = Callable
-cache_compare_cb_t = Callable
-rb_compare_t = Callable
-draw_buf_malloc_cb = Callable
-draw_buf_free_cb = Callable
-draw_buf_align_cb = Callable
-draw_buf_invalidate_cache_cb = Callable
-draw_buf_width_to_stride_cb = Callable
-draw_glyph_cb_t = Callable
-timer_handler_resume_cb_t = Callable
-delay_cb_t = Callable
-tick_get_cb_t = Callable
+# TODO: The following types are referenced in the generated stubs but need proper
+# definition. They should be extracted from the LVGL API metadata or added manually.
+# This section is a placeholder until the API generator captures them correctly.
+{todo_type_aliases}
 
 
 class _draw_sw_mask_radius_circle_dsc_t(object):
@@ -452,6 +563,18 @@ class mem_pool_t(object):
 
 
 def run(json_path, lvgl_api_json_path):
+    # clean hous in case of multiple runs in the same session
+    object_output.clear()
+    func_output.clear()
+    enum_output.clear()
+    constant_output.clear()
+    variable_output.clear()
+    struct_output.clear()
+    enum_types.clear()
+    generated_class_names.clear()
+    generated_function_names.clear()
+    generated_variable_names.clear()
+    generated_constant_names.clear()
 
     with open(json_path, 'r') as f:
         data = f.read()
@@ -470,6 +593,15 @@ def run(json_path, lvgl_api_json_path):
         build_int_constants(root['int_constants'])
     build_structs(root['structs'])
 
+    declared_alias_names = set(enum_types)
+    declared_alias_names.update(generated_class_names)
+    declared_alias_names.update(generated_function_names)
+    declared_alias_names.update(generated_variable_names)
+    declared_alias_names.update(generated_constant_names)
+
+    fixed_aliases = build_alias_block(FIXED_ALIASES, declared_alias_names)
+    todo_type_aliases = build_alias_block(TODO_TYPE_ALIASES, declared_alias_names)
+
     output = output_template.format(
             constants='\n'.join(constant_output),
             enums='\n\n'.join(enum_output),
@@ -477,7 +609,9 @@ def run(json_path, lvgl_api_json_path):
             variables='\n'.join(variable_output),
             funcs='\n\n'.join(func_output),
             structs=''.join(struct_output),
-            enum_types=build_enum_types()
+            enum_types=build_enum_types(),
+            fixed_aliases=fixed_aliases,
+            todo_type_aliases=todo_type_aliases
         )
 
     with open(OUPUT_FILE, 'w') as f:
