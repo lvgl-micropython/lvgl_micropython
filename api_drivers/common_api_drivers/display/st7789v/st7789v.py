@@ -29,10 +29,8 @@ class ST7789V(display_driver_framework.DisplayDriver):
     )
 
     # ST7789V uses 0xB4 for inversion control, not 0x20/0x21.
-    # Set these to None so the base set_color_inversion() raises
-    # NotImplementedError rather than sending the wrong commands.
-    _INVON = None
-    _INVOFF = None
+    _INVON = const(0x01)
+    _INVOFF = const(0x00)
 
     def __init__(
         self,
@@ -90,7 +88,5 @@ class ST7789V(display_driver_framework.DisplayDriver):
     def set_color_inversion(self, value):
         # ST7789V uses 0xB4 with parameter:
         #   bit 0: 0 = normal, 1 = inverted
-        param_buf = bytearray(1)
-        param_mv = memoryview(param_buf)
-        param_buf[0] = 0x01 if value else 0x00
-        self.set_params(_INVCTR, param_mv)
+        self._param_buf[0] = self._INVON if value else self._INVOFF
+        self.set_params(_INVCTR, self._param_mv[:1])
