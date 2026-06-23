@@ -29,8 +29,8 @@ class ST7789V(display_driver_framework.DisplayDriver):
     )
 
     # ST7789V uses 0xB4 for inversion control, not 0x20/0x21.
-    _INVON = const(0x01)
-    _INVOFF = const(0x00)
+    _INVON = 0x01
+    _INVOFF = 0x00
 
     def __init__(
         self,
