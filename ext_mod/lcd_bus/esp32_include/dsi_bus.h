@@ -23,6 +23,7 @@
         #include "esp_lcd_panel_io.h"
         #include "esp_lcd_mipi_dsi.h"
 
+        #define DPI_PANEL_MAX_FB_NUM 3 // from "mipi_dsi_priv.h"
 
         typedef struct _mp_lcd_dsi_bus_obj_t {
             mp_obj_base_t base;
