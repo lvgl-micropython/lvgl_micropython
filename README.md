@@ -38,7 +38,7 @@ related bits of a microcontroller.
 
 [LVGL](https://lvgl.io) is a graphics framework written for C99. It is also written to run on resource constrained devices.
 It is a feature rich framework that provides a plethora of different controls (widgets) as well as the ability
-to make your owmn custom controls. 
+to make your own custom controls. 
 
 ***What is a binding?***
 
